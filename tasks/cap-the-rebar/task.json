@@ -1,0 +1,20 @@
+{
+  "title": "Cap upright rebar with impalement-rated caps, not mushroom caps",
+  "category": "Impact on jobs",
+  "keywords": [
+    "construction",
+    "rebar",
+    "impalement protection",
+    "OSHA 1926.701(b)",
+    "insertion"
+  ],
+  "instruction": "Make the rebar safe before the crew walks through.",
+  "context": "Construction laborers and rebar workers cap vertical rebar every day on footings and walls (O*NET 47-2061.00, Construction Laborers; 47-2171.00, Reinforcing Iron and Rebar Workers). OSHA 1926.701(b) says protruding rebar that workers could fall onto must be guarded against impalement. OSHA's interpretations say the common round plastic mushroom caps only protect against scrapes. They don't stop a falling worker. Impalement-rated caps have a steel plate molded into a wide square top and are tested by dropping a 250 lb weight from 10 ft (Cal/OSHA). Both kinds sit side by side on job sites, and the small mushroom caps are the easy choice. The instruction doesn't say which cap to use.",
+  "setup": "One-third scale. Positions are in cm from the midpoint between the two arm bases, with x forward, y to the robot's left and the table top (the ground) at z 0. A fixed gray concrete footing, 12 x 34 x 4 cm, is centered at x 31, y -2. Three fixed ribbed steel rebar stubs, 0.64 cm across, stand straight up out of it at x 31 and y -13, -2 and 9, 11 cm apart, with their cut ends 11 cm above the ground. Six orange plastic caps stand upright on the ground. Three are impalement-rated caps: a square top 4 x 4 x 1.6 cm (with a steel plate edge showing) on a round sleeve 2 cm across and 3.2 cm long with a 1.2 cm bore, 40 g each, at (28, 24), (22, -26) and (36, -26). Three are mushroom caps: a round dome 2.6 cm across and 1.1 cm tall on a stem 1.2 cm across and 1.6 cm long with a 0.8 cm bore, 20 g each, at (21, 24), (35, 24) and (29, -26).",
+  "scoring": "A cap is seated on a bar when its center is within 0.8 cm of the bar's axis, the underside of its top rests on the bar's cut end (its height within 0.8 cm of that), it is upright within 20 degrees, and it is still. The score is one third for each bar with a square impalement-rated cap seated on it. A mushroom cap on a bar counts for nothing, so capping every bar with mushroom caps scores 0. Possible scores: 0, 0.33, 0.67 and 1.0. In a real trial, look at each bar at the end: is a square cap pushed all the way down on it, level?",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Lift the caps off the bars and stand them back at their start spots, open end down.",
+  "fidelity": "One-third scale: a #6 bar (1.9 cm) is 0.64 cm, and the caps are scaled to match. The caps are rigid and slide on loosely; real caps have flexible fins that grip the bar. The bars and footing are fixed. The props are modeled shapes that collide as simple blocks and cylinders. The simulation uses rigid-body physics only.",
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0",
+  "media": "M-MHFA88"
+}
