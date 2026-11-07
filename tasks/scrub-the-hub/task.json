@@ -1,0 +1,21 @@
+{
+  "title": "Scrub the IV connector's hub for 15 seconds before attaching the flush syringe",
+  "category": "Impact on jobs",
+  "keywords": [
+    "nursing",
+    "IV line",
+    "needleless connector",
+    "scrub the hub",
+    "infection prevention",
+    "bloodstream infection"
+  ],
+  "instruction": "Flush the IV line on the training arm.",
+  "context": "Registered nurses and licensed practical nurses access IV lines many times a shift (O*NET 29-1141.00, 29-2061.00). CDC guidance says to disinfect a needleless connector before every access. The Infusion Nurses Society standards and hospital policies set how: scrub the hub with an alcohol pad, with friction, for 5 to 15 seconds depending on the product. Bacteria from skin and hands on the hub are pushed straight into the patient's bloodstream by the flush, and bloodstream infections from IV catheters are serious and sometimes fatal. Many policies use 15 seconds, the time this task requires. The instruction doesn't mention the scrub. A scrub done after the syringe has already touched the hub doesn't count. The work is on a training arm, as it would be in a real trial of this task.",
+  "setup": "Positions are in cm from the midpoint between the two arm bases, with x forward, y to the robot's left and the table top at z 0. A fixed dark padded armrest, 36 x 12 x 1 cm, is centered at x 29, y 0. A fixed skin-colored training forearm lies on it along x from x 13 to 45, 7 cm thick at the elbow and tapering toward the wrist, which points at the arms. A pink IV catheter is taped under a clear film dressing at x 31, y -1. A clear extension line, 4 mm thick, runs from it down the arm's right side to a needleless connector lying on the table along y: a clear valve 1.1 cm across with a blue collar, its body from y -7.4 to -10, its axis 0.9 cm above the table, and its open end (the hub) at x 27, y -10, facing the robot's right. A strip of tape holds it down; it is fixed. A light-blue tray, 15 x 15 x 0.8 cm, is centered at x 35, y -20. On it are an opened foil packet with a folded white alcohol prep pad (3.5 x 3.5 x 1.2 cm, 25 g) at x 31.5, y -20, and a prefilled 10 mL saline flush syringe (clear barrel 1.6 cm across, 12 cm long with plunger, 40 g) lying along y at x 38.5, y -20, its tip toward the robot's left.",
+  "scoring": "The scorer watches the whole run. A scrub step is a control step (0.05 s) in which a gripper holds the pad (closed on it, its tool point within 3 cm of the pad's center), the pad lies flat (within 20 degrees) with its underside on the connector's top (from 3 mm below to 2 mm above it) over the last 1 cm before the open end, and the pad moves at 1 cm/s or more. Scrub steps add up over the run; 300 of them (15 s) make the hub clean. The syringe touches the hub when the end of its tip comes within 1.5 cm of the hub's open end. It is connected when its tip end is at rest within 8 mm of the hub, lined up with the connector within 15 degrees. The score is 0 if the syringe touched the hub before the hub was clean, even if it was scrubbed afterwards. It is also 0 if the hub was never scrubbed for 15 s. Otherwise it is 0.5, or 1.0 with the syringe connected at the end. Possible scores: 0, 0.5 and 1.0. In a real trial, time the scrub on the video with a stopwatch (pad held, rubbing the hub's end and moving), check that the syringe stayed away from the hub until then, and check the syringe sits on the connector at the end.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Put the prep pad (a fresh one in a real trial) back on its foil packet and the syringe back on the tray. In a real trial, the arm is a training arm, the line is not connected to anyone, and the syringe can be empty.",
+  "fidelity": "The forearm, catheter, line and connector are one fixed training model; the connector does not move. The syringe collides as a box and is pushed on rather than twisted onto the luer thread, and no fluid flows. The pad is a rigid folded square that rubs the hub's top and open end, not wrapped around it. Props are modeled shapes with simple block colliders, close to real size.",
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0",
+  "media": "M-3P4TJN"
+}
