@@ -1,0 +1,20 @@
+{
+  "title": "Check a dial thermometer at the ice point: sensing area under, clear of the glass, 30 seconds",
+  "category": "Impact on jobs",
+  "keywords": [
+    "food safety",
+    "thermometer calibration",
+    "ice-point method",
+    "cooks",
+    "restaurant kitchen"
+  ],
+  "instruction": "Calibrate the probe thermometer.",
+  "context": "Cooks and food prep workers (O*NET 35-2014.00, Cooks, Restaurant) check their stem thermometers with the ice-point method, often every shift, because a thermometer that reads high lets undercooked chicken or warm cold-holding pass. Food safety training (FDA Food Code 4-502.11, ServSafe) teaches the method: put the stem in a glass packed with ice and water so the whole sensing area, from the tip to the dimple on the stem, is under the water; keep the stem off the glass's bottom and sides, which read warmer; and hold it steady for 30 seconds until the needle stops, then set it to 32 F. A quick dip, or a thermometer dropped in and left leaning on the glass, gives a wrong reading. The instruction doesn't describe the method.",
+  "setup": "Positions are in cm from the midpoint between the two arm bases, with x forward, y to the robot's left and the table top at z 0. A dial stem thermometer stands in its fixed holder at x 25, y -9. The holder is a black weighted base, 5 cm across and 1 cm tall, with a clear plastic sleeve 2.1 cm across (1.6 cm bore) rising to 5 cm. The thermometer has a steel dial case 2.7 cm across and 2.2 cm deep with a white face, black ticks, a red pointer and a clear lens, facing up. Under the dial are a hex calibration nut and a steel stem 0.5 cm across, reaching 9.7 cm below the dial to a pointed tip, with a dimple 5 cm up from the tip. It weighs 40 g and starts with its tip resting in the sleeve, the dial's middle 11.8 cm up. A fixed clear glass tumbler, 8 cm across and 8.8 cm tall with a 0.6 cm thick bottom, stands at x 28, y -22, packed with crushed ice and filled with water to 7.8 cm. The ice is a ring of chunks round the sides, leaving room in the middle.",
+  "scoring": "The scorer watches the whole run at 20 Hz and finds the longest unbroken stretch in each of two states. Under the water: the tip inside the glass and the dimple below the water's surface. Clear and steady: under the water, and also the tip at least 5 mm above the glass's bottom, the stem from tip to dimple at least 6 mm from the side, the thermometer within 10 degrees of upright and moving slower than 3 cm/s. Back in the holder: at the end, standing in the sleeve within 12 degrees of upright, its tip within 8 mm of the sleeve's axis and within 6 mm of the bore's floor, and still. The score is 1.0 for 30 s or more in a row clear and steady with the thermometer back in the holder at the end, and 0.75 for the same 30 s if it isn't put back. It is 0.5 for 10 to 30 s clear and steady (read too soon), and 0.25 if it was under the water for 10 s or more in a row but never 10 s clear and steady (resting on the bottom, leaning on the side, tilted or swirled). These two don't depend on where it ends. It is 0 otherwise, including a dip of only the tip. The possible scores are 0, 0.25, 0.5, 0.75 and 1.0. In a real trial, time the video with the stem in the glass, check from the side camera that the tip is off the bottom and the stem off the glass, and check at the end that the thermometer stands in its holder.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Stand the thermometer back in its holder. In a real trial, top up the ice and pour off extra water so the level is back at 7.8 cm before each trial.",
+  "fidelity": "Real size, except the stem is 9.7 cm, shorter than the usual 12.7 cm, so the arm can lift it over the glass. The water and ice are seen but not felt: the stem passes through them, so nothing pushes it. The needle doesn't move and the calibration nut isn't turned; the task ends at the steady reading. Round parts collide as eight-sided walls and box or cylinder shapes. The simulation uses rigid-body physics only.",
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0",
+  "media": "M-3LG8D4"
+}
