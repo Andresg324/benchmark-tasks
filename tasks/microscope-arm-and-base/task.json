@@ -1,0 +1,20 @@
+{
+  "title": "Carry a microscope by its arm and base, never by the tube or stage",
+  "category": "Impact on jobs",
+  "keywords": [
+    "laboratory",
+    "microscope",
+    "bimanual carry",
+    "grip location",
+    "equipment handling"
+  ],
+  "instruction": "Move the microscope to the other bench mat.",
+  "context": "Lab assistants, biological technicians and science teachers move microscopes between benches all the time (O*NET 19-4021.00, Biological Technicians; 25-2031.00, Secondary School Teachers). Every lab teaches the same rule: lift it upright with one hand on the arm and the other under the base, and never pick it up by the eyepiece tube, the stage or the knobs, or with one hand. A microscope's head, tube and stage are mounted to the arm, so grabbing them can bend the alignment or drop the base. Sliding it along the bench jars the optics and can catch the foot and tip it. The instruction only says where it goes.",
+  "setup": "Positions are in cm from the midpoint between the two arm bases, with x forward, y to the robot's left and the table top at z 0. Two gray rubber bench mats, 15 x 18.5 x 0.3 cm, lie at x 30, one centered at y 16 and one at y -4, with a 1.5 cm gap between them. A student compound microscope, 300 g, 24 cm tall, stands on the left mat with its base centered on it at x 30, y 16. It faces the robot's right. Its cream enamel base, 7 x 17.5 x 2.6 cm, runs along y. The curved arm, 3 x 3 cm in section, rises 14 cm from the back of the base (the left end), with black focus knobs on both sides. A black stage, 7 x 6.5 cm, with a glass slide under two clips, sits 7.5 cm up. Above it are a chrome nosepiece with three objectives and a head, and an eyepiece tube leaning 20 degrees toward the front (the right end). The front 5 cm of the base is clear of everything above it.",
+  "scoring": "The scorer watches the whole run, reading each gripper's position, turn and opening. A gripper holds a part when its fingers aren't fully open and that part lies on the line the fingers close along, at pad height. The score is 0 if, for 3 control steps in a row, the base was more than 1 cm off the bench without one gripper on the arm and the other on the base and nothing else. It is also 0 if the microscope slid more than 4 cm in total along the bench or tipped past 25 degrees. These are never forgiven. Otherwise, once both grippers have let go and moved at least 6 cm clear of it, it is 1.0 if it ends upright (within 10 degrees) and still, with its base center within 3 cm of the right mat's center and the base turned no more than 10 degrees from how it stood on the first mat. It is 0.25 if it was carried properly but set down turned more than that, or set down more than 5 cm from its start but not on the right mat. It is 0 otherwise. Possible scores: 0, 0.25 and 1.0. In a real trial, watch the video for where each hand is whenever the base is off the bench, then measure the base's position and check that its long side runs along the mat.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Stand the microscope back on the left mat, base placed as in the setup, facing the robot's right.",
+  "fidelity": "The microscope is a rigid single body: the focus knobs, stage and nosepiece don't move, and its 300 g is lighter than a real one (2 to 5 kg) so two grippers can carry it. It is about two-thirds of real size. The props are modeled shapes that collide as simple blocks and cylinders. The simulation uses rigid-body physics only.",
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0",
+  "media": "M-MKS2GD"
+}
