@@ -1,0 +1,20 @@
+{
+  "title": "Store red cells, platelets and plasma each at its own temperature",
+  "category": "Impact on jobs",
+  "keywords": [
+    "blood bank",
+    "transfusion",
+    "storage temperature",
+    "platelets",
+    "AABB standards"
+  ],
+  "instruction": "Put away the blood products from the delivery.",
+  "context": "Medical and clinical laboratory technologists and technicians (O*NET 29-2011.00, 29-2012.00) check in blood deliveries in hospital blood banks. AABB standards and FDA rules (21 CFR 640) set a storage temperature for each product. Red cells go in the blood bank refrigerator at 1 to 6 °C. Standard platelets are kept at 20 to 24 °C with constant agitation, because refrigerating them shortens their survival in the patient after transfusion. Frozen plasma goes in a freezer at -18 °C or colder, because thawed plasma can't be refrozen and expires within days. A unit stored at the wrong temperature is discarded. The tempting shortcut is to put everything in the refrigerator. Unlike an ABO issuing task, this tests storage, not compatibility.",
+  "setup": "Positions are in cm from the midpoint between the two arm bases, with x forward, y to the robot's left and the table top at z 0. A fixed open blue transport cooler (13 x 25 cm inside, 4 cm walls, 0.8 cm thick, white rim) is centered at x 23.5, y 0. Three blood bags lie flat in it along x, each 10 x 4.5 cm with a clear film, a white barcode label on top, two ports at the +x end and a hanging tab at the -x end. Red blood cells: dark red, 2.5 cm thick, 60 g, at y 8.5. Frozen plasma: pale yellow with a white frost layer, 2.2 cm thick, 50 g, at y 0. Platelets: opaque straw color, 2.5 cm thick, 60 g, at y -8.5. On the left is a fixed chest blood bank refrigerator centered at x 30, y 21.5: white walls 7 cm tall around a 17 x 13 cm well with a pale gray floor, a dark rim, the lid standing open behind it and a green display on its front. Two red cell units already lie across the back of its well. On the right is a matching fixed chest freezer at x 30, y -21.5, frosted inside, with a blue display and two frozen plasma units across the back. Straight ahead is a fixed platelet agitator centered at x 37.5, y 0: a gray base 10 x 17 x 3.5 cm with an amber display, under a white platform 12 x 17 cm whose top is 4.3 cm up, with 0.8 cm rails along its front and back edges. One platelet unit already lies across its far half.",
+  "scoring": "A unit counts as in the refrigerator or the freezer when its center is inside that unit's well and its top is below the rim. It counts as on the agitator when its center is over the platform and its bottom is no more than 2.5 cm above the platform's surface, so it may lie on the platform or on the platelet bag already there. The scorer watches the whole run. The score is 0 if any unit ever rested in the wrong storage unit for 1 s (20 control steps), even if it was moved out afterwards, since that unit would be discarded. It is also 0 if any unit is in the wrong storage unit at the end, at rest or not. Otherwise the score is one third for each unit resting in its own storage at the end: red cells in the refrigerator, platelets on the agitator, plasma in the freezer. Units left in the cooler or on the table earn nothing. The possible scores are 0, 0.33, 0.67 and 1.0. In a real trial, watch the video for where each bag is set down and check the three storage units at the end.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Lay the three bags back in the cooler at their start positions, film side up, ports facing away from the robot.",
+  "fidelity": "The bags are rigid blocks with modeled film, labels and ports. The refrigerator and freezer are open chest units shown at about one-sixth scale, and the agitator doesn't rock. Bags are about 0.6 scale. No temperatures are simulated: the storage units are told apart by their contents, frost and display colors. Rigid-body physics only.",
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0",
+  "media": "M-ABXM4Q"
+}
