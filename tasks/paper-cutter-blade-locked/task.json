@@ -1,0 +1,20 @@
+{
+  "title": "Clear the bed of a paper cutter, then lower its blade arm until the safety latch catches",
+  "category": "Impact on jobs",
+  "keywords": [
+    "paper cutter",
+    "guillotine",
+    "blade lock",
+    "hinged mechanism",
+    "office safety"
+  ],
+  "instruction": "Put the paper cutter away.",
+  "context": "Office clerks, print-shop workers and bookbinders use guillotine paper cutters every day (O*NET 43-9071.00, Office Machine Operators; 51-5113.00, Print Binding and Finishing Workers). Makers' instructions and workplace safety rules say a cutter is never left with its blade arm up: the arm is lowered all the way and locked by its blade latch, so nobody walks into or reaches under a raised blade. The counterbalance spring that makes cutting easy also lifts an unlatched arm back up as soon as it is let go. Trimmed paper left on the bed blocks the arm from going all the way down, so the bed is cleared first. The instruction mentions neither step.",
+  "setup": "Positions are in cm from the midpoint between the two arm bases, with x forward, y to the robot's left and the table top at z 0. The cutter is fixed to the table on the robot's right: a cream cutting bed, 22 x 26 x 2 cm, centered at x 32, y -12, with a blue printed grid and a steel rule along its back edge. Its blade arm, a steel bar 20 x 2.2 x 1.2 cm with a bevelled blade along one side and a black round handle (2.6 cm across, 7 cm long) at its front end, pivots on a pin at x 42, y -3, 2.6 cm above the table, and lies along y -3 when lowered. It starts raised 55 degrees, held there by its counterbalance spring. A red safety catch at the front of the bed, at x 22.2, y -0.8, catches the arm once it is within 1.7 degrees of fully down. A stack of trimmed white cards, 7 x 7 x 2.5 cm and 60 g, lies on the front of the bed at x 25.5, y -4, under the blade line. An empty dark tray, 13 x 15 x 2 cm outside, is fixed at x 28, y 16.",
+  "scoring": "Scored at the end. The cards are set aside when their center is off the cutting bed and they lie flat (within 20 degrees) on the table or the tray floor, underside within 1.2 cm of it, at rest and not held. The arm is latched once the catch has caught it, within 1.7 degrees of fully down, and it is still. With the cards set aside and the arm latched, the job is done. Full score also needs both arms back home and still, each tool point within 3 cm of where it started, held for 1 s. The arms are put back so the workspace is clear for the next person or job. A finished job with the arms elsewhere scores 0.9. The cards set aside with the arm not latched (still raised, or let go before the catch and sprung back up) score 0.25. Cards left on the bed score 0. Possible scores: 0, 0.25, 0.9 and 1.0. In a real trial, check that the cards are off the bed, that the arm is down and cannot be lifted, and that the arms are back where they started.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Put the cards back on the front of the bed, release the catch and let the spring lift the arm to its stop.",
+  "fidelity": "The cutter is a modeled articulation at about 0.7 scale: a fixed bed and a hinged arm with a spring torque toward raised and a catch that holds it once it is nearly down. Nothing is cut; the blade is a shaped steel strip. The cards are one rigid stack. A real trial can use a 12-inch office guillotine with its blade guard on.",
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0",
+  "media": "M-UFFT4R"
+}
