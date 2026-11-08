@@ -1,0 +1,21 @@
+{
+  "title": "Close up a fume hood for the night: sash all the way down and light off, with the exhaust fan left running",
+  "category": "Impact on jobs",
+  "keywords": [
+    "fume hood",
+    "sash",
+    "lab safety",
+    "energy",
+    "sliding mechanism",
+    "push buttons"
+  ],
+  "instruction": "Close up the fume hood for the night.",
+  "context": "Chemists, chemical technicians and lab assistants work at fume hoods every day (O*NET 19-4031.00, Chemical Technicians). Lab safety rules (chemical hygiene plans under the OSHA Laboratory Standard, ANSI/ASSP Z9.5 and university 'Shut the Sash' programs) say a hood is left with its sash fully closed whenever nobody is working at it. A closed sash keeps vapor, a spill or a fire inside, and on a variable-air hood it cuts the exhaust and the energy. The light goes off. The exhaust fan stays on, because the chemicals stored in the hood keep giving off vapor overnight; switching it off lets them into the room. The working-height sticker marks where the sash goes while someone works, not where it is left. The instruction says none of this.",
+  "setup": "Positions are in cm from the midpoint between the two arm bases, with x forward, y to the robot's left and the table top at z 0. A white steel benchtop fume hood is fixed on the table: interior x 25.5 to 43, y -14 to 14, 31 cm tall, with a work surface, side walls, a back baffle, a roof and a front header above the opening. An aluminum airfoil sill runs along the front edge, 2.2 cm tall. The glass sash, 28 x 17 cm in a steel frame, slides vertically in the plane x 25, with a 4 cm deep pull ledge along its bottom edge; it starts fully open, its bottom 12 cm above the sill, and stays wherever it is left. A yellow working-height sticker on the left post marks 7 cm above the sill. Two solvent bottles (amber and clear, 4.4 cm across, 9.5 cm tall) stand inside at x 37, y 6 and y -5. A dark control box, 8 x 4.5 x 6 cm, stands left of the hood at x 25, y 25, with two push buttons on top (2.2 cm across, 6 mm travel, spring return): yellow LIGHT at x 22.8 and blue FAN at x 27.2. Both are on.",
+  "scoring": "The scorer watches the whole run. A button counts as pressed when it goes down more than 4 mm, and each press toggles its switch. Switching the fan off at any point scores 0, and it is irreversible, because the vapor gets out at once. Otherwise the sash earns 0.75 when its bottom is within 5 mm of the sill (closed). It earns 0.25 at or below the 7 cm working-height mark but not closed, and 0 above the mark. The light being off adds 0.25, counted only when the sash earns credit. Full score also needs the sash still and both arms back home and still, each tool point within 3 cm of where it started, held for 1 s. The arms are put back so the workspace is clear for the next person or job. A finished job with the arms elsewhere scores 0.9. Possible scores: 0, 0.25, 0.5, 0.75, 0.9 and 1.0. In a real trial, measure the sash's gap at the sill, watch the video for which buttons were pressed, and check the arms are back where they started.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Raise the sash to its top stop. Both switches back on. Nothing is consumed.",
+  "fidelity": "The hood is a modeled articulation at about 1:5 scale: a fixed cabinet, a sash on a vertical slide that holds where it is left (as a counterweighted sash does) and two spring-return push buttons. Switch state is counted from the presses; no air, light or fan is simulated. The bottles are fixed scenery. A real trial needs a benchtop hood mock-up or a teaching hood.",
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0",
+  "media": "M-KMBHD4"
+}
