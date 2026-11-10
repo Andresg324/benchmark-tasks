@@ -1,0 +1,23 @@
+{
+  "title": "Wrap a window blind's cord on the high wall cleat, out of a child's reach",
+  "category": "Impact on jobs",
+  "keywords": [
+    "deformable",
+    "cord",
+    "window blind",
+    "child safety",
+    "cord cleat",
+    "wrapping",
+    "unstated rule",
+    "childcare"
+  ],
+  "instruction": "The afternoon sun is in the playroom, so the blind is down. Tidy up its cord.",
+  "context": "Childcare workers (O*NET 39-9011.00) and preschool teachers (25-2011.00) tidy window-blind cords many times a day: the lift cord is wrapped around the cord cleat mounted high on the wall (at least 1.6 m, per CPSC and ANSI/WCMA A100.1 window-covering guidance and state child-care licensing rules), with the slack taken up so no loop or tassel hangs within a child's reach. A hanging blind-cord loop is a leading strangulation hazard for young children, and the wall here also has a cleat by the sill at child height, which is the easier one to reach and exactly the wrong place for the cord.",
+  "setup": "Positions in cm from the midpoint between the two arm bases, x forward, y to the robot's left, table top z = 0; room heights are drawn at 1:14 (the table is the floor), while the cord, tassel and cleats are near life size. Wall: a fixed painted panel 70 cm wide (y -35 to +35), 20.5 cm high, 6 cm deep, its face at x 40. Window on the wall: white trim around a pale blue-gray glass sheet, y -8.5 to +18.5, 6.5 to 18 cm high, sill trim along its bottom. Blind: a white mini blind (13 slats, 29 cm wide, y -10 to +19) lowered to the sill in front of the glass, with a white headrail 31.5 x 1.2 x 1.4 cm from y -12 to +19.5, centered 19 cm high. Cord: a cream braided lift cord 30 cm long, 5.6 mm thick, 30 g, leaving the headrail's bottom at x 38.4, y -11, z 18.2; at the start it hangs straight down to the table and runs along it toward the robot, ending in a 4 x 1.8 x 1.8 cm wooden tassel (35 g) at about x 28, y -13. High cord cleat: zinc, 64 mm, screwed to the wall with its horns horizontal (base plate 4 x 1.6 cm, a 1.4 cm square post standing 2 cm off the wall, horns 6.4 cm long, 0.8 cm thick, 1 cm tall), post centered at y -18, 11.5 cm high (1.61 m). Low cord cleat: identical, at y -2, 4.5 cm high (0.63 m), just under the sill. Both arms start at home.",
+  "scoring": "Checked at the end of the run on the settled cord (no point moving more than 2 mm per control step; a cord still moving scores 0), which must hold for 1 s. Turns on a cleat = half a turn for each pass of the cord through the horns' plane behind a horn (between it and the wall, less than 2.4 cm out) and within its 6.4 cm span, netted per horn and added unsigned over both horns, so a round turn or a figure-eight counts 1 and loops in front of the horns or past their tips count 0. Lowest point = the lowest of the cord's link points and the tassel's bottom. Hands off = no gripper holds the tassel and no tool point is within 4 cm (3D) of the cord or tassel. 0: fewer than 1 turn on the high cleat (cord left hanging, coiled on the floor or sill, hooked over a cleat), half a turn or more on the low cleat (even with the high cleat also used), or the cord still held or touched. 0.25: at least 1 turn on the high cleat but part of the cord or the tassel below the 1.0 m line (7.1 cm above the table, about a two-year-old's standing overhead reach): a loop of slack or the tassel left hanging. 1.0: at least 1 turn on the high cleat, nothing below the line, nothing on the low cleat, hands off and both arms back home (within 3 cm of their start, the arm's 1.6 cm lag plus margin, and still); 0.9 if all that holds but the arms are not home. Possible scores: 0, 0.25, 0.9, 1.0. Real trial: count the turns on each cleat by eye and measure the lowest point of the cord and tassel from the table with a ruler.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Unwind the cord from both cleats and let it hang from the headrail straight down to the table and along it toward the robot, tassel at about x 28, y -13. Check that both cleats are tight on the wall.",
+  "fidelity": "The cord is 15 rigid 2 cm links with bending springs and no twist; the tassel is a rigid box welded to its end. Cleats, wall, window and blind are fixed rigid parts (the blind and window are visual only). Heights are scaled 1:14 so the high cleat is within the arm's reach, while the cord and cleats are near life size. Turns are computed from the links' joint points.",
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0",
+  "media": "M-FXWTAF"
+}
