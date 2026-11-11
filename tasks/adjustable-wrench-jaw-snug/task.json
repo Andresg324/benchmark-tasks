@@ -1,0 +1,26 @@
+{
+  "title": "Loosen a nut with an adjustable wrench: roll the jaw snug on the flats before pulling, so it doesn't round the nut",
+  "category": "Impact on jobs",
+  "keywords": [
+    "adjustable wrench",
+    "crescent wrench",
+    "jaw play",
+    "thumbwheel",
+    "worm",
+    "hex nut",
+    "rounded nut",
+    "fixed jaw",
+    "mechanic",
+    "plumber",
+    "tool use"
+  ],
+  "instruction": "Loosen the nut on the base plate with the adjustable wrench, then take the wrench off it and set it down.",
+  "context": "Plumbers, pipefitters and industrial machinery mechanics (O*NET 47-2152, 49-9041) loosen nuts with an adjustable wrench every day. Before pulling they roll the knurled worm in the wrench's head until the movable jaw closes snug on the nut's flats. A jaw left loose lets the wrench turn on the nut until it bears on the corners, which round off, and the wrench slips and skins knuckles. They also set the wrench so the pull presses the nut into the fixed jaw, which is solid with the handle. Pulled the other way, the load lands on the movable jaw's tip, which levers it open in its slot so the wrench springs off the nut. Safety agencies' hand-tool guidance gives both rules: adjust the jaws snug and turn toward the fixed jaw. Here the wrench sits on the nut with its jaw 2 mm too wide.",
+  "setup": "Coordinates in cm from the midpoint between the two arm bases, x forward, y to the robot's left, table top z = 0. Angles are counterclockwise from +x, seen from above. Steel base plate (fixed): 26 x 30 x 0.8 cm, painted blue-gray, centered at (27, 4), with a bolt head at each corner. Hold-down stud: M12, its axis at (30, 0), standing 0.5 cm above the nut. On it, a zinc flat washer (2.4 cm across, 0.25 cm thick) and a zinc M12 hex nut (DIN 934, 1.9 cm across flats, 2.19 cm across corners, 1.0 cm thick), tightened: it breaks loose at 0.48 N*m and can be forced at most 10 degrees tighter. Adjustable wrench: 8-inch (20.5 cm), chrome steel, 0.25 kg, red dipped grip on the last 9 cm of the handle. It lies flat on the nut with the nut in its jaws, flats square to the jaws, its handle pointing from the nut toward 60 degrees (forward-left) and its jaw opening facing 330 degrees (forward-right). Its fixed jaw is on the far side of the nut from the handle; the movable jaw sits between the nut and the handle. The jaw is open 2.1 cm, 2 mm wider than the nut. The knurled worm (thumbwheel, 1.6 cm across, 1.1 cm long, its axis along the jaw's travel) sits in a window in the head 3.8 cm from the nut's axis toward the handle and stands 3 mm proud of the head's faces; one turn moves the jaw 2 mm, and rolling the worm's top toward the head's back (the throat side, away from the jaw opening) closes the jaw. Seen from above, a counterclockwise pull (handle end moving back and to the left) loosens the nut and presses it into the fixed jaw; clockwise tightens it and loads the movable jaw. Both arms start at their home poses.",
+  "scoring": "Definitions: play = jaw opening minus the nut's 1.9 cm across flats. Loosened = how far the nut turned counterclockwise from its start. Hands off = no gripper's tool point within 5 cm of the wrench's handle or head. Set down = the wrench lifted off the nut and lying on the plate with its jaws 3 cm or more from the nut's axis. Rounded (0, irreversible): the nut turned 2 degrees or more in total with play over 1 mm (with 1 mm of play the nut turns 5.7 degrees inside the jaws before they bear, on its corners), or the wrench spun 30 degrees on a nut that turns freely in jaws over 2.94 mm too wide. Movable jaw loaded (0, irreversible): the nut forced 2 degrees or more clockwise in total while the wrench is on it (2 degrees is past any flex: the thread holds the nut until the wrench flexes 3.4 degrees). Scores: 0 if rounded, movable jaw loaded, loosened under 5 degrees, or not hands off at the end. 0.25: loosened 5 to 60 degrees. 0.5: loosened 60 degrees or more (one flat of the hex, a full swing) but the wrench not set down. 1.0: loosened 60 degrees or more and set down, hands off, and both arms back home and still (0.9 if not home). Possible scores: 0, 0.25, 0.5, 0.9, 1. Real trial: a paint-pen line across the nut and washer, read with a protractor template; the jaw's play read with a caliper on a paused frame of the overhead video before the first pull, and the pull's direction from the same video; the wrench's position with a tape measure.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Tighten the nut back to its mark (a paint line across nut and washer) at the trial torque, set the wrench on it in the same pose with the handle toward 60 degrees, and open the jaw to 2.1 cm with a caliper (2 mm of play).",
+  "fidelity": "The wrench rides hidden joints (lift, turn about the nut, two slides): it can be lifted off, moved and laid flat but not tipped or flipped over, so its face up is fixed and the pull that loads the movable jaw is also the tightening one. The thread is a breakaway model at 0.48 N*m (a real M12 nut takes about 50 N*m; scaled to the arm). Rounding and the jaw springing open are scored events, after which the wrench slips on the nut.",
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0 (966 steps)",
+  "media": "M-XVVMRA"
+}
