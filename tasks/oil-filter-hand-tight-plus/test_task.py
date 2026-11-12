@@ -31,6 +31,15 @@ def st(p, yaw_deg=0.0):
                        ang_vel=np.zeros(3), low=p - .01, high=p + .01)
 
 
+def sg(p, yaw_deg=0.0):
+    """A gripper pointing straight down (pad tips below the tool point, as in the demo), its wrist turned `yaw_deg`
+    about the vertical: the quaternion Rz(yaw) * Rx(180 degrees)."""
+    p = np.array(p, float)
+    a = math.radians(yaw_deg) / 2
+    return ObjectState(pos=p, quat_xyzw=np.array((math.cos(a), math.sin(a), 0.0, 0.0)), lin_vel=np.zeros(3),
+                       ang_vel=np.zeros(3), low=p - .01, high=p + .01)
+
+
 def grip_z(below_top):
     """Tool point height for a grasp `below_top` metres under the can's top."""
     return TOP + m.SEAT + m.CAN_H - below_top
@@ -54,7 +63,7 @@ class Trial:
         tk._track(KEY).u = math.radians(-self.past)  # what twistkit reads from the simulator's hinge
         objs = {"head": st((*AX, TOP)), KEY: st((*AX, TOP + m.SEAT))}
         for g, (p, op, yaw) in (("left_gripper", self.L), ("right_gripper", self.R)):
-            objs[g] = st(p, yaw)
+            objs[g] = sg(p, yaw)
             kit._OPENING[g] = op
         tk._account(objs)
         self.ok = m.success(objs)
@@ -157,6 +166,43 @@ for stroke in (120.0, 90.0, 60.0, 45.0):
 case("pads slipping 3 degrees a step on the can", done(twist(Trial(), 300, slip=3.0)), 1.0)
 case("left arm does it (the filter is in reach of either)", done(twist(Trial(), 300, side="L")), 1.0)
 
+# --- review, Nov 12: a second hand near the can, or helping, does not void the holder's turning ----------------
+near = ((AX[0] - 0.05, AX[1] + 0.03, grip_z(0.03)), 1.0, 0.0)  # left tool point 2.5 cm outside the can's wall
+
+def twist_with_left(t, to, left):
+    """twist() by the right hand with the left gripper held at `left` throughout."""
+    t.L = left
+    return twist(t, to)
+
+
+case("right hand turns it to 300 while the left hovers open 2.5 cm from the can",
+     done(twist_with_left(Trial(), 300, near)), 1.0)
+case("right hand turns it to 300 while the left rests closed 1 cm from the can (steadying the head)",
+     done(twist_with_left(Trial(), 300, ((AX[0] - m.CAN_R - 0.01, AX[1], grip_z(0.03)), 0.0, 0.0))), 1.0)
+t = Trial()
+gR, gL = (*AX, grip_z(0.015)), (*AX, grip_z(0.045))
+yaw = 0.0
+t.step(R=(gR, W, 0.0), L=(gL, W, 0.0))
+while t.past < 300 - 1e-9:  # both hands closed on the can, both wrists rolling with it, 10 degrees a step
+    yaw -= 10.0
+    t.step(past=t.past + 10.0, R=(gR, W, yaw), L=(gL, W, yaw))
+t.step(R=(gR, 1.0, yaw), L=(gL, 1.0, yaw))
+case("both hands on the can, turning it together to 300", done(t), 1.0)
+t = Trial()
+yaw = 0.0
+t.step(R=(gR, W, 0.0), L=(gL, W, 0.0))
+while t.past < 300 - 1e-9:  # both hands closed on the can, only the right wrist rolling (the left steadying, slipping)
+    yaw -= 10.0
+    t.step(past=t.past + 10.0, R=(gR, W, yaw), L=(gL, W, 0.0))
+t.step(R=(gR, 1.0, yaw), L=(gL, 1.0, 0.0))
+case("both hands on the can, the right wrist turning it to 300, the left only steadying", done(t), 1.0)
+t = Trial()
+t.step(R=(gR, W, 0.0), L=(gL, W, 0.0))
+while t.past < 300 - 1e-9:  # both hands closed on the can, neither wrist rolling, yet it turns: swiped
+    t.step(past=t.past + 10.0)
+t.step(R=(gR, 1.0, 0.0), L=(gL, 1.0, 0.0))
+case("both hands closed on the can, neither wrist rolling, the filter turned to 300 anyway (swiped)", done(t), 0.0)
+
 # --- cheats and near misses ---------------------------------------------------------------------
 case("knocked spin: turned to 300 with no grip on it", done(swipe(Trial(), 300)), 0.0)
 case("gripped to contact, then swiped the rest of the way to 300", done(swipe(twist(Trial(), 0), 300, R=LIFTED)), 0.0)
@@ -212,17 +258,39 @@ t.R = ((*AX, grip_z(0.015)), W, 0.0)
 case("400 degrees and still gripping (no more than 0.5)", t.hold(40), 0.5)
 t = twist(Trial(), 300)
 t.R = ((*AX, TOP + m.SEAT + m.CAN_H + 0.01), 1.0, 0.0)
-case("300 degrees, an open hand 1 cm above the filter at the end", t.hold(40), 0.9)
+case("300 degrees, an open hand 1 cm above the filter at the end (let go)", t.hold(40), 1.0)
+# --- let go: judged by contact (the gripper's own shape within 2 mm of the can), not by a zone around it ----------
+TIP = 0.0128  # the pad tips' reach below the tool point, pointing down (guardkit's tip box)
+_body = m.gk.hand_boxes(0.0)[1]  # a closed hand's finger body: its outer face 2.4 cm out along the closing axis
+FIST = abs(_body.center[0]) + _body.size[0] / 2
+CAN_TOP = TOP + m.SEAT + m.CAN_H
+for name, R, want in [
+        ("closed fist beside the can, its fingers 5 mm off the side (the old 1.5 cm zone capped it at 0.5)",
+         ((AX[0] - m.CAN_R - FIST - 0.005, AX[1], grip_z(0.03)), 0.0, 0.0), 1.0),
+        ("fingers half open, tips 5 mm over the can's top (the old zone capped it at 0.5)",
+         ((*AX, CAN_TOP + TIP + 0.005), 0.5, 0.0), 1.0),
+        ("fingers 79 % open around the can, tool point on its axis, pads 4 mm off its wall (the old zone capped it)",
+         ((*AX, grip_z(0.03)), (m.CAN_R + 0.004) / abs(tk.FINGER_OPEN), 0.0), 1.0),
+        ("fingers half open, tips 1 mm over the can's top: touching it", ((*AX, CAN_TOP + TIP + 0.001), 0.5, 0.0), 0.5),
+        ("open hand, fingertips resting on the can's top: touching it", ((*AX, CAN_TOP + TIP), 0.35, 0.0), 0.5),
+        ("closed fist beside the can, its fingers 1 mm off the side: touching it",
+         ((AX[0] - m.CAN_R - FIST - 0.001, AX[1], grip_z(0.03)), 0.0, 0.0), 0.5),
+        ("wide-open hand, a finger's inner face 1 mm off the can's wall: touching it",
+         ((AX[0] + abs(tk.FINGER_OPEN) - m.CAN_R - 0.001, AX[1], grip_z(0.03)), 1.0, 0.0), 0.5)]:
+    t = twist(Trial(), 300)
+    t.R = R
+    case(f"300 degrees at the end, {name}", t.hold(40), want)
+
 t = twist(Trial(), 300)
 t.R = AWAY
-case("300 degrees, arm left away from home", t.hold(40), 0.9)
+case("300 degrees, arm left away from home (not scored)", t.hold(40), 1.0)
 t = twist(Trial(), 300)
 for k in range(40):
     t.step(R=((R_HOME[0], R_HOME[1] + 0.002 * (k % 2), R_HOME[2]), 1.0, 0.0))
-case("300 degrees, arms at home but still moving", t.sc, 0.9)
+case("300 degrees, arms at home but still moving (not scored)", t.sc, 1.0)
 t = twist(Trial(), 120)
 t.R = AWAY
-case("120 degrees and an arm away (no 0.9 for a partial)", t.hold(40), 0.25)
+case("120 degrees and an arm away", t.hold(40), 0.25)
 
 
 # --- twistkit's held check itself ----------------------------------------------------------------
@@ -265,8 +333,8 @@ print("ok  " if t.ok else "FAIL", "success once done and the arms home")
 t = twist(Trial(), 300)
 t.R = AWAY
 t.hold(40)
-bad += t.ok
-print("ok  " if not t.ok else "FAIL", "no success with an arm away from home")
+bad += not t.ok
+print("ok  " if t.ok else "FAIL", "success with an arm left away from home (arm position is not scored)")
 done(twist(Trial(), 460))  # a reset clears an earlier trial's crushed gasket
 got = done(twist(Trial(), 300))
 bad += got != 1.0
@@ -274,11 +342,69 @@ print("ok  " if got == 1.0 else "FAIL", got, "a reset clears an earlier trial's 
 got = Trial().hold(40)
 bad += got != 0.0 or abs(tk.past_seat_deg(None, KEY) + 270.0) > 1e-9
 print("ok  " if got == 0.0 else "FAIL", got, "after a reset the filter is back at 270 degrees short of contact")
-m.REQUIRE_ARMS_HOME = False
-t = twist(Trial(), 300)
-t.R = AWAY
-got = t.hold(40)
-m.REQUIRE_ARMS_HOME = True
-bad += got != 1.0
-print("ok  " if got == 1.0 else "FAIL", got, "REQUIRE_ARMS_HOME off: done, arm away, scores 1.0")
+bad += hasattr(m, "REQUIRE_ARMS_HOME") or hasattr(m, "_other_hand_on")
+print("ok   no arm-home or other-hand-nearby rule left in the scorer")
+
+
+# The settling hold: the simulator steps the scene for 0.5 s after each reset before the first frame, and the thread's
+# drives must act in those steps too (without them the filter dropped onto its slide's stop and rose back in the
+# first second of the video). A fake embodiment checks that every settling step is preceded by the thread's drives,
+# that a second reset does the same, and that control steps after the reset are left as they were.
+import sys  # noqa: E402
+import types  # noqa: E402
+
+
+class _Env:
+    def __init__(self):
+        self.unwrapped, self.log = self, []
+
+    def reset(self):
+        pass
+
+    def step(self, action):
+        self.log.append(len(_calls))
+
+
+class _Emb:
+    def __init__(self):
+        self._env = None
+
+    def _ensure_sim(self, goal):
+        if self._env is None:
+            self._env = _Env()
+
+    def reset(self, *a, **k):
+        self._ensure_sim(None)
+        self._env.reset()
+        for _ in range(10):
+            self._env.step(None)
+        return "obs"
+
+
+_calls = []
+_name = "yam_arena.inspect_embodiment"
+_saved, _drive, _had = sys.modules.get(_name), tk._drive_thread, "head" in kit._MECHS
+sys.modules[_name] = types.SimpleNamespace(YamArenaEmbodiment=_Emb)
+tk._drive_thread = lambda base, spec: _calls.append(spec.name)
+kit._MECHS.setdefault("head", m.OBJECTS[0])
+try:
+    m._hold_thread_while_settling()
+    e = _Emb()
+    e.reset()
+    first = list(e._env.log)
+    e.reset()
+    second = e._env.log[10:]
+    e._env.step(None)  # a control step after the reset: no extra drive call (twistkit sets them as before)
+    after = e._env.log[-1]
+finally:
+    tk._drive_thread = _drive
+    if _saved is None:
+        sys.modules.pop(_name)
+    else:
+        sys.modules[_name] = _saved
+    if not _had:
+        kit._MECHS.pop("head")
+ok = first == list(range(1, 11)) and second == list(range(11, 21)) and after == 20 and _calls == ["head"] * 20
+bad += not ok
+print("ok  " if ok else "FAIL", "the thread's drives act in every settling step after each reset, and only then")
 print("all pass" if not bad else f"{bad} FAILED")

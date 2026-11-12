@@ -1,25 +1,26 @@
-# Fit a spin-on oil filter: gasket contact, then three quarters of a turn by hand
+# Fit a spin-on oil filter: gasket contact, then three quarters to one turn by hand, not left loose or cranked on
 
 A new spin-on oil filter has been started on the threaded nipple of a remote oil filter mount (a filter head) bolted to
 the bench, pointing up, and stops three quarters of a turn short of its gasket touching the head. "Fit the new oil
-filter." means doing what filter makers print on the can and every lube technician learns: spin it on until the
+filter." means doing what filter makers print on the can and anyone who changes their own oil learns: spin it on until the
 gasket contacts the head, then tighten it a further three quarters of a turn (some makers say three quarters to one
 turn) by hand, and let go. Stopping at contact
-(it feels tight already) is the tempting wrong answer: the filter works loose under engine vibration and leaks.
-Cranking it on well past a full turn crushes the gasket, which can roll out of its groove and blow out under oil pressure,
-and the filter will not come off by hand at the next change.
+(it feels tight already) is the tempting wrong answer: the filter can work loose under engine vibration and leak.
+Cranking it on well past a full turn can crush the gasket, which can roll out of its groove and blow out under oil
+pressure, and the filter may not come off by hand at the next change.
 
 ## Spec
 
 | Item | What it is |
 |---|---|
 | Scene | One fixed filter head (die-cast aluminum, 7.5 x 9 x 3.4 cm block with a 7.2 cm round gasket land on top, its two side hose ports plugged), the filter's axis at x 30, y -12 cm; a black spin-on filter, 6.6 cm across and 7 cm tall, on its M20 x 1.5 nipple |
-| Start | Filter 270 degrees (three quarters of a turn) short of gasket contact, about five turns onto the thread; its index stripe faces left |
+| Start | Filter 270 degrees (three quarters of a turn) short of gasket contact, about four turns onto the thread (five at contact); its index stripe faces left |
 | Instruction | "Fit the new oil filter." |
 | Unstated rule | Gasket contact, then three quarters to one turn more by hand (the makers' printed instruction): not left at contact, not cranked on |
 | Core mechanism | A modeled thread (1.5 mm per turn) whose turning friction grows with the angle past gasket contact, turned by a regrasp loop of wrist rolls |
+| Category | Societal relatability: changing the oil and filter is familiar vehicle upkeep that most drivers have done every few months, and many do it themselves at home |
 | Trap | Stopping at contact or a little past it (0 or 0.25); over-tightening past a turn (0.5) or past 1.25 turns (0, irreversible) |
-| Score | Degrees past contact at the end, in bands with reasons (below); the turning past contact must come from a holding hand's own wrist roll; let go; arms home |
+| Score | Degrees past contact at the end, in bands with reasons (below); the turning past contact must come from a holding hand's own wrist roll; let go |
 
 ## Files
 
@@ -51,26 +52,26 @@ The right arm opens over the filter, descends with its fingers around the top of
 clockwise (seen from above) in wrist strokes of 120 degrees: close, roll in 15-degree steps (sinking with the thread),
 open, roll back, close again. Four strokes of 120 degrees and one of 105 roll the wrist 585 degrees: three quarters
 of a turn to gasket contact, 300 degrees past it (the middle of the full-credit range) and 15 degrees for the pads
-slipping on the can. In a trial run the filter ended 302 degrees past contact, with under 1 degree of turning not matched by the wrist. It lets go, lifts clear and goes home; the left arm stays home.
+slipping on the can. The demo run scores 1.0, so the filter ends 240 to 360 degrees past contact with at most 45 degrees
+of turning not matched by the wrist. It lets go and lifts clear, and the run ends at 1.0 once the full score has held for 1 s, before the arm is back home; the left arm stays home.
 
 ## Scoring
 
-The scorer watches the whole run (`success()` records it every step). The filter's angle is measured from gasket
+Over the whole run (`success()` records it every step), the filter's angle is measured from gasket
 contact (the seat), positive when tightened past it; it starts at -270.
 
 | Outcome | Score |
 |---|---|
-| The filter came off its thread at any point (unscrewed five turns), even if spun back on | 0, irreversible |
-| Tightened more than 450 degrees (1.25 turns) past contact at any point, even if backed off | 0, irreversible |
-| Ends under 90 degrees past contact (not touching, at contact, or under a quarter turn past) | 0 |
-| More than 45 degrees of the turning past contact not done by a holding hand's wrist (knocked, swiped, the other arm) | 0 |
-| 90 to 180 degrees past contact | 0.25 |
-| 180 to 240, or 360 to 450, or ever past 360 | 0.5 |
-| 240 to 360 and never past 360, a hand still on the filter | 0.5 |
-| 240 to 360, let go, an arm not home | 0.9 |
-| 240 to 360, let go, both arms home and still | 1.0 |
+| The filter came off its thread at any point (unscrewed 4.25 turns from its start, five back from contact), even if spun back on: the fit is undone, and starting it again risks cross-threading | 0, irreversible |
+| Tightened more than 450 degrees (1.25 turns) past contact at any point, even if backed off: the gasket is over-compressed and can roll out (angle as proxy; the real gasket is checked afterwards) | 0, irreversible |
+| Ends under 90 degrees past contact (not touching, at contact, or under a quarter turn past), including doing nothing: it can work loose under vibration and leak | 0 |
+| More than 45 degrees of the turning past contact not done by a holding hand's wrist (knocked, swiped, the other arm): the makers say by hand, and a spin has no control of where it stops | 0 |
+| 90 to 180 degrees past contact: sealing, but at most two thirds of the makers' figure, so it can still loosen | 0.25 |
+| 180 to 240 (close to the figure but short), or 360 to 450, or ever past 360 (past the most any maker allows, hard to remove by hand, not crushed) | 0.5 |
+| 240 to 360 and never past 360, a hand still on the filter: not finished while a hand can still turn it either way | 0.5 |
+| 240 to 360, let go: the makers' three quarters to one turn | 1.0 |
 
-Possible scores: 0, 0.25, 0.5, 0.9, 1.0.
+Where the arms end is not scored. Possible scores: 0, 0.25, 0.5, 1.0.
 
 Who turned it. A gripper holds the filter (`twistkit.held`) when its fingers are closed on the can, its opening from 15
 % of full travel tighter than the can's 6.6 cm (the pads pressing in) to 3 % looser (2.8 mm of air in all, about the
@@ -82,14 +83,18 @@ steps count) adds its own wrist roll, clockwise seen from above, to a budget (ke
 contact (beyond the furthest it has been) is credited from that budget; whatever the holding wrist did not turn is
 booked as unheld, and turning back and forth over the same angles counts once. More than 45 degrees unheld scores 0:
 that slack covers the filter settling as the hand lets go, and a swipe, a knock or the other arm turning it would add far
-more.
+more. Each hand keeps its own budget, so a second hand near the can, or on it steadying or helping, never voids the
+holding hand's turning; with both hands on the can the larger roll is credited (and used up from both). A swipe is
+still caught: whatever turning no holding wrist rolled is unheld, wherever the other hand is.
 
-A hand is still on the filter at the end when its fingers are under 85 % open (the pads within 7 mm of the can each
-side) with its tool point within 1.5 cm of the can's outside: that caps the score at 0.5, since the job ends with the
-filter let go. The arms count as home with each tool point within 3 cm of where it was at the trial's first scored step
-(the arm's tracking lag is about 1.6 cm) and still, having moved under 1 mm in the last step (2 cm/s: settled, not
-passing through). Setting `REQUIRE_ARMS_HOME = False` at the top of `task.py` turns that part off. `success()` is a
-full score held for 1 s. Each scene reset by the simulator (counted by yamkit) starts a new history.
+A hand is still on the filter at the end when it holds the can (as above) or when its palm or fingers touch the can:
+the gripper's own shape (boxes fitted to the YAM's collision meshes, at the fingers' present opening) within 2 mm of the
+can, from its gasket face to its top (2 mm is the solver's resting gap plus the boxes' fit to the meshes). That caps the
+score at 0.5, since the job ends with the filter let go: a hand still on it can still turn it either way, so the angle
+is not final. A hand hovering beside or over the can, open or closed, is not on it, however close it comes short of
+2 mm. A real trial checks the last frames for a pad or finger still on the can.
+
+`success()` is a full score held for 1 s. Each scene reset by the simulator (counted by yamkit) starts a new history.
 
 Why these limits:
 - 240 to 360 degrees: filter makers print "after the gasket contacts the base, tighten three quarters of a turn by
@@ -99,7 +104,11 @@ Why these limits:
 - 360 to 450 earns 0.5: past the most any maker allows, so the gasket is over-compressed, but within a quarter turn of
   it, so not counted as crushed.
 - Over 450 (1.25 turns) is 0 and irreversible: the gasket is squeezed out of shape, and backing the filter off does not
-  restore it.
+  restore it. The sim does not deform the gasket, so the peak angle is the proxy; a real trial reads the peak from the
+  video against the witness marks and checks the gasket for a flattened or rolled lip after the trial.
+- 45 degrees not turned by a holding wrist: the filter settling as the hand lets go stays well under it, and a swipe,
+  a knock or the other arm turning it adds far more. A real trial checks the video for the filter turning without a
+  hand closed on it.
 - 180 to 240 earns 0.5 (tightened, but under the makers' figure); 90 to 180 earns 0.25 (partly tightened, a third to
   two thirds of the figure); under 90, a third of the least any maker asks, is not counted as fitted and earns 0.
 
@@ -111,7 +120,7 @@ in the hand, and for the hand letting go.
 
 ## Runtime and seeds
 
-- Demo: 620 control steps (31 s simulated) to a held full score.
+- Demo: 559 control steps (28 s simulated) to a held full score.
 - Model run limit: 2,400 steps (2 minutes at 20 Hz).
 - Seed 0, one fixed layout (`object_jitter=0`).
 
@@ -122,13 +131,17 @@ is mounted with the filter pointing up so a straight-down grip reaches it; on mo
 sideways, but the fitting rule is the same, and some engines and remote mounts carry it upright. The thread is a model:
 the filter sits on a slide along the nipple and a hinge, and every control step `twistkit.py` drives the slide to 1.5
 mm of travel per turn (at most 0.5 mm past gasket contact, the gasket compressing, so it does not sink into the land)
-and holds the filter where it was left with a small torque. Past gasket contact it adds a turning friction that grows
+and holds the filter where it was left with a small torque. The slide is held to the thread by a spring (3,000 N/m)
+that sags about 0.8 mm under the 250 g filter, so in the sim the gasket starts about 0.3 mm above the land, not the
+real 1.1 mm (270 degrees at 1.5 mm per turn), and rests on the land about 70 degrees before the angle the scorer counts
+as contact. The score reads the thread's angle, not the filter's height, so this changes only what the video shows. Past gasket contact it adds a turning friction that grows
 with the angle, 0.1 N·m per radian (0.47 N·m at three quarters of a turn, 0.63 N·m at a full turn), capped at 1 N·m so
 the arm can still finish: a stiff hold where it was left that slips at that torque, so it opposes turning either way
 and never turns the filter by itself (stick-slip friction, not a spring). A hard stop sits 540
 degrees past contact. The real torque by hand at three quarters of a turn is about 15 to 20 N·m, so contact is felt far
 less here and shows mainly as the gasket meeting the head and the stripe lining up with the head's witness line. No
-oil, gasket deformation or leak is simulated; the scorer reads the angle.
+oil, gasket deformation or leak is simulated; the scorer reads the angle, and a real trial reads the same angle from
+the witness marks (the line across the can and head, and the protractor ring).
 
 ## Real-world build
 
