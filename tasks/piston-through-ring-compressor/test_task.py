@@ -6,7 +6,11 @@ simulator.
 
 import os
 
+import math
+
 import numpy as np
+from yam_arena.constants import FINGER_OPEN, PAD_TIP_PAST_TCP as PAD_TIP
+from yam_arena.demo import grip_rotation
 from yam_arena.task_file import ObjectState, load
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -14,15 +18,28 @@ m = load(os.path.join(HERE, "task.py")).module
 kit = m.kit
 DECK = m.TOP + m.DECK
 HOME = {"left_gripper": (0.323, 0.30, m.TOP + 0.26), "right_gripper": (0.323, -0.30, m.TOP + 0.26)}
-AWAY = {"left_gripper": (0.25, 0.25, m.TOP + 0.20), "right_gripper": (0.25, -0.30, m.TOP + 0.20)}
-ON_CROWN = lambda q: (m.BX, m.BY, DECK + q + 0.013)  # noqa: E731
+AWAY = {"left_gripper": (0.30, 0.25, m.TOP + 0.15), "right_gripper": (0.10, -0.35, m.TOP + 0.15)}  # 24 cm off the axis
+ON_CROWN = lambda q, up=0.0: (m.BX, m.BY, DECK + q + PAD_TIP + up)  # noqa: E731  (fingertips on the crown, or `up` over it)
 _hp = m.HANDLE_DIR * m.PRESS_R
-ON_HANDLES = (m.BX + _hp[0], m.BY + _hp[1], DECK + 0.02)
+HANDLE_TOP = m.HANDLE_Z + 0.005  # the handles' collider tops above the deck
+ON_HANDLES = (m.BX + _hp[0], m.BY + _hp[1], DECK + HANDLE_TOP + PAD_TIP - 0.002)  # fingertips pressing the handles
 
 
-def st(pos):
+def mat_quat(R):
+    """Rotation matrix -> quaternion (x, y, z, w)."""
+    w = math.sqrt(max(0.0, 1 + R[0, 0] + R[1, 1] + R[2, 2])) / 2
+    x = math.copysign(math.sqrt(max(0.0, 1 + R[0, 0] - R[1, 1] - R[2, 2])) / 2, R[2, 1] - R[1, 2])
+    y = math.copysign(math.sqrt(max(0.0, 1 - R[0, 0] + R[1, 1] - R[2, 2])) / 2, R[0, 2] - R[2, 0])
+    z = math.copysign(math.sqrt(max(0.0, 1 - R[0, 0] - R[1, 1] + R[2, 2])) / 2, R[1, 0] - R[0, 1])
+    return np.array([x, y, z, w])
+
+
+DOWN = mat_quat(grip_rotation(0.0))  # grippers point straight down, fingers closed (opening 0) unless set
+
+
+def st(pos, q=(0, 0, 0, 1.0)):
     p = np.array(pos, float)
-    return ObjectState(pos=p, quat_xyzw=np.array([0, 0, 0, 1.0]), lin_vel=np.zeros(3), ang_vel=np.zeros(3),
+    return ObjectState(pos=p, quat_xyzw=np.asarray(q, float), lin_vel=np.zeros(3), ang_vel=np.zeros(3),
                        low=p - 0.01, high=p + 0.01)
 
 
@@ -35,9 +52,13 @@ def step(piston, lift=0.0, right=None, left=None, park=HOME):
         g["right_gripper"] = right
     if left is not None:
         g["left_gripper"] = left
-    objs = {"engine": st((m.BX, m.BY, DECK)), **{k: st(p) for k, p in g.items()}}
+    objs = {"engine": st((m.BX, m.BY, DECK)), **{k: st(p, DOWN) for k, p in g.items()}}
+    kit._OPENING.update({k: OPEN.get(k, 0.0) for k in g})
     ok = m.success(objs)
     return m.score(objs), ok
+
+
+OPEN = {}  # grippers' openings (default closed)
 
 
 def new_trial():
@@ -90,10 +111,11 @@ def correct():
 
 @case
 def correct_arms_not_home():
+    """Arms parked away from home at the end: the job alone earns full credit."""
     new_trial()
     finish(m.START, n=3)
     drive(m.START, m.SEAT)
-    return finish(m.SEAT, park=AWAY), 0.9
+    return finish(m.SEAT, park=AWAY), 1.0
 
 
 @case
@@ -153,16 +175,87 @@ def jump_across_deck_while_lifted():
     return finish(m.SEAT), 0.0
 
 
+FAST = [0.022 - 0.002 * k for k in range(4)] + [0.016, 0.012, 0.008, 0.004, 0.0, -0.004, -0.008, -0.010]
+
+
+def with_law(qs, held):
+    """Play crown heights qs through the compressor's law: an unheld band is at its modeled 6.7 mm ride-up at the
+    step after the law pushed it (the push ramps it up within one 50 ms step), a held one stays on the deck."""
+    cl, mem, pushed, out = m.CompressorLaw(), {}, False, None
+    for q in qs:
+        up = 0.0067 if (pushed and not held) else 0.0
+        out = step(q, up, right=ON_CROWN(q), left=ON_HANDLES if held else None)
+        _, k_, _, _ = cl.drive("engine/compressor", up, 0.0, {"piston": q, "compressor": up}, mem)
+        pushed = k_ > 0.0
+    return out
+
+
 @case
-def one_handed_fast_between_zones():
-    """Review, Nov 10: one hand drives at 8 cm/s (4 mm per step), the other at home; the samples fall between the ring
-    zones, so the band is never seen crossing. Each ring goes from above the entry to below the deck in one step:
-    slammed through, it escapes."""
+def fast_with_compressor_held():
+    """Review, Nov 11: a fast stroke (8 cm/s, 4 mm per 50 ms step, each ring from above the entry to below the deck in
+    one step) with the compressor held flat on the deck: no ring escapes, so the job counts."""
     new_trial()
     finish(m.START, n=3)
-    for q in [0.022 - 0.002 * k for k in range(4)] + [0.016, 0.012, 0.008, 0.004, 0.0, -0.004, -0.008, -0.010]:
+    with_law(FAST, held=True)
+    return finish(m.SEAT), 1.0
+
+
+@case
+def one_handed_fast_between_zones():
+    """The same fast stroke with nobody holding the compressor: the samples fall between the ring zones, but the
+    compressor's law tests the ring's path, so the band rides up and the next ring's path crosses the open gap."""
+    new_trial()
+    finish(m.START, n=3)
+    with_law(FAST, held=False)
+    return finish(m.SEAT), 0.0
+
+
+@case
+def fast_band_up_between_samples():
+    """A ring's whole path through a 3 mm gap falls between two samples (above the band's lip, then in the bore):
+    still an escape."""
+    new_trial()
+    finish(m.START, n=3)
+    step(0.0055 + 0.003, 0.0)  # top ring 3 mm above the deck, still in the band
+    step(0.0055 + 0.003, 0.0029)  # band 2.9 mm up: its lower edge just under the ring, which is still in it
+    step(0.0055 - 0.002, 0.0029)  # ring 2 mm into the bore: its path went through the gap
+    return finish(m.SEAT), 0.0
+
+
+@case
+def band_lifted_ring_still_in_band():
+    """The band 1.5 mm up while every ring is still 3 mm or more above the deck (inside the band, above its lower
+    edge), then pressed back down before any ring reaches the gap: nothing escaped."""
+    new_trial()
+    finish(m.START, n=3)
+    drive(m.START, 0.0085)  # top ring 3 mm above the deck
+    for _ in range(5):
+        step(0.0085, 0.0015, left=ON_HANDLES)
+    step(0.0085, 0.0, left=ON_HANDLES)
+    drive(0.0085, m.SEAT)
+    return finish(m.SEAT), 1.0
+
+
+@case
+def piston_pulled_up_out_of_band():
+    """The piston pulled up until the top ring's middle is past the band's top edge: it springs open above the band."""
+    new_trial()
+    finish(m.START, n=3)
+    for q in np.linspace(m.START, m.START + 0.002, 5):
         step(q, 0.0, right=ON_CROWN(q))
-    return finish(-0.010), 0.0
+    drive(m.START + 0.002, m.SEAT)
+    return finish(m.SEAT), 0.0
+
+
+@case
+def piston_nudged_up_inside_band():
+    """Pulled up 0.8 mm: the top ring's middle is still 0.2 mm under the band's top edge, so it stays squeezed."""
+    new_trial()
+    finish(m.START, n=3)
+    for q in np.linspace(m.START, m.START + 0.0008, 5):
+        step(q, 0.0, right=ON_CROWN(q))
+    drive(m.START + 0.0008, m.SEAT)
+    return finish(m.SEAT), 1.0
 
 
 @case
@@ -188,26 +281,80 @@ def compressor_lifted_with_rings_in():
     return finish(m.SEAT), 1.0
 
 
-@case
-def still_pushing_at_end():
+def end_with(q=None, right=None, left=None, n=30, lift=0.0):
+    """The correct drive to the seat (or to q), then the hands left at these poses for the last n steps."""
     new_trial()
     finish(m.START, n=3)
-    drive(m.START, m.SEAT)
+    q = m.SEAT if q is None else q
+    drive(m.START, q)
     out = None
-    for _ in range(30):
-        out = step(m.SEAT, right=ON_CROWN(m.SEAT))
-    return out, 0.0
+    for _ in range(n):
+        out = step(q, lift, right=right, left=left)
+    return out
+
+
+@case
+def still_pushing_at_end():
+    """Fingertips still on the crown: the rings are in, but the job isn't finished until the hand lets go."""
+    return end_with(right=ON_CROWN(m.SEAT)), 0.6
 
 
 @case
 def still_holding_compressor_at_end():
-    new_trial()
-    finish(m.START, n=3)
-    drive(m.START, m.SEAT)
-    out = None
-    for _ in range(30):
-        out = step(m.SEAT, left=ON_HANDLES)
-    return out, 0.0
+    return end_with(left=ON_HANDLES), 0.6
+
+
+@case
+def both_hands_on_at_end():
+    return end_with(right=ON_CROWN(m.SEAT), left=ON_HANDLES), 0.6
+
+
+@case
+def hand_grasping_a_handle_at_end():
+    """Fingers closed around the handle bars from above (pads either side, tool point at the bars' height)."""
+    p = m.HANDLE_DIR * m.PRESS_R
+    return end_with(left=(m.BX + p[0], m.BY + p[1], DECK + m.HANDLE_Z)), 0.6
+
+
+@case
+def held_band_flat_over_a_crossing_ring_at_end():
+    """The old loophole the hands-off rule guarded: the band held flat while the top ring is still crossing (2 mm above
+    the deck). Only the two rings wholly in the bore count, and they stay in when the hand lets go."""
+    return end_with(q=0.0075, left=ON_HANDLES, right=ON_CROWN(0.0075)), 0.4
+
+
+@case
+def fingertips_3mm_over_crown_at_end():
+    """Let go: closed fingertips hovering 3 mm over the crown, touching nothing (the old 21 cm zone scored 0)."""
+    return end_with(right=ON_CROWN(m.SEAT, 0.003)), 1.0
+
+
+@case
+def hand_hovering_over_bore_at_end():
+    """Fingertips 2.5 cm above the band's top over the bore (the old zone scored this 0)."""
+    return end_with(right=(m.BX, m.BY, DECK + m.BAND_H + 0.025 + PAD_TIP)), 1.0
+
+
+@case
+def fist_hovering_5mm_over_handles_at_end():
+    p = m.HANDLE_DIR * m.PRESS_R
+    return end_with(left=(m.BX + p[0], m.BY + p[1], DECK + HANDLE_TOP + PAD_TIP + 0.005)), 1.0
+
+
+@case
+def open_hand_beside_band_at_end():
+    """An open hand parked with its finger 1 cm beside the band's lip, at the side away from the handles (the old zone
+    scored this 0)."""
+    OPEN["left_gripper"] = 1.0
+    try:
+        pos = (m.BX, m.BY - m.BAND_OUT - 0.0015 - 0.01 - (abs(FINGER_OPEN) + 0.0064), DECK + 0.03)  # tip 1 cm out
+        out = end_with(left=pos)
+        objs = {"left_gripper": st(pos, DOWN), "compressor": m._on_axis(0.0)}
+        gap = m.gk.hand_gap(objs, "left_gripper", "compressor", m.COMPRESSOR_SHAPE)
+        assert abs(gap - 0.01) < 1e-4, gap  # the pose is what it says: 1 cm from the band, not touching
+        return out, 1.0
+    finally:
+        OPEN.clear()
 
 
 @case
@@ -262,6 +409,8 @@ def only_hold_compressor():
     return finish(m.START), 0.0
 
 
+
+
 @case
 def history_reset():
     """A failed trial, then a scene reset and a clean trial: the new trial is scored on its own."""
@@ -293,6 +442,15 @@ def law_checks():
     assert lift_e == 0.0 and k_ == 0.0
     t, k, e, d = pl.drive("engine/piston", q, 0.0, {"compressor": 0.004, "piston": q}, mem)
     assert mem["jam"] == q and mem["escaped"] == [0] and k == m.JAM_HOLD
+    # a fast stroke: the top ring at 4.5 mm above the deck, moving 4 mm a step, will skip the 2.5 mm zone between
+    # samples; the compressor's law still pushes the band up (and the piston's law adds the crossing drag and push)
+    mem_c = {"piston": 0.0055 + 0.0085}
+    tgt, k_, _, _ = cl.drive("engine/compressor", 0.0, 0.0, {"piston": 0.0055 + 0.0045, "compressor": 0.0}, mem_c)
+    assert k_ == m.LIFT_K, "a ring about to cross between samples pushes the band"
+    mem = pl.fresh(L)
+    mem["prev"] = 0.0055 + 0.0085
+    t, k, e, d = pl.drive("engine/piston", 0.0055 + 0.0045, 0.0, {"compressor": 0.0, "piston": 0.0}, mem)
+    assert e == m.RING_PUSH and mem["jam"] is None
     # equilibrium ride-up of an unheld compressor: lift = weight
     up = (m.LIFT_N - m.COMP_MASS * 9.81) / m.LIFT_K
     assert 0.005 < up < 0.008, up
