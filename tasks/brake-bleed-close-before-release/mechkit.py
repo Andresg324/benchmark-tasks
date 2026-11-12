@@ -259,6 +259,75 @@ class Interlock:
 
 
 @dataclass(frozen=True)
+class Piston:
+    """(Local to brake-bleed-close-before-release.) A pedal or lever pushing a hydraulic master cylinder's piston (a
+    brake or clutch pedal, a hand pump on a closed line): a return spring (`rest`, `k`, `damp`) plus a stop on the
+    fluid. Past `port` (toward `sign`; -1 = toward the joint's lower limit) the piston has shut the compensating port
+    and sweeps `area` of fluid (mL per rad or per m), up to `sweep` mL at the joint's limit. Volumes, all in mL:
+    - pushed down past the piston, the pedal moves it and the law calls `displace(dv)` with what it swept;
+    - held on the piston (within `lag` mL of it), the pedal is pressing: `pressing` is set, and the line's own model
+      (a supply at the hand's push) moves fluid; `pushed()` (no arguments) returns the mL it moved since the last
+      call, and the piston goes on by that much;
+    - let up ahead of the piston, the piston comes back on its spring only as fast as fluid fills behind it: `draw()`
+      says how many mL can this step, and the law calls `displace(-dv)`.
+    `room()` says how many mL the line still takes before it reaches the push. The joint's limit on the press side is
+    the fluid stop, the piston on by that room: a hand stops there (deeper when the line holds air, which
+    compresses) and goes on only as fluid leaves the line (an open bleeder), at the rate it flows. The stop never
+    comes back up past the pedal (a limit beyond the joint would kick it). Memory: "swept" (mL the piston is past the
+    port), "pressing", "returning", "stop", "limits", "presses" (strokes past the port)."""
+
+    port: float
+    area: float
+    sweep: float
+    displace: object
+    room: object
+    draw: object
+    pushed: object
+    sign: int = -1
+    rest: float = 0.0
+    k: float = 0.3
+    damp: float = 0.02
+    lower: float = -1e9
+    upper: float = 1e9
+    lag: float = 0.5
+    sets_limits = True
+
+    def fresh(self, lk):
+        return {"swept": 0.0, "pressing": False, "returning": False, "stop": None, "limits": None, "presses": 0,
+                "past": False}
+
+    def _past(self, q):
+        """How far past the port (>= 0, in joint units)."""
+        return max(0.0, self.sign * (q - self.port))
+
+    def drive(self, key, q, qd, J, mem):
+        mem["swept"] = min(self.sweep, mem["swept"] + max(0.0, float(self.pushed())))
+        pedal = min(self.sweep, self.area * self._past(q))  # mL the pedal's pushrod is past the port
+        if pedal > mem["swept"]:  # pushed past the piston: it moves the piston
+            self.displace(pedal - mem["swept"])
+            mem["swept"] = pedal
+        pressing = self._past(q) > 0.0 and pedal >= mem["swept"] - self.lag
+        if not pressing and mem["swept"] > pedal:  # let up: the piston comes back as fluid fills behind it
+            dv = min(mem["swept"] - pedal, max(0.0, float(self.draw())))
+            if dv > 0.0:
+                self.displace(-dv)
+                mem["swept"] -= dv
+        mem["pressing"] = pressing and mem["swept"] < self.sweep - 1e-6
+        mem["returning"] = not pressing and mem["swept"] > pedal + 1e-9
+        past = self._past(q) > 0.0
+        if past and not mem["past"]:
+            mem["presses"] += 1
+        mem["past"] = past
+        # the fluid stop, in the press coordinate t (growing as it is pressed): the piston, on by the room left
+        t = self.sign * q
+        stop = max(self.sign * self.port + (mem["swept"] + max(0.0, float(self.room()))) / self.area, t)
+        stop = min(max(self.sign * stop, self.lower), self.upper)
+        mem["stop"] = stop
+        mem["limits"] = (stop, self.upper) if self.sign < 0 else (self.lower, stop)
+        return self.rest, self.k, 0.0, self.damp
+
+
+@dataclass(frozen=True)
 class Spring:
     """A plain return spring with damping, as a law (so it can be an Interlock's `inner`): pulls to `rest`."""
 

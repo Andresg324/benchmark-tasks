@@ -1005,6 +1005,17 @@ def liquid(objects, tank: str) -> float:
     return float(_S.liq.get(tank, 0.0))
 
 
+def room(objects, tank: str, psi: float) -> float:
+    """mL of liquid the tank still takes before its gauge pressure reaches `psi` (its gas and its cushion squeezed
+    to that pressure); negative if it is already above it. (Local addition, brake-bleed: a master cylinder's fluid
+    stop, mechkit.Piston's `room`.)"""
+    _fresh()
+    t = _CFG["parts"][tank]
+    p_abs = PATM + psi * KPA_PER_PSI
+    squeezed = (_S.gas[tank] + CUSHION * t.volume) * PATM / p_abs * (_S.tc[tank] + 273.15) / T0
+    return _tank_vg(t) - squeezed
+
+
 def inflow(objects, tank: str, medium: str = "liquid") -> float:
     """mL of that medium ("liquid", or "gas" as mL at 1 atm) that has flowed into the tank this trial."""
     _fresh()
