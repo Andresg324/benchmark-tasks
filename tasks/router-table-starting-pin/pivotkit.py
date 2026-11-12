@@ -168,7 +168,7 @@ def planar(pivot: Pivot, pin, reach, turn, mass: float, meshes=(), colliders=(),
     (y lo, y hi)) in m, how far the part can slide along its own axes (keep it within the surface it lies on);
     `turn` (lo, hi) in rad. `start` is (x, y, turn). `link_mass` (kg) is each of the two hidden intermediate links.
     `slide_at` (local addition, router task) is where on the part, (x, y) from the pin point in its frame, the slides'
-    joint frames sit: PhysX applies the slides' damping there, so put it at the part's centre, or a part pushed at
+    joint frames sit: PhysX applies the slides' damping there, so put it at the part's center, or a part pushed at
     one point drags as if held back at the pin point and swings round. The part's pose and the readouts are the same."""
     _PIVOTS[pivot.name] = pivot
     (xl, xh), (yl, yh) = reach
