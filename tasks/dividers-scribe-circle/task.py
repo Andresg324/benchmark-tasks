@@ -20,9 +20,10 @@ import numpy as np  # noqa: E402
 import mechkit as mk  # noqa: E402
 import pivotkit as pv  # noqa: E402
 import yamkit as kit  # noqa: E402  (spawns the modeled plate and dividers; nothing on disk changes)
+import guardkit as gk  # noqa: E402  (gripper contact: which hands are on the dividers)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN  # noqa: E402
 from yam_arena.demo import Waypoint  # noqa: E402
-from yam_arena.task_file import TABLE_TOP  # noqa: E402
+from yam_arena.task_file import TABLE_TOP, ObjectState  # noqa: E402
 
 SCENE = "station"
 TOP = TABLE_TOP[SCENE]
@@ -30,7 +31,6 @@ SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
 INSTRUCTION = ("Scribe the full circle for the hole on the blue steel plate with the dividers, centered on the punch "
                "mark, then stand the dividers back in the cork.")
-REQUIRE_ARMS_HOME = True  # full score also needs both arms back where they started, still (see _arms_home)
 
 # --- Scene, in world coordinates (m): x forward from the arm bases, y to the robot's left, z up from the table top.
 MX, MY = 0.260, -0.100  # the center-punch mark (the hole's center)
@@ -61,14 +61,28 @@ PRESS = 0.0015  # m: the handle pressed 1.5 mm down its spring (2.25 N, a light 
 RIDE_OUT = 1.0  # deg: turned this far without that press, the pivot point rides out of the mark (0.5 mm of travel at
 #                 the scribing point, about the depth of the punch mark's cone)
 POINT_DRAG = 30.0  # N*s/m: the points' drag on the steel while down and unseated (two hardened points on dyed steel)
+AIR_DAMP = 0.1  # N*s/m: a token damping on the chain's slides while the dividers are carried (for stability)
 DOWN = 0.0005  # m: the points within 0.5 mm of the steel are on it (they would scratch it if moved)
 STRAY = 0.0010  # m: a 1 mm stray scratch (a leg dragged with the point unseated) shows on blued steel
 FULL_ARC = 355.0  # deg: a 5-degree gap is 2.6 mm on the 60 mm circle, about the width of the saw's kerf when the
 #                   hole is cut, so a circle closed within it reads as complete
 HALF_ARC = 180.0  # deg: half the circle scribed cleanly, the least that is real progress
-HANDS_OFF = 0.030  # m: a tool point within 3 cm of the handle's center is still on it (it is 2.6 cm across)
-HOME_TOL = 0.03  # m: a gripper's tool point this close to where it was at the trial's first step counts as home
-HOME_STILL = 0.002  # m per control step: the tool point not moving
+# A hand is on the dividers when the gripper's own shape (palm and both fingers, opened as they are now) touches them,
+# within 2 mm (gk.touching: the solver's resting gap plus the boxes' fit to the gripper's meshes). It holds them when it
+# touches the handle ...
+GRIP_OPEN = (0.12, 0.45)  # ... with the fingers stopped by the handle (fully open is 1; closed on 2.6 cm reads about
+#                           0.28; an empty closed fist reads 0)
+TIP_MAX = math.radians(80.0)  # the lean's stops: lying on their side on the bow and handle
+STUCK = 0.002  # rad: the play of the points stuck in cork (0.1 degree)
+TIP_FALL = math.radians(10.0)  # leaning this far with the points on the steel, they have fallen (the handle is 2 cm
+#                                over, well past where a hand still holding it would let it go)
+LEAN = PART_MASS * 9.81 * 0.001  # N*m: the dividers' weight 1 mm to one side of the line of their points
+SLEEVE_HOLD = 0.01  # N*m: the sleeve's grip on its stem before it turns (0.7 N at the 15 mm swing radius, a light
+#                     push from the hand carrying the handle round)
+SLEEVE_K = 1.0  # N*m/rad: how stiffly it holds below that (0.6 degrees of give at the hold)
+HAND_TIP_K, HAND_TIP_D = 0.3, 0.01  # N*m/rad, N*m*s/rad: carried, the hand's grip on the handle holds them upright
+#                                     (the sim's two pads on a round handle would let them swing like a pendulum)
+FALL_STEPS = 2  # control steps let go on the plate before they count as fallen (a 0.1 s debounce for a regrip flicker)
 GRIPPERS = ("left_gripper", "right_gripper")
 
 STEEL_BLUE = kit.Look((0.10, 0.20, 0.52), 0.45, metallic=0.4)  # layout dye on steel
@@ -129,12 +143,30 @@ def seated(J):
 
 
 def _resist(J):
-    """The points' friction on the steel while down and not seated (the turn still scribes freely when seated)."""
-    return (POINT_DRAG, 0.01) if J["lift"] <= DOWN and not _SEATED["in"] else None
+    """The points' friction on the steel while down and not seated (the turn still scribes freely when seated); in the
+    air nothing drags on them (the chain's slides would otherwise drag at the pivot point and twist the dividers about
+    the handle in the hand)."""
+    if J["lift"] > DOWN:
+        return (AIR_DAMP, 0.0005)
+    return (POINT_DRAG, 0.01) if not _SEATED["in"] else None
 
 
 PIVOT = pv.Pivot("dv", engaged=seated, free="slide", tol=PLAY, slip=SEAT_OUT, slide_damp=4.0, turn_damp=0.01,
                  resist=_resist)
+
+
+class Sleeve:
+    """The handle's sleeve on its stem: it holds its turn until twisted past SLEEVE_HOLD (the bore's friction on the
+    stem, pressed by the spring), then slips round with that much drag, so the legs hang steady from a carrying hand but
+    swing round under one that carries the handle round the mark."""
+
+    @staticmethod
+    def drive(key, q, qd, J, mem):
+        held = mem.get("held", q)
+        lim = SLEEVE_HOLD / SLEEVE_K
+        held = min(max(held, q - lim), q + lim)  # past the hold it slips: the anchor follows, the drag stays at the hold
+        mem["held"] = held
+        return held, SLEEVE_K, 0.0, 0.002
 
 
 class HandleSpring:
@@ -144,6 +176,28 @@ class HandleSpring:
     @staticmethod
     def drive(key, q, qd, J, mem):
         return q, 0.0, SPRING_PRE + SPRING_K * max(0.0, -q), 0.3
+
+
+class Topple:
+    """The dividers' lean about the line through their points. Gravity on the legs and bow (their weight about 7 cm up)
+    tips them over once nothing holds them; standing on their points, LEAN adds the small sideways lean any real pair
+    has (they are never balanced exactly over the line of their points), so a let-go never stays balanced in the sim's
+    exact equilibrium. Carried, they hang from the handle. Stuck in the cork, the points can't rock, so the lean is
+    held where they were stuck."""
+
+    sets_limits = True
+
+    @staticmethod
+    def drive(key, q, qd, J, mem):
+        if in_cork(J):
+            at = mem.setdefault("stuck", q)
+            mem["limits"] = (at - STUCK, at + STUCK)
+            return q, 0.0, 0.0, 0.002
+        mem.pop("stuck", None)
+        mem["limits"] = (-TIP_MAX, TIP_MAX)
+        if J["lift"] > DOWN:
+            return 0.0, HAND_TIP_K, 0.0, HAND_TIP_D  # off the steel only a hand holds them: it holds them upright
+        return q, 0.0, LEAN, 0.002
 
 
 def _leg(foot, top, r, look):
@@ -169,18 +223,32 @@ def _divider_links():
     # the adjusting screw across the legs, with its knurled nut
     m.append(kit.cylinder((mid, 0.0, 0.055), 0.0012, 0.022, DIV, axis="x"))
     m.append(kit.cylinder((mid + 0.004, 0.0, 0.055), 0.0045, 0.003, DARK, axis="x", n=20))
-    col = kit.Collider((mid, 0.0, LEG_TOP + 0.010), size=(0.020, 0.005, 0.020))
-    links = list(pv.planar(PIVOT, pin=_w((MX, MY, PLATE_T)), reach=((-0.14, 0.14), (-0.14, 0.14)),
-                           turn=(-7.5, 7.5), mass=PART_MASS, meshes=m, colliders=(col,), parent="lift",
-                           start=(CX - mid - MX, CY - MY, 0.0)))
+    col = (kit.Collider((mid, 0.0, LEG_TOP + 0.010), size=(0.020, 0.005, 0.020)),  # the bow, screw and nut
+           kit.Collider((0.0045, 0.0, 0.050), size=(0.005, 0.005, 0.080)),  # the legs (their weight sets the
+           kit.Collider((R - 0.0045, 0.0, 0.050), size=(0.005, 0.005, 0.080)))  # dividers' balance, 7 cm up)
+    pin = _w((MX, MY, PLATE_T))
+    links = list(pv.planar(PIVOT, pin=pin, reach=((-0.14, 0.14), (-0.14, 0.14)), turn=(-7.5, 7.5), mass=0.005,
+                           parent="lift", start=(CX - mid - MX, CY - MY, 0.0)))
+    # The dividers themselves hinge about the line through their two points, so nothing but a hand (or the cork) keeps
+    # them upright: let go standing on the steel, gravity tips them over onto their side.
+    # (its own limits are the cork's hold, so they stand from the first physics step; the law opens them out of the cork)
+    tip = kit.Link("tip", "revolute", "X", pin, lower=-STUCK, upper=STUCK, start=0.0, mass=PART_MASS, meshes=m,
+                   colliders=col, parent="dv", damping=0.0, law=Topple())
+    # The handle's sleeve turns freely on its stem (as well as sliding down it), so a hand that keeps hold of it can
+    # swing the legs a full turn without turning the wrist.
+    axis = _w((MX + mid, MY, PLATE_T + KNOB_Z0))
+    swivel = kit.Link("swivel", "revolute", "Z", axis, lower=-7.5, upper=7.5, start=0.0, mass=0.002, parent="tip",
+                      damping=0.0, law=Sleeve())
     knob_mesh = (kit.cylinder((0, 0, KNOB_H / 2), KNOB_R, KNOB_H, DARK, n=24),
-                 kit.cylinder((0, 0, KNOB_H + 0.0005), KNOB_R - 0.002, 0.001, DIV, n=24))
-    knob = kit.Link("knob", "prismatic", "Z", _w((MX + mid, MY, PLATE_T + KNOB_Z0)), lower=-KNOB_TRAVEL, upper=0.0,
-                    start=0.0, mass=KNOB_MASS, meshes=knob_mesh, parent="dv", damping=0.0,
+                 kit.cylinder((0, 0, KNOB_H + 0.0005), KNOB_R - 0.002, 0.001, DIV, n=24),
+                 kit.box((KNOB_R - 0.0015, 0, KNOB_H / 2), (0.001, 0.003, KNOB_H * 0.9), DIV))  # a bright flat on the
+    # knurl, so the camera shows the sleeve turning on its stem
+    knob = kit.Link("knob", "prismatic", "Z", axis, lower=-KNOB_TRAVEL, upper=0.0, start=0.0, mass=KNOB_MASS,
+                    meshes=knob_mesh, parent="swivel", damping=0.0,
                     colliders=(kit.Collider((0, 0, KNOB_H / 2), radius=KNOB_R, height=KNOB_H),), law=HandleSpring())
-    lift = kit.Link("lift", "prismatic", "Z", _w((MX, MY, PLATE_T)), lower=0.0, upper=0.08, start=0.0, mass=0.005,
+    lift = kit.Link("lift", "prismatic", "Z", pin, lower=0.0, upper=0.08, start=0.0, mass=0.005,
                     damping=0.0, law=mk.Free(drag=0.5))
-    return [lift] + links + [knob]
+    return [lift] + links + [tip, swivel, knob]
 
 
 def _bench():
@@ -205,7 +273,7 @@ def _mechanism():
 
 OBJECTS = [_mechanism()]
 KEY = "bench/dv"
-NAMES = ("lift", "dv_turn", "dv_x", "dv", "knob")
+NAMES = ("lift", "dv_turn", "dv_x", "dv", "tip", "swivel", "knob")
 
 
 # --- Geometry from the joints.
@@ -224,12 +292,6 @@ def _inside(p, rect, inset=0.0):
     return x0 + inset <= p[0] <= x1 - inset and y0 + inset <= p[1] <= y1 - inset
 
 
-def handle_center(J):
-    p0, p1 = _points(J)
-    xy = (p0 + p1) / 2
-    return np.array([xy[0], xy[1], TOP + PLATE_T + J["lift"] + KNOB_Z0 + J["knob"] + KNOB_H / 2])
-
-
 # --- What happened during the run. success() and score() are called after every control step, so the run's history is
 # kept here. yamkit counts the simulator's scene resets (kit.episode()), so a new trial starts with a clean history.
 class _History:
@@ -244,9 +306,8 @@ class _History:
         # the two end bins over-count the arc by at most 0.2 degrees)
         self.lifted = 0.0  # the dividers' highest lift since the last scribing (m)
         self.line = []  # scribed dots (world x, y) for the drawing
-        self.home = None
-        self.last = None
-        self.still = False
+        self.loose = 0  # control steps in a row standing on the plate with no hand holding them
+        self.fallen = False  # irreversible: let go standing on their points on the plate, they fell over
 
 
 _H = _History()
@@ -275,6 +336,13 @@ def _update(objects):
     pts = _points(J)
     seat = pv.engaged(objects, KEY)
     down = J["lift"] <= DOWN
+    # A pair of dividers stands on two points in a line, so let go on the steel it falls over (the tip joint shows it;
+    # the scorer does not wait for the fall to finish): the pivot point leaves the mark and nothing scribed after
+    # counts. Stuck in the cork it stands.
+    on_plate = down and (_inside(pts[0], PLATE) or _inside(pts[1], PLATE))
+    _H.loose = _H.loose + 1 if on_plate and not holding(objects) else 0
+    if _H.loose >= FALL_STEPS or (on_plate and abs(J.get("tip", 0.0)) > TIP_FALL):
+        _H.fallen = True
     if _H.pts is not None:
         if down and not seat:
             for i in range(2):
@@ -282,42 +350,62 @@ def _update(objects):
                     _H.stray[i] += float(np.linalg.norm(pts[i] - _H.pts[i]))
             if max(_H.stray) > STRAY or pv.slid(objects, KEY):
                 _H.skated = True
-        if seat and _H.was_seated:
+        if seat and _H.was_seated and not _H.fallen:
             _cover(_H.theta, J["dv_turn"])
             _H.lifted = 0.0
         if down and _inside(pts[1], PLATE) and (not _H.line or np.linalg.norm(pts[1] - _H.line[-1]) > 0.0006):
             _H.line.append(pts[1].copy())
     _H.lifted = max(_H.lifted, J["lift"])
     _H.pts, _H.theta, _H.was_seated = pts, J["dv_turn"], seat
-    now = {g: np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects}
-    if _H.home is None and len(now) == 2:
-        _H.home = now
-    _H.still = _H.last is not None and all(g in _H.last and np.linalg.norm(now[g] - _H.last[g]) < HOME_STILL
-                                           for g in now)
-    _H.last = now
     _draw()
-    if os.environ.get("DIVIDERS_TRACE"):  # a per-step trace for debugging sim runs (off in normal runs)
-        with open(os.environ["DIVIDERS_TRACE"], "a") as f:
-            f.write(" ".join(f"{k}={v:.5f}" for k, v in J.items()) + f" seat={seat} off={point_off(J) * 1000:.2f}"
-                    f" stray={_H.stray[0] * 1000:.2f},{_H.stray[1] * 1000:.2f} arc={int(_H.arc.sum())}"
-                    f" score={_score(objects)} R={np.round(now.get('right_gripper', np.zeros(3)), 3)}\n")
 
 
 def arc_deg():
     return float(_H.arc.sum()) / 10.0
 
 
-def _arms_home(objects):
-    """Both grippers' tool points back within 3 cm of where they were at the trial's first step, and still."""
-    if _H.home is None or not _H.still:
-        return False
-    return all(g in objects and np.linalg.norm(np.asarray(objects[g].pos) - _H.home[g]) < HOME_TOL for g in GRIPPERS)
+def _frame(J):
+    """The dividers' own frame: origin at the pivot leg's point, x toward the scribing point, turned and leaning as the
+    joints have them (a turn about the vertical, then the lean about the line of the points)."""
+    p0, _ = _points(J)
+    th, tip = J["dv_turn"], J.get("tip", 0.0)
+    q = np.array([math.cos(th / 2) * math.sin(tip / 2), math.sin(th / 2) * math.sin(tip / 2),
+                  math.sin(th / 2) * math.cos(tip / 2), math.cos(th / 2) * math.cos(tip / 2)])
+    p = np.array([p0[0], p0[1], TOP + PLATE_T + J["lift"]])
+    return ObjectState(pos=p, quat_xyzw=q, lin_vel=np.zeros(3), ang_vel=np.zeros(3), low=p, high=p)
+
+
+def _handle_shape(J):
+    return gk.Ring(0.0, KNOB_R, 0.0, KNOB_H, center=(R / 2, 0.0, KNOB_Z0 + J["knob"]))
+
+
+def _body_shape():
+    """The legs, the bow with its screw, and the handle's stem, in the dividers' frame (as drawn)."""
+    mid = R / 2
+    return (gk.Seg((0.0, 0.0, 0.0), (mid - 0.006, 0.0, LEG_TOP), 0.0022),
+            gk.Seg((R, 0.0, 0.0), (mid + 0.006, 0.0, LEG_TOP), 0.0022),
+            gk.Block((mid, 0.0, LEG_TOP + 0.010), (0.020, 0.005, 0.020)),
+            gk.Block((mid, 0.0, 0.055), (0.022, 0.009, 0.009)),
+            gk.Seg((mid, 0.0, LEG_TOP), (mid, 0.0, KNOB_Z0), 0.002))
+
+
+def _hands_on(objects, parts):
+    """The grippers touching these parts of the dividers (gk.touching, 2 mm)."""
+    objs = dict(objects)
+    objs["_dividers"] = _frame(_joints(objects))
+    return gk.touching(objs, "_dividers", parts, grippers=GRIPPERS)
+
+
+def holding(objects):
+    """A hand holding the dividers: its fingers and palm touching the handle, with the fingers stopped by it (not wide
+    open, not an empty fist)."""
+    return any(GRIP_OPEN[0] <= kit.opening(objects, g) <= GRIP_OPEN[1]
+               for g in _hands_on(objects, (_handle_shape(_joints(objects)),)))
 
 
 def _released(objects):
-    """No tool point within 3 cm of the dividers' handle."""
-    hc = handle_center(_joints(objects))
-    return all(np.linalg.norm(np.asarray(objects[g].pos, float) - hc) >= HANDS_OFF for g in GRIPPERS if g in objects)
+    """No hand touching any part of the dividers (the handle, its stem, the bow or the legs)."""
+    return not _hands_on(objects, (_handle_shape(_joints(objects)),) + _body_shape())
 
 
 def in_cork(J):
@@ -339,29 +427,21 @@ def _job(objects):
     return 0.0
 
 
-def _score(objects):
-    job = _job(objects)
-    if job == 1.0 and REQUIRE_ARMS_HOME and not _arms_home(objects):
-        return 0.9
-    return job
-
-
 def success(objects):
     """At least 355 degrees of the circle scribed with the pivot point seated, no stray scratch, the dividers back in
-    the cork and let go, and (with REQUIRE_ARMS_HOME) both arms home and still. Called first each step, so it also
-    records the history."""
+    the cork and let go. Called first each step, so it also records the history."""
     _update(objects)
-    return _score(objects) == 1.0
+    return _job(objects) == 1.0
 
 
 def score(objects):
     """0, irreversibly, if either divider point ever moved more than 1 mm in all over the plate while down on it
     without the pivot point seated in the punch mark under pressure (starting off the mark, or skating out of it
-    mid-swing). 0 while a tool point is within 3 cm of the dividers' handle. Otherwise: 1.0 with at least 355 degrees
-    of the circle scribed with the pivot seated and the dividers standing back in the cork; 0.75 the same with the
-    dividers left elsewhere; 0.5 with at least 180 degrees scribed; 0 otherwise. With REQUIRE_ARMS_HOME, a finished
-    job with the arms not back home and still scores 0.9. Possible scores: 0, 0.5, 0.75, 0.9, 1."""
-    return _score(objects)
+    mid-swing). Let go standing on the plate, the dividers fall over and nothing scribed after counts. 0 while a hand
+    touches the dividers. Otherwise: 1.0 with at least 355 degrees of the circle scribed with
+    the pivot seated and the dividers standing back in the cork; 0.75 the same with the dividers left elsewhere; 0.5
+    with at least 180 degrees scribed; 0 otherwise. Possible scores: 0, 0.5, 0.75, 1."""
+    return _job(objects)
 
 
 # --- The scribed line, drawn as markers (visual only; scoring never reads it): a bright dot wherever the scribing
@@ -402,7 +482,8 @@ def _draw():
 
 # --- The scripted demo (right arm; the left arm stays home).
 GRIP_Z = TOP + PLATE_T + KNOB_Z0 + 0.015  # the tool point gripping the handle (pad tips 2 mm above its bottom)
-PRESS_Z = GRIP_Z - 0.006  # pressing: 4 mm down the spring and 2 mm more against the points
+PRESS_Z = GRIP_Z - 0.010  # pressing: aimed 4 mm down the spring and 6 mm more against the points (the arm sags
+#                           back 2 to 4 mm against the spring, so the handle stays 2 to 4 mm down)
 CARRY = 0.035  # m: the points carried 3.5 cm above the steel
 
 
@@ -411,52 +492,45 @@ def _handle_xy(px, py, th):
     return px + R / 2 * math.cos(th), py + R / 2 * math.sin(th)
 
 
-STROKES = (0.0, 125.0, 250.0, 375.0)  # deg: three strokes of 125 deg, a full turn and 15 deg of overlap
-YAW0 = -80.0  # deg: the grip's yaw at the start of each stroke (wrist roll 100 deg, inside its +-120 deg limit)
+SWING = 405.0  # deg: the hand's path round the mark in one stroke; pressing down, it runs about 30 degrees behind its
+#                path, so the legs turn a full turn and some 15 degrees of overlap
+END_LAG = 33.0  # deg: where the legs stop short of the hand's path; it eases off over them there, so the arm's lag
+#                 doesn't carry them on unpressed (which would drag the points on the steel)
+SWING_S = 18.0  # s for the whole stroke (21 degrees a second)
+STEP_DEG = 5.0  # deg per waypoint round the circle (1.3 mm of the handle's 15 mm circle)
+LAND_FIX = (0.0007, 0.0006)  # m: where the pivot point lands from the carry, off the hand's aim (the dividers turn a
+#                              little in the grip as they come out of the cork), aimed out
+YAW0 = -80.0  # deg: the grip's yaw, kept all the way round (the handle's sleeve turns on its stem instead)
 
 
 def demo():
     """Right arm: grip the dividers' handle in the cork, lift them 3.5 cm, carry them over the punch mark and lower
-    the pivot point into it, press, and swing the handle round the mark in three 125-degree strokes, letting go and
-    rolling the wrist back between strokes (the point stays seated: nothing turns it while the hand is off). Then lift
-    the dividers off, carry them back to the cork, set them down, let go, home."""
+    the pivot point into it, press, and move the handle round the mark in one stroke (the legs turn about 363 degrees)
+    without letting go or turning the wrist (the sleeve turns on its stem while the legs swing under it). Then lift the dividers off, carry
+    them back to the cork, set them down, let go and move away."""
     C, O = FINGER_CLOSED, FINGER_OPEN
-    y0 = math.radians(YAW0)
+    yaw = math.radians(YAW0)
     hx, hy = CX, CY
-    right = [Waypoint(2.6, (hx, hy, GRIP_Z + 0.05), O, "over the dividers' handle", y0),
-             Waypoint(1.0, (hx, hy, GRIP_Z), O, "around it", y0),
-             Waypoint(0.6, (hx, hy, GRIP_Z), C, "grip it", y0),
-             Waypoint(0.8, (hx, hy, GRIP_Z + CARRY), C, "lift the points out of the cork", y0)]
-    sx, sy = _handle_xy(MX, MY, 0.0)
-    right += [Waypoint(1.6, (sx, sy, GRIP_Z + CARRY), C, "carry them over the punch mark", y0),
-              Waypoint(1.2, (sx, sy, GRIP_Z + 0.006), C, "lower the points to just above the steel", y0),
-              Waypoint(0.8, (sx, sy, GRIP_Z + 0.006), C, "settle over the mark", y0),
-              Waypoint(1.0, (sx, sy, GRIP_Z), C, "set the point in the mark", y0),
-              Waypoint(0.8, (sx, sy, PRESS_Z), C, "press", y0)]
-    for i in range(len(STROKES) - 1):
-        a0, a1 = STROKES[i], STROKES[i + 1]
-        n = 10
-        for k in range(1, n + 1):
-            a = a0 + (a1 - a0) * k / n
-            x, y = _handle_xy(MX, MY, math.radians(a))
-            right.append(Waypoint(0.45, (x, y, PRESS_Z), C, "swing the scribing leg round", y0 + math.radians(a - a0)))
-        x, y = _handle_xy(MX, MY, math.radians(a1))
-        right.append(Waypoint(0.5, (x, y, PRESS_Z), C, "hold the press at the end of the stroke",
-                              y0 + math.radians(a1 - a0)))
-        if i < len(STROKES) - 2:  # regrip: let go, roll the wrist back, grip again and press
-            right += [Waypoint(0.5, (x, y, GRIP_Z), C, "ease off", y0 + math.radians(a1 - a0)),
-                      Waypoint(0.5, (x, y, GRIP_Z), O, "let go", y0 + math.radians(a1 - a0)),
-                      Waypoint(0.6, (x, y, GRIP_Z + 0.04), O, "up off the handle", y0 + math.radians(a1 - a0)),
-                      Waypoint(2.2, (x, y, GRIP_Z + 0.04), O, "roll the wrist back", y0),
-                      Waypoint(0.8, (x, y, GRIP_Z), O, "around the handle", y0),
-                      Waypoint(0.6, (x, y, GRIP_Z), C, "grip it", y0),
-                      Waypoint(0.5, (x, y, PRESS_Z), C, "press", y0)]
-        else:
-            yaw = y0 + math.radians(a1 - a0)
-            th = math.radians(a1)
-            right += [Waypoint(0.5, (x, y, GRIP_Z), C, "ease off", yaw),
-                      Waypoint(0.8, (x, y, GRIP_Z + CARRY), C, "lift the dividers off", yaw)]
-    # back to the cork, the handle over its center (the dividers keep their last turn)
+    right = [Waypoint(2.6, (hx, hy, GRIP_Z + 0.05), O, "over the dividers' handle", yaw),
+             Waypoint(1.0, (hx, hy, GRIP_Z), O, "around it", yaw),
+             Waypoint(0.6, (hx, hy, GRIP_Z), C, "grip it", yaw),
+             Waypoint(0.8, (hx, hy, GRIP_Z + CARRY), C, "lift the points out of the cork", yaw)]
+    sx, sy = _handle_xy(MX - LAND_FIX[0], MY - LAND_FIX[1], 0.0)
+    right += [Waypoint(1.6, (sx, sy, GRIP_Z + CARRY), C, "carry them over the punch mark", yaw),
+              Waypoint(1.2, (sx, sy, GRIP_Z + 0.006), C, "lower the points to just above the steel", yaw),
+              Waypoint(0.8, (sx, sy, GRIP_Z + 0.006), C, "settle over the mark", yaw),
+              Waypoint(1.0, (sx, sy, GRIP_Z), C, "set the point in the mark", yaw),
+              Waypoint(0.8, (sx, sy, PRESS_Z), C, "press", yaw)]
+    n = int(round(SWING / STEP_DEG))
+    for k in range(1, n + 1):
+        x, y = _handle_xy(MX - LAND_FIX[0], MY - LAND_FIX[1], math.radians(SWING * k / n))
+        right.append(Waypoint(SWING_S / n, (x, y, PRESS_Z), C, "swing the scribing leg round", yaw))
+    right.append(Waypoint(2.5, (x, y, PRESS_Z), C, "hold the press while the legs finish the turn", yaw))
+    x, y = _handle_xy(MX - LAND_FIX[0], MY - LAND_FIX[1], math.radians(SWING - END_LAG))
+    right += [Waypoint(1.0, (x, y, PRESS_Z), C, "settle the hand over where the legs stopped", yaw),
+              Waypoint(0.5, (x, y, GRIP_Z), C, "ease off", yaw),
+              Waypoint(0.8, (x, y, GRIP_Z + CARRY), C, "lift the dividers off", yaw)]
+    # back to the cork, the handle over its center (the legs keep their last turn)
     right += [Waypoint(1.6, (CX, CY, GRIP_Z + CARRY), C, "carry them to the cork", yaw),
               Waypoint(1.2, (CX, CY, GRIP_Z - 0.002), C, "stick the points in the cork", yaw),
               Waypoint(0.6, (CX, CY, GRIP_Z - 0.002), O, "let go", yaw),

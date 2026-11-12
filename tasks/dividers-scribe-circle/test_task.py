@@ -13,13 +13,31 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 m = load(os.path.join(HERE, "task.py")).module
 kit, pv = m.kit, m.pv
 PARK = {"left_gripper": (0.20, 0.27, m.TOP + 0.20), "right_gripper": (0.20, -0.27, m.TOP + 0.20)}
-START = {"lift": 0.0, "dv_turn": 0.0, "dv_x": m.CX - m.R / 2 - m.MX, "dv": m.CY - m.MY, "knob": 0.0}
+START = {"lift": 0.0, "dv_turn": 0.0, "dv_x": m.CX - m.R / 2 - m.MX, "dv": m.CY - m.MY, "tip": 0.0, "swivel": 0.0,
+         "knob": 0.0}
 
 
-def st(pos):
+DOWNWARD = (1.0, 0.0, 0.0, 0.0)  # a gripper pointing straight down (turned 180 degrees about x), as in the demo
+
+
+def st(pos, quat=(0, 0, 0, 1.0)):
     p = np.array(pos, float)
-    return ObjectState(pos=p, quat_xyzw=np.array([0, 0, 0, 1.0]), lin_vel=np.zeros(3), ang_vel=np.zeros(3),
+    return ObjectState(pos=p, quat_xyzw=np.array(quat, float), lin_vel=np.zeros(3), ang_vel=np.zeros(3),
                        low=p - 0.01, high=p + 0.01)
+
+
+def to_world(j, local):
+    """A point in the dividers' frame (turned and leaning as the joints have them), in world coordinates."""
+    f = m._frame(j)
+    x, y, z, w = f.quat_xyzw
+    rot = np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+                    [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+                    [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]])
+    return f.pos + rot @ np.asarray(local, float)
+
+
+def handle_center(j):
+    return to_world(j, (m.R / 2, 0.0, m.KNOB_Z0 + j["knob"] + m.KNOB_H / 2))
 
 
 class Trial:
@@ -30,8 +48,12 @@ class Trial:
         kit._EPISODE["count"] += 1
         self.j = dict(START)
 
-    def step(self, hand=True, right=None, **j):
+    def step(self, hand=True, right=None, opening=None, **j):
+        """opening: the right fingers' opening (default: closed on the 2.6 cm handle while the hand is on it, open
+        otherwise)."""
         self.j.update(j)
+        kit._OPENING["left_gripper"] = 1.0
+        kit._OPENING["right_gripper"] = opening if opening is not None else 0.28 if hand and right is None else 1.0
         for k, v in self.j.items():
             kit._JOINTS[f"bench/{k}"] = kit.JointState(v, 0.0, False)
         pv.step(m.KEY, dict(self.j))
@@ -39,8 +61,8 @@ class Trial:
         if right is not None:
             g["right_gripper"] = right
         elif hand:
-            g["right_gripper"] = tuple(m.handle_center(self.j))
-        objs = {"bench": st(m.BASE), **{k: st(p) for k, p in g.items()}}
+            g["right_gripper"] = tuple(handle_center(self.j))
+        objs = {"bench": st(m.BASE), **{k: st(p, DOWNWARD) for k, p in g.items()}}
         ok = m.success(objs)
         return m.score(objs), ok
 
@@ -64,9 +86,10 @@ class Trial:
             self.step(dv_turn=math.radians(a0 + (a1 - a0) * k / n), knob=knob, **kw)
 
     def regrip(self):
-        """Let go of the handle (the spring pushes it up), then grip and press again; nothing turns."""
+        """Let go of the handle (the spring pushes it up), roll the wrist back with the hand off it (the demo's hand is
+        off for about 3.6 s, 72 steps; 4 here), then grip and press again; nothing turns."""
         self.step(knob=0.0)
-        self.step(knob=0.0, hand=False)
+        self.rest(4, knob=0.0, hand=False)
         self.step(knob=0.0)
         self.step(knob=-0.003)
 
@@ -78,13 +101,18 @@ class Trial:
         self.carry_to(c * wx + s * wy, -s * wx + c * wy)
 
 
-def full_job(t, end=375.0, home=True):
+def full_job(t, end=375.0, home=True, regrip=False):
+    """Carry the dividers to the mark, press and swing the full circle without letting go (a handle that turns in the
+    hand), lift off, back to the cork. regrip=True lets go on the plate between three 125-degree strokes instead."""
     t.rest(3, hand=False)
     t.carry_to(0.0002, -0.0001)
     t.step(knob=-0.003)
-    for a0, a1 in ((0.0, 125.0), (125.0, 250.0), (250.0, end)):
-        t.swing(a0, a1)
-        t.regrip()
+    if regrip:
+        for a0, a1 in ((0.0, 125.0), (125.0, 250.0), (250.0, end)):
+            t.swing(a0, a1)
+            t.regrip()
+    else:
+        t.swing(0.0, end)
     t.step(knob=0.0)
     t.to_cork(end)
     t.rest(2, hand=False)
@@ -100,15 +128,52 @@ def check(name, got, want):
 t = Trial()
 check("do nothing", t.rest(30, hand=False)[0], 0.0)
 
-# the full job: three strokes, regrips, back in the cork, hands off and home
+# the full job: one stroke round the mark, held throughout, back in the cork, hands off
 t = Trial()
 s, ok = full_job(t)
-check("full job, home", (s, ok), (1.0, True))
+check("full job", (s, ok), (1.0, True))
 check("arc", m.arc_deg() >= 360, True)
 
-# the same, arms not home
+# the same, arms not home: the job alone earns full credit
 t = Trial()
-check("full job, arm not home", full_job(t, home=False)[0], 0.9)
+check("full job, arm not home", full_job(t, home=False)[0], 1.0)
+
+# review, Nov 11: letting go between strokes with the dividers standing on the plate. Real dividers fall over, so only
+# the first 125-degree stroke counts (the sim's joints keep them upright; the scorer applies the fall)
+t = Trial()
+check("full job with let-go regrips", full_job(t, regrip=True)[0], 0.0)
+check("let-go regrips: fallen", m._H.fallen, True)
+check("let-go regrips: arc stops at the first stroke", 124.5 <= m.arc_deg() <= 125.5, True)
+
+# an empty closed fist resting on the handle, or an open hand around it, is not holding: they fall
+for name, op in (("empty fist", 0.0), ("open hand", 1.0)):
+    t = Trial()
+    t.carry_to(0.0, 0.0)
+    t.step(knob=-0.003)
+    t.swing(0.0, 90.0)
+    t.rest(3, opening=op, knob=-0.003)
+    t.swing(90.0, 370.0, opening=op)
+    t.step(knob=0.0)
+    t.to_cork(370.0)
+    check(f"{name} on the handle: fallen", m._H.fallen, True)
+    check(f"{name} on the handle: 90 deg only", t.rest(10, hand=False)[0], 0.0)
+
+# a one-step flicker of the fingers (a pressure pop) is not a let-go
+t = Trial()
+t.carry_to(0.0, 0.0)
+t.step(knob=-0.003)
+t.swing(0.0, 180.0)
+t.step(opening=1.0, knob=-0.003)
+t.swing(180.0, 375.0)
+t.step(knob=0.0)
+t.to_cork(375.0)
+check("one-step flicker: not fallen", m._H.fallen, False)
+check("one-step flicker", t.rest(10, hand=False)[0], 1.0)
+
+# let go standing in the cork (points stuck in it): they stand, nothing falls
+t = Trial()
+t.rest(10, hand=False)
+check("let go in the cork: not fallen", m._H.fallen, False)
 
 # still holding the handle at the end: nothing counts
 t = Trial()
@@ -264,5 +329,56 @@ check("reset arc 0", m.arc_deg(), 0.0)
 t = Trial()
 check("starts in the cork", m.in_cork(t.j), True)
 check("lifted out of the cork", m.in_cork(dict(t.j, lift=0.01)), False)
+
+# the tip joint (Nov 12): held but leaning more than 10 degrees on the plate counts as fallen; 8 degrees in hand does not;
+# a lean in the air (carried) is not a fall
+t = Trial()
+t.carry_to(0.0, 0.0)
+t.step(knob=-0.003)
+t.swing(0.0, 90.0, tip=math.radians(8.0))
+check("held, leaning 8 deg: not fallen", m._H.fallen, False)
+t.step(tip=math.radians(12.0))
+check("leaning 12 deg on the plate: fallen", m._H.fallen, True)
+t = Trial()
+t.step(lift=0.03, tip=math.radians(30.0))
+t.rest(3, tip=0.0)
+check("leaning in the air: not fallen", m._H.fallen, False)
+
+# the handle's center follows the lean: 30 degrees over moves it sideways by its height x sin(30)
+j = dict(START, dv_turn=0.0, tip=math.radians(30.0))
+hc, h0 = handle_center(j), handle_center(dict(j, tip=0.0))
+hh = m.KNOB_Z0 + m.KNOB_H / 2
+check("lean moves the handle sideways", abs((h0[1] - hc[1]) - hh * 0.5) < 1e-9 and abs(hc[0] - h0[0]) < 1e-9, True)
+
+# the lean's law: on the steel nothing holds them up (only the small lean torque, no stiffness); carried in the air the
+# hand holds them upright; stuck in the cork the lean is held
+on = dict(START, dv_x=0.0, dv=0.0)
+tq = m.Topple.drive("bench/tip", 0.05, 0.0, on, {})
+check("on the plate: no upright stiffness", tq[1] == 0.0 and tq[2] > 0.0, True)
+tq = m.Topple.drive("bench/tip", 0.05, 0.0, dict(on, lift=0.02), {})
+check("in the air: held upright by the hand", tq[0] == 0.0 and tq[1] > 0.0, True)
+mem = {}
+m.Topple.drive("bench/tip", 0.01, 0.0, START, mem)
+check("in the cork: lean held where stuck", mem["limits"], (0.01 - m.STUCK, 0.01 + m.STUCK))
+
+# contact, not distance (Nov 12 audit): a hand at grip width hovering 5 mm over the handle is not holding (the
+# dividers fall); at the end, finger tips resting on the handle's top are still on them (0 until let go), and 5 mm
+# above it they are off (1.0)
+t = Trial()
+t.carry_to(0.0, 0.0)
+t.step(knob=-0.003)
+t.swing(0.0, 40.0)
+hc = handle_center(t.j)
+side = (hc[0], hc[1], hc[2] + m.KNOB_H / 2 + 0.0128 + 0.005)  # the finger tips (12.8 mm past the tool point) 5 mm
+# over the handle's top, the fingers at the opening of a grip on it
+t.rest(3, right=side, opening=0.28, knob=-0.003)
+check("fingers at grip width 5 mm over the handle: not holding, fallen", m._H.fallen, True)
+t = Trial()
+full_job(t)
+top = handle_center(t.j) + np.array([0.0, 0.0, m.KNOB_H / 2 + 0.0128])  # the tool point with the closed finger tips
+# (12.8 mm past it) just on the handle's top
+for gap, want in ((0.001, 0.0), (0.005, 1.0)):
+    check(f"closed hand, finger tips {gap * 1000:.0f} mm over the handle's top at the end",
+          t.step(hand=False, right=tuple(top + [0.0, 0.0, gap]), opening=0.0)[0], want)
 
 print("all pass")
