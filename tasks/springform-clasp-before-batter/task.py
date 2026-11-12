@@ -2,8 +2,8 @@
 on the top lip of the ring's groove instead of in it; a narrow glass jug of cake batter stands beside it. A springform
 holds batter only when it is closed up: the base pressed down into the groove at the bottom of the ring, then the side
 clasp pushed in until it snaps over center, which draws the ring tight around the base's edge. With the clasp open the
-ring's seam stands open and the batter runs out through it; with the base above the groove it runs out under the ring.
-Either way it ends up on the counter or the oven floor. So the baker seats the base, snaps the clasp shut, and only
+ring's seam stands open and the batter can run out through it; with the base above the groove it can run out under the
+ring. Either way it can end up on the counter or the oven floor. So the baker seats the base, snaps the clasp shut, and only
 then pours the batter in and sets the jug down.
 """
 
@@ -17,6 +17,7 @@ import numpy as np  # noqa: E402
 import mechkit as mk  # noqa: E402  (the over-center clasp and the ring that follows it)
 import pourkit as pk  # noqa: E402  (the batter: volumes, pours, spills, the pan's leak)
 import yamkit as kit  # noqa: E402  (modeled props, the pan mechanism, gripper states, tilted grips)
+import guardkit as gk  # noqa: E402  (the hold check: the gripper's own shape touching the jug)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN  # noqa: E402
 from yam_arena.demo import Waypoint  # noqa: E402
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
@@ -26,7 +27,6 @@ TOP = TABLE_TOP[SCENE]
 SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
 INSTRUCTION = "Pour the cake batter into the springform pan."
-REQUIRE_ARMS_HOME = True  # full score also needs both arms back where they started, still (see _arms_home)
 
 # --- The pan: a real 10 cm (4 inch) mini springform at full size, fixed to the counter (a real trial tapes it down).
 # Heights are above the table top in the pan's frame (origin on the table under the pan's axis).
@@ -48,11 +48,12 @@ PIN = (0.012, R_OUT + 0.0045, LEVER_Z)  # the pin, in the pan's frame; closed, t
 OPEN = -0.95  # rad (54 degrees): fully swung out
 CENTER = -0.30  # rad (17 degrees out): the over-center point; inside it the clasp snaps shut, outside it springs open
 LOCK_AT = -0.06  # rad (3.4 degrees, 2.4 mm at the lever's end): within this of flat the clasp is locked over center
-SNAP_TORQUE = 0.12  # N*m: the ring's spring pushing the clasp to one side of center (3 N at the tab)
-# The ring's seam: the ring is two halves here, the left (-x) half turning on a pin at the ring's right (-y) side so
+SNAP_TORQUE = 0.12  # N*m: the ring's spring pushing the clasp to one side of center (3 N at the tab). This is the
+#                     model's value, not measured on a pan; a real trial reads it with a spring scale on the tab
+# The ring's seam: the ring is two halves here, the near (-x) half turning on a pin at the ring's -y side so
 # the seam at +y opens as the clasp swings out, by GAP_OPEN fully open (a real ring springs open 4-6 mm at the seam).
 GAP_OPEN = 0.005
-SPREAD = GAP_OPEN / (2 * RM)  # rad the ring's left half turns at OPEN
+SPREAD = GAP_OPEN / (2 * RM)  # rad the ring's near half turns at OPEN
 
 # --- The batter and its leaks. A real springform holds batter only with the base seated and the clasp locked.
 # Leak rates from slot flow, Q = w h^3 rho g H / (12 mu L), for cake batter (mu about 2 Pa*s, rho 1,000 kg/m^3) 1.5 cm
@@ -114,10 +115,10 @@ class SeatBase:
 
 
 def _pan():
-    fixed_m, fixed_c = _half(-math.pi / 2, math.pi / 2)  # the right (+x) half, fixed, with the clasp's pin
+    fixed_m, fixed_c = _half(-math.pi / 2, math.pi / 2)  # the far (+x) half, fixed, with the clasp's pin
     pin_m = (kit.cylinder((PIN[0], PIN[1], LEVER_Z), 0.0028, 0.024, CLASP),
              kit.box((PIN[0] + 0.004, R_OUT + 0.0015, LEVER_Z), (0.012, 0.003, 0.024), CLASP))  # the pin's bracket
-    pivot = (0.0, -RM)  # the left half turns about the ring's -y side
+    pivot = (0.0, -RM)  # the near half turns about the ring's -y side
     move_m, move_c = _half(math.pi / 2, 3 * math.pi / 2, about=pivot)
     keeper = kit.box((-0.006 - pivot[0], R_OUT + 0.0015 - pivot[1], LEVER_Z), (0.010, 0.003, 0.016), CLASP)
     band = kit.Link("ring", "revolute", "Z", (pivot[0], pivot[1], 0.0), lower=-0.005, upper=SPREAD + 0.005,
@@ -187,17 +188,22 @@ pk.set_floor(TOP)
 
 
 # --- Scoring
-SOME = 10.0  # mL of batter in the pan before anything counts (a 1.3 mm skim over the base)
-FULL = 110.0  # mL in the pan for full credit (73 % of the jug, 1.4 cm deep): what a pour leaves in the jug is about
+SOME = 10.0  # mL of batter in the pan before the pour counts (a 1.3 mm skim over the base)
+FULL = 110.0  # mL in the pan for full credit (73% of the jug, 1.4 cm deep): what a pour leaves in the jug is about
 #               15-25 mL of batter clinging to its walls and the last that won't run out without scraping
 LEAK_TOL = 0.5  # mL: batter in the pan while it is not sealed (a few drops: any real pour puts in more in a step)
 SPILL_MAX = 3.0  # mL spilled on the counter in all (a coin-sized drip; more is a mess to wipe from under the pan)
 UPRIGHT = 10.0  # degrees
 KNOCKED = 45.0  # degrees: the jug leaning this far with no gripper holding it has been knocked over
 ON_TABLE = 0.01  # m: the jug's bottom within 1 cm of the table top stands on it
-HOLD_R, HOLD_OPEN = 0.07, 0.6  # a gripper holds the jug: tool point within 7 cm and fingers under 60 % open
-ON_CLASP = 0.04  # m: a tool point within 4 cm of the clasp's tab is still on the clasp (holding it shut)
-HOME_TOL, HOME_STILL = 0.03, 0.002  # m; m per control step
+# A gripper holds the jug only if it touches the jug with its fingers part-closed: its own shape (palm and both
+# fingers, boxes fitted to the YAM's collision meshes, at their present opening) within 2 mm of the jug (gk.touching:
+# the solver's resting gap plus the box fit), and the fingers stopped short of shut (opening 2% to 85%: an empty fist
+# reads 0 and an open hand 1). The band is wider than the jug's own 52% because the sim's pads sink into the glass as
+# they squeeze (they read about 7% to 50% while the demo carries and pours it). A part-closed hand hovering more than
+# 2 mm off the jug, an empty fist or a wide-open hand does not hold it.
+JUG_SHAPE = gk.Ring(0.0, JUG_R, -JUG_H / 2, JUG_H / 2)  # the jug's glass, in its own frame
+JUG_GRIP = gk.HELD_OPEN
 GRIPPERS = ("left_gripper", "right_gripper")
 
 
@@ -212,9 +218,6 @@ class _History:
         self.clamped_seated = None  # at the step the clasp locked: was the base seated? (None while it is open)
         self.loose = 0
         self.knocked = False  # irreversible: the jug went over
-        self.home = None
-        self.last = None
-        self.still = False
 
 
 _H = _History()
@@ -237,25 +240,13 @@ def _update(objects):
     _H.loose = _H.loose + 1 if pk.tilt(objects, "jug") > KNOCKED and not _held(objects) else 0
     if _H.loose >= 2:
         _H.knocked = True
-    now = {g: np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects}
-    if _H.home is None and len(now) == 2:
-        _H.home = now
-    _H.still = _H.last is not None and all(g in _H.last and np.linalg.norm(now[g] - _H.last[g]) < HOME_STILL
-                                           for g in now)
-    _H.last = now
-
-
-def _arms_home(objects):
-    """Both grippers' tool points back within 3 cm of where they were at the trial's first step, and still."""
-    if _H.home is None or not _H.still:
-        return False
-    return all(g in objects and np.linalg.norm(np.asarray(objects[g].pos) - _H.home[g]) < HOME_TOL for g in GRIPPERS)
 
 
 def _held(objects):
-    s = objects["jug"]
-    return any(g in objects and kit.opening(objects, g) < HOLD_OPEN
-               and np.linalg.norm(np.asarray(objects[g].pos) - np.asarray(s.pos)) < HOLD_R for g in GRIPPERS)
+    """A gripper touching the jug (its own shape within 2 mm of the glass, gk.touching) with its fingers part-closed
+    (opening 2% to 85%), neither an empty fist nor an open hand. A hand hovering more than 2 mm off does not count."""
+    lo, hi = JUG_GRIP
+    return any(lo <= kit.opening(objects, g) <= hi for g in gk.touching(objects, "jug", JUG_SHAPE, grippers=GRIPPERS))
 
 
 def tab_xyz(q):
@@ -265,13 +256,9 @@ def tab_xyz(q):
     return np.array([PX + PIN[0] + c * lx - s * ly, PY + PIN[1] + s * lx + c * ly, TOP + LEVER_Z])
 
 
-def _on_clasp(objects):
-    tab = tab_xyz(kit.joint(objects, "pan/clasp").pos)
-    return any(g in objects and np.linalg.norm(np.asarray(objects[g].pos) - tab) < ON_CLASP for g in GRIPPERS)
-
-
 def _jug_down(objects):
-    """The jug upright (within 10 degrees), still, on the table and let go."""
+    """The jug standing on the counter on its own: upright (within 10 degrees), its bottom within 1 cm of the table
+    top, at rest, and no gripper holding it (touching it with the fingers part-closed)."""
     s = objects["jug"]
     return (pk.tilt(objects, "jug") < UPRIGHT and abs(s.low[2] - TOP) < ON_TABLE
             and s.resting(max_speed=0.02, max_spin=1.0) and not _held(objects))
@@ -280,56 +267,44 @@ def _jug_down(objects):
 def _job(objects):
     if _H.leaked or _H.knocked:
         return 0.0
-    batter = pk.volume(objects, "pan")
-    if batter < SOME or not sealed(objects):
+    if not sealed(objects):
         return 0.0
-    if _held(objects) or _on_clasp(objects):
-        return 0.0  # nothing counts while the jug is still held or a hand still holds the clasp
-    if pk.spilled(objects) > SPILL_MAX:
-        return 0.25
+    # No rule about hands near the clasp: it is judged by its own angle, and inside its lock (3.4 degrees, well past
+    # the 17-degree over-center point) the ring's spring holds it shut, so a hand on or near it changes nothing.
+    batter = pk.volume(objects, "pan")
+    if batter < SOME or pk.spilled(objects) > SPILL_MAX:
+        return 0.25  # the pan closed in the right order (the step that keeps batter off the counter), but nothing
+        #              really poured yet, or the pour made a mess on the counter that needs wiping
     if batter < FULL:
         return 0.5
     if not _jug_down(objects):
-        return 0.75
+        return 0.75  # includes the jug still held: the pour isn't over while the jug is over the pan (it can still
+        #              drip or tip)
     return 1.0
 
 
 def _score(objects):
-    job = _job(objects)
-    if job == 1.0 and REQUIRE_ARMS_HOME and not _arms_home(objects):
-        return 0.9
-    return job
-
-
-def _debug(objects):
-    path = os.environ.get("SPRINGFORM_DEBUG")  # a file to append one line per step to
-    if path:
-        g = {k: np.round(np.asarray(objects[k].pos) - [0, 0, TOP], 3).tolist() for k in GRIPPERS if k in objects}
-        print("SPRING", pk.step(), g, "clasp", round(math.degrees(kit.joint(objects, "pan/clasp").pos), 1),
-              "ring", round(math.degrees(kit.joint(objects, "pan/ring").pos), 2),
-              "base_mm", round(kit.joint(objects, "pan/bottom").pos * 1000, 2), "sealed", sealed(objects),
-              "pan", round(pk.volume(objects, "pan"), 1), "jug", round(pk.volume(objects, "jug"), 1),
-              "jug_tilt", round(pk.tilt(objects, "jug"), 1), "spill", round(pk.spilled(objects), 2),
-              "leaked", _H.leaked, "score", _score(objects), file=open(path, "a"))
+    return _job(objects)
 
 
 def success(objects):
-    """The job done and, with REQUIRE_ARMS_HOME, both arms home and still. Called first each step, so it also
-    records the history."""
+    """The job done: poured into the sealed pan and the jug set down and let go (where the arms end is not scored).
+    Called first each step, so it also records the history."""
     _update(objects)
-    _debug(objects)
-    return _job(objects) == 1.0 and (_arms_home(objects) or not REQUIRE_ARMS_HOME)
+    return _job(objects) == 1.0
 
 
 def score(objects):
     """0, irreversibly, if there was ever more than 0.5 mL of batter in the pan for 2 steps while it was not sealed
     (sealed: the clasp locked, within 3.4 degrees of flat, and the base within 1 mm of its seat in the groove), since
-    that batter runs out under the ring, or if the jug leaned more than 45 degrees for 2 steps with no gripper holding
-    it (knocked over). 0 with less than 10 mL in the pan at the end (includes doing nothing, and closing the pan
-    without pouring). 0 while the jug is still held at the end or a tool point is within 4 cm of the clasp's tab. 0.25
-    with more than 3 mL spilled on the counter. 0.5 with 10 to 110 mL in the pan. 0.75 with at least 110 mL in but the
-    jug not standing upright (within 10 degrees) and still on the table. 1.0 with the jug set down and both arms home
-    and still; 0.9 if an arm is not home. Possible scores: 0, 0.25, 0.5, 0.75, 0.9, 1."""
+    that batter can run out under the ring, or if more than 0.5 mL leaked out in all, or if the jug leaned more than 45
+    degrees for 2 steps with no gripper holding it (knocked over). 0 with the pan not sealed at the end (includes doing
+    nothing). 0.25 with the pan sealed but less than 10 mL in it (closed up, nothing really poured), or more than 3 mL
+    spilled on the counter. 0.5 with 10 to 110 mL in the sealed pan and no more than 3 mL spilled. 0.75 with at least 110 mL in but the jug not set down (upright
+    within 10 degrees, still, its bottom within 1 cm of the table, and no gripper holding it: touching it, its own
+    shape within 2 mm of the glass, with the fingers 2% to 85% open; an empty fist, a wide-open hand or a hand
+    hovering more than 2 mm off does not count). 1.0 with the jug set down. Doing nothing scores 0. Possible scores:
+    0, 0.25, 0.5, 0.75, 1."""
     return _score(objects)
 
 
@@ -338,11 +313,18 @@ YAW, ROLL = math.pi / 2, 1.35  # the right hand comes in from -y, fingers closin
 GRIP_Z = 0.06  # grip height above the table
 LIP_ABOVE = 0.05  # m: the jug's lip this far above the pan's rim (the held jug rides about 2 cm low)
 POUR_PITCH = 1.60  # rad: how far the demo tips the jug
+START_PITCH = 0.52  # rad (30 degrees): the jug comes over the pan tipped this far, short of the 37 degrees where its
+#                     150 mL reaches the lip (pk.held_at), so nothing pours before the tipping the cameras see
+BRIM_PITCH = 0.85  # rad (49 degrees): from here on the lip stays 5 cm over the rim; tipped less, its foot would reach
+#                    the counter
+RAISE = 0.03  # m: the lip comes over the pan 3 cm higher (8 cm over the rim) and comes down as it is tipped to 49
 
 
 def pour_plan(wait, pitch=POUR_PITCH):
-    """The right arm: grip the jug from the side and lift it, wait `wait` s, bring it over the pan already tipped 49
-    degrees, tip it about its lip to `pitch` rad, tip it back, set it back on its spot, let go and go home."""
+    """The right arm: grip the jug from the side and lift it, wait `wait` s, bring it over the pan tipped 30 degrees
+    (short of pouring) with its lip 8 cm over the rim, tip it to 49 degrees while lowering the lip to 5 cm (the batter
+    starts to pour on the way), tip it on about its lip to `pitch` rad, tip it back, set it back on its spot, let go
+    and go home."""
     sx, sy, _ = JUG_POS
     gz = TOP + GRIP_Z
     tcp = np.array([sx, sy, gz])
@@ -355,8 +337,26 @@ def pour_plan(wait, pitch=POUR_PITCH):
             t(0.8, tuple(tcp), FINGER_CLOSED, "grip"),
             t(1.2, (sx, sy, gz + 0.06), FINGER_CLOSED, "lift"),
             t(wait, (sx, sy, gz + 0.06), FINGER_CLOSED, "wait for the pan to be closed")]
-    plan += pk.pour(tcp, lip0, over, roll=ROLL, yaw=YAW, start_pitch=0.85, to_pitch=pitch, above=0.05, steps=10,
-                    duration=7.0, hold=2.0, back=2.0, finger=FINGER_CLOSED)
+    # The jug is tipped about its lip, which ends 5 cm over the rim. It comes over the pan tipped only 30 degrees, below
+    # the 37 degrees where 150 mL in this jug reaches its lip, with the lip 8 cm over the rim so its foot clears the
+    # counter; it is then tipped on to 49 degrees while the lip comes down to 5 cm, so the batter reaches the lip and
+    # starts to fall during a tilt the cameras see, and then on to `pitch`.
+    r0 = kit._rot_xyz(ROLL, 0.0)
+    d = np.asarray(lip0, float) - tcp
+    over = np.asarray(over, float)
+
+    def at(d_s, p, h, label):  # the jug pitched p (rad), its lip h m above `over`
+        q = kit._rot_xyz(ROLL, p) @ r0.T
+        return kit.Tilted(d_s, tuple(over + (0.0, 0.0, h) - q @ d), FINGER_CLOSED, label, yaw=YAW, roll=ROLL, pitch=p)
+
+    plan += [at(1.5, START_PITCH, RAISE + 0.05, "over the pan, tipped 30 degrees (short of pouring)"),
+             at(1.0, START_PITCH, RAISE, "lip down to 8 cm over the rim")]
+    plan += [at(0.5, START_PITCH + k / 6 * (BRIM_PITCH - START_PITCH), RAISE * (1 - k / 6),
+                "tip and lower: the batter reaches the lip") for k in range(1, 7)]
+    plan += [at(0.7, BRIM_PITCH + k / 10 * (pitch - BRIM_PITCH), 0.0, "tip") for k in range(1, 11)]
+    plan.append(at(2.0, pitch, 0.0, "hold"))
+    plan += [at(0.4, BRIM_PITCH + k / 5 * (pitch - BRIM_PITCH), 0.0, "tip back") for k in range(4, -1, -1)]
+    plan.append(at(1.0, BRIM_PITCH, 0.05, "lift away"))
     plan += [t(1.5, (sx, sy, gz + 0.06), FINGER_CLOSED, "back over its spot"),
              t(1.2, (sx, sy, gz + 0.003), FINGER_CLOSED, "set down"),
              t(1.0, (sx, sy, gz + 0.003), FINGER_OPEN, "let go"),
@@ -388,7 +388,7 @@ def left_plan():
     p0 = _tab_push(OPEN, PUSH_OFF + 0.03)
     plan += [Waypoint(1.5, tuple(p0 + [0, 0, 0.05]), FINGER_CLOSED, "over the clasp"),
              Waypoint(1.0, tuple(p0), FINGER_CLOSED, "beside the clasp's tab")]
-    for k, q in enumerate(np.linspace(OPEN, 0.12, 8)):
+    for q in np.linspace(OPEN, 0.12, 8):
         plan.append(Waypoint(0.5, tuple(_tab_push(q)), FINGER_CLOSED, "push the clasp shut"))
     plan += [Waypoint(0.8, tuple(_tab_push(0.0, PUSH_OFF + 0.04)), FINGER_CLOSED, "back off"),
              Waypoint(1.0, tuple(_tab_push(0.0, PUSH_OFF + 0.06) + [0, 0, 0.08]), FINGER_CLOSED, "up and away"),

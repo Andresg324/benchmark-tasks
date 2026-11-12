@@ -20,6 +20,7 @@ RIM_Z = m.TOP + m.RING_H
 LINKS = {lk.name: lk for lk in m.OBJECTS[0].links}
 OPEN, SHUT = m.OPEN, 0.0  # clasp angles, rad
 UP, DOWN = m.BASE_UP, 0.0  # base heights above its seat, m
+GRIPPED = m.JUG_R / abs(kit.FINGER_OPEN)  # fingers stopped by the 4.9 cm jug (0.52 of full opening)
 
 
 def quat_y(deg):
@@ -40,7 +41,7 @@ def tipped(lip_at, deg):
     return np.asarray(lip_at, float) - pk._rotm(quat_y(deg)) @ lip_local
 
 
-def frame(jug=None, jdeg=0.0, clasp=OPEN, base=UP, grip=None, opening=1.0, left=None, locked_flag=None):
+def frame(jug=None, jdeg=0.0, clasp=OPEN, base=UP, grip=None, opening=1.0, left=None, locked_flag=None, gdeg=0.0):
     """One step's scene. `clasp` is the lever angle (rad, 0 = flat and locked) and `base` the base's height above its
     seat (m). `locked_flag` overrides the over-center law's own flag (a stale or wrong flag)."""
     grippers = dict(HOME)
@@ -51,7 +52,7 @@ def frame(jug=None, jdeg=0.0, clasp=OPEN, base=UP, grip=None, opening=1.0, left=
     return {"_opening": opening, "_clasp": clasp, "_base": base, "_flag": locked_flag,
             "pan": st(PAN, half=(m.R_OUT, m.R_OUT, 0.0)),
             "jug": st(JUG if jug is None else jug, jdeg, half=(m.JUG_R, m.JUG_R, m.JUG_H / 2)),
-            **{g: st(p, half=(0.01, 0.01, 0.01)) for g, p in grippers.items()}}
+            **{g: st(p, gdeg if g == "right_gripper" else 0.0, half=(0.01, 0.01, 0.01)) for g, p in grippers.items()}}
 
 
 def set_joints(objs):
@@ -90,7 +91,7 @@ def pour(peak=88.0, clasp=SHUT, base=DOWN, lip_xy=CENTER, lip_dz=0.05, held=True
     """Tip the jug about its lip (`lip_dz` over the pan's rim) from 60 degrees to `peak` in `n` stages, hold it there,
     then tip it back upright."""
     lip = (*lip_xy, RIM_Z + lip_dz)
-    o = 0.0 if held else 1.0
+    o = GRIPPED if held else 1.0
     f = []
     for k in range(1, n + 1):
         d = 60 + (peak - 60) * k / n
@@ -125,7 +126,7 @@ def slow_tip(clasp, base, d0, d1, dd):
     """Tip the jug from d0 to d1 degrees in dd-degree steps over the pan (a slow trickle)."""
     lip, f, d = (*CENTER, RIM_Z + 0.05), [], d0
     while d <= d1:
-        f.append((1, frame(jug=tipped(lip, d), jdeg=d, clasp=clasp, base=base, grip=lip, opening=0.0)))
+        f.append((1, frame(jug=tipped(lip, d), jdeg=d, clasp=clasp, base=base, grip=lip, opening=GRIPPED)))
         d += dd
     return f
 
@@ -144,9 +145,18 @@ CASES = [
      close(base=UP) + [(5, frame(clasp=OPEN, base=UP))] + seat() + close() + pour() + jug_back(), 1.0),
     ("nothing done", [(40, frame())], 0.0),
     ("seated, clasp snapped shut, batter poured, jug set down, arms home", GOOD, 1.0),
+    # review, Nov 12: where the arms end is not scored once the jug is let go
     ("same, but the right arm left hovering away from home", GOOD + [(20, frame(clasp=SHUT, base=DOWN,
-                                                                                 grip=(0.25, -0.05, 0.95)))], 0.9),
-    ("pan closed up right but nothing poured", seat() + close() + [(40, FULL_END)], 0.0),
+                                                                                 grip=(0.25, -0.05, 0.95)))], 1.0),
+    ("pan closed up right but nothing poured", seat() + close() + [(40, FULL_END)], 0.25),
+    # mock review, Nov 12: sealing alone earns 0.25, but only sealed in the right order
+    ("pan closed up right, nothing poured, jug still held up", seat() + close() +
+     [(20, frame(jug=JUG + [0, 0, 0.1], clasp=SHUT, grip=JUG + [0, 0, 0.1], opening=GRIPPED, base=DOWN))], 0.25),
+    ("clasp shut on the raised base (wrong order), nothing poured", close(base=UP) + [(40, frame(clasp=SHUT, base=UP))],
+     0.0),
+    ("base seated, clasp left open, nothing poured", seat() + [(40, frame(clasp=OPEN, base=DOWN))], 0.0),
+    ("clasp snapped only partway (8 degrees out), base seated, nothing poured",
+     seat() + [(40, frame(clasp=-0.14, base=DOWN))], 0.0),
     ("batter poured with the clasp open (base seated), clasp closed afterward",
      seat() + pour(clasp=OPEN) + jug_back(clasp=OPEN) + close(), 0.0),
     ("clasp closed with the base still on the lip (clamped high), batter poured",
@@ -156,11 +166,44 @@ CASES = [
     ("poured right, then the clasp opened at the end (the ring lets go)", GOOD + [(20, frame(clasp=OPEN, base=DOWN))],
      0.0),
     ("nothing sealed, batter poured straight in", pour(clasp=OPEN, base=UP) + jug_back(clasp=OPEN, base=UP), 0.0),
-    ("poured right, but the jug still held over the pan at the end",
+    ("poured right, but the jug still held up at the end (not set down)",
      seat() + close() + pour() + [(20, frame(jug=JUG + [0, 0, 0.1], clasp=SHUT, grip=JUG + [0, 0, 0.1],
-                                            opening=0.0, base=DOWN))], 0.0),
-    ("poured right, jug down, but the left hand still on the clasp's tab at the end",
-     GOOD + [(20, frame(clasp=SHUT, base=DOWN, left=m.tab_xyz(0.0) + [0, 0.02, 0.0]))], 0.0),
+                                            opening=GRIPPED, base=DOWN))], 0.75),
+    # QC, Nov 12: held means fingers closed on the jug, not a hand near it
+    ("poured right, jug set down, fingers still closed on it standing on the counter",
+     GOOD + [(20, frame(clasp=SHUT, base=DOWN, grip=JUG + [0.0, 0.0, 0.0], opening=GRIPPED))], 0.75),
+    ("pads sunk into the glass as in the sim (opening 7%) through the pour, then set down",
+     seat() + close() + [(n, dict(fr, _opening=0.07)) for n, fr in pour()] + jug_back(), 1.0),
+    ("poured right, jug set down, an empty closed fist left 3 cm from it (not touching)",
+     GOOD + [(20, frame(clasp=SHUT, base=DOWN, grip=JUG + [0.0, -(m.JUG_R + 0.03), 0.0], opening=0.0))], 1.0),
+    ("poured right, jug set down, an empty fist left just touching its side",
+     GOOD + [(20, frame(clasp=SHUT, base=DOWN, grip=JUG + [0.0, -m.JUG_R, 0.0], opening=0.0))], 1.0),
+    # contact, not nearness: a right hand pointing down over the jug, its tool point 5 mm above the rim (inside the old
+    # 1 cm zone) and its pad tips 7.8 mm down beside the glass
+    ("poured right, jug set down, a part-closed hand straddling its top 3.7 mm off the glass (not touching)",
+     GOOD + [(20, frame(clasp=SHUT, base=DOWN, grip=JUG + [0.0, 0.0, m.JUG_H / 2 + 0.005], opening=0.6, gdeg=180.0))],
+     1.0),
+    ("same hand closed to touch the glass (fingers on it, 52% open): still held",
+     GOOD + [(20, frame(clasp=SHUT, base=DOWN, grip=JUG + [0.0, 0.0, m.JUG_H / 2 + 0.005], opening=GRIPPED * 0.99,
+                        gdeg=180.0))], 0.75),
+    ("poured right, jug set down, open fingers still around it",
+     GOOD + [(20, frame(clasp=SHUT, base=DOWN, grip=JUG + [0.0, 0.0, 0.0], opening=1.0))], 1.0),
+    ("poured right, then the jug knocked onto its side with an empty fist beside it",
+     seat() + close() + pour() + [(20, frame(jug=JUG + [0, 0, -0.03], jdeg=90.0, clasp=SHUT, base=DOWN,
+                                             grip=JUG + [0.0, -0.04, 0.0], opening=0.0))], 0.0),
+    ("poured right, jug still held tipped over the pan at the end", seat() + close() + pour()[:-1], 0.75),
+    ("too little poured and the jug still held", seat() + close() + pour(peak=68)[:-1], 0.5),
+    # review, Nov 12: a hand near the clasp, not touching it, after a correct pour is full credit
+    ("poured right, jug down, left hand parked 3 cm from the clasp's tab, not touching it",
+     GOOD + [(20, frame(clasp=SHUT, base=DOWN, left=m.tab_xyz(0.0) + [0, 0.03, 0.0]))], 1.0),
+    ("poured right, jug down, left hand still resting on the locked clasp's tab at the end",
+     GOOD + [(20, frame(clasp=SHUT, base=DOWN, left=m.tab_xyz(0.0) + [0, 0.005, 0.0]))], 1.0),
+    # anti-loophole: a hand holding the clasp in, short of its lock, does not seal the pan
+    ("hand holds the clasp 8 degrees out (short of the lock) through the pour",
+     seat() + [(n, dict(fr, left_gripper=st(m.tab_xyz(-0.14), half=(.01, .01, .01))))
+               for n, fr in pour(clasp=-0.14) + jug_back(clasp=-0.14)], 0.0),
+    ("hand holds the clasp at 8 degrees during the pour, then it snaps shut at the end",
+     seat() + pour(clasp=-0.14) + close() + jug_back(), 0.0),
     ("too little poured (tipped to 68 degrees)", seat() + close() + pour(peak=68) + jug_back(), 0.5),
     ("poured from 15 cm over the rim (splashes)", seat() + close() + pour(lip_dz=0.15) + jug_back(), 0.25),
     ("half the stream misses the pan",
@@ -266,6 +309,26 @@ def check_masses():
     print("ok   every moving part is at least 50 g")
 
 
+def check_no_home_rule():
+    assert not hasattr(m, "REQUIRE_ARMS_HOME") and not hasattr(m, "ON_CLASP") and not hasattr(m, "_on_clasp")
+    print("ok   no arm-home or near-the-clasp rule left in the scorer")
+
+
+def check_pour_onset():
+    """The demo brings the jug over the pan short of pouring and starts the batter only while it tips (Andres saw
+    batter in the pan before the jug visibly tilted: it came in already tipped 49 degrees, past the 37 where its 150 mL
+    reaches the lip). Read from the demo's own waypoints."""
+    plan = m.pour_plan(1.0)
+    tips = [w for w in plan if isinstance(w, kit.Tilted) and w.pitch]
+    arrive = next(w for w in tips if "lip down" in w.label)
+    onset = next(t for t in np.arange(0.0, 90.0, 0.1) if pk.held_at("jug", t) < m.JUG0)
+    assert pk.held_at("jug", math.degrees(arrive.pitch)) > m.JUG0 + 5.0, "the jug arrives already pouring"
+    assert math.degrees(arrive.pitch) < onset - 5.0
+    first = next(w for w in tips if w.pitch > math.radians(onset))
+    assert "tip and lower" in first.label, first.label  # it starts to pour during the visible tilt
+    print(f"ok   jug arrives at {math.degrees(arrive.pitch):.0f} degrees, pours from {onset:.1f}, during the tilt")
+
+
 def main():
     fails = 0
     for label, frames, want in CASES:
@@ -277,6 +340,8 @@ def main():
     check_leak_rates()
     check_laws()
     check_masses()
+    check_no_home_rule()
+    check_pour_onset()
     if fails:
         raise SystemExit(f"{fails} failed")
     print("all pass")
