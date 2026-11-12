@@ -30,7 +30,6 @@ TOP = TABLE_TOP[SCENE]
 SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
 INSTRUCTION = "Loosen the nut on the base plate with the adjustable wrench, then take the wrench off it and set it down."
-REQUIRE_ARMS_HOME = True  # full score also needs both arms back where they started, still (see _arms_home)
 
 # --- Scene, in world coordinates (m): x forward from the arm bases, y to the robot's left, z up from the table top.
 NX, NY = 0.30, 0.0  # the stud's axis
@@ -73,12 +72,14 @@ PLAY_MAX = 0.001  # m: snug = jaw within 1 mm of the flats; 1 mm lets the nut tu
 ROUND_DEG = 2.0  # degrees: the nut turned this far with the jaw loose = corners rounded (it bears only on them)
 SPIN_TURN_DEG = 30.0  # degrees: the wrench spun this far on a nut that turns freely in its jaws = corners rounded
 CW_DEG = 2.0  # degrees: the nut forced this far clockwise (tighter) = the pull loaded the movable jaw
+# PLAY_MAX with ROUND_DEG, and CW_DEG, are operational proxies: the sim's nut can't deform, so the scorer counts the
+# pull that would round the corners or spring the jaw. A real trial reads the jaw's play and the nut's turn from
+# overhead video in every frame, checks a soft aluminum nut's corners in before and after photos (see the README).
 BROKEN_DEG = 5.0  # degrees: the nut has broken loose (more than any flex or play: it really turned on its thread)
-LOOSE_DEG = 60.0  # degrees: one flat of the hex, the most one swing of a wrench on a hex nut gives
+LOOSE_DEG = 60.0  # degrees: one flat of the hex, a full swing before the wrench is reset on the next flats
 SPRUNG_GAP = 0.003  # m: how far a movable jaw loaded at its tip springs open in its slot
-HANDS_OFF = 0.05  # m: no gripper's tool point within 5 cm of the wrench's handle or head (nobody holding it)
-HOME_TOL = 0.03  # m: a gripper's tool point this close to where it was at the trial's first step counts as home
-HOME_STILL = 0.002  # m per control step: the tool point not moving
+HANDS_OFF = 0.05  # m: a gripper holds the wrench with its tool point within 5 cm of the handle or head
+HOLD_OPEN = 0.6  # and its fingers under 60 % open (an open hand resting near the wrench is not holding it)
 GRIPPERS = ("left_gripper", "right_gripper")
 KEY = "base"  # the mechanism's name
 
@@ -400,11 +401,12 @@ def wrench_point(J, local):
 
 
 def _held(objects, J) -> bool:
-    """Any gripper's tool point within 5 cm of the wrench (its handle's centerline, or its head)."""
+    """Any gripper with its fingers under 60 % open and its tool point within 5 cm of the wrench (its handle's
+    centerline, or its head)."""
     a, b = wrench_point(J, (HANDLE_X[0], HANDLE_Y)), wrench_point(J, (0.0, 0.0))
     z = TOP + NZ + J["lift"]
     for g in GRIPPERS:
-        if g not in objects:
+        if g not in objects or kit.opening(objects, g) >= HOLD_OPEN:
             continue
         p = np.asarray(objects[g].pos, float)
         u = np.clip(np.dot(p[:2] - a, b - a) / np.dot(b - a, b - a), 0.0, 1.0)
@@ -421,37 +423,6 @@ def set_down(J) -> bool:
 
 def loosened_deg(m: Model) -> float:
     return 0.0 if m.nut0 is None else math.degrees(m.nut - m.nut0)
-
-
-# --- What happened during the run (arms). The jaw and nut history lives in the Model (reset with kit.episode()).
-class _History:
-    def __init__(self):
-        self.episode = kit.episode()
-        self.home = None
-        self.last = None
-        self.still = False
-
-
-_H = _History()
-
-
-def _update(objects):
-    global _H
-    if _H.episode != kit.episode():
-        _H = _History()
-    now = {g: np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects}
-    if _H.home is None and len(now) == 2:
-        _H.home = now
-    _H.still = _H.last is not None and all(g in _H.last and np.linalg.norm(now[g] - _H.last[g]) < HOME_STILL
-                                           for g in now)
-    _H.last = now
-
-
-def _arms_home(objects):
-    """Both grippers' tool points back within 3 cm of where they were at the trial's first step, and still."""
-    if _H.home is None or not _H.still:
-        return False
-    return all(g in objects and np.linalg.norm(np.asarray(objects[g].pos) - _H.home[g]) < HOME_TOL for g in GRIPPERS)
 
 
 def _job(objects):
@@ -473,42 +444,21 @@ def _job(objects):
     return 1.0
 
 
-def _score(objects):
-    job = _job(objects)
-    if job == 1.0 and REQUIRE_ARMS_HOME and not _arms_home(objects):
-        return 0.9
-    return job
-
-
 def success(objects):
     """The nut loosened at least 60 degrees with a snug jaw and the pull on the fixed jaw, the wrench off the nut and
-    laid down with nobody holding it, and both arms home and still. Called first each step; records the arms."""
-    _update(objects)
-    if os.environ.get("WRENCH_DEBUG"):
-        m, J = model(), _joints(objects)
-        if m.steps % 10 == 0:
-            print(f"wrench step {m.steps} nut {loosened_deg(m):.1f} open {m.open * 1000:.2f} wheel {J['wheel']:.2f} "
-                  f"turn {math.degrees(J['wr_turn']):.1f} lift {J['lift'] * 1000:.1f} xy {J['wr_x'] * 1000:.1f},"
-                  f"{J['wrench'] * 1000:.1f} coupled {m.coupled} cw {math.degrees(m.cw):.1f} "
-                  f"loose {math.degrees(m.loose_turn):.1f} rounded {m.rounded} sprung {m.sprung} "
-                  f"held {_held(objects, J)} score {_score(objects)}", flush=True)
-            if "left_gripper" in objects:
-                g = objects["left_gripper"]
-                w = wrench_point(J, WHEEL_AT)
-                print(f"  left tcp {np.round(np.asarray(g.pos) - [w[0], w[1], TOP + NZ + WHEEL_R], 4)} "
-                      f"tip-z {1000 * (g.low[2] - TOP - NZ - WHEEL_R):.1f} mm vs worm top", flush=True)
-    return _score(objects) == 1.0
+    laid down with nobody holding it."""
+    return _job(objects) == 1.0
 
 
 def score(objects):
-    """0 if the nut was ever turned 2 degrees or more with the jaw over 1 mm wider than its flats (the corners round
-    off; irreversible), or forced 2 degrees or more clockwise (the pull loaded the movable jaw, which springs open;
-    irreversible), or if it never turned 5 degrees looser, or if a gripper's tool point is within 5 cm of the wrench at
-    the end. Otherwise 0.25 if the nut turned 5 to 60 degrees looser; 0.5 if 60 degrees or more but the wrench is not
-    off the nut and laid down; 1.0 with it laid down off the nut (its jaws 3 cm or more from the nut's axis). With
-    REQUIRE_ARMS_HOME, a finished job with the arms not back home and still scores 0.9.
-    Possible scores: 0, 0.25, 0.5, 0.9, 1."""
-    return _score(objects)
+    """Doing nothing scores 0. 0 if the nut was ever turned 2 degrees or more with the jaw over 1 mm wider than its
+    flats (the proxy for rounding its corners; irreversible), or forced 2 degrees or more clockwise (the proxy for
+    loading the movable jaw, which springs open; irreversible), or if it never turned 5 degrees looser, or if a
+    gripper still holds the wrench at the end (fingers under 60 % open, tool point within 5 cm of it). Otherwise 0.25
+    if the nut turned 5 to 60 degrees looser; 0.5 if 60 degrees or more but the wrench is not off the nut and laid
+    down; 1.0 with it laid down off the nut (its jaws 3 cm or more from the nut's axis).
+    Possible scores: 0, 0.25, 0.5, 1."""
+    return _job(objects)
 
 
 # --- The scripted demo.
