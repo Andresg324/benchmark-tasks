@@ -208,17 +208,17 @@ check("do nothing", t.step(40)[0], 0.0)
 check("do nothing, arms home", t.home()[0], 0.0)
 
 t = full()
-check("full transfer, all back, arms not home", t.last[0], 0.9)
+check("full transfer, all back, arms not home (arm position is not scored)", t.last[0], 1.0)
 check("full transfer, arms home", t.home()[0], 1.0)
 
 t = full(secs=0.15)
 check("fast but correct: marker slid 3.8 cm in 0.15 s", t.home()[0], 1.0)
 
 t = full(back=False)
-check("marked, the jar still held on the line", t.home()[0], 0.0)
+check("marked to 1.5 mm, the jar and the end not put back (jar still held on the line)", t.home()[0], 0.75)
 
 t = full(to=m.DATUM_Z + m.PAD[2])
-check("marker set 2.5 cm high (the datum's height above the far post's pad)", t.home()[0], 0.0)
+check("level set up, but marker set 2.5 cm high (the datum's height above the far post's pad)", t.home()[0], 0.25)
 
 t = full(off=0.01)
 check("jar 1 cm above the line, marker slid to the end's water", t.home()[0], 0.0)
@@ -230,7 +230,7 @@ t = full(off=0.0012)
 check("jar 1.2 mm above the line, marker on the water", t.home()[0], 1.0)
 
 t = full(off=0.0012, to=m.DATUM_Z + 0.0022)
-check("jar 1.2 mm high, marker 1 mm over the water (2.2 mm off the datum)", t.home()[0], 0.0)
+check("jar 1.2 mm high, marker 1 mm over the water (2.2 mm off the datum): within 3 mm", t.home()[0], 0.5)
 
 
 def end_dropped():
@@ -367,7 +367,7 @@ t = full()
 t.home()
 t.marker += 0.0025
 t.step(3)
-check("marker nudged 2.5 mm after everything was put back", t.home()[0], 0.0)
+check("marker nudged 2.5 mm after everything was put back (setup credit only)", t.home()[0], 0.25)
 
 # a correct transfer, then a quick wrong flick of the marker (undone) with the jar already down
 t2 = full()
@@ -377,27 +377,27 @@ z = t2.marker
 t2.slide(z + 0.02, "right_gripper", 0.1)
 t2.slide(z, "right_gripper", 0.1)
 t2.let_go("right_gripper")
-check("marker flicked 2 cm and back after the jar was down", t2.home()[0], 0.0)
+check("marker flicked 2 cm and back after the jar was down (setup credit only)", t2.home()[0], 0.25)
 
 t = full()
 t.home()
 t.g["right_gripper"] = (TAB_X, TAB_Y, t.marker - 0.01)
 t.open["right_gripper"] = 1.0
-check("open hand left around the marker's tab", t.step(3)[0], 0.0)
+check("open hand left around the marker's tab (marker not let go)", t.step(3)[0], 0.25)
 t.open["right_gripper"] = 0.0
-check("empty closed fist on the marker's tab", t.step(3)[0], 0.0)
+check("empty closed fist on the marker's tab", t.step(3)[0], 0.25)
 
 t = full()
 t.home()
 t.g["left_gripper"] = (m.JAR_STAND[0] + 0.03, m.JAR_STAND[1], m.TOP + 0.05)
 t.open["left_gripper"] = 0.0
-check("closed fist resting against the jar's side", t.step(3)[0], 0.0)
+check("closed fist resting against the jar's side (jar not let go)", t.step(3)[0], 0.75)
 
 t = full()
 t.home()
 t.g["left_gripper"] = (m.JAR_STAND[0], m.JAR_STAND[1], m.TOP + m.JAR_DZ)
 t.open["left_gripper"] = 1.0
-check("open hand around the jar's handle at the end", t.step(3)[0], 0.0)
+check("open hand around the jar's handle at the end", t.step(3)[0], 0.75)
 
 t = Trial()  # a fist on the handle without closing on it is not a grip on the jar
 end_up(t)
@@ -411,13 +411,64 @@ print("ok  an empty closed fist at the handle is not a grip")
 
 t = full()
 t.obj[m.END][0] = t.obj[m.END][0] + np.array([0.03, 0.0, 0.0])
-check("end set down 3 cm off its stand", t.home()[0], 0.0)
+check("end set down 3 cm off its stand", t.home()[0], 0.75)
 
 t = full()
 t.obj[m.JAR][1] = qx(30)
-check("jar left leaning 30 degrees in its stand", t.home()[0], 0.0)
+check("jar left leaning 30 degrees in its stand", t.home()[0], 0.75)
+
+# --- partial credit (review, Nov 12)
+t = Trial()  # the level set up and held on the line for 2 s, then put back without marking
+end_up(t)
+jar_up(t)
+t.step(40)
+jar_back(t)
+end_back(t)
+check("level set up and held on the line 2 s, never marked, all put back", t.home()[0], 0.25)
+
+t = Trial()  # the same held only 0.5 s: not yet a setup
+end_up(t)
+t.hold(m.JAR, "left_gripper")
+t.move({m.JAR: (m.JAR_STAND, m.JAR_CARRY, "left_gripper")})
+t.move({m.JAR: (JAR_SPOT, m.JAR_CARRY, "left_gripper")}, 2.5)
+t.move({m.JAR: (JAR_SPOT, m.JAR_HOLD + 0.0035, "left_gripper")}, 0.5)
+t.move({m.JAR: (JAR_SPOT, m.JAR_HOLD, "left_gripper")}, 0.25)
+t.step(4)
+t.move({m.JAR: (JAR_SPOT, m.JAR_HOLD + 0.0035, "left_gripper")}, 0.25)
+jar_back(t)
+end_back(t)
+check("jar on the line only 0.6 s, never marked", t.home()[0], 0.0)
+
+t = Trial()  # the jar swept up past the line and straight back down: passing through is not a setup
+end_up(t)
+t.hold(m.JAR, "left_gripper")
+t.move({m.JAR: (m.JAR_STAND, m.JAR_CARRY, "left_gripper")})
+t.move({m.JAR: (JAR_SPOT, m.JAR_CARRY, "left_gripper")}, 2.5)
+t.move({m.JAR: (JAR_SPOT, m.JAR_HOLD - 0.01, "left_gripper")}, 0.5)
+t.move({m.JAR: (JAR_SPOT, m.JAR_CARRY, "left_gripper")}, 0.5)
+jar_back(t)
+end_back(t)
+check("jar swept through the line height and back, never held there", t.home()[0], 0.0)
+
+t = full(off=0.0025)
+check("jar 2.5 mm above the line, marker on the water (mark 2.5 mm off), all put back", t.home()[0], 0.5)
+t = full(off=0.0025, back=False)
+check("the same, jar and end not put back", t.home()[0], 0.5)
+t = full(off=-0.0028)
+check("jar 2.8 mm below the line, marker on the water", t.home()[0], 0.5)
+t = full(off=0.005)
+check("jar 5 mm above the line, marker on the water (mark 5 mm off)", t.home()[0], 0.0)
+t = full(off=0.005, to=m.DATUM_Z)
+check("jar 5 mm above the line, marker slid to the datum height by eye (not on the water)", t.home()[0], 0.0)
+t = full(off=0.0025, to=m.DATUM_Z)
+check("jar 2.5 mm high, marker 2.5 mm under the water on the datum height (lucky, not a 1.5 mm read)", t.home()[0],
+      0.5)
+t = full(off=0.0012, back=False)
+t.home()
+check("1.5 mm mark, then the marker still pinched at the end", (t.grip_tab("right_gripper") or t.step(3))[0], 0.25)
 
 # the text's numbers match the code
+assert m.WIDE == 0.003 and m.SET_S == 1.0 and m.SET_UP.steps == 20
 assert m.FULL == 0.0015 and m.ON_LINE == 0.0015 and m.ON_SURFACE == 0.0015 and m.SPILL_MAX == 1.0
 assert m.MOVED == 0.0005 and m.AT_JAR == 0.03 and m.AT_END == 0.025 and m.IN_STAND == 0.025
 assert abs(m.DATUM_Z - m.TOP - 0.130) < 1e-9 and abs(m.SHELF_TOP - m.TOP - 0.04) < 1e-9 and m.PAD[2] == 0.025

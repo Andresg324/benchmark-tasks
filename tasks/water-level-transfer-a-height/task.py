@@ -7,7 +7,7 @@ The job is to carry the datum line's height across to the far post (Fine Homebui
 Levels", 1994; JLC, "Making and Using a Water Level"): the water in the jar and in the end tube always stands at one
 height, so the end tube is set at the far post, the jar is held beside the datum post and raised or lowered until its
 water sits on the line, and the marker is slid to the end tube's water surface. The jar has 55 times the end tube's
-cross-section, so moving the end tube barely shifts the water (4 cm moves it 0.7 mm) while the water follows the jar
+cross-section, so moving the end tube barely shifts the water (4 cm moves it 0.65 mm) while the water follows the jar
 almost 1:1; the jar has nowhere to stand at the line's height, so one hand holds it on the line while the other, 45 cm
 away at the far post, slides the marker. The end tube's mouth is 12 cm above its stand's floor and the line is at 13
 cm, so the jar can only go up to the line once the end tube is up on the far post's shelf, and must come down again
@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np  # noqa: E402
 import yamkit as kit  # noqa: E402  (spawns the modeled props; nothing on disk changes)
-import guardkit as gk  # noqa: E402  (grip, release and arms-home checks)
+import guardkit as gk  # noqa: E402  (grip, release and latch checks)
 import levelhose as lh  # noqa: E402  (the water in the level, updated every control step)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN  # noqa: E402
 from yam_arena.demo import Waypoint  # noqa: E402
@@ -38,7 +38,6 @@ SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
 INSTRUCTION = ("Use the water level to mark the height of the datum post's black line on the far post with the red "
                "marker, then put the jar and the hose end back in their stands.")
-REQUIRE_ARMS_HOME = True  # full score also needs both arms back where they started, still
 
 # --- Scene, in world coordinates (m): x forward from the arm bases, y to the robot's left, z up from the table top.
 POST_X = 0.30  # both posts' centers (x)
@@ -59,11 +58,11 @@ JAR_MASS = 0.15  # kg in the sim (a real jar with 0.4 L of water about 0.5 kg)
 STICK = (0.025, 0.025, 0.15)
 FOOT = (0.04, 0.04, 0.008)
 TUBE_R = 0.008  # clear acrylic tube, 16 mm outside ...
-BORE_R = 0.00635  # ... 12.7 mm (1/2 in) bore: 1.27 mL per cm
+BORE_R = 0.00635  # ... 12.7 mm (0.5 inch) bore: 1.27 mL per cm
 TUBE_X = -(STICK[0] / 2 + TUBE_R + 0.0045)  # the tube's axis in the stick's frame: on its front face (-x)
 TUBE_Z = (0.03, 0.12)  # the tube from 3 cm to 12 cm above the stick's bottom
 END_MASS = 0.08  # kg: stick, foot, tube and its water
-HOSE = lh.Hose(radius=0.0048, length=1.2)  # 3/8 in bore clear vinyl, 1.2 m
+HOSE = lh.Hose(radius=0.0048, length=1.2)  # 9.5 mm (0.375 inch) bore clear vinyl, 1.2 m
 FILL = TOP + 0.060  # the water 6 cm above the table with both in their stands
 
 # stands on the table (start and finish) and the far post's shelf: floors with a 1 cm rim
@@ -191,9 +190,13 @@ lh.setup([lh.End(JAR, bottom=(0.0, 0.0, JAR_FLOOR), top=(0.0, 0.0, JAR_H), radiu
          hose=HOSE, fill_to=FILL, floor_z=TOP)
 
 # --- The rule's numbers (reasons in score() and the README).
-ON_LINE = 0.0015  # m: the jar's water within 1.5 mm of the line while the marker moves (a meniscus read on a 2 mm line)
+ON_LINE = 0.0015  # m: the water level in the jar within 1.5 mm of the line while the marker moves (a meniscus read on a 2 mm line)
 ON_SURFACE = 0.0015  # m: the marker's edge within 1.5 mm of the end's water surface when it moves
-FULL = 0.0015  # m: the mark within 1.5 mm (a sixteenth of an inch) of the datum height: carpentry tolerance
+FULL = 0.0015  # m: the mark within 1.5 mm (about 0.06 inch) of the datum height: carpentry tolerance
+WIDE = 0.003  # m: 3 mm (about 0.12 inch), the wider tolerance for partial credit: the water level in the jar, the marker's
+#               edge on the end's water and the mark itself each within 3 mm (good enough for rough framing, not for
+#               a ledger or a run of cabinets)
+SET_S = 1.0  # s: the level held set up (end on the shelf, jar on the line) this long in a row earns the setup credit
 MOVED = 0.0005  # m: the marker counts as moved once its edge is 0.5 mm from where it was last counted
 SPILL_MAX = 1.0  # mL: about 20 drops; a careful transfer spills none
 AT_JAR = 0.03  # m: the jar's axis within 3 cm of its spot 1 cm off the datum post (its water read against the line)
@@ -211,8 +214,8 @@ END_PARTS = (gk.Block((0, 0, STICK[2] / 2), STICK), gk.Block((0, 0, FOOT[2] / 2)
              gk.Seg((TUBE_X, 0, TUBE_Z[0]), (TUBE_X, 0, TUBE_Z[1]), TUBE_R))
 MARKER = "rail/marker"
 MARKER_PARTS = (gk.Block(*TAB), gk.Block((-0.003, 0.0, -0.0075), (0.006, POST + 0.006, 0.015)))
-HOME = gk.ArmsHome()
 TAUT = gk.Latch(steps=2)
+SET_UP = gk.Latch(steps=int(round(SET_S * 20)))  # 20 control steps at 20 Hz
 
 
 def _tilt(objects, name):
@@ -231,27 +234,34 @@ def _end_tube_xy(objects):
     return (np.asarray(o.pos, float) + lh._rotm(o.quat_xyzw) @ np.array([TUBE_X, 0.0, 0.0]))[:2]
 
 
-def reading(objects):
-    """This step is a transfer: the jar beside the datum post, upright, gripped by its handle, its water on the line;
-    the end at the far post, upright; the marker's edge on the end's water surface; the hand on the jar not the one on
-    the marker."""
+def set_up(objects, tol=WIDE):
+    """The level set up for a reading: the jar beside the datum post, upright, gripped by its handle, its water within
+    `tol` of the line; the end at the far post, upright. Returns the hands gripping the jar (empty if not set up)."""
     jar = objects[JAR]
     hands = gk.grip_on(objects, JAR, HANDLE_PART, HANDLE_BAND)
+    ok = (float(np.linalg.norm(np.asarray(jar.pos, float)[:2] - JAR_SPOT)) <= AT_JAR
+          and _tilt(objects, JAR) <= UPRIGHT_READ
+          and abs(lh.surface_at(objects, JAR) - DATUM_Z) <= tol
+          and float(np.linalg.norm(_end_tube_xy(objects) - END_SPOT)) <= AT_END
+          and _tilt(objects, END) <= UPRIGHT_READ)
+    return hands if ok else []
+
+
+def reading(objects, tol=ON_LINE):
+    """This step is a transfer: the level set up with the jar's water within `tol` of the line, the marker's edge
+    within `tol` of the end's water surface, and the hand on the jar not the one on the marker."""
+    hands = set_up(objects, tol)
     on_marker = gk.holding(objects, MARKER, MARKER_PARTS)
     return bool(any(h not in on_marker for h in hands)
-                and float(np.linalg.norm(np.asarray(jar.pos, float)[:2] - JAR_SPOT)) <= AT_JAR
-                and _tilt(objects, JAR) <= UPRIGHT_READ
-                and abs(lh.surface_at(objects, JAR) - DATUM_Z) <= ON_LINE
-                and float(np.linalg.norm(_end_tube_xy(objects) - END_SPOT)) <= AT_END
-                and _tilt(objects, END) <= UPRIGHT_READ
-                and abs(lh.surface_at(objects, END) - mark(objects)) <= ON_SURFACE)
+                and abs(lh.surface_at(objects, END) - mark(objects)) <= tol)
 
 
 class _Marking(gk._PerStep):
-    """Per trial, latched: whether the step at which the marker last moved was a transfer."""
+    """Per trial, latched: whether the step at which the marker last moved was a transfer, at the 1.5 mm tolerance
+    (`read`) and at the 3 mm one (`read_wide`)."""
 
     def _fresh(self):
-        self.ref, self.read = None, False
+        self.ref, self.read, self.read_wide = None, False, False
 
     def feed(self, objects):
         if not self._tick(objects):
@@ -260,7 +270,7 @@ class _Marking(gk._PerStep):
         if self.ref is None:
             self.ref = z
         elif abs(z - self.ref) > MOVED:
-            self.ref, self.read = z, reading(objects)
+            self.ref, self.read, self.read_wide = z, reading(objects), reading(objects, WIDE)
 
 
 MARKING = _Marking()
@@ -268,7 +278,7 @@ MARKING = _Marking()
 
 def in_stand(objects, name, stand):
     """`name` let go (every tool point and pad tip 1 cm clear), standing in its stand within 10 degrees of upright,
-    still."""
+    moving under 1 cm/s."""
     o = objects[name]
     parts = JAR_PARTS if name == JAR else END_PARTS
     p = np.asarray(o.pos, float)
@@ -280,23 +290,22 @@ def in_stand(objects, name, stand):
 def _job(objects):
     MARKING.feed(objects)
     TAUT.feed(objects, lh.taut(objects))
+    SET_UP.feed(objects, bool(set_up(objects)))
     if lh.spilled(objects) > SPILL_MAX or TAUT.on:
         return 0.0  # water out of a mouth (an end below the water, the jar tipped) or the hose pulled taut
-    if not (in_stand(objects, JAR, JAR_STAND) and in_stand(objects, END, END_STAND)):
-        return 0.0  # the jar or the end still held, not back in its stand, lying down or moving
-    if not gk.released_clear(objects, MARKER, MARKER_PARTS, 0.01):
-        return 0.0  # the marker still held
-    if not MARKING.read:
-        return 0.0  # never moved, or last moved without a transfer (the jar off its line or not held, the end away)
-    return 1.0 if abs(mark(objects) - DATUM_Z) <= FULL else 0.0
+    err = abs(mark(objects) - DATUM_Z)
+    if gk.released_clear(objects, MARKER, MARKER_PARTS, 0.01):
+        if MARKING.read and err <= FULL:
+            if in_stand(objects, JAR, JAR_STAND) and in_stand(objects, END, END_STAND):
+                return 1.0
+            return 0.75  # marked to 1.5 mm, but the jar or the end not put back in its stand (or still held)
+        if MARKING.read_wide and err <= WIDE:
+            return 0.5  # marked from a transfer, but only to 3 mm
+    return 0.25 if SET_UP.on else 0.0  # the level was set up and held on the line for 1 s, but no good mark
 
 
 def _score(objects):
-    HOME.feed(objects)
-    job = _job(objects)
-    if job == 1.0 and REQUIRE_ARMS_HOME and not HOME.home(objects):
-        return 0.9
-    return job
+    return _job(objects)
 
 
 def success(objects):
@@ -304,17 +313,18 @@ def success(objects):
 
 
 def score(objects):
-    """1.0 if the red marker's edge ends within 1.5 mm (a sixteenth of an inch, carpentry tolerance) of the datum line's height and it
-    was set from a transfer: at the last step it moved (by more than 0.5 mm), the jar stood within 3 cm of its spot
-    beside the datum post, within 15 degrees of upright, gripped by its handle by a hand other than one on the marker,
-    with its water within 1.5 mm of the line; the end's tube stood within 2.5 cm of its spot behind the marker's
-    pointer, within 15 degrees of upright; and the marker's edge was within 1.5 mm of the end's water surface. Also no
-    more than 1 mL spilled, the hose never pulled taut, the jar and the end back in their stands (within 2.5 cm),
-    upright within 10 degrees, still and let go (every tool point and pad tip 1 cm clear), the marker let go, and both
-    arms back home and still (0.9 if not home). Otherwise 0: nothing done, the marker last moved without such a
-    transfer (the jar off its line, set down or in the marker hand, the end not at the far post), the mark more than
-    1.5 mm off, more than 1 mL spilled (the end left in its stand or set back while the jar is up, the jar tipped), or
-    anything still held or not back in its stand. Possible scores: 0, 0.9, 1.0."""
+    """0 if more than 1 mL ever spilled (the end left in its stand or set back while the jar is up, the jar tipped) or
+    the hose was pulled taut. The marker counts as moved once its edge is 0.5 mm from where it was last counted, and
+    its last move must be a transfer: the jar within 3 cm of its spot beside the datum post, within 15 degrees of
+    upright, gripped by its handle by a hand other than one on the marker, its water on the line (the water surface
+    inside the jar level with the line, not the jar above it); the end's tube within 2.5 cm of its spot behind the
+    pointer, within 15 degrees of upright; the marker's edge on the end's water. With the marker let go: 1.0 if the
+    transfer and the mark are within 1.5 mm (about 0.06 inch) and the jar and the end stand back in their stands
+    (within 2.5 cm, bottom within 5 mm of the table, upright within 10 degrees, under 1 cm/s, every tool point and
+    pad tip 1 cm clear); 0.75 for the same mark with the jar or the end not put back; 0.5 if the transfer and the
+    mark are only within 3 mm. Otherwise 0.25 if the level was ever held set up for 1 s (the end at the far post,
+    the jar gripped at its spot with its water within 3 mm of the line), else 0. Where the arms end is not scored.
+    Possible scores: 0, 0.25, 0.5, 0.75, 1.0."""
     return _score(objects)
 
 
