@@ -1,6 +1,6 @@
 """A baked tart has cooled in its loose-bottom fluted tart pan on the counter, and a small cake stand stands behind
-it. A tart cannot be turned out upside down like a cake (its crust and topping would break), and lifting the
-pan by its rim lifts everything, because the ring's inward bottom lip holds the loose base. The baker's way out is to
+it. A tart cannot be turned out upside down like a cake (its crust and topping can break), and lifting the
+pan by its rim lifts everything, because the ring's inward bottom lip holds the loose base. The usual way out is to
 stand the base on a cake stand narrower than the base and lower the ring away level with both hands, so it drops to
 the table around the stand and leaves the tart on its base, on the stand, ready to serve.
 """
@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np  # noqa: E402
-import guardkit as gk  # noqa: E402  (per-trial latches, arms-home check, tool points)
+import guardkit as gk  # noqa: E402  (per-trial latches, gripper contact)
 import yamkit as kit  # noqa: E402  (modeled props, gripper states, tilted demo grips)
 from yam_arena.constants import FINGER_CLOSED  # noqa: E402
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
@@ -22,7 +22,6 @@ TOP = TABLE_TOP[SCENE]
 SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
 INSTRUCTION = "Take the tart out of its pan."
-REQUIRE_ARMS_HOME = True  # full score also needs both arms back where they started, still
 
 # The pan: a 24 cm (9.5-inch) fluted tart pan with a removable bottom, tinned steel, full size. Ring frame origin at
 # the center of the ring's bottom edge.
@@ -117,21 +116,29 @@ OBJECTS = [_stand(), _ring(), _base(), _tart()]
 # --- Scoring
 # Thresholds and why:
 COCK_DEG = 6.0  # ring tilt while it slides down past the crust: 6 degrees leans the top of the 2.6 cm wall 2.7 mm
-#                 inward, deeper than the 2 mm flutes, so the high side's wall levers into the baked fluted edge
+#                 inward, deeper than the 2 mm flutes, so the high side's wall can lever into the baked fluted
+#                 edge (the tilt is the proxy; a real trial reads it from an inclinometer and photographs the edge)
 SHOVE = 0.005  # m: the tart pushed 5 mm across its base has been shoved by a hand or the ring (it sits there by
-#                friction and nothing else moves it): its crust edge is dented
-TIP_DEG = 20.0  # the tart tilted this far has slid on the base or broken against the stand's edge: ruined
+#                friction and nothing else moves it), which can dent its crust edge (the sim's tart is rigid: the
+#                shift is the proxy; a real trial photographs the edge before and after)
+TIP_DEG = 20.0  # the tart tilted this far has slid on the base or fallen against the stand's edge, where it can
+#                 break (a proxy for a ruined tart; a real trial reads the tilt from the video)
 LEVEL_DEG = 5.0  # base (with the tart) and ring "level": 5 degrees drops one edge of the 23.4 cm base 1 cm
 CENTER = 0.03  # m: base center within 3 cm of the stand's axis, so the tart's weight stays well inside its 5.5 cm top radius
 ON = 0.005  # m: "resting on": the base's bottom within 5 mm of the stand's top; the ring's within 5 mm of the table
-TOUCH = 0.01  # m: a tool point or pad tip within 1 cm of the tart's top or side, over its footprint, is in the crust
-CLEAR = 0.01  # m: let go: every tool point and pad tip at least 1 cm clear of the ring, the base and the tart
+# Touching (gk.touching): a gripper's own shape (palm and both fingers, boxes fitted to the YAM's collision meshes, at
+# their present opening) within gk.CONTACT (2 mm: the solver's resting gap plus the box fit) of the part's shape. A
+# hand hovering over the tart or beside the pan more than 2 mm away is not touching it.
+TART = gk.Ring(0.0, TART_R, -TART_H / 2, TART_H / 2)
+BASE = gk.Ring(0.0, BASE_R, -BASE_T / 2, BASE_T / 2)
+RING = (gk.Ring(LEDGE_IN, WALL_R + WALL_T / 2, 0.0, LEDGE_H),  # the bottom lip
+        gk.Ring(WALL_R - WALL_T / 2, WALL_R + WALL_T / 2, 0.0, WALL_H),  # the wall
+        gk.Ring(WALL_R, LIP_OUT, LIP_Z - LIP_H / 2, LIP_Z + LIP_H / 2))  # the top lip
 
 COCKED = gk.Latch(steps=1)  # irreversible: the ring cocked while sliding off the crust (the two-step guard
 #                                against physics pops is in _Slide: tilted at both ends of a step)
-TOUCHED = gk.Latch(steps=2)  # irreversible: a finger in the tart
-RUINED = gk.Latch(steps=2)  # irreversible: the tart tipped or slid off its base
-HOME = gk.ArmsHome()
+TOUCHED = gk.Latch(steps=2)  # irreversible: a gripper touched the tart
+RUINED = gk.Latch(steps=2)  # irreversible: the tart tipped or slid off its base (the proxy for a ruined tart)
 
 
 def _tilt(objects, name):
@@ -139,41 +146,27 @@ def _tilt(objects, name):
     return math.degrees(math.acos(max(-1.0, min(1.0, 1 - 2 * (x * x + y * y)))))
 
 
-def _cyl_dist(p, r_in, r_out, z0, z1):
-    """Distance from a local point to an annulus r_in..r_out, z0..z1 (0 inside)."""
-    r = math.hypot(p[0], p[1])
-    dr = max(r_in - r, r - r_out, 0.0)
-    dz = max(z0 - p[2], p[2] - z1, 0.0)
-    return math.hypot(dr, dz)
+_SEEN = {}  # this step's contact results: success() and score() both ask, with the same objects
 
 
-SHAPES = {"ring": (LEDGE_IN, LIP_OUT, 0.0, WALL_H),
-          "base": (0.0, BASE_R, -BASE_T / 2, BASE_T / 2),
-          "tart": (0.0, TART_R, -TART_H / 2, TART_H / 2)}
+def _contact(objects, name, parts):
+    if _SEEN.get("objs") is not objects:
+        _SEEN.clear()
+        _SEEN["objs"] = objects
+    if name not in _SEEN:
+        _SEEN[name] = bool(gk.touching(objects, name, parts))
+    return _SEEN[name]
 
 
-def _dist(objects, name, p):
-    return _cyl_dist(gk.local(objects, name, p), *SHAPES[name])
-
-
-def _points(objects):
-    for g in gk.GRIPPERS:
-        if g in objects:
-            yield from gk.tool_points(objects, g)
-
-
-def _in_tart(objects):
-    """A tool point or pad tip over the tart's footprint (or 3 mm into its side), from the base's bottom (a tip that
-    low under the footprint is pinching the crust's bottom edge) to 1 cm above the tart's top."""
-    for p in _points(objects):
-        q = gk.local(objects, "tart", p)
-        if math.hypot(q[0], q[1]) < TART_R + 0.003 and -TART_H / 2 - BASE_T < q[2] < TART_H / 2 + TOUCH:
-            return True
-    return False
+def _on_tart(objects):
+    """A gripper (palm, finger or pad) touching the tart's top, side or the crust's bottom edge."""
+    return _contact(objects, "tart", TART)
 
 
 def _let_go(objects):
-    return all(_dist(objects, n, p) >= CLEAR for p in _points(objects) for n in ("ring", "base", "tart"))
+    """No gripper touching the ring, the base or the tart (an open hand resting against the ring still counts as on
+    it; one hovering beside it does not)."""
+    return not (_contact(objects, "ring", RING) or _contact(objects, "base", BASE) or _on_tart(objects))
 
 
 def _bottom(objects, name, half):
@@ -244,9 +237,8 @@ SLID = _Slide()
 
 def _watch(objects):
     COCKED.feed(objects, SLID.cocked(objects))
-    TOUCHED.feed(objects, _in_tart(objects))
+    TOUCHED.feed(objects, _on_tart(objects))
     RUINED.feed(objects, _tilt(objects, "tart") > TIP_DEG or not _tart_on_base(objects))
-    HOME.feed(objects)
 
 
 def _job(objects):
@@ -260,24 +252,22 @@ def _job(objects):
 
 
 def success(objects):
-    """Unmolded level, let go and, with REQUIRE_ARMS_HOME, both arms home and still."""
+    """Unmolded level and let go (where the arms end once clear does not matter)."""
     _watch(objects)
-    return _job(objects) == 1.0 and (HOME.home(objects) or not REQUIRE_ARMS_HOME)
+    return _job(objects) == 1.0
 
 
 def score(objects):
-    """0 if a finger ever went into the tart (a tool point or pad tip over its footprint within 1 cm of its top) or
-    the tart ever tipped past 20 degrees or slid off its base (irreversible, 2 steps in a row). 0 unless the base, with
-    the tart on it, ends resting on the stand: within 3 cm of its axis, within 5 degrees of level, its bottom within
-    5 mm of the stand's top. Then 0.25 if the ring is still on (the base on its bottom lip) or a hand is still within
-    1 cm of the ring, base or tart; 0 if the ring is anywhere but flat on the table around the stand; 0.5 if the ring
-    ever tilted past 6 degrees while sliding down past the crust (irreversible); 1.0 with both arms home and still,
-    0.9 with an arm not home. Possible scores: 0, 0.25, 0.5, 0.9, 1.0."""
+    """Doing nothing scores 0. 0 if a gripper ever touched the tart (its palm or fingers in contact with the tart's
+    top, side or crust edge, by the gripper's own shape; hovering does not count) or the tart ever tipped past 20
+    degrees or slid off its base (irreversible, 2 steps in a row). 0 unless the base, with the tart on it, ends
+    resting on the stand: within 3 cm of its axis, within 5 degrees of level, its bottom within
+    5 mm of the stand's top. Then 0.25 if the ring is still on (the base on its bottom lip) or a gripper is still
+    touching the ring or the base; 0 if the ring is anywhere but flat on the table around the stand; 0.5 if the ring
+    ever tilted past 6 degrees while sliding down past the crust (irreversible); otherwise 1.0. Possible scores: 0,
+    0.25, 0.5, 1.0."""
     _watch(objects)
-    job = _job(objects)
-    if job == 1.0 and REQUIRE_ARMS_HOME and not HOME.home(objects):
-        return 0.9
-    return job
+    return _job(objects)
 
 
 # --- Demo: each arm pinches the pan's lip from its own side (a side grip: approach along y tilted 25 degrees down,
