@@ -1,10 +1,10 @@
 """An IV flush on a training arm. The patient's forearm (skin-colored, about 7 cm thick and 32 cm long, tapering to the
 wrist) lies on a dark padded armrest, pointing at the robot. A peripheral IV catheter is taped in the forearm under a
-clear film dressing. A short clear extension line runs from it down the arm's right side to a needleless connector (a
-clear valve with a blue cap ring) that lies on the bench beside the armrest, taped down, its open end pointing to the
-robot's right. On the right, a light-blue tray holds an opened alcohol prep pad, folded, on its torn foil packet, and a
-prefilled 10 mL saline flush syringe lying with its tip toward the connector.
-"""
+clear film dressing. A short clear extension line runs from it around the arm's right side and across the armrest to a
+needleless connector (a clear valve with a blue cap ring) that lies on the bench beside the armrest, taped down, its
+open end pointing to the robot's right. On the right, a light-blue tray holds an opened large alcohol prep pad, folded,
+on its torn foil packet, and an empty 10 mL luer syringe, plunger pulled back to 10 mL, lying with its tip toward the
+connector."""
 
 import math
 import os
@@ -14,7 +14,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np  # noqa: E402
 import yamkit as kit  # noqa: E402  (spawns the modeled props below; nothing on disk changes)
+import guardkit as gk  # noqa: E402  (the gripper's own shape, for the grip on the pad)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN  # noqa: E402
+import yam_arena.demo as D  # noqa: E402
 from yam_arena.demo import Waypoint, pick_place_waypoints  # noqa: E402
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
 
@@ -36,23 +38,37 @@ AXIS_Z = TOP + 0.009  # the connector's and the syringe's common axis height
 HUB_X, HUB_BACK_Y, HUB_TIP_Y, HUB_R = 0.27, -0.074, -0.100, 0.0055
 HUB = np.array([HUB_X, HUB_TIP_Y, AXIS_Z])  # the hub's open end: the surface that must be scrubbed
 
-PAD = (0.035, 0.035, 0.012)  # the folded prep pad
-TRAY_X, TRAY_Y, TRAY_H = 0.35, -0.20, 0.008
+PAD = (0.035, 0.065, 0.010)  # the folded large prep pad, lying flat: 3.5 cm wide, 6.5 cm long, 1 cm thick
+TRAY_X, TRAY_Y, TRAY_H = 0.37, -0.20, 0.008
 TRAY_SIZE = (0.15, 0.15, TRAY_H)
-PAD_START = (0.315, -0.20, TOP + TRAY_H + 0.002 + PAD[2] / 2)  # on its foil packet
-SYR_L, SYR_W = 0.12, 0.018  # the syringe collides as a box along y, its tip end at +y
-SYR_START = (0.385, -0.20, TOP + TRAY_H + SYR_W / 2)
+PAD_START = (0.335, -0.20, TOP + TRAY_H + 0.002 + PAD[2] / 2)  # on its foil packet
+# The syringe lies along y, its tip at +y. Its frame's origin is the middle of the barrel-and-tip body; y in that frame:
+SYR_L, SYR_W = 0.080, 0.018  # barrel (with its finger flange) plus luer tip: 8 cm long, 1.8 cm across
+BARREL_BACK, BARREL_FRONT = -SYR_L / 2, 0.028  # the flange end and the barrel's front shoulder
+TIP_W = 0.006  # the luer tip, 6 mm across, from the shoulder to the tip end at +SYR_L / 2
+SYR_START = (0.405, -0.165, TOP + TRAY_H + SYR_W / 2)
 
-HUB_TOP = AXIS_Z + HUB_R  # the connector's top surface
-SCRUB_END = 0.010  # the scrubbed part: the last 1 cm of the connector before its open end
-CONTACT_BELOW, CONTACT_ABOVE = 0.003, 0.002  # pad underside within 3 mm below / 2 mm above the connector's top
-SCRUB_SPEED = 0.010  # and moving at least 1 cm/s: a scrub, not a pad left lying there
-HELD_OPENING = 0.6  # a gripper closed at least this far (0 closed, 1 open) ...
-HELD_DIST = 0.03  # ... with its tool point within 3 cm of the pad's center holds the pad
-PAD_TILT = 20.0  # degrees; a tumbling pad doesn't scrub
+SCRUB_TILT = 20.0  # degrees; a face of the pad lies within this of the access face (flat on it, not a corner or edge)
+FACE_GAP = 0.0005  # the pad's face within 0.5 mm of the access face ...
+FACE_PRESS = 0.003  # ... or pressed up to 3 mm into it (the colliders give a little under a push): in contact
+SCRUB_SPEED = 0.010  # the pad rubbing across the face at 1 cm/s or more: a scrub, not a pad held still on it
+PAD_SHAPE = gk.Block((0.0, 0.0, 0.0), PAD)  # the pad's collider, in its own frame
+PAD_GRIP = gk.band(PAD[0])  # a gripper holds the pad when both its fingers touch it (gk.gripping: within 2 mm, the
+# solver's resting gap plus the fit of the hand's boxes to its meshes) with their opening stopped by the pad's 3.5 cm
+# width: 0.22 to 0.40 of full opening (0 closed, 1 open, 9.4 cm). A pad pushed with one finger or the palm, an open
+# hand resting on it or an empty fist beside it does not hold it.
 SCRUB_STEPS = 300  # 15 s at 20 Hz, counted over the whole run
-TOUCH = 0.015  # the syringe's tip end within 1.5 cm of the hub counts as touching it
-CONNECTED = 0.008  # within 8 mm at rest, lined up with the connector, counts as connected
+TOUCH = 0.002  # the syringe's barrel or luer tip within 2 mm of the access face (a 1.1 cm disc) touches it
+SEAT_GAP = 0.0005  # seated: the luer tip's end touching the access face, from 0.5 mm short of it (the solver's
+#                   resting gap between two props) ...
+SEAT_PRESS = 0.003  # ... to pressed 3 mm into it (the give of the colliders under a push), the same contact band as the
+#                     pad's; a tip hovering off the face, however close, is not seated ...
+SEAT_RADIAL = 0.0015  # ... within 1.5 mm of the connector's axis, so the 6 mm tip sits on the port's middle ...
+SEAT_TILT = 5.0  # ... its barrel within 5 degrees of the connector's axis ...
+SEAT_STEPS = 10  # ... for 0.5 s in a row
+PLUNGER_ANCHOR = -0.102  # the thumb press's center on the syringe's axis at the start (pulled back to 10 mL)
+STROKE = 0.060  # the plunger's travel from 10 mL to empty
+FLUSH = 0.030  # 3 cm of plunger travel is 5 mL from this 10 mL syringe (6 cm stroke), the usual peripheral flush
 
 # -- looks and models -------------------------------------------------------------------------
 
@@ -70,28 +86,61 @@ FOIL = kit.Look((0.82, 0.82, 0.86), 0.25, metallic=0.8)
 FOIL_PRINT = kit.Look((0.75, 0.10, 0.25), 0.5)
 TRAY_LOOK = kit.Look((0.62, 0.76, 0.90), 0.5)
 BARREL = kit.Look((0.94, 0.96, 0.98), 0.15, opacity=0.5)
-SALINE = kit.Look((0.86, 0.92, 0.98), 0.1, opacity=0.35)
+MARK = kit.Look((0.15, 0.15, 0.18), 0.6)
 PLUNGER = kit.Look((0.97, 0.97, 0.97), 0.5)
 STOPPER = kit.Look((0.18, 0.18, 0.20), 0.6)
-LABEL = kit.Look((0.95, 0.95, 0.85), 0.6)
+
+
+def _tube(path, radius, look, n=10):
+    """A round tube of `radius` along the points of `path`, with closed ends."""
+    path = np.asarray(path, float)
+    pts, counts, idx = [], [], []
+    u = np.array([0.0, 0.0, 1.0])
+    for i, p in enumerate(path):
+        tan = path[min(i + 1, len(path) - 1)] - path[max(i - 1, 0)]
+        tan /= np.linalg.norm(tan)
+        u = u - np.dot(u, tan) * tan  # carried along the path, so the tube doesn't twist
+        u /= np.linalg.norm(u)
+        v = np.cross(tan, u)
+        pts += [p + radius * (math.cos(2 * math.pi * k / n) * u + math.sin(2 * math.pi * k / n) * v) for k in range(n)]
+    for i in range(len(path) - 1):
+        for k in range(n):
+            a, b = i * n + k, i * n + (k + 1) % n
+            counts.append(4)
+            idx += [a, b, b + n, a + n]
+    for end, flip in ((0, True), (len(path) - 1, False)):
+        ring = [end * n + k for k in range(n)]
+        counts.append(n)
+        idx += ring[::-1] if flip else ring
+    return kit._mesh(pts, counts, idx, look)
 
 
 def _forearm():
-    """The training arm with the IV site: catheter hub and wings under a clear film, and the extension line running
-    down the arm's right side onto the bench to the connector."""
+    """The training arm with the IV site: catheter hub and wings under a clear film, and the extension line wrapping
+    down the arm's right side, onto the armrest and to the connector's back end."""
     profile = [(0.0, -0.165), (0.022, -0.163), (0.027, -0.155), (0.030, -0.10), (0.034, -0.02), (0.036, 0.06),
                (0.037, 0.15), (0.033, 0.16), (0.0, 0.162)]
     cx, cy = CATH[0] - ARM_X, CATH[1]
     top = ARM_R + 0.001
-    line = [(cx - 0.012, cy - 0.002, top + 0.004), (cx - 0.025, cy - 0.016, top - 0.004),
-            (cx - 0.035, -0.032, -0.010), (cx - 0.040, -0.042, -0.030), (HUB_X - ARM_X, -0.055, AXIS_Z - ARM_Z + 0.002),
-            (HUB_X - ARM_X, HUB_BACK_Y + 0.002, AXIS_Z - ARM_Z)]
+    tube_r = 0.002  # the extension line is 4 mm across
+    # The line lies on the skin from the catheter's hub around the arm's right side (it never passes through the
+    # arm), drops onto the armrest, then runs straight along y into the connector's back end.
+    radius = lambda x: float(np.interp(x, [h for _, h in profile], [r for r, _ in profile]))  # noqa: E731
+    line = [(cx - 0.013, cy, top + 0.004)]
+    for k in range(9):  # 20 to 110 degrees around from the top toward the robot's right (-y), on the skin
+        s = k / 8
+        x = cx - 0.016 - 0.020 * s
+        a = math.radians(20 + 90 * s)
+        rho = radius(x) + tube_r + 0.0008
+        line.append((x, -rho * math.sin(a), rho * math.cos(a)))
+    rest = -ARM_R + tube_r  # the line's center lying on the armrest
+    line += [(cx - 0.039, -0.042, -0.024), (cx - 0.040, -0.047, rest), (HUB_X - ARM_X, -0.056, rest),
+             (HUB_X - ARM_X, -0.063, rest - 0.0005), (HUB_X - ARM_X, HUB_BACK_Y + 0.002, AXIS_Z - ARM_Z)]
     meshes = (kit.lathe(profile, SKIN, axis="x", n=48),
               kit.box((cx, cy, top + 0.0005), (0.045, 0.035, 0.001), FILM),
               kit.cylinder((cx - 0.006, cy, top + 0.004), 0.004, 0.014, CATH_PINK, axis="x"),
               kit.box((cx - 0.004, cy, top + 0.0015), (0.008, 0.022, 0.002), CATH_PINK),
-              kit.box((cx - 0.030, -0.030, -0.006), (0.012, 0.012, 0.001), TAPE),
-              kit.band(line, 0.004, 0.004, TUBE, normal=(0, 0, 1)))
+              _tube(line, tube_r, TUBE))
     return kit.Prop("forearm", pos=(ARM_X, 0.0, ARM_Z), size=(ARM_L, 2 * ARM_R, 2 * ARM_R), meshes=meshes,
                     colliders=(kit.Collider((0, 0, 0), size=(ARM_L, 2 * ARM_R, 2 * ARM_R)),))
 
@@ -112,29 +161,67 @@ def _connector():
 
 
 def _pad():
-    """An alcohol prep pad folded in four into a soft square."""
-    w, h = PAD[0], PAD[2]
+    """A large alcohol prep pad folded into a soft rectangle."""
+    w, l, h = PAD
     return kit.Prop("pad", pos=PAD_START, size=PAD, mass=0.025,
-                    meshes=(kit.box((0, 0, -h / 4), (w, w, h / 2), PAD_LOOK),
-                            kit.box((0.001, -0.001, h / 4), (w - 0.003, w - 0.002, h / 2), PAD_LOOK)),
+                    meshes=(kit.box((0, 0, -h / 4), (w, l, h / 2), PAD_LOOK),
+                            kit.box((0.001, -0.001, h / 4), (w - 0.003, l - 0.002, h / 2), PAD_LOOK)),
                     colliders=(kit.Collider((0, 0, 0), size=PAD),))
 
 
+def _free_root(text):
+    """The syringe is loose: its articulation root goes on its barrel body (PhysX otherwise roots a floating
+    articulation at its most central body, and the plunger's slide misbehaves). The plunger's slide also gets a PhysX
+    drive, so its damping (a rubber stopper's drag in the barrel) is applied by the solver, not once per step."""
+    root = 'def Xform "Root" (\n    prepend apiSchemas = ["PhysicsArticulationRootAPI", "PhysxArticulationAPI"]\n)\n{\n'
+    lines = text.replace(root, 'def Xform "Root"\n{\n', 1).splitlines(True)
+    settings = [ln for ln in lines if ln.startswith("    ") and not ln.startswith("     ") and "physxArticulation:" in ln]
+    text = "".join(ln for ln in lines if ln not in settings)
+    old = ('    def Xform "base" (\n        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI", '
+           '"PhysxRigidBodyAPI"]\n    )\n    {\n')
+    new = old.replace('"PhysxRigidBodyAPI"]', '"PhysxRigidBodyAPI", "PhysicsArticulationRootAPI", "PhysxArticulationAPI"]')
+    joint = '"PhysicsJointStateAPI:linear"]\n    )\n    {\n'
+    drive = ('"PhysicsJointStateAPI:linear", "PhysicsDriveAPI:linear"]\n    )\n    {\n'
+             '        uniform token drive:linear:physics:type = "force"\n'
+             "        float drive:linear:physics:maxForce = 1000\n"
+             "        float drive:linear:physics:stiffness = 0\n"
+             "        float drive:linear:physics:damping = 0\n"
+             "        float drive:linear:physics:targetPosition = 0\n")
+    if old not in text or joint not in text:
+        raise RuntimeError("scrub-the-hub: unexpected yamkit USD layout")
+    return text.replace(old, new + "".join("    " + ln for ln in settings), 1).replace(joint, drive, 1)
+
+
+_mech_usda = kit._mech_usda
+kit._mech_usda = lambda mech: _free_root(_mech_usda(mech)) if mech.name == "syringe" else _mech_usda(mech)
+
+
 def _syringe():
-    """A prefilled saline flush: clear barrel with saline, white plunger and flange, luer tip at +y."""
+    """An empty 10 mL luer syringe: clear barrel with mL marks and a white finger flange, luer tip at +y; the white
+    plunger (thumb press, cross-shaped rod, dark rubber stopper) slides 6 cm on its axis and stays where it is pushed."""
     r = SYR_W / 2 - 0.001
-    half = SYR_L / 2
-    return kit.Prop("syringe", pos=SYR_START, size=(SYR_W, SYR_L, SYR_W), mass=0.04,
-                    meshes=(kit.cylinder((0, 0.012, 0), r, 0.075, BARREL, axis="y"),
-                            kit.cylinder((0, 0.015, 0), r - 0.0015, 0.064, SALINE, axis="y"),
-                            kit.cylinder((0, 0.012, 0), r + 0.0003, 0.03, LABEL, axis="y"),
-                            kit.lathe([(r, 0), (0.003, 0.006), (0.002, 0.012), (0.0, 0.012)], BARREL,
-                                      center=(0, 0.0495, 0), axis="y"),
-                            kit.cylinder((0, -0.0165, 0), r - 0.0012, 0.004, STOPPER, axis="y"),
-                            kit.box((0, -0.0275, 0), (SYR_W, 0.0025, 0.012), WHITE),
-                            kit.box((0, -0.0435, 0), (0.004, 0.030, 0.010), PLUNGER),
-                            kit.cylinder((0, -half + 0.002, 0), r, 0.003, PLUNGER, axis="y")),
-                    colliders=(kit.Collider((0, 0, 0), size=(SYR_W, SYR_L, SYR_W)),))
+    blen = BARREL_FRONT - BARREL_BACK
+    stopper = 0.0675  # the stopper's middle, from the thumb press
+    marks = tuple(kit.box((0, BARREL_FRONT - 0.003 - 0.006 * i, r + 0.0001), (0.006 if i % 2 else 0.009, 0.0006, 0.0003),
+                          MARK) for i in range(11))  # 0 to 10 mL, every 6 mm
+    plunger = kit.Link(
+        "plunger", "prismatic", "Y", anchor=(0, PLUNGER_ANCHOR, 0), lower=0.0, upper=STROKE, mass=0.008,
+        meshes=(kit.cylinder((0, 0, 0), 0.0082, 0.003, PLUNGER, axis="y"),
+                kit.box((0, stopper / 2, 0), (0.010, stopper, 0.0015), PLUNGER),
+                kit.box((0, stopper / 2, 0), (0.0015, stopper, 0.010), PLUNGER),
+                kit.cylinder((0, stopper, 0), r - 0.0012, 0.005, STOPPER, axis="y")),
+        colliders=(kit.Collider((0, 0, 0), size=(0.016, 0.003, 0.016)),
+                   kit.Collider((0, 0.033, 0), size=(0.010, 0.060, 0.010))),
+        damping=5.0, stick=True)
+    return kit.Mechanism(
+        "syringe", pos=SYR_START, size=(SYR_W, SYR_L, SYR_W), mass=0.02,
+        meshes=(kit.cylinder((0, (BARREL_FRONT + BARREL_BACK) / 2, 0), r, blen, BARREL, axis="y"),
+                kit.lathe([(r, 0), (0.003, 0.004), (TIP_W / 2, 0.006), (TIP_W / 2 - 0.001, SYR_L / 2 - BARREL_FRONT),
+                           (0.0, SYR_L / 2 - BARREL_FRONT)], BARREL, center=(0, BARREL_FRONT, 0), axis="y"),
+                kit.box((0, BARREL_BACK + 0.00125, 0), (0.028, 0.0025, 0.014), WHITE)) + marks,
+        colliders=(kit.Collider((0, (BARREL_FRONT + BARREL_BACK) / 2, 0), size=(SYR_W, blen, SYR_W)),
+                   kit.Collider((0, (SYR_L / 2 + BARREL_FRONT) / 2, 0), size=(TIP_W, SYR_L / 2 - BARREL_FRONT, TIP_W))),
+        links=(plunger,))
 
 
 def _tray():
@@ -156,7 +243,6 @@ OBJECTS = [
     _pad(),
     _syringe(),
 ]
-_START = {o.name: np.array(o.pos) for o in OBJECTS if o.mass is not None}
 
 
 def _rot(q):
@@ -173,129 +259,217 @@ def _syringe_tip(s):
     return np.asarray(s.pos, dtype=float) + axis * SYR_L / 2, axis
 
 
+def _face_offset(p):
+    """The access face's center relative to a point, as (axial, radial): axial is along the connector's axis (+y,
+    into the connector), radial is the distance from the axis in the face's plane."""
+    d = HUB - np.asarray(p, dtype=float)
+    return float(-d[1]), float(math.hypot(d[0], d[2]))
+
+
 # --- What happened during the run. success() and score() are called after every control step, so the run's history is
 # kept here. yamkit counts the simulator's scene resets (kit.episode()), so a new trial starts with a clean history.
 class _History:
     def __init__(self):
         self.episode = kit.episode()  # which trial this history belongs to
-        self.last = None
-        self.scrub = 0  # control steps the pad was scrubbing the hub
-        self.touched_unscrubbed = False  # never forgiven
+        self.scrub = 0  # control steps the pad was scrubbing the access face
+        self.touched_unscrubbed = False  # the syringe touched the face before 15 s of scrubbing; never forgiven
+        self.seat_run = 0  # control steps in a row the syringe has been seated
+        self.connected = False  # seated for SEAT_STEPS in a row after the scrub; latched
+        self.last_depth = None  # the plunger's depth at the last step
+        self.flushed = 0.0  # net plunger travel while the syringe was connected and still seated
+        self.flush_done = False  # 3 cm of it reached; latched
 
 
 _H = _History()
 
 
-def _held(objects, name):
-    """Some gripper is closed on the object: closed past HELD_OPENING with its tool point near the object's center."""
-    pos = np.asarray(objects[name].pos, dtype=float)
-    for side in ("left_gripper", "right_gripper"):
-        g = objects.get(side)
-        if g is None:
-            continue
-        if kit.opening(objects, side) < HELD_OPENING and np.linalg.norm(np.asarray(g.pos) - pos) < HELD_DIST:
+def _held(objects):
+    """Some gripper holds the pad: both fingers touching it, their opening stopped by its 3.5 cm width."""
+    return bool(gk.gripping(objects, "pad", PAD_SHAPE, PAD_GRIP))
+
+
+def _scrubbing(objects):
+    """A scrub step: a gripper holds the pad; one of the pad's faces lies on the access face (square to the
+    connector's axis within 20 degrees, from 0.5 mm short of the face to pressed 3 mm into it) and covers the whole
+    1.1 cm face; and the pad rubs across it (its speed across the face, sliding plus twisting at the face's rim, is
+    1 cm/s or more). Rubbing the connector's side or top, or holding the pad still on the face, is not a scrub."""
+    p = objects["pad"]
+    r = _rot(np.asarray(p.quat_xyzw, dtype=float))
+    half = np.array(PAD) / 2
+    # which of the pad's three axes points along the connector's axis (world y)
+    k = int(np.argmax(np.abs(r[1, :])))
+    if abs(r[1, k]) < math.cos(math.radians(SCRUB_TILT)):
+        return False
+    # How far the pad's face reaches past the access face where they meet: the face's plane, measured along its
+    # normal, at the point of the 1.1 cm disc it reaches first (the disc's middle when the pad is square to it, a point
+    # on its rim when the pad leans). A far corner of a leaning pad passing beside the hub does not count.
+    n = r[:, k] * math.copysign(1.0, r[1, k])  # the face's normal, toward the connector (+y)
+    face = np.asarray(p.pos, dtype=float) + n * half[k]
+    reach = float(n @ (face - HUB) + HUB_R * math.hypot(n[0], n[2]))
+    if not (-FACE_GAP <= reach <= FACE_PRESS):
+        return False
+    # the face covers the whole access face: the face's center, in the pad's frame, at least HUB_R inside both edges
+    loc = r.T @ (HUB - np.asarray(p.pos, dtype=float))
+    others = [i for i in range(3) if i != k]
+    if any(abs(loc[i]) > half[i] - HUB_R for i in others):
+        return False
+    v = np.asarray(p.lin_vel, dtype=float)
+    w = np.asarray(p.ang_vel, dtype=float)
+    rub = math.hypot(v[0], v[2]) + abs(w[1]) * HUB_R
+    return bool(rub >= SCRUB_SPEED and _held(objects))
+
+
+def _touching(s):
+    """Any part of the syringe's front (its 1.8 cm barrel or its 6 mm luer tip) within 2 mm of the access face's
+    1.1 cm disc."""
+    r = _rot(np.asarray(s.quat_xyzw, dtype=float))
+    loc = r.T @ (HUB - np.asarray(s.pos, dtype=float))  # the face's center in the syringe's frame
+    face_r = np.array([HUB_R, 0.0, HUB_R])  # the face is a disc square to y: it reaches HUB_R across, not along y
+    for center, size in (((BARREL_FRONT + BARREL_BACK) / 2, (SYR_W, BARREL_FRONT - BARREL_BACK, SYR_W)),
+                         ((SYR_L / 2 + BARREL_FRONT) / 2, (TIP_W, SYR_L / 2 - BARREL_FRONT, TIP_W))):
+        d = loc - np.array([0.0, center, 0.0])
+        if np.all(np.abs(d) <= np.array(size) / 2 + TOUCH + face_r):
             return True
     return False
 
 
-def _scrubbing(objects):
-    """A scrub step: the pad held in a gripper, lying flat (within 20 degrees), its underside on the connector's top
-    (within 3 mm below to 2 mm above it) over the connector's last centimeter before the open end, and moving at
-    1 cm/s or more."""
-    p = objects["pad"]
-    qx, qy = p.quat_xyzw[0], p.quat_xyzw[1]
-    flat = 1 - 2 * (qx * qx + qy * qy) > math.cos(math.radians(PAD_TILT))
-    half = PAD[0] / 2
-    over = (abs(p.pos[0] - HUB_X) < half + HUB_R
-            and p.pos[1] - half < HUB_TIP_Y + SCRUB_END and p.pos[1] + half > HUB_TIP_Y)
-    bottom = p.pos[2] - PAD[2] / 2
-    on_top = HUB_TOP - CONTACT_BELOW < bottom < HUB_TOP + CONTACT_ABOVE
-    return bool(flat and over and on_top and np.linalg.norm(p.lin_vel) > SCRUB_SPEED and _held(objects, "pad"))
-
-
-def _touching(s):
-    tip, _ = _syringe_tip(s)
-    return bool(np.linalg.norm(tip - HUB) < TOUCH)
-
-
-def _connected(s):
+def _seated(s):
+    """The syringe's luer tip touching the port's access face, centered and lined up: its end from 0.5 mm short of the
+    face to pressed 3 mm into it (contact, not a hover), within 1.5 mm of the connector's axis, its barrel within 5
+    degrees of the axis. The sim's connector is solid, so the tip pressed square on its port stands in for the luer
+    slipped into the valve; a real trial checks the connection with a tug on the barrel."""
     tip, axis = _syringe_tip(s)
-    return bool(np.linalg.norm(tip - HUB) < CONNECTED and axis[1] > math.cos(math.radians(15)) and s.resting())
+    axial, radial = _face_offset(tip)  # axial < 0: the tip end short of the face; > 0: pressed past it
+    return bool(-SEAT_GAP <= axial <= SEAT_PRESS and radial <= SEAT_RADIAL
+                and axis[1] >= math.cos(math.radians(SEAT_TILT)))
+
+
+def _plunger_depth(objects):
+    """How far the plunger has been pushed into the barrel since the start (m), along the syringe's axis; None if the
+    scene has no plunger."""
+    pl = objects.get("syringe/plunger")
+    if pl is None:
+        return None
+    s = objects["syringe"]
+    _, axis = _syringe_tip(s)
+    return float(np.dot(np.asarray(pl.pos, dtype=float) - np.asarray(s.pos, dtype=float), axis) - PLUNGER_ANCHOR)
 
 
 def _update(objects):
     global _H
     if _H.episode != kit.episode():  # the simulator reset the scene: a new trial, a clean history
         _H = _History()
-    now = {n: np.asarray(objects[n].pos, dtype=float) for n in _START}
-    _H.last = now
     if _scrubbing(objects):
         _H.scrub += 1
-    if _touching(objects["syringe"]) and _H.scrub < SCRUB_STEPS:
+    s = objects["syringe"]
+    clean = _H.scrub >= SCRUB_STEPS
+    if _touching(s) and not clean:
         _H.touched_unscrubbed = True
+    seated = _seated(s)
+    _H.seat_run = _H.seat_run + 1 if seated else 0
+    if clean and not _H.touched_unscrubbed and _H.seat_run >= SEAT_STEPS:
+        _H.connected = True
+    depth = _plunger_depth(objects)
+    if depth is not None:
+        if _H.connected and seated and _H.last_depth is not None:
+            _H.flushed += depth - _H.last_depth  # net travel through the seated connection: drawing back subtracts
+        _H.last_depth = depth
+        if _H.flushed >= FLUSH:
+            _H.flush_done = True
 
 
 def _score(objects):
     if _H.touched_unscrubbed or _H.scrub < SCRUB_STEPS:
         return 0.0
-    return 1.0 if _connected(objects["syringe"]) else 0.5
+    if not _H.connected:
+        return 0.25
+    return 1.0 if _H.flush_done else 0.5
 
 
 def success(objects):
-    """1.0: the hub scrubbed for 15 s before the syringe touched it, and the syringe connected. Called first each
-    step, so it also records the step's history."""
+    """1.0: the access face scrubbed for 15 s before the syringe touched it, the syringe seated, and 5 mL flushed
+    through it. Called first each step, so it also records the step's history."""
     _update(objects)
     return _score(objects) == 1.0
 
 
 def score(objects):
-    """0 if the syringe's tip came within 1.5 cm of the hub before the hub had been scrubbed for 15 s in all, even
-    if it was scrubbed later. 0 also if the hub was never scrubbed for 15 s. Otherwise 0.5, or 1.0 with the syringe
-    connected: its tip end at rest within 8 mm of the hub, lined up with the connector within 15 degrees.
-    A scrub step is a control step in which a gripper holds the pad flat, rubbing its underside on the connector's
-    top over the last centimeter before the open end, moving at 1 cm/s or more (see _scrubbing). Possible scores: 0,
-    0.5, 1."""
+    """0 if the syringe's barrel or tip came within 2 mm of the access face before the face had been scrubbed for 15
+    s in all, even if it was scrubbed later; 0 also if the face was never scrubbed for 15 s. Otherwise 0.25 for the
+    scrub alone; 0.5 once the syringe was seated on the face (its luer tip touching it: the tip end from 0.5 mm
+    short of the face to pressed 3 mm in, within 1.5 mm of the axis, lined up within 5 degrees) for 0.5 s in a row;
+    1.0 once the plunger was then pushed 3 cm (5 mL) while the syringe stayed seated. A scrub step is a control step
+    in which a gripper holds the pad (both fingers touching it, their opening stopped by its 3.5 cm width) with a
+    face of it on the access face, covering it, and rubs it across the face at 1 cm/s or more (see _scrubbing).
+    Possible scores: 0, 0.25, 0.5, 1."""
     return _score(objects)
 
 
 def demo():
-    """Right arm: pick up the prep pad, scrub the hub's open end with small back-and-forth strokes for 17 s, drop the
-    pad on the tray, then pick up the syringe, lay it in line with the connector and push its tip home."""
+    """Right arm: pick up the prep pad by one end, turn it on its edge and scrub the hub's open end face-on with small
+    side-to-side strokes for 20 s, put the pad back on the tray, then pick up the syringe, lay it in line with the
+    connector, push its tip home and let go, and push the plunger in about 3.4 cm with the closed fingers."""
 
     def grip(top, below=0.012):  # TCP height that puts the finger pads `below` an object's top
         return top - below + 0.013
 
     travel = TOP + 0.20
-    lag = 0.012  # the arm falls ~1.5 cm short of a target near the middle of the bench, toward its own base
+    lag = 0.012  # the arm falls about 1.2 cm short toward its own base (-y) when it pushes along y low on the bench
     o, c = FINGER_OPEN, FINGER_CLOSED
+    yaw = np.pi / 2  # fingers close along x
+    # The grip turned on its side, 84 degrees about x: the pad's underside faces the connector (+y), leaning 6 degrees
+    # (the arm's wrist reaches that here with room to spare; 90 is at the end of its travel).
+    roll = math.radians(84.0)
     pad_top = PAD_START[2] + PAD[2] / 2
-    held_below = 0.006  # the pads grip the pad 6 mm below its top
-    pick_pad = pick_place_waypoints((PAD_START[0], PAD_START[1], grip(pad_top, held_below)),
-                                    (0.0, 0.0, 0.0), travel_z=travel)[:4]
-    # Scrub: the pad's underside rubs over the top and the open end of the connector.
-    pad_z = AXIS_Z + HUB_R + PAD[2] / 2 - 0.002
-    tcp_z = grip(pad_z + PAD[2] / 2, held_below)
-    hx, hy = HUB_X, HUB[1] + 0.006 + lag
-    scrub = [Waypoint(1.8, (hx, hy, tcp_z + 0.05), c, "over the hub"),
-             Waypoint(1.0, (hx, hy, tcp_z), c, "pad on the hub")]
-    for k in range(17):
-        scrub += [Waypoint(0.5, (hx + 0.010, hy - 0.004, tcp_z), c, "scrub"),
-                  Waypoint(0.5, (hx - 0.010, hy + 0.004, tcp_z), c, "scrub")]
-    drop = [Waypoint(1.0, (hx, hy, travel), c, "lift the pad"),
-            Waypoint(1.5, (0.24, -0.24, travel - 0.08), c, "to the discard spot"),
-            Waypoint(0.8, (0.24, -0.24, TOP + 0.05), c, "lower"),
-            Waypoint(0.5, (0.24, -0.24, TOP + 0.05), o, "drop the pad"),
-            Waypoint(0.8, (0.24, -0.24, travel), o, "up")]
-    yaw = np.pi / 2  # fingers close along x, across the syringe
+    end = 0.020  # the pad is held this far from its middle (toward +y on the tray), so its far end reaches the hub
+    pick_tcp = np.array([PAD_START[0], PAD_START[1] + end, grip(pad_top, PAD[2] / 2)])
+    pick_pad = pick_place_waypoints(tuple(pick_tcp), (0.0, 0.0, 0.0), travel_z=travel, yaw=yaw)[:4]
+    r0 = D.grip_rotation(yaw)
+    r1 = kit._rot_xyz(roll, 0.0) @ r0
+    local = r0.T @ (np.array(PAD_START) - pick_tcp)  # the pad's middle in the grip's frame
+    turn = r1 @ r0.T  # the pad's turn from lying on the tray to held on its side
+    n = turn @ np.array([0.0, 0.0, -1.0])  # its underside's normal, now toward the connector
+    long_ = turn @ np.array([0.0, 1.0, 0.0])  # its long side, now pointing up (and leaning toward +y)
+    press = 0.0008
+    # the pad's middle: its low end 1.5 mm above the bench, its face pressed `press` past the disc's nearest rim point
+    cz = TOP + 0.0015 + abs(long_[2]) * PAD[1] / 2 + abs(n[2]) * PAD[2] / 2
+    mid = np.array([HUB_X, 0.0, cz])
+    # n . (mid + n * h - HUB) + HUB_R * |n_xz| = press, solved for mid's y
+    mid[1] = (press - HUB_R * math.hypot(n[0], n[2]) - PAD[2] / 2 - n[2] * (mid[2] - HUB[2])) / n[1] + HUB[1]
+    # the arm stops about 6 mm short toward its base here; 3 mm toward -x centers the strokes on the hub
+    tcp = mid - r1 @ local + np.array([-0.003, 0.006, 0.0])
+    back = -0.04 * n
+    stroke = 0.009  # the strokes reach about 7 mm each way: the pad still covers the 1.1 cm face
+    scrub = [kit.Tilted(2.0, tuple(tcp + 2 * back + (0, 0, 0.06)), c, "turn the pad on its side", yaw, roll=roll),
+             kit.Tilted(1.5, tuple(tcp + back), c, "line up with the hub", yaw, roll=roll),
+             kit.Tilted(1.0, tuple(tcp), c, "pad on the access face", yaw, roll=roll)]
+    for _ in range(20):
+        scrub += [kit.Tilted(0.5, tuple(tcp + (stroke, 0, 0)), c, "scrub", yaw, roll=roll),
+                  kit.Tilted(0.5, tuple(tcp - (stroke, 0, 0)), c, "scrub", yaw, roll=roll)]
+    put_back = [kit.Tilted(1.0, tuple(tcp + 2 * back + (0, 0, 0.04)), c, "off the hub", yaw, roll=roll),
+                Waypoint(1.5, (PAD_START[0], PAD_START[1] + end, travel - 0.08), c, "over the tray", yaw),
+                Waypoint(1.0, (PAD_START[0], PAD_START[1] + end, grip(pad_top, PAD[2] / 2) + 0.01), c, "lower", yaw),
+                Waypoint(0.5, (PAD_START[0], PAD_START[1] + end, grip(pad_top, PAD[2] / 2) + 0.01), o, "let go", yaw),
+                Waypoint(0.8, (PAD_START[0], PAD_START[1] + end, travel), o, "up", yaw)]
     syr_top = SYR_START[2] + SYR_W / 2
-    sy_home = HUB[1] - SYR_L / 2  # syringe center when its tip meets the hub
+    sy_seat = HUB_TIP_Y - SYR_L / 2  # syringe center when its tip meets the hub
+    sx = HUB_X + 0.002  # the syringe settles 2 mm toward -x of the grip
     held = grip(TOP + SYR_W, 0.008)
     syringe = pick_place_waypoints((SYR_START[0], SYR_START[1], grip(syr_top, 0.008)),
-                                   (HUB_X, sy_home - 0.02 + lag, held + 0.003), travel_z=travel, yaw=yaw)[:6]
-    syringe += [Waypoint(1.5, (HUB_X, sy_home + lag + 0.006, held + 0.003), c, "push the tip home", yaw),
-                Waypoint(0.8, (HUB_X, sy_home + lag + 0.006, held + 0.003), c, "seat", yaw),
-                Waypoint(0.6, (HUB_X, sy_home + lag + 0.006, held + 0.003), o, "let go", yaw),
-                Waypoint(1.0, (HUB_X, sy_home + lag, travel), o, "up", yaw)]
+                                   (sx, sy_seat - 0.02 + lag, held + 0.003), travel_z=travel, yaw=yaw)[:6]
+    syringe += [Waypoint(1.5, (sx, sy_seat + lag + 0.006, held + 0.003), c, "push the tip home", yaw),
+                Waypoint(0.8, (sx, sy_seat + lag + 0.006, held + 0.003), c, "seat", yaw),
+                Waypoint(0.6, (sx, sy_seat + lag + 0.006, held + 0.003), o, "let go", yaw),
+                Waypoint(1.0, (sx, sy_seat + lag, travel), o, "up", yaw)]
+    press_y = sy_seat + PLUNGER_ANCHOR  # the thumb press, plunger pulled back
+    pz = TOP + 0.022  # closed fingertips about 9 mm above the bench, level with the press's middle
+    push = 0.016  # the closed fingers meet the press about 1.8 cm before this target: a ~3.4 cm push
+    syringe += [Waypoint(1.5, (HUB_X, press_y - 0.03, travel), c, "behind the thumb press", 0.0),
+                Waypoint(1.2, (HUB_X, press_y - 0.03 + lag, pz), c, "down", 0.0),
+                Waypoint(1.0, (HUB_X, press_y - 0.012 + lag, pz), c, "on the thumb press", 0.0),
+                Waypoint(2.5, (HUB_X, press_y + push + lag, pz), c, "push 5 mL", 0.0),
+                Waypoint(1.0, (HUB_X, press_y + push + lag, pz), c, "hold", 0.0),
+                Waypoint(1.0, (HUB_X, press_y, travel), c, "up", 0.0)]
     park = (0.16, -0.26, TOP + 0.22)
-    right = pick_pad + scrub + drop + syringe + [Waypoint(1.2, park, o, "park"), Waypoint(2.0, park, o, "hold")]
+    right = pick_pad + scrub + put_back + syringe + [Waypoint(1.2, park, o, "park"), Waypoint(2.0, park, o, "hold")]
     return {"right": right}
