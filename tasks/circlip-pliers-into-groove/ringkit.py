@@ -36,6 +36,9 @@ into the shaft, so s = -thickness/2 is a ring lying on the end face):
   lands cocked (one side in the groove, the other on the land; not seated, it cannot turn), however near closed it
   was before; spreading it again frees it. The largest tilt and twist while held are kept for the scorer.
 - Seated: in a groove, closed onto the groove bottom (inner radius within `seat_tol` of it), not cocked, not held.
+- Reaction on the shaft (`grip_n` > 0): a ring closed onto the shaft grips it, and a tool turning it drags the shaft
+  round with a torque about its axis until the ring slips (mu * grip * shaft radius); the ring's turn counts only as
+  it slips on the shaft. See "reaction loads" below.
 
 Spreaders (anything with `grip(ring, st, frame, objects) -> Grip | None`): `TipPair` is a pair of pliers tips in a
 split ring's two lug holes. A tip engages when it is within `catch` of a lug hole across the shaft axis and its end
@@ -48,7 +51,8 @@ Joints: `links(ring)` gives the ring's invisible, collider-less links for the fi
 end) and "<name>" (prismatic: the opening, inner radius minus free radius). The kit writes them every control step
 from its model, so `kit.joint(objects, "fixture/clip")` etc. read the ring too (one step behind the kit's readouts).
 The ring is drawn with Isaac Lab visualization markers (segments of a band and two lug ears) at its current radius,
-turn, tilt and twist; drawing never affects scoring. New marker prims take about five rendered frames to appear, so a
+turn, tilt and twist, and once more at its start pose right after every reset, so it shows in the first camera frame;
+drawing never affects scoring. New marker prims take about five rendered frames to appear, so a
 fourth link, "<name>_shown", carries a mesh of the ring at its start pose for the first SHOW_STEPS steps and is then
 moved to s = `hide` (inside the table or fixture). Use a matte look: a metallic dark ring mirrors the bright dome.
 
@@ -119,6 +123,8 @@ class Ring:
     lug_angle: float = math.pi
     tilt_limit: float = 4.0
     seat_tol: float = 0.00005
+    grip_n: float = 0.0  # N: total radial force of the ring closed onto the bottom of its first groove (0: no drag)
+    mu: float = 0.0  # friction coefficient between the ring and the shaft
     hide: float = 0.15  # m along the shaft from its end face where the start-pose placeholder mesh is put away
     look: kit.Look = kit.Look((0.05, 0.05, 0.06), 0.85)  # matte: a metallic dark ring reflects the dome and vanishes
 
@@ -168,6 +174,9 @@ class RingState:
     turn_lo: float | None = None  # deg, smallest and largest unwrapped angle while closed in a groove
     turn_hi: float | None = None
     steps: int = 0
+    wind: float = 0.0  # m at the lug holes: how far the tool has moved round the shaft since the ring last slipped,
+    #                    while the ring sticks to the shaft (the hand and pliers take it up; see reaction loads)
+    anchor: float | None = None  # rad: the tool's angle on the shaft where the ring would sit with no wind-up
 
 
 @dataclass
@@ -350,11 +359,13 @@ def _step(key: str, grip: Grip | None) -> RingState:
             st.cocked = False  # spread again: free of the land
         st.s = _travel(ring, st.s, grip.s, st.r)
         if not st.cocked:
-            st.theta = grip.theta + st.theta_off
+            st.theta = grip.theta + st.theta_off - st.wind / (st.r + ring.lug_out)
         st.tilt, st.tilt_axis, st.twist = grip.tilt, tuple(grip.tilt_axis), grip.twist
         st.max_tilt = max(st.max_tilt, abs(grip.tilt))
         st.max_twist = max(st.max_twist, abs(grip.twist))
     st.engaged = grip is not None
+    if grip is None:
+        st.wind, st.anchor = 0.0, None
     st.grip = grip
     under = span_r(ring, st.s)
     closing_r = max(free_r, under)
@@ -485,6 +496,135 @@ class HandleSpring:
 
     def drive(self, key, q, qd, J, mem):
         return self.rest, self.k, 0.0, self.damp
+
+
+# -- reaction loads on the shaft --------------------------------------------------------------------
+# A ring closed onto the shaft grips it with its own spring. Turned by the pliers' tips in its lug holes, it drags the
+# shaft round with it until the friction at the shaft gives way: up to slip_force() at the lug holes, a torque of
+# mu * grip * shaft radius about the shaft's axis. That torque acts on the shaft; the hand turning the pliers supplies
+# it (the pliers themselves are not pushed back). A loose shaft whose footing gives way first turns with the pliers,
+# and the ring does not turn on it. A tool pushing the ring sideways would push the shaft sideways too; that is not
+# modelled (the turn is about the axis). While the ring is spread clear of the shaft (it slides only with `clear` to
+# spare) it touches nothing and pushes nothing. Sticking is a stiff spring at the lug holes (DRAG_K), so that the
+# wind-up is small next to a 15-degree check turn; DRAG_C damps it. Both act every physics step.
+
+DRAG_K = 10000.0  # N/m: the stick, at the lug holes (2.5 mm of wind-up at 25 N)
+DRAG_C = 20.0  # N*s/m
+
+
+def grip_force(ring: Ring, st: RingState) -> float:
+    """N: the ring's total radial force on the shaft now. Closed onto the shaft it grows with its stretch (linear
+    elastic, `grip_n` at the groove bottom); held open by the tool it eases off over `seat_tol` and is 0 once the
+    tool holds it clear; a cocked ring is jammed on the land and not modelled here (0)."""
+    if ring.grip_n <= 0 or not ring.grooves or st.cocked:
+        return 0.0
+    under = span_r(ring, st.s)
+    free_r = ring.free_id / 2 + st.set
+    if under <= free_r:
+        return 0.0
+    n = ring.grip_n * (under - free_r) / (ring.grooves[0].diameter / 2 - ring.free_id / 2)
+    if st.grip is not None and st.grip.r is not None:
+        n *= min(1.0, max(0.0, (under + ring.seat_tol - st.grip.r) / ring.seat_tol))
+    return n
+
+
+def slip_force(ring: Ring, st: RingState) -> float:
+    """N: the turning force at the lug holes at which the ring slips round the shaft (mu * grip * shaft radius / lug
+    radius)."""
+    return ring.mu * grip_force(ring, st) * span_r(ring, st.s) / (st.r + ring.lug_out)
+
+
+def drag(ring: Ring, st: RingState, angle: float, dt: float) -> float:
+    """One physics step of the stick-slip: `angle` (rad) is the tool's angle about the shaft in the shaft's frame (as
+    Grip.theta). While the ring sticks, the tool's turn since it took hold is wind-up at the lug holes, and the ring
+    passes the spring force of that wind-up to the shaft; past slip_force() the ring slips round and the wind-up stays
+    at its limit. Returns the turning force (N at the lug holes, positive along the ring's turn) and keeps the
+    wind-up in st.wind."""
+    f_max = slip_force(ring, st) if st.engaged else 0.0
+    if f_max <= 0.0:
+        if st.wind:  # let go of the shaft: the ring stays where it is, the tool's offset takes up the wind-up
+            st.theta_off -= st.wind / (st.r + ring.lug_out)
+        st.wind, st.anchor = 0.0, None
+        return 0.0
+    lug = st.r + ring.lug_out
+    if st.anchor is None:
+        st.anchor = angle - st.wind / lug
+    w_max = f_max / DRAG_K
+    wind = _wrap(angle - st.anchor) * lug
+    if abs(wind) > w_max:  # the ring slips round the shaft
+        wind = math.copysign(w_max, wind)
+        st.anchor = angle - wind / lug
+    rate = (wind - st.wind) / dt
+    st.wind = wind
+    return max(-f_max, min(f_max, DRAG_K * wind + DRAG_C * rate))
+
+
+def _body(base, key: str):
+    """(articulation, body index) for an object key "mech" or "mech/link"."""
+    mech, _, link = key.partition("/")
+    art = base.scene[mech]
+    return art, list(art.body_names).index(link or "base")
+
+
+def _push(base, dt: float) -> None:
+    """Before each physics step: each held ring's turning drag on its shaft."""
+    import torch
+    from types import SimpleNamespace
+
+    np_ = lambda t: getattr(t, "torch", t)[0].detach().cpu().numpy().astype(np.float64)  # noqa: E731
+    for key, att in _RINGS.items():
+        st = state(key)
+        sp = att.spreader
+        if not st.engaged or not isinstance(sp, TipPair):
+            drag(att.ring, st, 0.0, dt)
+            continue
+        try:
+            parts = {k: _body(base, k) for k in (att.mech, sp.a[0], sp.b[0])}
+        except (KeyError, ValueError):
+            continue
+        objs = {}
+        for k, (art, i) in parts.items():
+            d = art.data
+            objs[k] = SimpleNamespace(pos=np_(d.body_link_pos_w)[i], quat_xyzw=np_(d.body_link_quat_w)[i])
+        fr = frame(objs, att.mech, att.ring)
+        ta, tb = sp.tips(objs)
+        mid = (ta - fr.o) + (tb - fr.o)
+        angle = math.atan2(float(np.dot(mid, fr.e2)), float(np.dot(mid, fr.e1))) - att.ring.lug_angle
+        f = drag(att.ring, st, angle, dt)
+        if f == 0.0:
+            continue
+        art, i = parts[att.mech]
+        dev = getattr(art.data.body_link_pos_w, "torch", art.data.body_link_pos_w).device
+        vec = lambda v: torch.tensor(np.asarray(v, np.float32).reshape(1, 1, 3), device=dev)  # noqa: E731
+        # the ring's friction on the shaft: a torque about the shaft's axis (world frame); angles run ccw seen from
+        # the end, i.e. about -u
+        torque = -f * (st.r + att.ring.lug_out) * fr.u
+        art.instantaneous_wrench_composer.add_forces_and_torques_index(torques=vec(torque), body_ids=[i],
+                                                                       is_global=True)
+
+
+def _hook_physics(base) -> None:
+    """Run _push before every physics step (the scene writes the wrenches into the simulator in that call)."""
+    scene = base.scene
+    if getattr(scene, "_ringkit_push", False) or not any(a.ring.grip_n > 0 for a in _RINGS.values()):
+        return
+    scene._ringkit_push = True
+    write = scene.write_data_to_sim
+    dt = float(getattr(base, "physics_dt", 1 / 240))
+
+    def write_data_to_sim(*a, **k):
+        try:
+            _push(base, dt)
+        except Exception as e:  # noqa: BLE001
+            if not _VIS.get("push_failed"):
+                import traceback
+
+                _note(f"ringkit: no reaction loads ({e!r})\n{traceback.format_exc()}")
+            _VIS["push_failed"] = True
+            raise
+        return write(*a, **k)
+
+    scene.write_data_to_sim = write_data_to_sim
 
 
 # -- the ring's joints ------------------------------------------------------------------------------
@@ -722,6 +862,7 @@ def _patch(scene) -> None:
         if key[1] is None or key != last["key"]:  # once per control step
             last["key"] = key
             update(out)
+            _hook_physics(base)
             _write_joints(base)
             if os.environ.get("RINGKIT_DEBUG"):
                 for k in _RINGS:
@@ -740,6 +881,65 @@ def _patch(scene) -> None:
         return out
 
     scene.object_states = object_states
+
+
+def _draw_start(env) -> None:
+    """Draw every ring at its start pose right after a reset, so the settling steps and the reset renders that follow
+    show it in the first camera frame (new marker prims take a few rendered frames to appear)."""
+    from types import SimpleNamespace
+
+    base = env.unwrapped
+    origin = base.scene.env_origins[0].detach().cpu().numpy()
+    objs = {}
+    for att in _RINGS.values():
+        try:
+            d = base.scene[att.mech].data
+        except KeyError:
+            continue
+        i = list(base.scene[att.mech].body_names).index("base")
+        pick = lambda t: getattr(t, "torch", t)[0, i].detach().cpu().numpy().astype(np.float64)  # noqa: E731
+        objs[att.mech] = SimpleNamespace(pos=pick(d.body_link_pos_w) - origin, quat_xyzw=pick(d.body_link_quat_w))
+    keep = dict(_STATE)
+    _STATE.clear()  # a fresh ring at its start pose; the trial's own state is untouched
+    try:
+        _draw(objs, origin)
+    finally:
+        _STATE.clear()
+        _STATE.update(keep)
+
+
+def _patch_embodiment() -> None:
+    try:
+        from yam_arena import inspect_embodiment as ie
+    except Exception:  # noqa: BLE001  (offline: no embodiment)
+        return
+    cls = ie.YamArenaEmbodiment
+    if getattr(cls, "_ringkit_start", False):
+        return
+    cls._ringkit_start = True
+    ensure = cls._ensure_sim
+
+    def _ensure_sim(self, *a, **k):
+        ensure(self, *a, **k)
+        env = self._env
+        if env is None or getattr(env, "_ringkit_reset", False):
+            return
+        reset = env.reset
+
+        def reset_and_draw(*ra, **rk):
+            out = reset(*ra, **rk)
+            try:
+                _draw_start(env)
+            except Exception as e:  # noqa: BLE001  (never let the visuals break a run)
+                _note(f"ringkit: no start visuals ({e!r})")
+            return out
+
+        env.reset, env._ringkit_reset = reset_and_draw, True
+
+    cls._ensure_sim = _ensure_sim
+
+
+_patch_embodiment()
 
 
 class _Hook(kit._Hook):
