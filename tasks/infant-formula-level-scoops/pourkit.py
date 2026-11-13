@@ -29,7 +29,8 @@ so the cameras see them; they have no physics. The vessels themselves are ordina
 solid collider (the liquid is not physical), so nothing can be pushed into it.
 
 Episodes: the contents and history go back to the start whenever yamkit's `episode()` changes (the simulator reset
-the scene). `reset()` does that by hand.
+the scene). `reset()` does that by hand. The starting contents are also drawn right after every scene reset (the
+embodiment's env.reset), before the first rendered frame, so a video does not open on empty containers.
 
 Demo helper: `pour(...)` returns `yamkit.Tilted` waypoints that tip a held container about its lip, so the lip stays
 over a chosen point while the grip pitches (or rolls); `lip(...)` gives the lip's world position at the grip.
@@ -74,7 +75,7 @@ class Vessel:
     stacked along the object's +z from `floor` (the inside bottom, in the object's frame: relative to the object's
     `pos`). The top section's top is the rim. `mouth` is the opening's radius (default: the top section's).
     `fill` is the starting contents, mL per liquid. `receive_tilt` (degrees) is how far it may lean and still catch a
-    stream. `max_flow` caps how fast it pours, mL/s (default 10 mL/s per cm² of opening). `seal` (local change for
+    stream. `max_flow` caps how fast it pours, mL/s (default 10 mL/s per cm² of opening). `seal` (from
     decant-off-the-sediment) is the mL of unsettled liquid that must stay between a settled layer (see `setup`'s
     `settled`) and the lip: while more than that is left, the vessel pours only unsettled liquid; past it, the rest
     pours well mixed with the settled layer."""
@@ -87,7 +88,7 @@ class Vessel:
     receive_tilt: float = 60.0
     max_flow: float | None = None
     seal: float = 0.0
-    # The settled layer's creep (local change for decant-off-the-sediment). While the vessel leans past `slide_tilt`
+    # The settled layer's creep (from decant-off-the-sediment). While the vessel leans past `slide_tilt`
     # degrees with less than `slide_below` mL of unsettled liquid left above the settled layer, the layer slides from
     # the floor toward the shoulder: its front moves 1/`slide_s` of the way per second, sped up by the stream dragging
     # it (times 1 + `slide_gain` x the outflow as a fraction of `flow_cap`). Below `slide_tilt` it stops where it is.
@@ -99,12 +100,12 @@ class Vessel:
     slide_gain: float = 2.0
     slurry_tilt: float = 85.0
     slurry_flow: float = 2.0
-    # Glugging (local change for decant-off-the-sediment): tipped past `glug_tilt` degrees (neck pointing down; 0 = off),
+    # Glugging (from decant-off-the-sediment): tipped past `glug_tilt` degrees (neck pointing down; 0 = off),
     # air gulps back up the neck and the churn lifts the settled layer: its front moves up to 1/`glug_s` of the way per second
     # (scaled by how far past `glug_tilt`, full at 10 degrees past), whatever is left above it.
     glug_tilt: float = 0.0
     glug_s: float = 0.5
-    # Leaking (local change for springform-clasp-before-batter): `leak(objects)` gives mL/s the vessel loses at this
+    # Leaking (from springform-clasp-before-batter): `leak(objects)` gives mL/s the vessel loses at this
     # step through a gap in its wall or floor (0 when sealed), well mixed, to the spill total (logged as a pour to
     # "spill"). `leak_at` is where it runs out, in the object's frame: the run is drawn from there to the table, with
     # a puddle on the table that grows with what has leaked.
@@ -150,7 +151,7 @@ class Pour:
         return float(sum(self.amounts.values()))
 
 
-_CFG = {"vessels": {}, "liquids": {}, "splash_drop": None, "splash": 0.0, "dt": 0.05, "settled": ()}
+_CFG = {"vessels": {}, "liquids": {}, "splash_drop": None, "splash": 0.0, "dt": 0.05, "settled": (), "docks": {}, "limits": {}}
 _TABLES: dict[str, tuple[np.ndarray, np.ndarray]] = {}  # vessel -> (tilt degrees, mL held at that tilt)
 
 
@@ -174,11 +175,17 @@ _S = _State()
 
 
 def setup(vessels, liquids: dict | None = None, splash_drop: float | None = None, splash: float = 0.0,
-          control_hz: float = 20.0, settled: tuple = ()) -> None:
+          control_hz: float = 20.0, settled: tuple = (), docks: dict | None = None,
+          limits: dict | None = None) -> None:
     """Declare the task's vessels (list of `Vessel`) and liquid colors ({name: sRGB}). `splash_drop` (m) and
     `splash` (fraction) turn on splash losses for streams that fall farther than `splash_drop`. `control_hz` is the
     run's control rate (the commands here use 20). `settled` names liquids that lie at a vessel's bottom (a sediment):
-    they pour last (see `Vessel.seal`) and are drawn below the rest when upright, behind it when tipped neck-down."""
+    they pour last (see `Vessel.seal`) and are drawn below the rest when upright, behind it when tipped neck-down.
+    `docks` (from water-cooler-bottle-flip) maps a vessel to a function of the step's objects that returns
+    (receiver, seal mL) while the vessel's mouth is seated in that receiver, else None: a seated vessel pours only into
+    its receiver, and only until the receiver holds `seal` mL (an inverted bottle in a water cooler's crown feeds the
+    reservoir until the water covers its neck, then air can no longer get in and it stops). `limits` (same
+    task) caps what a receiver may hold, mL: liquid poured into it past that is counted as spill."""
     global _S
     _CFG["vessels"] = {v.name: v for v in vessels}
     _CFG["liquids"] = dict(liquids or {})
@@ -187,6 +194,8 @@ def setup(vessels, liquids: dict | None = None, splash_drop: float | None = None
             _CFG["liquids"].setdefault(k, (0.6, 0.8, 1.0))
     _CFG["splash_drop"], _CFG["splash"], _CFG["dt"] = splash_drop, float(splash), 1.0 / control_hz
     _CFG["settled"] = tuple(settled)
+    _CFG["docks"] = dict(docks or {})
+    _CFG["limits"] = dict(limits or {})
     _TABLES.clear()
     _S = _State()
 
@@ -295,6 +304,10 @@ def update(objects) -> None:
         total = sum(have.values())
         excess = total - held_at(v, tilt)
         out = min(excess, v.flow_cap * dt) if excess > 1e-9 else 0.0
+        dock = _CFG["docks"][name](objects) if name in _CFG["docks"] else None
+        if dock is not None:  # seated in a receiver: pours into it only while it has room below the seal level
+            room = max(0.0, dock[1] - sum(_S.contents[dock[0]].values()))
+            out = min(out, room)
         front = _S.front.get(name, 0.0)
         sed = sum(q for k, q in have.items() if k in _CFG["settled"])
         clear = total - sed
@@ -315,7 +328,7 @@ def update(objects) -> None:
         _S.flowing[name] = out > 1e-9
         if out <= 1e-9:
             continue
-        dest, dest_z = _landing(objects, name, lip)
+        dest, dest_z = (dock[0], lip[2]) if dock is not None else _landing(objects, name, lip)
         if dest is not None and _CFG["splash_drop"] is not None and lip[2] - dest_z > _CFG["splash_drop"]:
             lost = {k: q * _CFG["splash"] for k, q in share.items()}
             moves.append((name, SPILL, lost))
@@ -354,6 +367,14 @@ def _apply(moves) -> None:
             for k, q in amt.items():
                 _S.spilled[k] = _S.spilled.get(k, 0.0) + q
         else:
+            limit = _CFG["limits"].get(dst)
+            if limit is not None:  # past its limit a receiver overflows: the rest is spill
+                room = max(0.0, limit - sum(_S.contents[dst].values()))
+                tot = sum(amt.values())
+                if tot > room + 1e-12:
+                    for k, q in amt.items():
+                        _S.spilled[k] = _S.spilled.get(k, 0.0) + q * (tot - room) / tot
+                    amt = {k: q * room / tot for k, q in amt.items()}
             for k, q in amt.items():
                 _S.contents[dst][k] = _S.contents[dst].get(k, 0.0) + q
         key = f"{src}>{dst}"
@@ -561,7 +582,7 @@ def _draw(objects, origin) -> None:
         front = _S.front.get(name, 0.0)
         sed_liq = next((liq for liq, *_ in slots if liq in _CFG["settled"]), None)
         if inverted and sed_liq is not None and front > LEAD_FROM and len(secs) > 1 and len(slots) < n_slots:
-            # the settled layer's leading edge reaching the shoulder (local change for decant-off-the-sediment): for
+            # the settled layer's leading edge reaching the shoulder (from decant-off-the-sediment): for
             # the last part of its slide a dark sleeve grows from the body into the shoulder around the wine there,
             # where a wrist camera holding the bottle by its body sees it (the band itself is often behind the fingers)
             r1, h1 = secs[1]
@@ -637,6 +658,95 @@ def _patch(scene) -> None:
     scene.object_states = object_states
 
 
+# -- the reset draw (the embodiment's env.reset) ---------------------------------------------------
+# object_states runs only after a step, so without this the first rendered frames of a trial show the markers as the
+# last trial left them (or none): containers empty until the first step. Like levelhose/dispersekit/siphonkit, the
+# starting contents are drawn right after every scene reset, before the first rendered frame, without touching the
+# trial's state.
+
+
+def start_objects(env, names) -> tuple[dict, np.ndarray]:
+    """Poses of `names` straight from the sim (for drawing before the first step): a dict of ObjectState-like records
+    (pos: a yamkit Prop's origin, else the bounding-box centre, as object_states gives them; quat, zero velocities,
+    bounds), and the env origin. Names the sim does not know (grippers) are skipped."""
+    from types import SimpleNamespace
+
+    base = env.unwrapped
+    world = base.arena_world
+    origin = base.scene.env_origins[0].detach().cpu().numpy().astype(np.float64)
+
+    def arr(t) -> np.ndarray:
+        return t.detach().cpu().numpy().astype(np.float64)
+
+    out = {}
+    for n in names:
+        try:
+            pose = arr(world.get_pose_w(n)[0])
+        except Exception:  # noqa: BLE001  (grippers and missing objects are skipped)
+            continue
+        pos = pose[:3] - origin
+        low = high = pos
+        try:
+            box = world.get_aabb_w(n)
+            low, high = arr(box.min_point[0]) - origin, arr(box.max_point[0]) - origin
+            if n not in kit._PROPS:
+                pos = arr(world.get_centroid_w(n)[0]) - origin
+        except Exception:  # noqa: BLE001
+            pass
+        out[n] = SimpleNamespace(pos=pos, quat_xyzw=pose[3:], lin_vel=np.zeros(3), ang_vel=np.zeros(3), low=low,
+                                 high=high)
+    return out, origin
+
+
+def _draw_start(env) -> None:
+    """Every vessel at its starting contents and pose, no streams, before the first rendered frame (the trial's own
+    state is left alone: the first step still starts it afresh)."""
+    global _S
+    if not _CFG["vessels"]:
+        return
+    objs, origin = start_objects(env, list(_CFG["vessels"]))
+    keep, _S = _S, _State()
+    try:
+        for name, v in _CFG["vessels"].items():
+            if name in objs:
+                _S.tilt[name] = _pose(objs, v)[2]
+        _draw(objs, origin)
+    finally:
+        _S = keep
+
+
+def _patch_embodiment() -> None:
+    try:
+        from yam_arena import inspect_embodiment as ie
+    except Exception:  # noqa: BLE001  (offline: no embodiment)
+        return
+    cls = ie.YamArenaEmbodiment
+    if getattr(cls, "_pourkit", False):
+        return
+    cls._pourkit = True
+    ensure = cls._ensure_sim
+
+    def _ensure_sim(self, *a, **k):
+        ensure(self, *a, **k)
+        env = self._env
+        if env is None or getattr(env, "_pourkit_reset", False):
+            return
+        reset = env.reset
+
+        def reset_and_draw(*ra, **rk):
+            out = reset(*ra, **rk)
+            if not _VIS["failed"]:
+                try:
+                    _draw_start(env)
+                except Exception as e:  # noqa: BLE001  (never let the visuals break a run)
+                    print(f"pourkit: no start visuals ({e!r})", file=sys.stderr, flush=True)
+            return out
+
+        env.reset, env._pourkit_reset = reset_and_draw, True
+
+    cls._ensure_sim = _ensure_sim
+
+
 class _Hook(kit._Hook):
     def exec_module(self, module):
         self._inner.exec_module(module)
@@ -644,6 +754,7 @@ class _Hook(kit._Hook):
         _patch(module)
 
 
+_patch_embodiment()
 if "yam_arena.scene" in sys.modules:
     _patch(sys.modules["yam_arena.scene"])
 else:  # replace yamkit's import hook with one that also adds the pour step after yamkit's patch

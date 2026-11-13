@@ -3,14 +3,13 @@ in it, next to an opened tin of formula powder with a leveling bar across its op
 scoop stand.
 
 US standard powdered formulas are mixed at one unpacked, level scoop of powder per 2 fl oz of water, so this bottle
-takes exactly two level scoops (17.8 g). The scoop is dipped into the powder, which leaves it heaped, and then drawn
-up under the tin's leveling bar so the heap is cut back into the tin. A heaped scoop holds about 29% more powder
-than a level one, and a pressed-down one more still; too much powder (or too little) makes the feed wrong for the
-baby, and powder in water cannot be taken back out.
+takes exactly two level scoops (17.8 g). The scoop is dug through the powder with its bowl tipped, turned level while
+still under the surface, which leaves it heaped, and then drawn up under the tin's leveling bar so the heap is cut
+back into the tin. A heaped scoop holds about 29% more powder than a level one, and a pressed-down one more still;
+too much powder (or too little) makes the feed wrong for the baby, and powder in water cannot be taken back out.
 
 The powder is dosekit's scored bulk model (dosekit.py, on pourkit and yamkit): heaps at the angle of repose, dips,
-the strike-off under the fixed bar, pours from the tipped scoop into the bottle's neck, spills. Visuals only: the
-powder standing above the scoop's rim is drawn orange, so heaped and level read apart at 320x176.
+the strike-off under the fixed bar, pours from the tipped scoop into the bottle's neck, spills.
 """
 
 import math
@@ -23,6 +22,7 @@ import numpy as np  # noqa: E402
 import yamkit as kit  # noqa: E402  (modeled props; nothing on disk changes)
 import pourkit as pk  # noqa: E402,F401  (dosekit builds on it)
 import dosekit as dk  # noqa: E402  (import last: its hook runs after yamkit's and pourkit's)
+import guardkit as gk  # noqa: E402  (a hand on the scoop: the gripper's own shape touching it)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN  # noqa: E402
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
 import yam_arena.demo as _yd  # noqa: E402
@@ -32,7 +32,6 @@ TOP = TABLE_TOP[SCENE]
 SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
 INSTRUCTION = "Measure the formula into this bottle."
-REQUIRE_ARMS_HOME = True  # full score also needs both arms back where they started, still (see _arms_home)
 
 # --- Scene, world coordinates (m): x forward from the arm-base midpoint, y to the robot's left, z up from the table.
 TIN = (0.310, 0.110)  # the formula tin's axis
@@ -60,7 +59,7 @@ WATER_ML = 120.0  # 4 fl oz
 FORMULA = dk.Material("formula", loose=0.497, dipped=0.50, tapped=0.62, packed=0.64, repose=42.0,
                       color=(0.97, 0.94, 0.80), flow=2.5)  # dk.MATERIALS["formula"]
 SCOOP_BIN = dk.Bin("scoop", obj="scoop", at=(0.0, BOWL_Y, RIM_Z), sections=((BOWL_R, BOWL_D),), floor=-BOWL_D,
-                   jolt_dv=None, heap_color=(1.0, 0.45, 0.05))
+                   jolt_dv=None)
 TIN_BIN = dk.Bin("tin", sections=((TIN_R_IN, TIN_H - TIN_FLOOR),), floor=TIN_FLOOR, fill={"formula": POWDER_G},
                  scoop=False, jolt_dv=None)
 BOTTLE_BIN = dk.Bin("bottle", sections=((BOTTLE_R - 0.0015, 0.093), (NECK_R_IN, 0.020)), floor=0.002,
@@ -77,13 +76,13 @@ DOSE_G = 2 * LEVEL_G  # two level scoops for 4 fl oz of water: 17.8 g
 TOL = 0.07  # +-7%: a strike-off 1 mm high or low changes a scoop by 0.5 g (5.7%)
 SPILL_MAX = 1.0  # g of powder on the counter
 SWEPT_MIN = 0.99  # share of the scoop's mouth the bar must have passed over (at its underside) since the last dip
-HANDS_OFF = 0.040  # m: a tool point within 4 cm of the scoop's body (handle, neck or bowl) is still on it
-# the scoop's body as a line, scoop frame: the handle's two ends, the neck's foot, the bowl's center
-SCOOP_LINE = np.array([(0.0, -HANDLE_L / 2, 0.0), (0.0, HANDLE_L / 2, 0.0), (0.0, BOWL_Y - BOWL_R_OUT, RIM_Z),
-                       (0.0, BOWL_Y, RIM_Z - BOWL_D / 2)])
+NECK_A = (0.0, HANDLE_L / 2 - 0.002, -0.004)  # the neck, from the handle's +y end down to the bowl's rim
+NECK_B = (0.0, BOWL_Y - BOWL_R_OUT + 0.001, RIM_Z)
+NECK_R = 0.005
+# the scoop's shape for the hands-off check, scoop frame: handle, neck and bowl (a hand anywhere on it is on it)
+SCOOP_PARTS = (gk.Seg((0.0, -HANDLE_L / 2, 0.0), (0.0, HANDLE_L / 2, 0.0), HANDLE_R), gk.Seg(NECK_A, NECK_B, NECK_R),
+               gk.Ring(0.0, BOWL_R_OUT, BOWL_BOTTOM, RIM_Z, center=(0.0, BOWL_Y, 0.0)))
 DT = 0.05
-HOME_TOL = 0.03
-HOME_STILL = 0.002
 GRIPPERS = ("left_gripper", "right_gripper")
 
 STEEL = kit.Look((0.90, 0.90, 0.88), 0.35, metallic=0.5)
@@ -117,10 +116,10 @@ def _tin():
 
 def _scoop():
     """The scoop: a round dark-blue bowl with its handle rising from the rim, origin at the handle's center."""
-    neck_a, neck_b = np.array([0.0, HANDLE_L / 2 - 0.002, -0.004]), np.array([0.0, BOWL_Y - BOWL_R_OUT + 0.001, RIM_Z])
+    neck_a, neck_b = np.array(NECK_A), np.array(NECK_B)
     neck = neck_b - neck_a
     m = (kit.cylinder((0, 0, 0), HANDLE_R, HANDLE_L, BLUE, axis="y"),
-         kit.cylinder(tuple((neck_a + neck_b) / 2), 0.005, float(np.linalg.norm(neck)), BLUE, axis=neck),
+         kit.cylinder(tuple((neck_a + neck_b) / 2), NECK_R, float(np.linalg.norm(neck)), BLUE, axis=neck),
          kit.lathe([(0.0, BOWL_BOTTOM), (BOWL_R_OUT, BOWL_BOTTOM), (BOWL_R_OUT, RIM_Z), (BOWL_R, RIM_Z),
                     (BOWL_R, RIM_Z - BOWL_D), (0.0, RIM_Z - BOWL_D)], BLUE, center=(0.0, BOWL_Y, 0.0)))
     c = (kit.Collider((0, 0, 0), radius=HANDLE_R, height=HANDLE_L, axis="Y"),
@@ -162,9 +161,6 @@ OBJECTS = [_tin(), _scoop(), _stand(), _bottle()]
 class _History:
     def __init__(self):
         self.episode = kit.episode()
-        self.home = None  # each gripper's tool point at the trial's first scored step
-        self.last = None
-        self.still = False
         self.most_in_bottle = 0.0  # g: the most powder the bottle has held this trial (it can only grow)
         self.unleveled = False  # a scoopful went into the bottle without being drawn across the leveling bar
 
@@ -176,12 +172,6 @@ def _update(objects):
     global _H
     if _H.episode != kit.episode():  # the simulator reset the scene: a new trial, a clean history
         _H = _History()
-    now = {g: np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects}
-    if _H.home is None and len(now) == 2:
-        _H.home = now
-    _H.still = _H.last is not None and all(g in _H.last and np.linalg.norm(now[g] - _H.last[g]) < HOME_STILL
-                                           for g in now)
-    _H.last = now
     g = dk.amount(objects, "bottle")
     if g > _H.most_in_bottle + 1e-6:  # powder arrived in the bottle this step: was this load leveled at the bar?
         loads = [d for d in dk.dips() if d.scoop == "scoop"]
@@ -190,77 +180,53 @@ def _update(objects):
     _H.most_in_bottle = max(_H.most_in_bottle, g)
 
 
-def _arms_home(objects):
-    """Both grippers' tool points back within 3 cm of where they were at the trial's first step, and still."""
-    if _H.home is None or not _H.still:
-        return False
-    return all(g in objects and np.linalg.norm(np.asarray(objects[g].pos) - _H.home[g]) < HOME_TOL for g in GRIPPERS)
+def _put_down(objects):
+    """The scoop back on its stand (its handle within 1.5 cm of where it started) or lying on the table: its handle's
+    center under 7 cm up (lower than it sits on the stand) and clear of the tin's and the bottle holder's footprints.
+    Resting in the tin or across the bottle's neck is not put down: it is in the way of capping the bottle."""
+    p = np.asarray(objects["scoop"].pos, float)
+    if np.linalg.norm(p - HANDLE0) < 0.015:
+        return True
+    clear_tin = math.hypot(p[0] - TIN[0], p[1] - TIN[1]) > TIN_R_OUT
+    clear_bottle = math.hypot(p[0] - BOTTLE[0], p[1] - BOTTLE[1]) > 0.045
+    return TOP <= p[2] < TOP + 0.07 and clear_tin and clear_bottle
 
 
-def _dist_to_scoop(objects, point):
-    """Distance from `point` to the scoop's body line (handle, neck, bowl), as the scoop now lies."""
-    s = objects["scoop"]
-    line = np.asarray(s.pos, float) + SCOOP_LINE @ pk._rotm(s.quat_xyzw).T
-    p, best = np.asarray(point, float), np.inf
-    for a, b in zip(line[:-1], line[1:]):
-        t = float(np.clip(np.dot(p - a, b - a) / np.dot(b - a, b - a), 0.0, 1.0))
-        best = min(best, float(np.linalg.norm(p - (a + t * (b - a)))))
-    return best
-
-
-def _held(objects):
-    """Some tool point within 4 cm of the scoop's handle, neck or bowl: a hand still on the scoop, wherever it holds
-    it (the tool point sits between the fingertips, within about 2 cm of what they hold)."""
-    return any(g in objects and _dist_to_scoop(objects, objects[g].pos) < HANDS_OFF for g in GRIPPERS)
-
-
-def _job(objects):
-    if _H.unleveled:
-        return 0.0  # a scoopful went in without being drawn across the leveling bar since it was dipped
-    if _H.most_in_bottle > DOSE_G * (1 + TOL):
-        return 0.0  # too much powder went in (heaped, packed or a third scoop): it cannot come back out
-    if _held(objects):
-        return 0.0  # nothing counts while the scoop is still in hand (by its handle, neck or bowl)
-    s = objects["scoop"]
-    if not s.resting(0.01, 0.5) or s.pos[2] < TOP:
-        return 0.0  # the scoop still moving, or dropped off the counter
-    if dk.spilled(objects) >= SPILL_MAX:
-        return 0.0  # powder on the counter: missed the bottle or knocked off the scoop
-    g = dk.amount(objects, "bottle")
-    if DOSE_G * (1 - TOL) <= g <= DOSE_G * (1 + TOL):
-        return 1.0  # two level scoops
-    if LEVEL_G * (1 - TOL) <= g <= LEVEL_G * (1 + TOL):
-        return 0.25  # one level scoop in: half the job, nothing over
-    return 0.0
+def _let_go(objects):
+    """No gripper touching the scoop's handle, neck or bowl (gk.touching: the gripper's own shape within 2 mm of it),
+    and the scoop at rest (under 1 cm/s) on the table or back on its stand, not in the tin or on the bottle."""
+    hands = gk.touching(objects, "scoop", SCOOP_PARTS, grippers=GRIPPERS)
+    return not hands and objects["scoop"].resting(0.01, 0.5) and _put_down(objects)
 
 
 def _score(objects):
-    job = _job(objects)
-    if job == 1.0 and REQUIRE_ARMS_HOME and not _arms_home(objects):
-        return 0.9
-    return job
+    if _H.unleveled or _H.most_in_bottle > DOSE_G * (1 + TOL):
+        return 0.0  # a scoopful went in unleveled, or the feed got too strong: powder in water cannot come back out
+    g = dk.amount(objects, "bottle")
+    if DOSE_G * (1 - TOL) <= g <= DOSE_G * (1 + TOL):  # two level scoops
+        return 1.0 if _let_go(objects) and dk.spilled(objects) < SPILL_MAX else 0.5
+    if LEVEL_G * (1 - TOL) <= g <= LEVEL_G * (1 + TOL):
+        return 0.25  # one level scoop: half the feed, measured right
+    return 0.0
 
 
 def success(objects):
-    """Two level scoops in the bottle, each drawn across the leveling bar, nothing spilled, the scoop set down, both arms home and still. Called first
-    each step, so it also records the history."""
+    """Two level scoops in the bottle, each drawn along the leveling bar, the scoop let go and at rest on the table or
+    its stand, under 1 g spilled. Called first each step, so it also records the history."""
     _update(objects)
     return _score(objects) == 1.0
 
 
 def score(objects):
-    """Scored on the final state; the powder is weighed by the kit. A correct feed is two level scoops, 17.8 g (one
-    level scoop holds 17.8 mL of powder at 0.50 g/mL, 8.9 g). 0 for the whole trial if any scoopful reached the bottle
-    without the bar having passed over all of the scoop's mouth (at its underside) since that scoopful was dipped:
-    the label's level scoop is leveled with the leveler, and the model's exact shedding of a heap by tilting is not
-    something a real cohesive powder does. 0 for the whole trial once the bottle has held more than
-    17.8 g + 7% = 19.1 g (one heaped scoop with one level is up to 20.3 g, though part of a heap can fall off on the carry, so the
-    strike-off rule is what catches it; packed or third scoops more), since powder in
-    water cannot be taken back out. Otherwise 0 while a tool point is within 4 cm of the scoop's handle, neck or bowl, while
-    the scoop is still moving or off the counter, or with 1 g or more of powder spilled. Then: 1.0 for 16.6 to 19.1 g
-    in the bottle (+-7%: a strike-off 1 mm high or low changes a scoop by 0.5 g) with both arms back home and still,
-    0.9 for the same with the arms not home; 0.25 for 8.3 to 9.5 g (exactly one level scoop, nothing over); 0 for
-    anything else, including doing nothing. Possible scores: 0, 0.25, 0.9, 1.0."""
+    """Scored on the final state; the powder is weighed by the kit. A correct feed is two level scoops, 17.8 g, at one
+    level scoop per 2 fl oz of water.
+    1.0: 16.6 to 19.1 g in the bottle (+-7%, a scoop leveled 1 mm short of the bar), the scoop let go (no gripper
+         touching it) and at rest on the table or back on its stand (not in the tin or on the bottle), under 1 g
+         spilled.
+    0.5: the same dose, but the scoop still in hand or moving, or 1 g or more spilled.
+    0.25: one level scoop, 8.3 to 9.5 g.
+    0: a scoopful reached the bottle without the bar having passed over all of its mouth since it was dipped; the
+       bottle ever held over 19.1 g (powder cannot come back out of water); any other amount, including nothing."""
     return _score(objects)
 
 
@@ -286,22 +252,44 @@ _UP = -(kit._rot_xyz(ROLL, P0) @ _yd.grip_rotation(YAW))[:, 1]  # back of the
 # hand: the direction across the handle that the open fingers straddle it along
 
 
-def tcp_for_mouth(mouth):
-    """Tool point that puts the level scoop's rim center at `mouth`."""
-    return tuple(np.asarray(mouth, float) - MOUTH_OFF + [0.0, GRIP_DY, 0.0])
+def tcp_for_mouth(mouth, pitch=P0):
+    """Tool point that puts the scoop's rim center at `mouth` with the wrist at `pitch` (P0: the scoop level; less
+    tips the bowl's mouth toward -x, turning about the tool point)."""
+    d = pitch - P0
+    turn = np.array([[math.cos(d), 0.0, math.sin(d)], [0.0, 1.0, 0.0], [-math.sin(d), 0.0, math.cos(d)]])
+    return tuple(np.asarray(mouth, float) - turn @ (MOUTH_OFF - [0.0, GRIP_DY, 0.0]))
 
 
 def _w(dur, pos, finger, label, pitch=P0):
     return kit.Tilted(dur, tuple(float(v) for v in pos), finger, label, YAW, ROLL, pitch)
 
 
+SCOOP_TILT = 0.61  # rad (35 deg): the bowl tipped mouth-first toward -x to dig in, as a hand scoops
+DIP_X0, DIP_DX = 0.322, -0.030  # the rim center enters the powder here (world x) and is dragged 3 cm toward -x
+DIP_Y = TIN[1] - 0.025  # on the near side of the bar, the bowl clear of it
+
+
+def _scoop_through(k, surface):
+    """Dig in like a hand: the bowl tipped 35 deg, its lip leading, pushed under the surface and dragged 3 cm through
+    the powder, then turned level while still under it (the kit fills it to the brim plus a heap at the angle of
+    repose), and lifted straight out heaped."""
+    deep = surface - 0.008  # the rim center 8 mm under the surface (the kit fills a mouth 4 mm or more under)
+    p1 = P0 - SCOOP_TILT
+    x0, x1 = DIP_X0, DIP_X0 + DIP_DX
+    return [_w(1.2, tcp_for_mouth((x0, DIP_Y, TOP + 0.15)), FINGER_CLOSED, f"scoop {k}: over the tin"),
+            _w(1.0, tcp_for_mouth((x0, DIP_Y, surface + 0.03), p1), FINGER_CLOSED, f"scoop {k}: tip the bowl", p1),
+            _w(1.0, tcp_for_mouth((x0, DIP_Y, deep), p1), FINGER_CLOSED, f"scoop {k}: lip into the powder", p1),
+            _w(1.5, tcp_for_mouth((x1, DIP_Y, deep), p1), FINGER_CLOSED, f"scoop {k}: drag it through", p1),
+            _w(1.0, tcp_for_mouth((x1 - 0.005, DIP_Y, deep), P0 - SCOOP_TILT / 2), FINGER_CLOSED,
+               f"scoop {k}: turn it up", P0 - SCOOP_TILT / 2),
+            _w(1.0, tcp_for_mouth((x1 - 0.008, DIP_Y, deep)), FINGER_CLOSED, f"scoop {k}: level under the powder"),
+            _w(1.2, tcp_for_mouth((x1 - 0.008, DIP_Y, surface + 0.05)), FINGER_CLOSED, f"scoop {k}: lift out heaped")]
+
+
 def _cycle(k, surface):
-    """One scoop: over the tin, dip, draw up under the leveling bar, carry to the bottle, tip it in."""
+    """One scoop: dig it through the powder, draw it up under the leveling bar, carry it to the bottle, tip it in."""
     tx, ty = TIN
-    dip_xy = (tx, ty - 0.025)  # dip on the near side of the bar
-    out = [_w(1.2, tcp_for_mouth((*dip_xy, TOP + 0.15)), FINGER_CLOSED, f"scoop {k}: over the tin")]
-    out += dk.dip(TCP0, HANDLE0 + MOUTH_OFF, (*dip_xy, surface), 0.010, drag=(0.0, 0.008), above=0.05, roll=ROLL,
-                  pitch=P0, yaw=YAW, finger=FINGER_CLOSED, label=f"scoop {k}: dip")
+    out = _scoop_through(k, surface)
     bar = ty + BAR_Y
     y_in = bar - 0.016  # the bowl's leading wall under the bar, the heap still short of the bar's line
     y_end = bar + 0.014  # every heap cell past the bar's line; the trailing wall still under the bar's -y edge

@@ -66,7 +66,8 @@ Scorer API (after the kit has updated for the step, which it does inside the sce
 above the rim, m; `heaped(objects, bin, tol)`; `level_struck(objects, bin, tol, fill_tol)` full to the brim and flat;
 `packing(objects, bin)` 0 loose .. 1 packed (mass-weighted); `density(objects, bin)`; `lifts(objects, bin)` list of
 `Lift`; `strokes(objects, bin)`; `stroke_log(objects, bin)` (each stroke: its depth, the lift it was made in and
-how far below that lift's bottom it reached); `struck(objects, bin)` strike-off steps and `struck_grams`;
+how far below that lift's bottom it reached, and in which direction from the axis); `taps(objects, bin)` (each
+`Tapper` tap on a bin's outside, e.g. mallet taps on a mold, tagged with the lift on top); `struck(objects, bin)` strike-off steps and `struck_grams`;
 `swept_since(objects, bin, step)` (share of the mouth an edge was drawn across since a step); `jolts(objects, bin)`;
 `caked(objects, bin)`; `transfers()` (every move: pour, dip, strike, drain, overflow) and `transferred(objects, src,
 dst, material, how)`; `dipped(objects, scoop, source)`; `dips()` (each with what the scoop had held before);
@@ -78,7 +79,8 @@ empty=True)`; `on_scale(objects, scale)`.
 Visuals (Isaac Lab VisualizationMarkers, guarded so the model imports and tests offline): each bin's body as a
 column per section, the heap as one short column per cell, spill piles as flat disks, a seven-segment readout per
 `Display` (digits 3 cm tall are about 13 px at 320x176 from the top camera) and an optional bar gauge with a target
-tick. Packed material is drawn darker. Visuals never affect scoring.
+tick. Packed material is drawn darker. Visuals never affect scoring. Drawn right after every scene reset (the
+embodiment's env.reset), before the first rendered frame, at the starting contents, and after every step.
 
 Limits: bins are stacked cylinders; the material has no weight in the physics (only the scale counts it); it is not
 solid (tools and fingers pass through it; nothing piles against a tool); a heap's shape is kept per cell but a pour
@@ -121,7 +123,9 @@ EDGE_BELOW = 0.008  # m: an edge deeper than this below the rim strikes nothing 
 CAKE_HOLD = 0.3  # a layer caked more than this does not flow
 PILE_MERGE = 0.015  # m
 CELLS = 9  # heap grid across the mouth's diameter
-SWEEP_STEP = 0.03  # m: (local fix) a bin's rim moving up to this far in a step, and up to SWEEP_DZ in height, sweeps
+DRAW_MIN = 0.001  # m: a body fill thinner than this (what a tipped scoop keeps on its lower wall) is drawn as a lump
+# against that wall, on the side the bin was last tipped toward, not as a film over the whole floor
+SWEEP_STEP = 0.03  # m: a bin's rim moving up to this far in a step, and up to SWEEP_DZ in height, sweeps
 SWEEP_DZ = 0.002  # the whole band its mouth crossed under an edge between steps (a fast draw is not skipped over)
 SWEEP_ABOVE = 0.002  # m: an edge this close above a cell's top still counts as drawn across it (swept_since)
 LAND_BELOW = 0.02  # m: material let go up to this far below a bin's rim, inside its mouth, still lands in it (a
@@ -250,6 +254,37 @@ class Presser:
 
 
 @dataclass(frozen=True)
+class Tapper:
+    """A point on task object `obj` (or a gripper key), at `tip` in its frame, that taps the outside of bin `bin`
+    (a mallet's head, the side of a hand). A tap counts when the point comes within `radius` + `reach` of the bin's
+    axis (set `radius` to the bin's outer radius plus the tool's half-thickness at `tip`) between `lo` and `hi` m above
+    the bin's floor; it counts again only after the point has moved `release` m further out (a bounce is one tap). Taps change nothing in the model (no settling);
+    they are only counted and logged (`taps`), each tagged with the lift on top at the time."""
+
+    obj: str
+    bin: str
+    radius: float
+    tip: tuple = (0.0, 0.0, 0.0)
+    reach: float = 0.005
+    release: float = 0.010
+    lo: float = 0.0
+    hi: float = 1.0
+    min_r: float = 0.0  # a point closer to the axis than this is inside the bin (rodding, scooping), not tapping
+
+
+@dataclass(frozen=True)
+class Tap:
+    """One tap on the outside of `bin` at control step `step` by tapper `tapper` (its index among the tappers), at
+    height `h` m above the bin's floor, while lift `lift` was on top (0 if the bin was empty)."""
+
+    step: int
+    bin: str
+    tapper: int
+    h: float
+    lift: int
+
+
+@dataclass(frozen=True)
 class Edge:
     """A straight edge on task object `obj` from `a` to `b` (its frame). `below` (m) is how far the edge may sit below
     a bin's rim and still strike (default EDGE_BELOW, 8 mm: a hand-held knife can be pushed down into the bin's mouth).
@@ -361,6 +396,7 @@ class Stroke:
     lift: int
     lift_bottom: float
     r: float
+    ang: float = 0.0  # the tip's direction from the bin's axis at its deepest, radians in the bin's frame (x = 0)
 
 
 @dataclass(frozen=True)
@@ -371,7 +407,7 @@ class TareEvent:
     contents: float  # grams of material in bins on the pan at the press
 
 
-_CFG = {"materials": {}, "bins": {}, "pressers": (), "edges": (), "scales": {}, "displays": (), "dt": 0.05,
+_CFG = {"materials": {}, "bins": {}, "pressers": (), "edges": (), "tappers": (), "scales": {}, "displays": (), "dt": 0.05,
         "floor_z": 0.0}
 _GEO: dict = {}
 
@@ -422,10 +458,12 @@ class _State:
         self.open: dict = {}
         self.dips: list = []
         self.stroke_log: list = []  # Stroke, in order
+        self.tap_log: list = []  # Tap, in order
+        self.tap_in: dict = {}  # tapper index -> True while it is against its bin
         self.dip_open: dict = {}
         self.press: dict = {}  # (presser index, bin) -> (deepest height (bin frame), radial offset there) while in
         self.edge_prev: dict = {}  # edge index -> (a, b) world at the last step
-        self.rim_prev: dict = {}  # (edge index, bin) -> the bin's rim center (world) at the last step (local fix)
+        self.rim_prev: dict = {}  # (edge index, bin) -> the bin's rim center (world) at the last step
         self.motion: dict = {}  # object -> (pos, vel)
         self.frames: dict = {}
         self.tare = {n: s.start_tare for n, s in _CFG["scales"].items()}
@@ -440,13 +478,15 @@ _S = None
 
 def setup(materials=(), bins=(), tools=(), scales=(), displays=(), control_hz: float = 20.0,
           floor_z: float = 0.0) -> None:
-    """Declare the task's materials (`Material`s; presets in MATERIALS), bins, tools (`Presser`s and `Edge`s), scales
+    """Declare the task's materials (`Material`s; presets in MATERIALS), bins, tools (`Presser`s, `Edge`s and
+    `Tapper`s), scales
     and displays. `floor_z` is the table top's height (where spills land)."""
     global _S
     _CFG["materials"] = {m.name: m for m in materials}
     _CFG["bins"] = {b.name: b for b in bins}
     _CFG["pressers"] = tuple(t for t in tools if isinstance(t, Presser))
     _CFG["edges"] = tuple(t for t in tools if isinstance(t, Edge))
+    _CFG["tappers"] = tuple(t for t in tools if isinstance(t, Tapper))
     _CFG["scales"] = {s.name: s for s in scales}
     _CFG["displays"] = tuple(displays)
     _CFG["dt"], _CFG["floor_z"] = 1.0 / control_hz, float(floor_z)
@@ -661,6 +701,9 @@ def _landing(objects, source_obj: str | None, point) -> str | None:
         axis, rim = fr["axis"], fr["rim"]
         t = float(np.dot(point - rim, axis) / axis[2])
         if t <= -LAND_BELOW:
+            # below the rim: inside the bin's walls (a scoop's lip shedding under the powder) it stays in this bin
+            if b.core <= _radial(b, fr, point) < b.mouth_r and float(np.dot(point - fr["floor"], axis)) >= 0.0:
+                return name
             continue
         hit = point - np.array([0.0, 0.0, t])
         dist = float(np.linalg.norm(hit - rim))
@@ -746,6 +789,7 @@ def update(objects) -> None:
             _pour(objects, n, b, fr, dt)
     _dips(objects, dt)
     _presses(objects)
+    _taps(objects)
     _strikes(objects)
     for n, b in bins.items():
         _sync(_S.bins[n], b)
@@ -776,6 +820,9 @@ def _pour(objects, n: str, b: Bin, fr, dt: float) -> None:
         how = "pour"
     parcels = _take(st, out)
     _sync(st, b)
+    side = (fr["rot"].T @ (fr["lip"] - fr["rim"]))[:2]  # the lip's side, in the bin's own frame (for the draw)
+    if np.linalg.norm(side) > 1e-6:
+        st.tip_dir = side / np.linalg.norm(side)
     _drop(objects, n, b.body, fr["lip"], parcels, how)
 
 
@@ -873,13 +920,34 @@ def _presses(objects) -> None:
             if inside and st.layers and tip[2] < surf - PRESS_MIN:
                 h = float(np.dot(tip - fr["floor"], fr["axis"]))
                 if key not in _S.press or h < _S.press[key][0]:
-                    _S.press[key] = (h, _radial(b, fr, tip))
+                    rel = tip - fr["rim"]
+                    ang = math.atan2(float(rel @ fr["rot"][:, 1]), float(rel @ fr["rot"][:, 0]))
+                    _S.press[key] = (h, _radial(b, fr, tip), ang)
             elif key in _S.press and (not inside or tip[2] > surf - PRESS_MIN / 2):
-                deepest, r = _S.press.pop(key)
-                _stroke(st, b, P, deepest, n, k, r)
+                deepest, r, ang = _S.press.pop(key)
+                _stroke(st, b, P, deepest, n, k, r, ang)
 
 
-def _stroke(st: _Bin, b: Bin, P: Presser, deepest: float, name: str = "", k: int = 0, r: float = 0.0) -> None:
+def _taps(objects) -> None:
+    for k, T in enumerate(_CFG.get("tappers", ())):
+        p = _tool_point(objects, T.obj, T.tip)
+        b = _CFG["bins"].get(T.bin)
+        fr = _S.frames.get(T.bin)
+        if p is None or b is None or fr is None:
+            continue
+        r = _radial(b, fr, p)
+        h = float(np.dot(p - fr["floor"], fr["axis"]))
+        if not _S.tap_in.get(k):
+            if T.min_r <= r <= T.radius + T.reach and T.lo <= h <= T.hi:
+                _S.tap_in[k] = True
+                st = _S.bins[T.bin]
+                _S.tap_log.append(Tap(_S.step, T.bin, k, h, st.layers[-1].lift if st.layers else 0))
+        elif r > T.radius + T.reach + T.release or not T.lo - T.release <= h <= T.hi + T.release:
+            _S.tap_in[k] = False
+
+
+def _stroke(st: _Bin, b: Bin, P: Presser, deepest: float, name: str = "", k: int = 0, r: float = 0.0,
+            ang: float = 0.0) -> None:
     """One finished stroke: compact the band, count it and log it."""
     total = _vol(st)
     surf_h = _h_of_v(b, total)
@@ -892,7 +960,7 @@ def _stroke(st: _Bin, b: Bin, P: Presser, deepest: float, name: str = "", k: int
                 bottom_v = cum
             cum += L.vol
         _S.stroke_log.append(Stroke(_S.step, name, k, float(deepest), float(lo), int(top_lift),
-                                    float(_h_of_v(b, bottom_v or 0.0)), float(r)))
+                                    float(_h_of_v(b, bottom_v or 0.0)), float(r), float(ang)))
     out, cum = [], 0.0
     for L in st.layers:  # split the layer that straddles the band's bottom
         v = L.vol
@@ -937,8 +1005,8 @@ def _strikes(objects) -> None:
                 continue
             g = _GEO[n]
             cx, cy = fr["rim"][0] + g["x"], fr["rim"][1] + g["y"]  # cells, upright approximation
-            # local fix: the edge's motion relative to the bin's mouth since the last step. The bin moved by `mv`, so
-            # in the mouth's current frame the edge came from pa - mv: a fast draw sweeps the whole band it crossed.
+            # The edge's motion relative to the bin's mouth since the last step: the bin moved by `mv`, so in the
+            # mouth's current frame the edge came from pa + mv, and a fast draw sweeps the whole band it crossed.
             rp = _S.rim_prev.get((k, n))
             _S.rim_prev[(k, n)] = np.array(fr["rim"], float)
             mv = np.zeros(3) if rp is None else np.array(fr["rim"], float) - rp
@@ -1109,6 +1177,11 @@ def lifts(objects, bin: str) -> list:
         d["p"] += L.mass * (L.rho - mat.loose) / max(mat.packed - mat.loose, 1e-9)
     return [Lift(i, d["g"], d["lo"], d["hi"], d["smin"], d["smax"], d["p"] / d["g"] if d["g"] else 0.0)
             for i, d in sorted(out.items())]
+
+
+def taps(objects, bin: str | None = None) -> tuple:
+    """Every tap on the outside of a bin this trial (`Tap`s, in order), on `bin` or any bin."""
+    return tuple(t for t in _S.tap_log if bin is None or t.bin == bin)
 
 
 def stroke_log(objects, bin: str | None = None) -> tuple:
@@ -1332,7 +1405,13 @@ def _draw(objects, origin) -> None:
         z = 0.0
         for r, hh in b.sections:
             part = min(max(h_body - z, 0.0), hh)
-            if part > 1e-4:
+            side = getattr(st, "tip_dir", None)
+            if part > 1e-4 and h_body < DRAW_MIN and side is not None and z == 0.0:
+                rc = 0.35 * r  # the residue lies in the corner of the floor and the wall it was tipped onto
+                hc = _vol(st) / ML / (math.pi * rc * rc)
+                off = side * (r * 0.97 - rc)
+                put(fr["floor"] + fr["rot"] @ np.array([off[0], off[1], hc / 2]), q, (rc, rc, hc), key)
+            elif part > 1e-4:
                 put(fr["floor"] + fr["axis"] * (z + part / 2), q, (r * 0.97, r * 0.97, part), key)
             else:
                 hide()
@@ -1345,7 +1424,8 @@ def _draw(objects, origin) -> None:
                 hide()
                 continue
             c = fr["rim"] + fr["rot"] @ np.array([g["x"][i], g["y"][i], h / 2])
-            put(c, q, (cell_r, cell_r, h), hkey)
+            ri = min(cell_r, b.mouth_r - math.hypot(g["x"][i], g["y"][i]))  # kept inside the mouth, off the rim
+            put(c, q, (ri, ri, h), hkey)
     for k in range(MAX_PILES):
         if k < len(_S.piles):
             x, y, z, mat, grams, _ = _S.piles[k]
@@ -1438,12 +1518,70 @@ def _patch(scene) -> None:
     scene.object_states = object_states
 
 
+# -- the reset draw (the embodiment's env.reset) ---------------------------------------------------
+# object_states runs only after a step, so without this a trial's first rendered frames show empty bins and a blank
+# readout. Like pourkit (and levelhose/dispersekit/siphonkit), the starting contents, heaps and scale readings are
+# drawn right after every scene reset, before the first rendered frame, without touching the trial's state.
+
+
+def _draw_start(env) -> None:
+    global _S
+    if not (_CFG["bins"] or _CFG["scales"]):
+        return
+    names = [b.body for b in _CFG["bins"].values()] + [n for sc in _CFG["scales"].values() for n in sc.masses]
+    names += [t for sc in _CFG["scales"].values() for t in sc.touch_by]
+    objs, origin = pk.start_objects(env, list(dict.fromkeys(names)))
+    keep, _S = _S, _State()
+    try:
+        _S.frames = {n: _frame(objs, b) for n, b in _CFG["bins"].items()}
+        try:
+            _scales(objs)
+        except Exception:  # noqa: BLE001  (the readout then shows the start tare)
+            pass
+        _draw(objs, origin)
+    finally:
+        _S = keep
+
+
+def _patch_embodiment() -> None:
+    try:
+        from yam_arena import inspect_embodiment as ie
+    except Exception:  # noqa: BLE001  (offline: no embodiment)
+        return
+    cls = ie.YamArenaEmbodiment
+    if getattr(cls, "_dosekit", False):
+        return
+    cls._dosekit = True
+    ensure = cls._ensure_sim
+
+    def _ensure_sim(self, *a, **k):
+        ensure(self, *a, **k)
+        env = self._env
+        if env is None or getattr(env, "_dosekit_reset", False):
+            return
+        reset = env.reset
+
+        def reset_and_draw(*ra, **rk):
+            out = reset(*ra, **rk)
+            if not _VIS["failed"]:
+                try:
+                    _draw_start(env)
+                except Exception as e:  # noqa: BLE001  (never let the visuals break a run)
+                    print(f"dosekit: no start visuals ({e!r})", file=sys.stderr, flush=True)
+            return out
+
+        env.reset, env._dosekit_reset = reset_and_draw, True
+
+    cls._ensure_sim = _ensure_sim
+
+
 class _Hook(pk._Hook):
     def exec_module(self, module):
         super().exec_module(module)
         _patch(module)
 
 
+_patch_embodiment()
 if "yam_arena.scene" in sys.modules:
     _patch(sys.modules["yam_arena.scene"])
 else:  # replace yamkit's/pourkit's import hook with one that also adds the dose step after theirs

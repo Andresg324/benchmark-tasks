@@ -25,6 +25,8 @@ SCOOP0 = m.HANDLE0.copy()
 
 
 BAR = TY + m.BAR_Y
+DOWN = (1.0, 0.0, 0.0, 0.0)  # a gripper pointing down (turned 180 deg about x): its palm above the tool point
+HOLD = m.HANDLE_R / 0.047  # the opening of fingers closed on the 2.5 cm handle (the pads open 94 mm apart)
 
 
 def clamp(mouth, tilt):
@@ -56,11 +58,12 @@ class Trial:
         self.g = {k: v.copy() for k, v in PARK.items()}
         self.vel = np.zeros(3)
         self.out = None
+        kit._OPENING.update({"left_gripper": 1.0, "right_gripper": 1.0})
         self.step()
 
     def objs(self):
         return {"tin": st((TX, TY, TOP)), "stand": st((*m.STAND, TOP)), "bottle": st((*m.BOTTLE, TOP)),
-                "scoop": st(self.scoop, self.q, self.vel), **{k: st(v) for k, v in self.g.items()}}
+                "scoop": st(self.scoop, self.q, self.vel), **{k: st(v, DOWN) for k, v in self.g.items()}}
 
     def step(self, n=1):
         for _ in range(n):
@@ -80,6 +83,7 @@ class Trial:
             self.scoop = start + (target - start) * k / n
             self.q = q
             self.g["right_gripper"] = self.scoop + [0, m.GRIP_DY, 0]
+            kit._OPENING["right_gripper"] = HOLD
             self.step()
 
     def put_lip(self, xy, z, tilt):
@@ -88,6 +92,7 @@ class Trial:
         self.scoop = np.array([xy[0], xy[1], z]) - fr["lip"]
         self.q = q
         self.g["right_gripper"] = self.scoop + [0, m.GRIP_DY, 0]
+        kit._OPENING["right_gripper"] = HOLD
         self.step()
 
     def dip(self):
@@ -138,6 +143,7 @@ class Trial:
 
     def set_down(self, home=True, n=30):
         self.put(SCOOP0 + m.MOUTH_OFF, n=8)
+        kit._OPENING["right_gripper"] = 1.0
         self.g["right_gripper"] = PARK["right_gripper"].copy() if home else np.array([0.25, -0.15, TOP + 0.12])
         return self.step(n)
 
@@ -177,24 +183,29 @@ expect("do nothing", t.step(40), 0.0, g_in())
 
 t = Trial()
 t.scoops(2)
-expect("two level scoops, scoop back on its stand, arms home", t.set_down(), 1.0, g_in())
+expect("two level scoops, scoop back on its stand, let go", t.set_down(), 1.0, g_in())
 
 t = Trial()
 t.scoops(2)
-expect("two level scoops, right arm not home", t.set_down(home=False), 0.9, g_in())
+expect("two level scoops, right hand left open 4 cm over the scoop (arm-home is not scored)", t.set_down(home=False),
+       1.0, g_in())
 
 t = Trial()
 t.scoops(2)
 t.put(SCOOP0 + m.MOUTH_OFF, n=8)
-expect("two level scoops, still holding the scoop", t.step(30), 0.0, g_in())
-t.g["right_gripper"] = t.scoop + [0, 0, 0.041]
-expect("... hand lifted 4.1 cm off the handle (let go)", t.step(30), 0.9, g_in())
+expect("two level scoops, scoop on its stand, still closed on the handle", t.step(30), 0.5, g_in())
+kit._OPENING["right_gripper"] = 1.0
+expect("... fingers opened around the handle, not touching it (let go)", t.step(30), 1.0, g_in())
+t.g["right_gripper"] = t.scoop + [-0.0345, m.GRIP_DY, 0]
+expect("... open hand moved over so one pad rests against the handle (touching)", t.step(30), 0.5, g_in())
+t.g["right_gripper"] = t.scoop + [-0.0345, m.GRIP_DY, 0.03]
+expect("... lifted 3 cm, the pad 5 mm clear of the handle (no contact, however close)", t.step(30), 1.0, g_in())
 
 t = Trial()
 t.scoops(2)
 t.set_down()
 t.vel = np.array([0.0, 0.05, 0.0])
-expect("two level scoops, scoop still sliding", t.step(), 0.0)
+expect("two level scoops, scoop still sliding", t.step(), 0.5)
 
 t = Trial()
 t.scoops(1)
@@ -257,7 +268,14 @@ t.scoops(1)
 t.dip()
 t.strike()
 t.pour(xy=(m.BOTTLE[0] - 0.06, m.BOTTLE[1]))
-expect("second scoop poured beside the bottle", t.set_down(), 0.0, g_in())
+expect("second scoop poured beside the bottle: one level scoop in", t.set_down(), 0.25, g_in())
+
+t = Trial()
+t.scoops(2)
+t.dip()
+t.strike()
+t.pour(xy=(m.BOTTLE[0] - 0.06, m.BOTTLE[1]))
+expect("two level scoops, then a third poured on the table (spilled)", t.set_down(), 0.5, g_in())
 
 t = Trial()
 t.dip()
@@ -314,7 +332,8 @@ for where, off in (("neck", (0.0, 0.06, -0.02)), ("bowl", (0.0, m.BOWL_Y, m.RIM_
     t.scoops(2)
     t.put((m.BOTTLE[0] - 0.08, m.BOTTLE[1] - 0.05, TOP + 0.15), n=10)
     t.g["right_gripper"] = t.scoop + np.array(off)
-    expect(f"two level scoops, scoop held still in the air by its {where}", t.step(30), 0.0, g_in())
+    kit._OPENING["right_gripper"] = 0.1
+    expect(f"two level scoops, scoop held still in the air by its {where}", t.step(30), 0.5, g_in())
 
 
 def fast_strike(t, n, dz=0.002, enter=-0.001):
@@ -359,52 +378,110 @@ t.scoops(2)
 expect("new trial after an over-strong one", t.set_down(), 1.0, g_in())
 
 
+# --- where the scoop is put down after two level scoops: on the table or its stand counts, in the tin or across the
+# bottle's neck does not (it is in the way of capping the bottle)
+for where, pos, q, want in (("back on its stand", SCOOP0, (0, 0, 0, 1.0), 1.0),
+                            ("lying on the table", np.array([0.20, -0.20, TOP + 0.058]), (0, 0, 0, 1.0), 1.0),
+                            ("dropped into the tin, resting on its floor", np.array([TX, TY - 0.03, TOP + 0.060]),
+                             (0, 0, 0, 1.0), 0.5),
+                            ("laid across the bottle's neck", np.array([m.BOTTLE[0], m.BOTTLE[1] - 0.04,
+                                                                        TOP + m.BOTTLE_H + 0.06]), (0, 0, 0, 1.0), 0.5)):
+    t = Trial()
+    t.scoops(2)
+    t.set_down()
+    t.scoop, t.q, t.vel = pos.copy(), np.array(q, float), np.zeros(3)
+    expect(f"two level scoops, the scoop let go {where}", t.step(30), want, g_in())
+
+
+# --- the dig: the bowl tipped 35 deg toward -x, lip first under the surface, dragged 3 cm, turned level still under
+t = Trial()
+surf = dk.surface_z(t.objs(), "tin")
+t.put((m.DIP_X0, m.DIP_Y, TOP + 0.15), n=4)
+t.put((m.DIP_X0, m.DIP_Y, surf + 0.03), tilt=-35, n=6)
+t.put((m.DIP_X0, m.DIP_Y, surf - 0.008), tilt=-35, n=8)
+t.put((m.DIP_X0 + m.DIP_DX, m.DIP_Y, surf - 0.008), tilt=-35, n=12)
+tipped = dk.amount(None, "scoop")
+t.put((m.DIP_X0 + m.DIP_DX - 0.008, m.DIP_Y, surf - 0.008), n=12)
+t.put((m.DIP_X0 + m.DIP_DX - 0.008, m.DIP_Y, surf + 0.05), n=8)
+heaped = dk.amount(None, "scoop")
+ok = tipped < heaped and abs(heaped - 11.5) < 0.1 and dk.heaped(None, "scoop")
+fails += not ok
+print(f"{'ok  ' if ok else 'FAIL'} dug in tipped ({tipped:.2f} g while tipped), turned level under the powder and "
+      f"lifted out heaped: {heaped:.2f} g (want 11.5)")
+t.strike()
+ok = abs(dk.amount(None, "scoop") - m.LEVEL_G) < 0.2
+fails += not ok
+print(f"{'ok  ' if ok else 'FAIL'} ... then drawn along the bar: {dk.amount(None, 'scoop'):.2f} g (one level scoop "
+      f"{m.LEVEL_G:.2f} g)")
+
+# --- the visuals: the heap is drawn in the powder's own cream color (no highlight color on the scoop)
+cols = dk.marker_colors()
+ok = "heap_scoop" not in cols and cols["mat_formula"] == m.FORMULA.color
+fails += not ok
+print(f"{'ok  ' if ok else 'FAIL'} the heap is drawn in the powder's color {m.FORMULA.color}")
+
+
 # --- the scripted demo, replayed with perfect tracking: the right tool point follows the waypoints (smoothstep, as
 # yamkit's planner), the scoop rides in the hand from the grip to the release.
 SAG = 0.0055  # measured in the sim: the loaded arm tracks 3.5 mm low and the scoop sits 2 mm low in the grip
 
 
 def replay():
+    from yam_arena import ik
+    from yam_arena.demo import grip_rotation
+    from scipy.spatial.transform import Rotation
+
+    def orient(w):
+        return kit._rot_xyz(w.roll, w.pitch) @ grip_rotation(w.yaw)
+
     w = m.demo()["right"]
     t = Trial()
-    tcp, roll, pitch = PARK["right_gripper"].copy(), m.ROLL, m.P0
-    grip_rot = kit._rot_xyz(m.ROLL, m.P0)
+    grip_rot = orient(kit.Tilted(0, (0, 0, 0), 0, "", m.YAW, m.ROLL, m.P0))
+    tcp, rot = PARK["right_gripper"].copy(), grip_rot
     in_hand = False
     for k, wp in enumerate(w):
         if isinstance(wp, kit.Home):
-            goal, groll, gpitch = PARK["right_gripper"], roll, pitch
+            goal, grot = PARK["right_gripper"], rot
         else:
-            goal, groll, gpitch = np.array(wp.pos, float), wp.roll, wp.pitch
+            goal, grot = np.array(wp.pos, float), orient(wp)
         n = max(1, int(round(wp.duration / m.DT)))
-        start, r0, p0 = tcp.copy(), roll, pitch
+        start, r0 = tcp.copy(), rot
         for i in range(1, n + 1):
             s = i / n
             s = s * s * (3 - 2 * s)
-            tcp, roll, pitch = start + s * (goal - start), r0 + s * (groll - r0), p0 + s * (gpitch - p0)
+            tcp, rot = start + s * (goal - start), ik.slerp_matrix(r0, grot, s)
             t.g["right_gripper"] = tcp.copy()
             if in_hand:
-                rot = kit._rot_xyz(roll, pitch) @ grip_rot.T  # the scoop has turned with the hand since the grip
+                rel = rot @ grip_rot.T  # the scoop has turned with the hand since the grip
                 prev = t.scoop.copy()
-                t.scoop = tcp + rot @ (SCOOP0 - m.TCP0) - [0.0, 0.0, SAG]
-                if pitch == m.P0:  # level: the bar's collider stops the rim at its underside
+                t.scoop = tcp + rel @ (SCOOP0 - m.TCP0) - [0.0, 0.0, SAG]
+                if np.allclose(rel, np.eye(3), atol=1e-6):  # level: the bar's collider stops the rim at its underside
                     mouth = t.scoop + m.MOUTH_OFF
                     t.scoop = clamp(mouth, 0.0) - m.MOUTH_OFF
                 t.vel = (t.scoop - prev) / m.DT
-                ang = math.atan2(rot[0, 2], rot[2, 2])  # turn about y
-                t.q = qy(math.degrees(ang))
+                t.q = Rotation.from_matrix(rel).as_quat()
             t.step()
         if wp.label == "grip":
             in_hand = True
+            kit._OPENING["right_gripper"] = HOLD
         if wp.label == "let go":
             in_hand = False
+            kit._OPENING["right_gripper"] = 1.0
             t.scoop, t.q, t.vel = SCOOP0.copy(), np.array([0, 0, 0, 1.0]), np.zeros(3)  # drops 4 mm onto the stand
+        if wp.label.endswith("into the bottle: hold"):
+            left = dk.amount(t.objs(), "scoop")
+            t.left_in_scoop = max(getattr(t, "left_in_scoop", 0.0), left)
     return t, sum(x.duration for x in w)
 
 
 t, dur = replay()
 expect("scripted demo replayed (perfect tracking)", t.step(20), 1.0,
        f"{g_in()}, {dur:.1f} s = {int(dur / m.DT)} steps, struck {dk.struck_grams(None, 'scoop'):.2f} g")
-fails += dur / m.DT > 1400
-print(("ok  " if dur / m.DT <= 1400 else "FAIL") + " demo fits in the README's 1,400-step demo run")
+ok = t.left_in_scoop < 0.25
+fails += not ok
+print(f"{'ok  ' if ok else 'FAIL'} what the tipped scoop keeps at the pour (the wrist turns it 123 deg): "
+      f"{t.left_in_scoop:.3f} g left in it")
+fails += dur / m.DT > 1500
+print(("ok  " if dur / m.DT <= 1500 else "FAIL") + " demo fits in the README's 1,500-step demo run")
 
 print("all pass" if not fails else f"{fails} FAILED")
