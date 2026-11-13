@@ -1,8 +1,10 @@
 """A bench model of a small four-stroke engine (a mower or generator engine) with its dipstick seated in the oil fill
-tube and a folded shop rag on the table. Checking the oil means pulling the dipstick, wiping the blade clean on the rag
-(the first pull reads a false, smeared level because oil splashes up the tube while the engine runs), pushing it back
-in until the cap seats, pulling it again and holding it still to read the level, then seating it again and putting the
-rag down.
+tube, a folded shop rag, and an oil check card with ADD, OK and OVER pockets and a marker puck. Checking the oil means
+pulling the dipstick, wiping the blade clean on the rag (the first pull reads a false, smeared level because oil
+splashes up the tube while the engine runs), pushing it back in until the cap seats, pulling it again and holding it
+still to read the level, then seating it again, putting the rag down and reporting the level by leaving the puck in
+the matching pocket. The level changes from trial to trial (below ADD, between the marks, or above FULL), so the report
+can only be right if the blade is read.
 """
 
 import math
@@ -13,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np  # noqa: E402
 import yamkit as kit  # noqa: E402  (spawns the modeled engine and its sliding dipstick; nothing on disk changes)
+import guardkit as gk  # noqa: E402  (the gripper's own shape, for the let-go checks)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN  # noqa: E402
 from yam_arena.demo import Waypoint  # noqa: E402
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
@@ -21,8 +24,8 @@ SCENE = "station"
 TOP = TABLE_TOP[SCENE]
 SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
-INSTRUCTION = "Check the oil level on the engine with the dipstick, then put everything back."
-REQUIRE_ARMS_HOME = True  # full score also needs both arms back where they started, still (see _arms_home)
+INSTRUCTION = ("Check the oil level on the engine with the dipstick, mark it on the check card with the puck, then put "
+               "everything back.")
 
 # The engine's frame is fixed to the table, with its origin on the table top under the fill tube's axis.
 SX, SY = 0.25, -0.12  # the fill tube's axis in world x, y
@@ -37,6 +40,23 @@ TUBE_R = 0.012  # the fill tube's outside radius
 CASE_TOP = 0.05  # the crankcase block's top
 RAG = (0.04, 0.04, 0.025)  # the folded shop rag (pad): x, y, z
 RAG_START = (0.26, 0.10, TOP + RAG[2] / 2)
+
+# The oil level, set per trial (a real trial sets it with a syringe before each run). ADD is 0.8 cm and FULL 2.0 cm
+# above the tip; each case sits 4 mm or more from the nearest mark, so it reads the same by eye from any camera.
+ADD_MARK, FULL_MARK = 0.008, 0.020
+LEVELS = {"low": 0.004, "ok": 0.014, "over": 0.027}  # m above the tip: below ADD, between the marks, above FULL
+CASES = ("low", "ok", "over")
+# The oil check card (fixed to the bench, beside the rag) and its marker puck. The pockets run ADD, OK, OVER from the
+# robot's left to its right (left to right in the top camera).
+CARD_C = (0.35, 0.10)  # the card's middle, x, y
+CARD = (0.06, 0.16, 0.010)  # x, y, z: 6 x 16 cm, 1 cm tall
+FLOOR = 0.005  # each pocket is 5 mm deep: its floor 5 mm above the table, the card's top 1 cm
+POCKET = 0.044  # pockets 4.4 cm square
+POCKET_DY = 0.052  # pocket middles 5.2 cm apart along y (0.8 cm walls between them)
+POCKETS = {"low": (CARD_C[0], CARD_C[1] + POCKET_DY), "ok": CARD_C, "over": (CARD_C[0], CARD_C[1] - POCKET_DY)}
+POCKET_NAME = {"low": "ADD", "ok": "OK", "over": "OVER"}
+PUCK_R, PUCK_H = 0.015, 0.02  # the marker puck: 3 cm across, 2 cm tall
+PUCK_START = (0.20, 0.15, TOP + PUCK_H / 2)
 
 # Scoring (the dipstick's joint position q is how far the cap is above its seat, m)
 SEAT = 0.003  # m: q at or under this is seated (cap down on the rim; a 3 mm gap is a visible lift of the cap)
@@ -59,13 +79,22 @@ RAG_GAP = 0.002  # m: and the rag's outline within 2 mm of the blade's faces (th
 READ_STEPS = 20  # control steps (1 s at 20 Hz) the dipstick must be held out and still to read it
 STILL = 0.01  # m/s: the dipstick moving slower than this (its travel per control step) counts as still
 CONTROL_HZ = 20
-HOLD_R = 0.03  # m: a tool point this close to the handle's middle, with the fingers closed on it, holds the dipstick
-CLOSED = 0.75  # kit.opening below this: fingers closed on something
-LET_GO = 0.06  # m: at the end each tool point is farther than this from the handle and from the rag
-RAG_DOWN = 0.01  # m: the rag's bottom within 1 cm of the table, at rest
-HOME_TOL = 0.03  # m: a gripper's tool point this close to where it was at the trial's first step counts as home
-HOME_STILL = 0.002  # m per control step: the tool point not moving
-GRIPPERS = ("left_gripper", "right_gripper")
+# Held: a gripper with both fingers touching the T-handle (gk.gripping, contact as below) and their opening stopped by
+# it, across its 1.8 cm thickness or its 3.5 cm width: from 1.8 cm less 15 % of full opening to 3.5 cm plus 3 % (0.10
+# to 0.40; 0 closed, 1 open). An empty fist (0) or an open hand around the handle does not hold it.
+HANDLE_GRIP = (gk.band(HANDLE[0])[0], gk.band(HANDLE[1])[1])
+# Let go at the end: no gripper touching the dipstick's cap and handle, the rag or the puck, judged by the gripper's own
+# shape (palm and both fingers at their present opening, gk.touching: within 2 mm, the solver's resting gap plus the box
+# fit to the meshes). A hand hovering beside them, however close, has let go.
+HANDLE_SHAPE = gk.Block((0.0, 0.0, HANDLE_C), HANDLE)  # in the dipstick's frame
+STICK_SHAPE = (HANDLE_SHAPE, gk.Ring(0.0, CAP_R, 0.0, CAP_H))
+RAG_SHAPE = gk.Block((0.0, 0.0, 0.0), RAG)
+PUCK_SHAPE = gk.Ring(0.0, PUCK_R, -PUCK_H / 2, PUCK_H / 2)
+RAG_DOWN = 0.01  # m: the rag at rest with its bottom 1 cm or less above the table
+IN_POCKET = 0.012  # m: the puck's middle within this of a pocket's middle along x and y (a puck lying flat in the
+# 4.4 cm pocket can be at most 7 mm off; one hanging on a wall with its middle outside the pocket does not count)
+SUNK = 0.002  # m: and its bottom at least 2 mm below the card's top (down in the 5 mm pocket, not lying on the rim)
+DEBOUNCE = 2  # control steps: the puck in a pocket for 2 steps is a report made (one step can be a physics pop)
 
 ALU = kit.Look((0.62, 0.64, 0.66), 0.4, metallic=0.6)  # cast crankcase
 DARK = kit.Look((0.14, 0.14, 0.15), 0.6)
@@ -75,6 +104,12 @@ STEEL = kit.Look((0.82, 0.83, 0.85), 0.25, metallic=0.9)
 BLACK = kit.Look((0.06, 0.06, 0.06), 0.7)
 RAGLOOK = kit.Look((0.20, 0.35, 0.70), 0.9)  # blue shop towel
 WOOD = kit.Look((0.55, 0.40, 0.25), 0.7)
+CARDLOOK = kit.Look((0.20, 0.21, 0.23), 0.6)  # dark gray card
+POCKET_LOOK = {"low": kit.Look((0.95, 0.55, 0.05), 0.5), "ok": kit.Look((0.10, 0.65, 0.20), 0.5),
+               "over": kit.Look((0.80, 0.08, 0.06), 0.5)}  # amber ADD, green OK, red OVER
+PUCKLOOK = kit.Look((0.95, 0.95, 0.93), 0.4)  # white puck
+LABEL = kit.Look((0.97, 0.97, 0.95), 0.5)  # the pockets' white label symbols
+TICK = kit.Look((0.02, 0.02, 0.02), 0.6)  # the ADD and FULL marks
 
 
 def _box(lo, hi, look, solid=True):
@@ -105,11 +140,15 @@ def _engine():
     meshes += (kit.cylinder((0.0, 0.0, (CASE_TOP - 0.02 + MOUTH) / 2), TUBE_R, MOUTH - CASE_TOP + 0.02, YELLOW),
                kit.cylinder((0.0, 0.0, MOUTH - 0.002), TUBE_R + 0.002, 0.004, DARK))  # fill tube and its rim
     # Dipstick (link frame at the cap's underside, on the tube's axis): blade below, cap disc and T-handle above.
-    marks = 0.012  # the crosshatch between ADD and FULL near the tip
+    marks = FULL_MARK - ADD_MARK  # the crosshatch between ADD and FULL near the tip
     s_meshes = (
         kit.box((0.0, 0.0, -BLADE / 2), (BLADE_W, BLADE_T, BLADE), STEEL),
-        kit.box((0.0, 0.0, -BLADE + 0.008 + marks / 2), (BLADE_W * 1.02, BLADE_T * 1.2, marks),
+        kit.box((0.0, 0.0, -BLADE + ADD_MARK + marks / 2), (BLADE_W * 1.02, BLADE_T * 1.2, marks),
                 kit.Look((0.45, 0.46, 0.48), 0.5, metallic=0.6)),
+        # the ADD and FULL marks: black ticks 1.5 mm tall standing 2 mm proud of the blade's edges, so they show
+        # beside the oil band from every side
+        kit.box((0.0, 0.0, -BLADE + ADD_MARK), (BLADE_W + 0.004, BLADE_T * 1.5, 0.0015), TICK),
+        kit.box((0.0, 0.0, -BLADE + FULL_MARK), (BLADE_W + 0.004, BLADE_T * 1.5, 0.0015), TICK),
         kit.cylinder((0.0, 0.0, CAP_H / 2), CAP_R, CAP_H, YELLOW),
         kit.box((0.0, 0.0, HANDLE_C), HANDLE, YELLOW),
     )
@@ -132,7 +171,51 @@ def _rag():
                     colliders=(kit.Collider((0.0, 0.0, 0.0), size=RAG),))
 
 
-OBJECTS = [_engine(), _rag()]
+SYM_Z, SYM_T, SYM_W, SYM_L = FLOOR + 0.0013, 0.0006, 0.006, 0.028  # label strokes: height, thickness, width, length
+
+
+def _symbol(case, y):
+    """The pocket's label, drawn in white on its floor so every camera can tell the pockets apart without color: a
+    minus sign for ADD (too little oil), a check mark for OK and a plus sign for OVER (too much). Strokes are 6 mm wide
+    and 2.8 cm long; the minus runs across the robot's view (along y)."""
+    if case == "low":
+        return (kit.box((0.0, y, SYM_Z), (SYM_W, SYM_L, SYM_T), LABEL),)
+    if case == "over":
+        return (kit.box((0.0, y, SYM_Z), (SYM_W, SYM_L, SYM_T), LABEL),
+                kit.box((0.0, y, SYM_Z), (SYM_L, SYM_W, SYM_T), LABEL))
+    # check mark, seen from the robot (x away, y to its left): a short stroke down to the right, a long one up
+    path = [(0.001, y + 0.011, SYM_Z), (-0.007, y + 0.004, SYM_Z), (0.010, y - 0.012, SYM_Z)]
+    return (kit.band(path, SYM_T, SYM_W, LABEL, normal=(0, 0, 1)),)
+
+
+def _card():
+    """The oil check card: a 5 mm base and 5 mm walls round three 4.4 cm pockets, each floor colored and labelled
+    with a white symbol (minus ADD, check mark OK, plus OVER)."""
+    cx, cy, h = CARD[0] / 2, CARD[1] / 2, CARD[2]
+    p = POCKET / 2
+    parts = [((-cx, -cy, 0.0), (cx, cy, FLOOR), CARDLOOK, True),  # base
+             ((-cx, -cy, FLOOR), (-p, cy, h), CARDLOOK, True),  # near rail
+             ((p, -cy, FLOOR), (cx, cy, h), CARDLOOK, True)]  # far rail
+    ys = sorted(POCKETS[k][1] - CARD_C[1] for k in CASES)
+    edges = [-cy] + [y for m in ys for y in (m - p, m + p)] + [cy]
+    for a, b in zip(edges[0::2], edges[1::2]):  # the end walls and the walls between pockets
+        parts.append(((-p, a, FLOOR), (p, b, h), CARDLOOK, True))
+    meshes, colliders = _parts(parts)
+    for k in CASES:  # colored pocket floors (visual, 1 mm), each with its white label symbol on top
+        y = POCKETS[k][1] - CARD_C[1]
+        meshes += (kit.box((0.0, y, FLOOR + 0.0005), (POCKET * 0.98, POCKET * 0.98, 0.001), POCKET_LOOK[k]),)
+        meshes += _symbol(k, y)
+    return kit.Prop("card", pos=(*CARD_C, TOP), size=CARD, meshes=meshes, colliders=colliders)
+
+
+def _puck():
+    return kit.Prop("puck", pos=PUCK_START, size=(2 * PUCK_R, 2 * PUCK_R, PUCK_H), mass=0.015,
+                    meshes=(kit.cylinder((0.0, 0.0, 0.0), PUCK_R, PUCK_H, PUCKLOOK),
+                            kit.cylinder((0.0, 0.0, PUCK_H / 2), PUCK_R * 0.35, 0.0006, DARK)),
+                    colliders=(kit.Collider((0.0, 0.0, 0.0), radius=PUCK_R, height=PUCK_H),))
+
+
+OBJECTS = [_engine(), _rag(), _card(), _puck()]
 
 
 # --- What happened during the run. success() and score() are called after every control step, so the run's history is
@@ -150,29 +233,58 @@ class _History:
         self.half_seat = False  # a wiped blade went back into the tube without seating and came out again
         self.final_seat = False  # after the reading, pushed back in by hand until the cap seated
         self.last_q, self.speed = None, 0.0
-        self.home = None
-        self.last = None
-        self.still = False
+        self.case = None  # this trial's oil level: "low", "ok" or "over" (set at the first step)
+        self.in_steps = 0  # control steps in a row the puck has been down in a pocket
+        self.early = False  # the puck went into a pocket before the true reading: a guess, not a report
 
 
 _H = _History()
+
+
+def _trial_case(rag_xy):
+    """This trial's oil level. OIL_CASE=low|ok|over sets it (to run each case). Otherwise it comes from the seeded
+    reset: every free object starts jittered by up to 3 cm, and the rag's offset from its place, in whole millimetres
+    (x + y), modulo 3 picks the case, so it changes with the seed but the rag's position is no cue a camera could use.
+    With no jitter (object_jitter=0) the rag is in place and the level is between the marks."""
+    env = os.environ.get("OIL_CASE", "").strip().lower()
+    if env in LEVELS:
+        return env
+    off = np.asarray(rag_xy, float)[:2] - np.asarray(RAG_START[:2])
+    if np.linalg.norm(off) < 0.002:
+        return "ok"
+    return CASES[int(math.floor((off[0] + off[1]) / 0.001)) % 3]
+
+
+def _pocket(objects):
+    """The pocket the puck is down in (its middle within 1.2 cm of the pocket's middle, its bottom 2 mm or more below
+    the card's top), or None."""
+    pk = objects.get("puck")
+    if pk is None or float(pk.low[2]) > TOP + CARD[2] - SUNK:
+        return None
+    p = np.asarray(pk.pos, float)
+    for k, (x, y) in POCKETS.items():
+        if abs(p[0] - x) <= IN_POCKET and abs(p[1] - y) <= IN_POCKET:
+            return k
+    return None
+
+
+def _report(objects):
+    """The level reported at the end: the pocket the puck rests in, let go (no gripper touching it)."""
+    k = _pocket(objects)
+    pk = objects.get("puck")
+    if k is None or not pk.resting() or gk.touching(objects, "puck", PUCK_SHAPE):
+        return None
+    return k
 
 
 def _q(objects):
     return kit.joint(objects, "engine/stick").pos
 
 
-def _handle(objects):
-    return np.asarray(objects["engine/stick"].pos, float) + np.array([0.0, 0.0, HANDLE_C])
-
-
 def _holding(objects):
-    """A gripper's tool point within 3 cm of the handle's middle with its fingers closed (on the handle)."""
-    h = _handle(objects)
-    for g in GRIPPERS:
-        if g in objects and np.linalg.norm(np.asarray(objects[g].pos) - h) < HOLD_R and kit.opening(objects, g) < CLOSED:
-            return True
-    return False
+    """A gripper holding the dipstick: both fingers touching its T-handle with their opening stopped by it, not an
+    empty fist or an open hand beside it."""
+    return bool(gk.gripping(objects, "engine/stick", HANDLE_SHAPE, HANDLE_GRIP))
 
 
 def _wiped():
@@ -229,6 +341,13 @@ def _update(objects):
     global _H
     if _H.episode != kit.episode():
         _H = _History()
+    if _H.case is None:
+        r = objects.get("rag")
+        _H.case = _trial_case(r.pos if r is not None else RAG_START)
+    # A report made before the true reading is a guess: the puck down in any pocket for 2 steps before then marks it.
+    _H.in_steps = _H.in_steps + 1 if _pocket(objects) is not None else 0
+    if _H.in_steps >= DEBOUNCE and not _H.read:
+        _H.early = True
     js = kit.joint(objects, "engine/stick")
     q, held = js.pos, _holding(objects)
     speed = abs(q - _H.last_q) * CONTROL_HZ if _H.last_q is not None else 0.0  # from the joint's travel per step
@@ -273,20 +392,12 @@ def _update(objects):
         elif q > SEAT:
             _H.final_seat = False
 
-    now = {g: np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects}
-    if _H.home is None and len(now) == 2:
-        _H.home = now
-    _H.still = _H.last is not None and all(g in _H.last and np.linalg.norm(now[g] - _H.last[g]) < HOME_STILL
-                                           for g in now)
-    _H.last = now
     _draw_oil(objects, q)
-    _debug(objects, q, js.vel, held)
 
 
-# --- The oil on the blade, drawn as markers (visual only; scoring never reads it). A smeared blade shows a ragged dark
-# film over its lower 6 cm, which disappears where the rag has passed; after a wipe and a full seat the blade shows a
-# clean oil band up to the true level, between the ADD and FULL marks.
-OIL_LEVEL = 0.016  # m above the tip: the true level shown on a good reading
+# --- The oil on the blade, drawn as markers (visual only; the scorer knows the level from the trial's case). A smeared
+# blade shows a ragged amber film over its lower 6 cm, which disappears where the rag has passed; after a wipe and a full
+# seat the blade shows a clean oil band from the tip up to this trial's level (below ADD, between the marks, or above FULL).
 SMEAR = ((0.0, 0.060, 0.0013), (0.0, 0.045, 0.0016), (0.0, 0.030, 0.0018))  # (from, to, extra thickness) streaks
 _VIS = {"markers": None, "failed": False}
 _N_SEG = 24
@@ -299,7 +410,7 @@ def _markers():
         import isaaclab.sim as sim_utils
         from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 
-        oil = sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(kit._linear(c) for c in (0.30, 0.17, 0.04)),
+        oil = sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(kit._linear(c) for c in (0.85, 0.52, 0.06)),
                                           roughness=0.1, metallic=0.0)
         _VIS["markers"] = VisualizationMarkers(VisualizationMarkersCfg(
             prim_path="/World/Visuals/dipstick_oil", markers={"oil": sim_utils.CuboidCfg(size=(1.0, 1.0, 1.0),
@@ -313,7 +424,7 @@ def _markers():
 def _oil_segments():
     """(from, to, extra thickness) spans above the tip, in m, of oil to draw on the blade now."""
     if _H.phase in ("reseated", "second", "second_in", "after_read"):
-        return [(0.0, OIL_LEVEL, 0.0012)]
+        return [(0.0, LEVELS[_H.case or "ok"], 0.0012)]
     if _H.phase in ("clean_out", "clean_in"):
         return []
     segs = []
@@ -342,85 +453,57 @@ def _draw_oil(objects, q):
     tr, sc = [], []
     for a, b, t in _oil_segments():
         tr.append((SX, SY, tip + (a + b) / 2))
-        sc.append((BLADE_W * 0.9, BLADE_T + t, max(b - a, 1e-4)))
+        sc.append((BLADE_W + 0.001, BLADE_T + t, max(b - a, 1e-4)))  # the film wraps the blade's edges
     while len(tr) < _N_SEG:
         tr.append((0.0, 0.0, -10.0)), sc.append((1e-5, 1e-5, 1e-5))
     m.visualize(translations=np.array(tr, float), orientations=np.tile([0.0, 0.0, 0.0, 1.0], (_N_SEG, 1)),
                 scales=np.array(sc, float), marker_indices=np.zeros(_N_SEG, int))
 
 
-def _debug(objects, q, qd, held):
-    path = os.environ.get("DIPLOG")
-    if not path:
-        return
-    f = lambda v: ",".join(f"{x:.3f}" for x in v)  # noqa: E731
-    r = objects.get("rag")
-    line = (f"q={q:.4f} qd={qd:.3f} held={int(held)} ph={_H.phase} swept={_H.swept.sum() * BIN:.3f} "
-            f"rs={_H.read_steps} rag={f(r.pos) if r else '-'} raglo={r.low[2] - TOP if r else 0:.3f} "
-            f"ragq={f(r.quat_xyzw) if r else '-'} raghi={r.high[2] - TOP if r else 0:.3f} "
-            f"L={f(objects['left_gripper'].pos)} Lq={f(objects['left_gripper'].quat_xyzw)} oL={kit.opening(objects, 'left_gripper'):.2f} "
-            f"R={f(objects['right_gripper'].pos)} oR={kit.opening(objects, 'right_gripper'):.2f}")
-    with open(path, "a") as fh:
-        fh.write(line + "\n")
-
-
-def _arms_home(objects):
-    """Both grippers' tool points back within 3 cm of where they were at the trial's first step, and still."""
-    if _H.home is None or not _H.still:
-        return False
-    return all(g in objects and np.linalg.norm(np.asarray(objects[g].pos) - _H.home[g]) < HOME_TOL for g in GRIPPERS)
-
-
-def _clear_of(objects, p):
-    return all(g in objects and np.linalg.norm(np.asarray(objects[g].pos) - p) > LET_GO for g in GRIPPERS)
-
-
 def _let_go(objects):
-    """Both tool points more than 6 cm from the dipstick's handle."""
-    return _clear_of(objects, _handle(objects))
+    """No gripper touching the dipstick's cap or handle."""
+    return not gk.touching(objects, "engine/stick", STICK_SHAPE)
 
 
 def _rag_down(objects):
-    """The rag at rest with its bottom within 1 cm of the table, both tool points more than 6 cm from it."""
+    """The rag at rest, its bottom 1 cm or less above the table, and no gripper touching it."""
     r = objects.get("rag")
     return (r is not None and float(r.low[2]) - TOP < RAG_DOWN and r.resting()
-            and _clear_of(objects, np.asarray(r.pos, float)))
+            and not gk.touching(objects, "rag", RAG_SHAPE))
 
 
 def _job(objects):
+    report = _report(objects)
+    if _H.early or (_pocket(objects) is not None and not _H.read):  # reported before the true reading: a guess
+        return 0.0
+    if report is not None and report != _H.case:  # a wrong report: worse than none, so guessing never pays
+        return 0.0
     if not _H.reseated:  # never wiped and pushed back in: a first-pull reading, or nothing
         return 0.0
     if not _H.read:  # wiped and reinserted, but no true second reading (half-seated, or not read)
         return 0.25
-    closed = _H.final_seat and _q(objects) <= SEAT and _let_go(objects)
-    if not closed:  # read, but the dipstick is left out, half in or still held
+    if report is None:  # read, but no level reported (puck not in a pocket, still held, or on a wall)
         return 0.5
-    return 1.0 if _rag_down(objects) else 0.75
-
-
-def _score(objects):
-    job = _job(objects)
-    if job == 1.0 and REQUIRE_ARMS_HOME and not _arms_home(objects):
-        return 0.9
-    return job
+    closed = _H.final_seat and _q(objects) <= SEAT and _let_go(objects)
+    return 1.0 if closed and _rag_down(objects) else 0.75
 
 
 def success(objects):
-    """Job done (wiped, reseated, read, reseated, everything let go, rag down), dipstick still, and with
-    REQUIRE_ARMS_HOME both arms home and still. Called first each step, so it also records the history."""
+    """Job done (wiped, reseated, read, reseated, the right level reported, everything let go, rag down) and the
+    dipstick still. Where the arms end up does not matter. Called first each step, so it also records the history."""
     _update(objects)
-    still = _H.speed < STILL
-    return _job(objects) == 1.0 and still and (_arms_home(objects) or not REQUIRE_ARMS_HOME)
+    return _job(objects) == 1.0 and _H.speed < STILL
 
 
 def score(objects):
     """0 unless the blade was pulled out, wiped (the rag's middle slid, in contact, over at least 3.2 cm of the blade's
     lower 4 cm in that pull, so its face rubbed the 6 cm smear; a dab is not a wipe) and pushed back in by hand
-    until the cap seated (within 3 mm). 0.25 for that without a true second reading (pulled again from a full seat and
-    held out and still for 1 s). 0.5 for a true reading with the dipstick then left out, part way in or still held.
-    0.75 for the dipstick seated and let go but the rag not put down on the table. 1.0 with the rag down and both
-    tool points clear; 0.9 if the arms are not back home and still. Possible scores: 0, 0.25, 0.5, 0.75, 0.9, 1."""
-    return _score(objects)
+    until the cap seated (within 3 mm). Also 0 for a wrong report (the puck left in another level's pocket) or a
+    report made before the true reading (the puck in any pocket before then). 0.25 for the wipe and reseat without a
+    true second reading (pulled again from a full seat and held out and still for 1 s). 0.5 for a true reading with
+    no report (the puck not let go in a pocket). 0.75 for the right report with the dipstick not seated by hand and
+    let go, or the rag not put down. 1.0 for all of it. Possible scores: 0, 0.25, 0.5, 0.75, 1."""
+    return _job(objects)
 
 
 # --- Scripted demo: the right arm works the dipstick, the left arm the rag.
@@ -440,6 +523,11 @@ PULL_WIPE = BLADE + 0.03  # for the wipe the first pull lifts the tip 3 cm clear
 WIPE_BOT, WIPE_TOP = TOP + MOUTH + 0.030, TOP + MOUTH + 0.075  # the rag's middle at the start and end of the stroke,
 # which runs up the blade from beside the tip to past 4 cm above it; drawn upward, the pad's tilted leading edge rides
 # off the blade instead of digging into it (a downward stroke jammed the pad after about 1 cm)
+
+
+PUCK_CARRY = 0.0  # the puck is gripped round its middle (the rag is held near one edge)
+PUCK_GRIP_Z = PUCK_H + 0.003  # tool point 3 mm above the puck's top: the pads (13 mm past it) hold its upper 1 cm
+PUCK_DROP_Z = FLOOR + PUCK_GRIP_Z + 0.002  # let go with the puck's bottom 2 mm above the pocket's floor
 
 
 def demo():
@@ -483,5 +571,31 @@ def demo():
              Waypoint(1.0, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ + 0.002), FINGER_CLOSED, "rag down", lyaw),
              Waypoint(0.6, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ + 0.002), FINGER_OPEN, "let go of the rag", lyaw),
              Waypoint(0.8, (RAG_START[0], ry, TOP + rz + 0.07), FINGER_OPEN, "hand up", lyaw)]
+    # During the second pull's hold the empty left hand rolls its wrist as for the wipe and stops 5 cm beside the
+    # blade, so its wrist camera shows the oil band against the marks (the view a policy can read the level from).
+    t_hold = t_wiped + 2.0 + 0.8 + 2.0  # the second pull is out
+    t_read = t_hold + 2.5  # the second pull's hold ends: the reading is taken
+    look = (lx, ly + 0.05, bot + 0.03)
+    left += [kit.Tilted(max(t_hold - sum(w.duration for w in left), 1.2), look, FINGER_CLOSED, "look at the blade",
+                        lyaw, roll=ROLL),
+             kit.Tilted(t_read - t_hold, look, FINGER_CLOSED, "read the level", lyaw, roll=ROLL),
+             kit.Tilted(0.8, (lx, ly + 0.10, bot + 0.04), FINGER_CLOSED, "hand away from the blade", lyaw, roll=ROLL)]
+    # The report. This scripted demonstration is told this trial's level (OIL_CASE, or between the marks with no
+    # jitter); it does not read the blade, so it only shows the motions can be done. The scored policy is told nothing
+    # and has to read the oil band off the blade.
+    case = _trial_case(RAG_START[:2])
+    px, py = PUCK_START[0], PUCK_START[1] + PUCK_CARRY
+    kx, ky = POCKETS[case][0], POCKETS[case][1] + PUCK_CARRY
+    left += [Waypoint(1.5, (px, py, TOP + PUCK_GRIP_Z + 0.06), FINGER_OPEN, "over the puck", lyaw),
+             Waypoint(1.0, (px, py, TOP + PUCK_GRIP_Z), FINGER_OPEN, "down on the puck", lyaw),
+             Waypoint(0.6, (px, py, TOP + PUCK_GRIP_Z), FINGER_CLOSED, "pick up the puck", lyaw),
+             Waypoint(1.0, (px, py, TOP + PUCK_GRIP_Z + 0.05), FINGER_CLOSED, "lift the puck", lyaw),
+             Waypoint(1.5, (kx, ky, TOP + PUCK_GRIP_Z + 0.04), FINGER_CLOSED, f"over the {POCKET_NAME[case]} pocket",
+                      lyaw)]
+    left += [Waypoint(max(t_read + 0.5 - sum(w.duration for w in left), 0.2), (kx, ky, TOP + PUCK_GRIP_Z + 0.04),
+                      FINGER_CLOSED, "wait for the reading", lyaw),
+             Waypoint(1.0, (kx, ky, TOP + PUCK_DROP_Z), FINGER_CLOSED, "puck into the pocket", lyaw),
+             Waypoint(0.6, (kx, ky, TOP + PUCK_DROP_Z), FINGER_OPEN, "let go of the puck", lyaw),
+             Waypoint(0.8, (kx, ky, TOP + PUCK_DROP_Z + 0.07), FINGER_OPEN, "hand up", lyaw)]
     left += [kit.Home(max(total - 1.5 - sum(w.duration for w in left), 1.0)), kit.Home(1.5, label="hold at home")]
     return {"left": left, "right": right}
