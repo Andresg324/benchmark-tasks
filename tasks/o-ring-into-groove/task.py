@@ -1,16 +1,17 @@
 """Fit an O-ring into its groove on a hydraulic O-ring boss (ORB) plug, stretched over the thread by hand.
 
-A zinc-plated steel SAE -24 straight-thread O-ring boss plug (1-7/8-12 UN thread, 2-1/4 inch hex) stands hex-down in
+A zinc-plated steel SAE -24 straight-thread O-ring boss plug (1.875-12 UN thread, 2.25 inch hex) stands hex-down in
 a bench holder. Its O-ring groove (the undercut between the thread and the hex) takes an AS568-924 blue 90-durometer
 fluorocarbon (FKM) O-ring, which lies flat on the plug's end face.
 
 The job is a hydraulic fitter's: put two fingertips into the ring, stretch it just enough to pass over the thread,
 carry it down square to the groove against the hex, draw the fingers out so it closes into the groove, and leave it
-seated all the way round. Stretching it past half again its size (50%, the installation limit: half the 100%
-minimum elongation of the 90-durometer FKM) thins its section for good, so it no longer seals.
+seated all the way round. Stretching its inside diameter past 50% (Machinery's Handbook's installation limit) gives it a permanent
+set and thins its section, so it no longer seals.
 Pushing it down the thread instead of stretching it rolls it: its section twists, and a ring left twisted in the
-groove spirals and leaks. Letting it go tilted leaves one side on the thread, where it is cut when the plug is
-screwed into its port.
+groove can spiral and leak. Letting it go tilted leaves one side on the thread, where it can be cut when the plug
+is screwed into its port, until a fingertip presses that side down into the groove. A ring seated right but with a hand
+still on it is not yet handed off: that hand can still roll it out of the groove. The score reads the ring as it ends.
 
 The ring is modeled by ringkit (see ringkit.py, task copy): its position along the plug, turn and stretch are joints
 of the holder, driven each step from the gripper's fingertips (rk.FingerTips); it is drawn with markers.
@@ -22,7 +23,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import numpy as np  # noqa: E402
+import guardkit as gk  # noqa: E402  (touching: a gripper's own shape in contact with the ring)
 import ringkit as rk  # noqa: E402  (the ring on the plug; imports yamkit)
 import yamkit as kit  # noqa: E402  (spawns the modeled props and the moving parts; nothing on disk changes)
 from yam_arena.constants import FINGER_OPEN  # noqa: E402
@@ -34,17 +35,16 @@ TOP = TABLE_TOP[SCENE]
 SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
 INSTRUCTION = "Fit the O-ring into the groove at the base of the plug's thread."
-REQUIRE_ARMS_HOME = True  # full score also needs both arms back where they started, still (see _arms_home)
 
 # --- The plug and its O-ring (m). SAE J1926 -24 port plug; AS568-924 O-ring (the -24 boss size).
 SX, SY = 0.34, -0.10  # the plug's axis on the table
 HOLDER_H = 0.040  # the bench holder's top above the table
-HEX_AF, HEX_H = 0.05715, 0.014  # 2-1/4 inch across flats, 14 mm tall
+HEX_AF, HEX_H = 0.05715, 0.014  # 2.25 inch across flats, 14 mm tall
 HEX_TOP = HOLDER_H + HEX_H  # the hex face: the groove's lower wall
 GROOVE_W = 0.0036  # the undercut's width along the plug
 THREAD_LEN = 0.019
 END_H = HEX_TOP + GROOVE_W + THREAD_LEN  # the plug's end face above the table (7.66 cm)
-THREAD_D = 0.04763  # 1-7/8-12 UN major diameter
+THREAD_D = 0.04763  # 1.875-12 UN major diameter
 ROOT_D = 0.0453  # the thread's root (12 threads per inch: 2.1 mm pitch)
 GROOVE_D = 0.0442  # the undercut's diameter: the ring sits on it stretched 1.2%
 FREE_ID = 0.04369  # AS568-924: 43.69 mm inner diameter
@@ -53,19 +53,20 @@ STOP = END_H - HEX_TOP  # the hex face, m below the end face
 GROOVE_AT = STOP - GROOVE_W / 2  # the groove's middle, below the end face
 
 # --- Scoring thresholds (each with its reason).
-LIMIT_ID = 1.5 * FREE_ID  # 65.5 mm: 50% stretch, the installation limit for O-rings (half the 100% minimum ultimate
-#                          elongation of the 90-durometer FKM, ASTM D2000 M2HK910, used for O-ring boss seals);
-#                          stretched further, the section thins for good and no longer fills the groove
+LIMIT_ID = 1.5 * FREE_ID  # 65.5 mm: 50% stretch, Machinery's Handbook's limit for stretching an O-ring's inside
+#                          diameter to install it; stretched further, the ring takes a permanent set and no longer
+#                          fills the groove (a real trial checks the ring on a sizing cone against a new one)
 CLEAR = 0.0002  # m (diametral): the stretched ring must clear the 47.6 mm thread by 0.2 mm to slide over it
 TILT_LIMIT = 4.0  # deg, atan(fingertips' height difference / their spacing) when let go: tilted more than this,
 #                   the 50 mm ring's far side sits 3.5 mm off the groove plane, more than its 3.0 mm section, so that
-#                   side lands on the thread instead of in the groove
+#                   side lands on the thread instead of in the groove (a fingertip pressing it down 1.5 mm, half its
+#                   section, then seats it: ringkit FingerTips._press)
 TWIST_LIMIT = 90.0  # deg of roll left in the ring's section: a quarter turn, 2.4 mm of rolling on the thread for its
 #                    3.0 mm section; the mold parting line, which a fitter checks runs round the ring's outside, is
 #                    then on its face for all to see (it spirals)
-HOME_TOL = 0.03  # m: a gripper's tool point this close to where it was at the trial's first step counts as home
-HOME_STILL = 0.002  # m per control step: the tool point not moving
-GRIPPERS = ("left_gripper", "right_gripper")
+ON_THREAD = 0.005  # m: partial credit while the ring's mid-plane is at least 5 mm down the thread, stretched over
+#                    it: its middle 3.5 mm past the 1.5 mm chamfer, over more than a full 2.1 mm thread pitch, so it
+#                    is clearly over the thread rather than resting on the end face
 
 ZINC = kit.Look((0.78, 0.79, 0.80), 0.35, metallic=0.8)
 HOLDER_LOOK = kit.Look((0.20, 0.32, 0.55), 0.5, metallic=0.3)  # blue anodized aluminum
@@ -102,67 +103,53 @@ KEY = rk.attach("holder", RING, FINGERS)
 OBJECTS = [_holder()]
 
 
-# --- What happened during the run. success() and score() are called after every control step, so the run's history is
-# kept here. yamkit counts the simulator's scene resets (kit.episode()), so a new trial starts with a clean history.
-class _History:
-    def __init__(self):
-        self.episode = kit.episode()
-        self.home = None  # each gripper's tool point at the trial's first scored step
-        self.last = None
-        self.still = False
-
-
-_H = _History()
-
-
-def _update(objects):
-    global _H
-    if _H.episode != kit.episode():  # the simulator reset the scene: a new trial, a clean history
-        _H = _History()
-    now = {g: np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects}
-    if _H.home is None and len(now) == 2:
-        _H.home = now
-    _H.still = _H.last is not None and all(g in _H.last and np.linalg.norm(now[g] - _H.last[g]) < HOME_STILL
-                                           for g in now)
-    _H.last = now
-
-
-def _arms_home(objects):
-    """Both grippers' tool points back within 3 cm of where they were at the trial's first step, and still."""
-    if _H.home is None or not _H.still:
-        return False
-    return all(g in objects and np.linalg.norm(np.asarray(objects[g].pos) - _H.home[g]) < HOME_TOL for g in GRIPPERS)
+def _ring_part(objects):
+    """The ring as it lies now, in the holder's frame, for gk.touching: a 3.0 mm square section round the plug's axis
+    from its inner diameter out (only read for a seated ring, which is square)."""
+    s, r = rk.position(objects, KEY), rk.inner_d(objects, KEY) / 2
+    mid = END_H - s
+    return gk.Ring(r, r + RING_CS, mid - RING_CS / 2, mid + RING_CS / 2)
 
 
 def _job(objects):
     if rk.overspread(objects, KEY):
         return 0.0  # stretched past 50% at some point: its section has thinned for good (irreversible)
-    if not rk.seated(objects, KEY):
-        return 0.0  # not closed into the groove (on the thread or the end face, landed tilted) or fingers still in it
     if rk.twist_deg(objects, KEY) > TWIST_LIMIT:
-        return 0.0  # seated, but rolled on: its section is left twisted in the groove
-    return 1.0
+        return 0.0  # rolled on: its section is left twisted (in the groove it can spiral and leak)
+    if rk.seated(objects, KEY):
+        if gk.touching(objects, "holder", _ring_part(objects)):
+            return 0.75  # seated right, but a gripper still touches the ring (its own shape within 2 mm): not handed
+            #              off, since a hand still on the ring can still roll it out of the groove
+        return 1.0  # closed into the groove all round, square, 90 degrees of roll or less, no fingertip in it and no
+        #             gripper touching it, however it got there (let go square, stretched again, or pressed down)
+    if abs(rk.position(objects, KEY) - GROOVE_AT) <= GROOVE_W / 2:
+        return 0.5  # down at the groove, untwisted, never over-stretched, but one side left on the thread (it closed
+        #             tilted and was not pressed down) or the fingertips still in it
+    if rk.position(objects, KEY) >= ON_THREAD:
+        return 0.25  # stretched over the thread and still at least 5 mm down it, untwisted, never over-stretched (a
+        #              ring carried down and then drawn back up past that point has lost the progress, so it scores 0)
+    return 0.0
 
 
 def _score(objects):
-    job = _job(objects)
-    if job == 1.0 and REQUIRE_ARMS_HOME and not _arms_home(objects):
-        return 0.9
-    return job
+    return _job(objects)
 
 
 def success(objects):
-    """The ring seated square and untwisted, nothing touching it, and (with REQUIRE_ARMS_HOME) both arms home and
-    still. Called first each step, so it also records the history."""
-    _update(objects)
+    """The ring seated square and untwisted, no gripper touching it (where the arms end is not scored)."""
     return _score(objects) == 1.0
 
 
 def score(objects):
-    """0 if the ring was ever stretched past 65.5 mm bore (50%; irreversible). 0 unless it is seated: in the groove,
-    closed onto its 44.2 mm bottom, not landed tilted more than 4 degrees, and no fingertip in it or pressing on it.
-    0 if it is left with more than 90 degrees of twist (rolled on instead of stretched over). Otherwise 1.0 if both
-    arms are also back home and still (REQUIRE_ARMS_HOME), else 0.9. Possible scores: 0, 0.9, 1."""
+    """The ring's final condition. Doing nothing scores 0. 0 if the ring was ever stretched past 65.5 mm bore (50%;
+    irreversible), or is left with more than 90 degrees of twist (rolled on instead of stretched over). 1.0 if it is
+    seated: in the groove all round, closed onto its 44.2 mm bottom, and no gripper touching it (gk.touching: the
+    gripper's own shape within 2 mm of the ring), however it got there. 0.75 if it is seated but a gripper still
+    touches it: the fit is right but not handed off, since a hand still on the ring can still roll it out. 0.5
+    if it is at the groove but not seated: one side left on the thread (in the sim, a ring let go more than 4 degrees
+    off square closes with its far side 3.5 to 6.5 mm above the hex face, all of it above the 3.6 mm groove, until a
+    fingertip presses that side down 1.5 mm, which seats it with 57 degrees of roll), or the fingertips still in it.
+    0.25 if it is, at the end, at least 5 mm down the thread. Otherwise 0. Possible scores: 0, 0.25, 0.5, 0.75, 1."""
     return _score(objects)
 
 

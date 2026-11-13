@@ -34,7 +34,8 @@ into the shaft, so s = -thickness/2 is a ring lying on the end face):
 - Tilt and twist: the tool reports how far it tilts the ring's plane off square to the shaft and how far it twists
   the ring's two ends apart along the shaft. A ring that closes into a groove tilted more than `tilt_limit` degrees
   lands cocked (one side in the groove, the other on the land; not seated, it cannot turn); spreading it again frees
-  it. The largest tilt and twist while held are kept for the scorer (FingerTips: tilt from the tips' heights).
+  it, and (FingerTips, this copy) a fingertip that comes down onto its high side and presses it half its thickness
+  past the land's edge pushes it into the groove (an elastomer ring rolls by that distance on the way). The largest tilt and twist while held are kept for the scorer (FingerTips: tilt from the tips' heights).
 - Seated: in a groove, closed onto the groove bottom (inner radius within `seat_tol` of it), not cocked, not held.
 
 Spreaders (anything with `grip(ring, st, frame, objects) -> Grip | None`): `TipPair` is a pair of pliers tips in a
@@ -149,6 +150,7 @@ class Grip:
     tilt_axis: tuple = (1.0, 0.0, 0.0)
     twist: float = 0.0
     push: bool = False  # a fingertip pressing on the ring's face (an elastomer ring then rolls along the shaft)
+    press: float = 0.0  # m: a fingertip pressed a cocked ring's high side this far down, over the land into its groove
     path: tuple | None = None  # the stretched ring's inner contour (2D points in the shaft frame's e1, e2), drawing only
 
 
@@ -353,7 +355,15 @@ def _step(key: str, grip: Grip | None) -> RingState:
     free_r = ring.free_id / 2 + st.set
     was_open = st.r > span_r(ring, st.s) + 1e-6  # spread clear of what is under it
     theta0 = st.theta
-    if grip is not None and grip.push:
+    if grip is not None and grip.push and grip.press > 0 and st.cocked:
+        # a cocked ring's high side pressed down off the land: it rolls over the last crest (by the same law as
+        # below) and the ring's own tension pulls it into the groove; it closes there square
+        st.cocked = False
+        st.tilt, st.twist = 0.0, 0.0
+        if ring.roll:
+            st.roll += math.degrees(grip.press / (ring.thickness / 2))
+        grip = replace(grip, r=None)
+    elif grip is not None and grip.push:
         # pressed on its face, not spread: an elastomer ring rolls along the shaft as far as it is pushed (only
         # deeper); every m it rolls over the shaft turns its section by m / (half its thickness) rad
         if ring.roll and st.groove is None:
@@ -623,8 +633,41 @@ class FingerTips:
             tilt, ax = -tilt, -ax
         return tilt, tuple(ax / np.linalg.norm(ax))
 
+    press_arc: float = 60.0  # deg: a press counts within this of the cocked ring's highest point
+
+    @staticmethod
+    def high_near(ring: Ring, st: RingState) -> float:
+        """s of the near face of a cocked ring's high side: it lies on the land just past the edge of the groove its
+        low side went into (a ring cocks only closing within half a groove's width of its middle)."""
+        i = st.groove if st.groove is not None else _snap(ring, st.s)[0]
+        g = ring.grooves[i if i is not None else 0]
+        return g.at - g.width / 2 - ring.thickness
+
+    def _on_high_side(self, ring, st, fr, e) -> bool:
+        """A fingertip end over a cocked ring's high side: over its section (radially) and within press_arc of its
+        highest point (the side away from the deeper side, -(u x tilt_axis))."""
+        if not (ring.shaft_d / 2 - self.push_pad <= fr.radial(e) <= ring.shaft_d / 2 + ring.width + self.push_pad):
+            return False
+        hi = -np.cross(fr.u, np.asarray(st.tilt_axis, float))
+        d = np.asarray(e, float) - fr.o
+        d = d - np.dot(d, fr.u) * fr.u
+        n = np.linalg.norm(d) * np.linalg.norm(hi)
+        return n > 1e-9 and float(np.dot(d, hi)) / n >= math.cos(math.radians(self.press_arc))
+
+    def _press(self, ring, st, fr, objects, g):
+        """A fingertip end that came down onto a cocked ring's high side and has pushed it half its section (1.5 mm
+        for a 3 mm ring) down past the land's edge: past that, the ring's own tension pulls it into the groove."""
+        ends, _, _ = self.fingers(objects, g)
+        need = self.high_near(ring, st) + ring.thickness / 2
+        for i, e in enumerate(ends):
+            if st.above.get((g, i), False) and self._on_high_side(ring, st, fr, e) and fr.s_of(e) >= need:
+                return Grip(s=st.s, theta=st.theta, push=True, press=ring.thickness / 2)
+        return None
+
     def _push(self, ring, st, fr, objects, g):
         ends, _, _ = self.fingers(objects, g)
+        if st.cocked:  # one side in the groove, the other on the land: only a press on the high side moves it
+            return self._press(ring, st, fr, objects, g)
         if st.groove is not None:
             return None  # in its groove: it cannot roll any deeper (the groove's wall holds it), so nothing pushes it
         r = max(ring.free_id / 2 + st.set, span_r(ring, st.s))  # where its section lies once nothing spreads it
@@ -648,6 +691,14 @@ class FingerTips:
 
     def after(self, ring: Ring, st: RingState, fr: Frame, objects):
         """After the step: where each fingertip end is against the ring's (moved) near face, for next step's push."""
+        if st.cocked:
+            # on a cocked ring the press is on its high side: a tip counts once it has come down onto that side's
+            # near face from above, and stays counted while it stays over that side
+            hn = self.high_near(ring, st)
+            st.above = {(g, i): fr.s_of(e) <= hn + 0.0005
+                        or (st.above.get((g, i), False) and self._on_high_side(ring, st, fr, e))
+                        for g in self.grippers if g in objects for i, e in enumerate(self.fingers(objects, g)[0])}
+            return
         near = st.s - ring.thickness / 2
         st.above = {(g, i): fr.s_of(e) <= near + 0.0005
                     for g in self.grippers if g in objects for i, e in enumerate(self.fingers(objects, g)[0])}
