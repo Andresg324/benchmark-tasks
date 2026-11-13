@@ -1,21 +1,21 @@
-# Hand-mount the last section of a kids' bike tire: bead into the rim's center channel first, no tire lever
+# Hand-mount the last section of a kids' bike tire: push the bead into the rim's center channel first, no lever under it
 
 A 12-inch kids' bike wheel lies flat on a hub stand with its tire almost on: one bead (the tire's stiff inner edge) is
 fully on, the other is on except the last 60 degrees over the valve, which sits up on the rim's flange (its raised edge).
-"Finish putting this tire on the rim." means what a bike mechanic does: push the bead that is already on down into the
+"Finish putting this tire on the rim." means what anyone fixing a kid's bike does: push the bead that is already on down into the
 rim's center channel (the drop center, a deeper groove round the middle of the rim), on the side away from the valve. That
 shortens the bead's path round the rim and frees a little extra length, so the last section rolls over the flange by
 hand, while one hand holds the bead beside it down in the channel (it pops back up as the section is lifted). Then set the
 valve stem straight toward the hub and let go. The tempting wrong moves are pushing on the last section without making
-slack first (it stops on the flange's edge) and reaching for the tire lever on the table, which pinches the tube between
+slack first (it stops on the flange's edge) and pushing the tire lever from the table in under the bead, which can pinch the tube between
 lever and rim.
 
 ## Spec
 
-- Job: Bicycle Repairers (O*NET 49-3091.00); Tire Repairers and Changers (49-3093.00).
+- Category: Societal relatability. Most people have ridden a bike, and fixing a flat on a child's bike is a familiar home repair, and the last section of a tight kids' tire is where people get stuck or reach for a lever and pinch the tube.
 - Rule and sources: Park Tool, [Tire and Tube Removal and Installation](https://www.parktool.com/en-us/blog/repair-help/tire-and-tube-removal-and-installation):
-  install the bead by hand, use levers only as a last resort because they can pinch the tube, and keep the valve
-  straight toward the hub. Shop practice for tight tires: squeeze the bead that is on into the rim's center channel
+  install the bead by hand where possible, since a lever pushed in past the bead can pinch the tube, and keep the
+  valve straight toward the hub. Shop practice for tight tires: squeeze the bead that is on into the rim's center channel
   all round, starting opposite the valve, to gain the slack for the last section, and hold it down beside the last
   section while rolling that over, since it pops back up there.
 - Mechanism: one `yamkit` articulation (the wheel). Five bead arcs slide down into the channel: the three away from
@@ -35,13 +35,14 @@ lever and rim.
 | Slack needed | 10 mm | lifting the last 60 degrees 4.5 mm onto the flange top takes 4.7 mm; its climb at each end about 2.5 mm more; rounded up |
 | Slack counted | from each end of the last section round the wheel, while each arc is at least 6 mm down | bead still on its shoulder is held there by the tube's pressure, so length freed beyond it can't reach the last section; 6 mm is the channel's click zone (within 3 mm of its floor) |
 | So | an arc beside the last section, held, and the next two (12.6 mm); two are not enough (8.4 mm) | the three far arcs alone give nothing until the arc beside is held down; in proportion between 6 and 9 mm down |
-| One hand can't do both | as the last section passes the edge or comes into its seat, one gripper's pad on its press spots and the other's on a press spot of an arc beside it, that arc at least 6 mm down and the lever not on that spot; and the arcs beside have press spots only 10 and 20 degrees from their far end, the last section's within 10 degrees of its middle | one hand holds, the other rolls; the spots are 60 degrees apart, 9.7 cm edge to edge, more than the gripper's 9.4 cm full opening |
-| A pad pressing a spot | the pad tip within 1.5 cm of the spot's center across, from 1 cm below its top to 6 mm above | the spot is 2 to 2.2 cm across, plus 4 mm; pressed into it, or touching it with the pad's rounded end |
+| Why it takes two hands | the law above, not a scoring rule: the arc beside the last section must be held down while the section rolls over, and their press spots are 9.7 cm apart edge to edge, more than one gripper's 9.4 cm full opening | one hand holds, the other rolls; any way of getting that (a lever pressing the arc, swapped hands) is allowed |
 | Last section | starts tilted 20 degrees up about the tread; stops at 6 degrees short of seated without slack | 6 degrees is where its lip, 1.2 cm over the flange top at the start, comes down to the flange's edge |
-| Forced | the last section passing 0.5 degrees beyond that stop or into its seat without 10 mm of slack, at any time, or staying past it without slack for 3 steps (0.15 s) | 0.5 degrees is 0.4 mm at its bead, past the sim's contact give at the stop |
 | Bead on | the last section within 2.6 degrees of seated | there its lip passes below the flange top; within 2.5 degrees it is pulled in and stays |
 | Valve straight | within 10 degrees of the line to the hub | 5.6 mm at the cap of the 3.2 cm stem, a lean you can see; it starts at 20 degrees (1.1 cm) |
-| Lever pinch | spoon tip between the rim bed and the flange (radius 9 to 10.6 cm), at or below the bead's height there (the raised lip over the last section) | that is where a lever goes to lift a bead, and where it traps the tube; a lever lying on top of the bead (tip 3 mm higher) is not |
+| Strike | the last section's bead lip driven toward its seat faster than 12 cm/s over a control step (its 20-degree roll in about 0.13 s), counted up to 2.5 degrees short of seated, where it snaps in by itself | a bead struck down over the flange can trap the tube under it and pinch it; a careful roll by hand takes about half a second, about 3 cm/s at the lip, so the limit is nearly 4 times that and over 4 times the demo's fastest step (2.8 cm/s). The sim has no tube, so a strike is a stand-in for a pinched tube and caps the score at 0.5 rather than zeroing it: speed alone does not prove damage. A real trial checks the tube itself with the dunk test, and a leak scores 0 |
+| Lever pinch | spoon tip more than 1 mm inside the bead seat line, down in the rim (radius 8.8 to 10.05 cm), at or below the bead's height there | that is the tube's space, where a lever pushed in past the bead can trap it against the rim; a tip that only hooks the bead on the flange or shoulder (careful lever use) or lies on top of it is not |
+| Let go | no gripper touching the tire, rim or valve: its own shape (palm and fingers at their present opening) more than 2 mm from them | 2 mm is the simulator's resting contact gap plus the fit of the boxes to the YAM's collision meshes; a hand hovering just over the tire is let go, one resting on it is not; a real trial checks the final photo |
+| Slack started | at least two bead arcs at least 6 mm down in the channel at the end (fully down they free 8.4 mm of the 10 mm needed) | the step that makes the job possible, visible as bare rim shoulder above the bead |
 
 ## Files
 
@@ -50,8 +51,8 @@ lever and rim.
 | `task.py` | Scene, scorer (`score()`, `success()`) and scripted demo (`demo()`), for the `yam_arena` embodiment (Isaac Lab-Arena, bimanual YAM, `station` scene). Its docstrings explain every rule. |
 | `yamkit.py` | Spawns the modeled wheel (an articulation) and the lever, and gives the scorer the grippers. It patches `yam_arena` in memory at import; no files change. |
 | `mechkit.py` | Joint laws: the far bead arcs' two detents and the valve's free turn. |
-| `guardkit.py` | Scoring guards: the pinch and forced latches (with the lever tip's path between steps tested), arms-home check, wheel-frame geometry. |
-| `test_task.py` | Offline checks of the slack law and of the scorer (every mistake below, one-arm and forced attempts, near misses, a hand left on the tire, fast lever motion, reset). No simulator needed. |
+| `guardkit.py` | Scoring guards: the pinch latch (with the lever tip's path between steps tested), wheel-frame geometry, and the contact check (the gripper's own shape touching the tire, rim or valve). |
+| `test_task.py` | Offline checks of the slack law and of the scorer (every outcome below, careful and pinching lever use, near misses, a hand left on the tire, fast lever motion, reset). No simulator needed. |
 | `task.json` | The task card. |
 
 ## Run a trial
@@ -74,40 +75,48 @@ Model run (Dream-1): the same command with `--policy dream`. Render the videos o
 2. Meanwhile the left arm lowers its closed fingers beside the valve stem, on its leaning side, and pushes it straight
    toward the hub, then backs off.
 3. While the right hand holds, the left arm presses the last section's sidewall down along its arc until the bead drops
-   inside the flange. Both hands lift off (the held arc springs back up onto its shoulder; the section stays in) and go
-   home. Score 1.0 in 553 steps.
+   inside the flange. Both hands lift off (the held arc springs back up onto its shoulder; the section stays in) and start
+   back toward home; the run ends at 1.0 in 506 steps, once both hands have been clear for a second.
 
 ## Scoring
 
 | Outcome | Score |
 |---|---|
-| The lever's spoon tip under the bead at any moment (irreversible) | 0 |
-| The last section forced more than 0.5 degrees past the flange's edge, or into its seat, without the slack, at any time (irreversible) | 0 |
-| The last section rolled over or seated without one hand pressing it and the other holding an arc beside it down (one hand, an idle hand, or the lever doing the holding; irreversible) | 0 |
-| The last section not over the flange at the end (nothing done, or pressed without slack, or with no arc beside it held: it stops at the flange's edge) | 0 |
-| A gripper's tool point or pad tip within 1 cm of the tire, rim or valve at the end | 0 |
-| Bead on, valve leaning more than 10 degrees | 0.5 |
-| Bead on, valve straight, hands off, an arm not home | 0.9 |
-| Bead on, valve straight, hands off, both arms home and still | 1.0 |
+| The lever's spoon tip in the tube's space at any moment (irreversible): it can trap the tube against the rim and puncture it. The tip's position is the sim's stand-in for a pinched tube | 0 |
+| Real trial only: the tube leaks in the dunk test after the trial (40 psi, in water), whatever caused it | 0 |
+| Bead on, valve straight, and no hand touching the tire, rim or valve: the gripper's own shape (palm and fingers at their present opening, boxes fitted to the YAM's collision meshes) more than 2 mm from them, the simulator's resting contact gap plus the boxes' fit. A hand left on the tire can pull the bead back up, and the job ends with the wheel ready to inflate; a real trial checks the final photo for a finger on the tire | 1.0 |
+| Bead on, but the valve leaning more than 10 degrees (pulled sideways in the rim hole, it can tear off at its base) or a hand still touching the tire: the hard part is done, but the wheel is not ready to inflate | 0.5 |
+| Bead on, but struck in: the last section's bead lip driven toward its seat faster than 12 cm/s over a control step (irreversible cap). A strike can pinch the tube under the bead; the sim has no tube, so the speed is a stand-in for a pinched tube and only caps the score. The real trial's dunk test decides, and a leak there scores 0 | 0.5 (cap) |
+| Bead not on, but at least two arcs at least 6 mm down in the channel: the step that makes the job possible is started (fully down, two arcs free 8.4 mm of the 10 mm needed), but the tire is not on | 0.25 |
+| Anything else, including doing nothing or pressing the last section without slack so it stops at the flange's edge | 0 |
+
+How the bead gets on is not scored (one hand or two, a lever used carefully, any order), and where the arms end is
+not scored. Possible scores: 0, 0.25, 0.5, 1.0.
 
 The lever's tip is checked at every control step and along its path since the last one, so a quick poke under the
-bead between two camera frames still counts. There is no debounce: the lever lies on the table 8 cm below and 9 cm
+bead between two camera frames still counts. There is no debounce: the lever lies on the table 8 cm below and 11 cm
 outside the rim, so only a hand can put its tip there.
 
 ## Real-world build
 
-- Wheel: any 12-inch (ISO 203) kids' bike wheel with a 12.5 x 2.25 (57-203) gumwall tire and a Schrader tube at about
-  5 psi, on a hub stand (a 15 mm post through the hub, bolted to a weighted plate clamped to the table) with the rim
+- Wheel: any 12-inch (ISO 203) kids' bike wheel with a 12.5 x 2.25 (57-203) gumwall tire and a Schrader tube at 5 psi
+  (0.34 bar, set with a gauge at every reset), on a hub stand (a post 1.8 cm across through the hub in place of its axle, bolted to a weighted plate clamped to the table) with the rim
   8.5 cm above the table. Mount the first bead, tuck the tube in, and work the second bead on to 60 degrees each side of
   the valve. Kids' tires on 203 rims are tight: whether a given tire needs exactly three arcs in the channel is
   checked once by hand (count how much of the bead has to be pushed into the channel before the last section rolls
-  over at 5 psi, and that the bead beside the last section rises back out of the channel when let go) and the setup's
-  tube pressure adjusted until it takes about half the bead.
+  over at 5 psi, and that the bead beside the last section rises back out of the channel when let go). This is done
+  once, when the rig is built: if that tire needs a different pressure to take about half the bead, that pressure is
+  written on the rig and set with the gauge at every reset in place of 5 psi, so every trial starts the same.
+- The slack law is the sim's stand-in for rubber stretch: it reproduces the real limit (the last section goes on only
+  once enough bead sits in the channel), and a real trial checks the outcome, the bead on all round, instead.
 - Slack in a real trial is the bead's own position: the bead visibly sits down in the channel, the rim's bare shoulder showing
   above it, wherever it has been pushed in; the sim's 4.2 mm per arc stands for that.
 - Tire lever: a blue nylon lever (11.5 cm, Park Tool TL-1.2 or similar) on a tape outline on the table.
 - Valve: a protractor card (marks at 0 and 10 degrees) taped to the rim bed beside the stem.
-- Checking a trial: the bead line inside the flange all round, the valve against the card, the video for any lever
-  under the bead, then inflate to 40 psi and dunk the tube to confirm no pinch.
+- Checking a trial: bead on = the tire's molding line evenly just above the flange all round with no tube showing under
+  the bead; valve = the stem against the card (10 degree mark); slack started = bare rim shoulder showing above the bead
+  where it sits in the channel; lever = the video, frame by frame where it goes into the rim; tube integrity = after every
+  trial, inflate to 40 psi and dunk the tube in water (bubbles mean a pinch, and a leak scores 0). The dunk test is the
+  real check behind both sim stand-ins for a pinched tube, the lever tip's position and a struck bead.
 - Safety: the arms press 1 cm into a soft tire on a clamped stand; no sharp edges, nothing under pressure beyond 5 psi
   during the trial.

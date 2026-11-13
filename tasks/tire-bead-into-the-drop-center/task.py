@@ -4,8 +4,9 @@ the valve stem leans 20 degrees off straight. A plastic tire lever lies on the t
 rim." A trained mechanic pushes the bead that is already on down into the rim's center channel (the drop center, a
 deeper groove round the middle of the rim) on the side away from the valve, which shortens its path round the rim and
 frees about 4 mm of bead per 60 degrees, then, holding the bead beside the last section down (it pops back up there),
-rolls the last section over the flange with the other hand, sets the valve straight toward the hub and lets go. Levering the last section over pinches the tube
-between the lever and the rim.
+rolls the last section over the flange with the other hand, sets the valve straight toward the hub and lets go. A lever
+pushed in under the bead can pinch the tube between the lever and the rim; a lever used with its tip kept out from under
+the bead is allowed.
 """
 
 import math
@@ -28,8 +29,6 @@ TOP = TABLE_TOP[SCENE]
 SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
 INSTRUCTION = "Finish putting this tire on the rim."
-# Full credit also needs both arms back where they started, still (the wheel is clear for the next job).
-REQUIRE_ARMS_HOME = True
 
 # --- The wheel, in its own frame: origin on the hub axis in the rim's middle plane, z up (the wheel lies flat).
 WX, WY = 0.28, 0.0  # hub axis on the table (m)
@@ -83,21 +82,21 @@ LEVER = (0.115, 0.022, 0.008)
 LEVER_TIP = (0.052, 0.0, 0.0)  # its spoon tip in the lever's own frame
 
 # --- Scoring thresholds (reasons in score() and the README)
-CLEAR = 0.01  # m: let go = every tool point and pad tip 1 cm clear of the tire, rim and valve
-HOME = gk.ArmsHome(tol=0.03, still=0.002, hold=1)
 PINCH = gk.Latch(steps=1)  # no debounce: the lever lies on the table, so only a hand can put its tip there
-# Every time the last section passes 0.5 degrees beyond the flange's edge (BLOCK_AT; 0.4 mm at its bead, past the
-# sim's contact give at the stop) or comes into the seat zone, over the whole run: without 10 mm of slack it was forced
-# through (FORCED, irreversible, 0); with it, one gripper must be pressing the section and the other holding an arc
-# beside it down (else ONE_HAND, irreversible, 0). Lingering past the stop without the slack, short of seated, for 3
-# steps (0.15 s: the stop pushes it back faster) is forcing too (STUCK).
-PAST_EDGE = BLOCK_AT + math.radians(0.5)
-FORCED = gk.Latch(steps=1)
-STUCK = gk.Latch(steps=3)
-ONE_HAND = gk.Latch(steps=1)
-# A pad tip pressing a press spot: within 1.5 cm of its center across (the 1 to 1.1 cm collider plus 4 mm), and from
-# 1 cm below its top (pressed into it) to 6 mm above (touching, the pad's rounding).
-PRESS_ACROSS, PRESS_BELOW, PRESS_ABOVE = 0.015, 0.010, 0.006
+TOE = 0.001  # m: a lever tip more than 1 mm inside the bead seat line (radius 10.15 cm), down in the rim where the tube
+#              lies, can trap the tube against the rim; a tip that only hooks the bead (on the flange or the shoulder,
+#              under the raised lip) does not reach it, so careful lever use is allowed
+LIP_ARM = math.hypot(R_SEAT - HINGE_R, Z_BEAD - HINGE_Z)  # 4.4 cm from the section's hinge line to its bead lip
+DT = 0.05  # s: one control step at 20 Hz
+STRIKE_SPEED = 0.12  # m/s: the last section's bead lip driven toward its seat faster than 12 cm/s (its whole
+#                      20-degree roll in about 0.13 s) is a strike, not a push: nearly 4 times a careful half-second
+#                      roll (3.1 cm/s) and over 4 times the demo's fastest step (2.8 cm/s). A bead struck down over the
+#                      flange can trap the tube under it and pinch it. The sim has no tube, so a strike is only a
+#                      stand-in for a pinched tube:
+STRIKE_CAP = 0.5  # it caps the score at 0.5 and never zeroes it on speed alone; the real trial's dunk test (40 psi, in
+#                   water) checks the tube itself, and a leak there scores 0
+PROGRESS_ARCS = 2  # partial credit: at least two bead arcs left down in the channel (the slack started: two arcs
+#                    fully down free 8.4 mm of the 10 mm needed)
 SWEEP = gk.Sweep(step=0.003, max_jump=0.05)
 
 RUBBER = kit.Look((0.07, 0.07, 0.075), 0.85)
@@ -335,10 +334,11 @@ def bead_height(objects, ang):
 
 
 def under_bead(objects, r, ang, h):
-    """A point under the bead: between the rim bed and the flange (radius 9 to 10.6 cm), from the rim's lower half
-    up to the bead's own height there (the lever tip's mid-plane at or below the bead: a lever lying on top of it,
-    tip 3 mm higher, does not count)."""
-    return R_BED - 0.002 <= r <= R_FLANGE + 0.002 and -Z_FLANGE <= h <= bead_height(objects, ang)
+    """A point in the tube's space: inside the bead seat line by more than 1 mm (radius 8.8 to 10.05 cm: the rim's
+    well and channel, where the tube lies), from the rim's lower half up to the bead's own height there. A lever tip
+    hooking the bead on the flange or the shoulder (radius 10.05 cm or more), or lying on top of the bead, does not
+    count."""
+    return R_BED - 0.002 <= r <= R_SEAT - TOE and -Z_FLANGE <= h <= bead_height(objects, ang)
 
 
 def lever_tip(objects):
@@ -353,140 +353,126 @@ def lever_pinch(objects):
     return SWEEP.crossed(objects, "tip", lever_tip(objects), test)
 
 
+# A hand on the tire is contact (gk.touching): the gripper's own shape (palm and both fingers, boxes fitted to the
+# YAM's collision meshes, at their present opening) within 2 mm (the solver's resting gap plus the box fit) of the
+# tire, the rim or the valve stem, in the wheel's frame. The tire is its outer profile cut into 0.5 mm rings (each as
+# tall as the profile's highest point over it, so a ring stands at most 0.5 mm proud of the real wall); the rim is its
+# bed to its flange, 21 mm tall; the valve is a 9 mm stem from the rim bed toward the hub, turned with the valve.
+TIRE_PROFILE = tuple(reversed(INNER)) + tuple(reversed(CROWN))[1:]  # (r, z) from the bead out to the tread
+
+
+def _profile_z(r):
+    return float(np.interp(r, [p[0] for p in TIRE_PROFILE], [p[1] for p in TIRE_PROFILE]))
+
+
+def _tire_rings(step=0.0005):
+    rings, r0 = [], TIRE_PROFILE[0][0]
+    while r0 < TIRE_PROFILE[-1][0] - 1e-9:
+        r1 = min(r0 + step, TIRE_PROFILE[-1][0])
+        top = max([_profile_z(r0), _profile_z(r1)] + [z for r, z in TIRE_PROFILE if r0 <= r <= r1])
+        rings.append(gk.Ring(r0, r1, -top, top))
+        r0 = r1
+    return tuple(rings)
+
+
+TIRE_SHAPE = _tire_rings()
+TIRE_OUTLINE = gk.Ring(R_SEAT, 0.1515, -0.0285, 0.0285)  # one ring round all of them: a quick first test
+RIM_SHAPE = gk.Ring(R_BED, 0.1075, -Z_FLANGE, Z_FLANGE)
+VALVE_R = 0.0045  # the stem's collider is 9 mm square
+
+
+def valve_shape(objects):
+    """The valve stem as a capsule in the wheel's frame: from the hole in the rim bed (at 90 degrees) 3.1 cm toward the
+    hub, turned about the vertical by the valve's angle (positive: its tip toward +x)."""
+    a = valve_angle(objects)
+    return gk.Seg((0.0, R_BED - 0.005, 0.0), (0.026 * math.sin(a), R_BED - 0.005 - 0.026 * math.cos(a), 0.0), VALVE_R)
+
+
 def on_tire(objects, g):
-    """A gripper's tool point or pad tip within 1 cm of the tire, rim or valve: inside the ring from 1 cm inside the
-    valve's end (radius 4.8 cm) to 1 cm past the tread (16.2 cm), up to 1 cm over the tire's top."""
-    for p in gk.tool_points(objects, g):
-        r, _, h = _wheel_frame(objects, p)
-        if R_BED - VALVE_LEN - CLEAR <= r <= 0.1515 + CLEAR and abs(h) <= 0.0285 + CLEAR:
-            return True
-    return False
+    """Gripper g touching the tire, the rim or the valve: its own shape within 2 mm of them (gk.touching). A hand
+    hovering over the tire, however close past 2 mm, is not on it."""
+    if gk.touching(objects, "wheel", (RIM_SHAPE, valve_shape(objects)), grippers=(g,)):
+        return True
+    return bool(gk.touching(objects, "wheel", TIRE_OUTLINE, grippers=(g,))
+                and gk.touching(objects, "wheel", TIRE_SHAPE, grippers=(g,)))
 
 
 def hands_clear(objects):
-    """Every gripper clear of the tire, rim and valve (not on_tire)."""
+    """No gripper touching the tire, rim or valve (not on_tire)."""
     return not any(on_tire(objects, g) for g in GRIPPERS if g in objects)
 
 
-def _spots(objects, J):
-    """Press spots (wheel frame: x, y, top) of the last section (as turned now) and of the arcs beside it (as far down
-    as they are now): ({"flap": [...]}, {arc: [...]})."""
-    q = flap_angle(objects)
-    flap = []
-    for d, (r, z) in FLAP_PRESS:
-        rr, hh = _hinge_vec(r, z, q)
-        flap.append((*_at(LAST_AT + d, rr), hh))
-    arcs = {}
-    for n in NEXT_TO_LAST:
-        offs = (10.0, 20.0) if SECTORS[n] > LAST_AT else (-20.0, -10.0)
-        arcs[n] = [(*_at(SECTORS[n] + d), PRESS_Z + J[n]) for d in offs]
-    return flap, arcs
-
-
-def _pressing(objects, g, spots):
-    """Gripper g's pad tip pressing one of `spots` (wheel frame)."""
-    if g not in objects:
-        return False
-    tip = gk.local(objects, "wheel", gk.tool_points(objects, g)[1])
-    return any(math.hypot(tip[0] - x, tip[1] - y) <= PRESS_ACROSS and top - PRESS_BELOW <= tip[2] <= top + PRESS_ABOVE
-               for x, y, top in spots)
-
-
-def _lever_on(objects, spots):
-    """The lever's body over one of `spots`, within its half-thickness plus 4 mm (it, not a hand, pressing there)."""
-    s = objects["lever"]
-    c, ax = np.asarray(s.pos, float), gk._rot(s.quat_xyzw) @ np.array([1.0, 0.0, 0.0])
-    a, b = (gk.local(objects, "wheel", c + k * LEVER[0] / 2 * ax) for k in (-1, 1))
-    for x, y, top in spots:
-        p = np.array([x, y, top])
-        t = min(max(np.dot(p - a, b - a) / np.dot(b - a, b - a), 0.0), 1.0)
-        if np.linalg.norm(a + t * (b - a) - p) <= LEVER[1] / 2 + 0.004:
-            return True
-    return False
-
-
-def two_hands(objects, J):
-    """One gripper pressing the last section and the other holding an arc beside it down: that arc at least 6 mm down,
-    the gripper's pad on its press spot, and the lever not on that spot."""
-    flap, arcs = _spots(objects, J)
-    for g in GRIPPERS:
-        other = [h for h in GRIPPERS if h != g]
-        if not _pressing(objects, g, flap):
-            continue
-        for n, sp in arcs.items():
-            if -J[n] >= DROP - SEAT_ZONE and not _lever_on(objects, sp) and any(_pressing(objects, h, sp) for h in other):
-                return True
-    return False
-
-
-class _Crossing(gk._PerStep):
-    """The last section crossing upward past the flange's edge (PAST_EDGE) or into the seat zone since the last step."""
+class _Seating(gk._PerStep):
+    """How fast the last section's bead lip moves toward its seat: its angle change since the last control step times
+    the lip's 4.4 cm from the hinge line, over the step (so a slam between two samples is still seen). Only the travel
+    up to 2.5 degrees short of seated counts, since from there the bead snaps in by itself. `on` latches once that
+    speed passes STRIKE_SPEED."""
 
     def _fresh(self):
-        self.prev, self.now = FLAP_START, False
+        self.prev, self.peak, self.on = None, 0.0, False
 
-    def feed(self, objects, q):
+    def feed(self, objects) -> bool:
         if self._tick(objects):
-            self.now = any(self.prev < t <= q for t in (PAST_EDGE, -FLAP_SEAT_ZONE))
-            self.prev = q
-        return self.now
+            a = flap_angle(objects)
+            if self.prev is not None and self.prev < -FLAP_SEAT_ZONE:
+                v = LIP_ARM * (min(a, -FLAP_SEAT_ZONE) - self.prev) / DT
+                self.peak = max(self.peak, v)
+                self.on = self.on or v > STRIKE_SPEED
+            self.prev = a
+        return self.on
 
 
-CROSS = _Crossing()
+SEATING = _Seating()
 
 
 def _watch(objects):
     PINCH.feed(objects, lever_pinch(objects))
-    J = {n: kit.joint(objects, f"wheel/{n}").pos for n in SECTORS}
-    q = flap_angle(objects)
-    ok = slack(J) >= SLACK_NEED
-    crossed = CROSS.feed(objects, q)
-    FORCED.feed(objects, crossed and not ok)
-    STUCK.feed(objects, PAST_EDGE < q < -FLAP_SEAT_ZONE and not ok)
-    ONE_HAND.feed(objects, crossed and ok and not two_hands(objects, J))
-    HOME.feed(objects)
+    SEATING.feed(objects)
+
+
+def arcs_down(objects):
+    """How many of the five bead arcs sit at least 6 mm down in the channel now."""
+    return sum(-kit.joint(objects, f"wheel/{n}").pos >= DROP - SEAT_ZONE for n in SECTORS)
 
 
 def _job(objects):
-    if PINCH.on:  # a lever's tip went under the bead at any step or between two: the tube is pinched, irreversible
+    if PINCH.on:  # a lever's tip reached the tube's space at any step or between two: the stand-in for a pinched tube
         return 0.0
-    if FORCED.on or STUCK.on:  # the last section went past the flange's edge without the slack: forced through
-        return 0.0
-    if ONE_HAND.on:  # it rolled over without one hand holding the arc beside it down and the other pressing it
-        return 0.0
-    if not bead_on(objects):
-        return 0.0
-    if not hands_clear(objects):  # still pressing or holding it
-        return 0.0
-    if abs(valve_angle(objects)) > VALVE_TOL:
-        return 0.5
-    return 1.0
+    if bead_on(objects):
+        if abs(valve_angle(objects)) > VALVE_TOL or not hands_clear(objects):
+            done = 0.5  # on, but the valve left leaning, or a hand still on the tire
+        else:
+            done = 1.0
+    elif arcs_down(objects) >= PROGRESS_ARCS:
+        done = 0.25  # not on yet, but the bead pushed into the center channel: the slack started
+    else:
+        done = 0.0
+    if SEATING.on:  # the last section struck down faster than 12 cm/s: a stand-in for a tube pinched under the bead,
+        done = min(done, STRIKE_CAP)  # so a cap, not a zero; the real trial's dunk test checks the tube itself
+    return done
 
 
 def success(objects):
     _watch(objects)
-    return _job(objects) == 1.0 and (HOME.home(objects) or not REQUIRE_ARMS_HOME)
+    return _job(objects) == 1.0
 
 
 def score(objects):
-    """0 (irreversible) if the tire lever's spoon tip was under the bead (radius 9 to 10.6 cm, at or below the bead's
-    height there) at any control step or on its path between two, even if pulled out after: the tube is pinched. 0
-    (irreversible) if the last section, at any time, went more than 0.5 degrees past the flange's edge or into the seat
-    zone without 10 mm of slack, or stayed past the edge short of seated without it for 3 steps: forced through. 0
-    (irreversible) unless, each time the section passes the flange's edge or enters its seat with the slack, BOTH
-    hands do their job: one gripper's pad presses the section's press spots AND the other gripper holds an arc beside
-    it at least 6 mm down at that arc's press spots (the lever on a spot does not count): otherwise it was one hand, or
-    a hand and a tool, instead of two hands. Then, at the end: 0 if the last section's bead lip is not below the flange
-    top (within 2.6 degrees
-    of seated) or a gripper's tool point or pad tip is within 1 cm of the tire, rim or valve (still holding or pressing
-    it); 0.5 if the bead is on but the valve stem leans more than 10 degrees off the line to the hub (its tip over 5.6
-    mm off); 1.0 with the valve straight, and 0.9 for that if REQUIRE_ARMS_HOME and an arm is not back within 3 cm of
-    its start and still. Possible: 0, 0.5, 0.9, 1."""
+    """Scored on what a mechanic can see and test. 0 (irreversible) if the tire lever's spoon tip reached the tube's
+    space at any control step or on its path between two: more than 1 mm inside the bead seat line, down in the rim
+    (radius 8.8 to 10.05 cm, at or below the bead's height there); a lever that only hooks the bead on the flange or
+    shoulder is careful use and allowed. Then, at the end: 1.0 with the last section's bead on (its lip below the
+    flange top, within 2.6 degrees of seated), the valve stem within 10 degrees of the line to the hub (its tip
+    within 5.6 mm), and no gripper touching the tire, rim or valve (its own shape, palm and fingers at their present
+    opening, within 2 mm of them); 0.5 with the bead on but the valve leaning or a hand still touching the tire;
+    0.25 with the bead not on but at least two bead arcs at least 6 mm down in the center channel (the slack
+    started); 0 otherwise. A struck bead caps the score at 0.5: the last section's bead lip driven toward its seat
+    faster than 12 cm/s over any control step (its whole roll in about 0.13 s), up to 2.5 degrees short of seated,
+    where it snaps in by itself. That is a stand-in for a tube pinched under the bead, so it caps rather than
+    zeroes; the real trial checks the tube with the dunk test, and a leak there scores 0. How the bead got on (one
+    hand or two, a lever, the order) is not scored, and where the arms end is not scored. Possible: 0, 0.25, 0.5, 1."""
     _watch(objects)
-    job = _job(objects)
-    if job == 1.0 and REQUIRE_ARMS_HOME and not HOME.home(objects):
-        return 0.9
-    return job
+    return _job(objects)
 
 
 # --- Demo -------------------------------------------------------------------------------------------------------------
