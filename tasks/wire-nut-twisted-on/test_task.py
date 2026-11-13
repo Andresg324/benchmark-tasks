@@ -63,11 +63,12 @@ def step(nut=None, held=False, b=None, grippers=None, grip_dz=0.014, grip_open=N
         g["left_gripper"] = (tuple(nut_pos() + (0, 0, grip_dz)), ON if grip_open is None else grip_open, yaw)
     for k, v in g.items():
         if isinstance(v[0], tuple):
-            pos, op, yaw = (v + (0.0,))[:3]
+            pos, op, yaw, down = (v + (0.0, False))[:4]
         else:
-            pos, op, yaw = v, 1.0, 0.0
+            pos, op, yaw, down = v, 1.0, 0.0, False
         objs[k] = st(pos)
-        objs[k] = ObjectState(pos=objs[k].pos, quat_xyzw=yawq(yaw), lin_vel=np.zeros(3), ang_vel=np.zeros(3),
+        q = (1.0, 0.0, 0.0, 0.0) if down else yawq(yaw)  # down: pointing down, pad tips 1.3 cm below the tool point
+        objs[k] = ObjectState(pos=objs[k].pos, quat_xyzw=np.asarray(q, float), lin_vel=np.zeros(3), ang_vel=np.zeros(3),
                               low=objs[k].low, high=objs[k].high)
         kit._OPENING[k] = op
     tk._account(objs)
@@ -105,13 +106,15 @@ def pull(to, frm=-m.SHORT, n=12):
 DONE = [(40, {})]
 EVEN = pull(0.0)
 AWAY = {"right_gripper": (0.30, -0.15, TOP + 0.15)}
+DOWN = True  # a gripper pointing straight down
 
 cases = [
     ("nothing", [(100, {})], 0.0),
     ("the right wire evened, connector not turned", EVEN + DONE, 0.0),
     ("connector twisted snug without evening the wires (the tempting wrong answer)", twist(-15.0) + DONE, 0.0),
     ("wires evened, connector twisted snug (15 past the seat), arms home", EVEN + twist(-15.0) + DONE, 1.0),
-    ("the same, an arm not home", EVEN + twist(-15.0) + [(40, dict(grippers=AWAY))], 0.9),
+    ("the same, an arm left away from home (review: no arm-home dependence)", EVEN + twist(-15.0)
+     + [(40, dict(grippers=AWAY))], 1.0),
     ("wires evened, connector 40 degrees short of snug", EVEN + twist(40.0) + DONE, 1.0),
     ("wires evened, connector 50 degrees short of snug (loose)", EVEN + twist(50.0) + DONE, 0.5),
     ("wires evened, connector 180 degrees short (copper just covered)", EVEN + twist(180.0) + DONE, 0.5),
@@ -135,16 +138,32 @@ cases = [
     ("the first 300 degrees by hand, the rest knocked", EVEN + twist(615.0) + twist(-15.0, frm=615.0, held=False)
      + DONE, 0.0),
     ("snug, then backed off to 300 degrees", EVEN + twist(-15.0) + twist(300.0, frm=-15.0) + DONE, 0.25),
-    ("snug but the connector still held at the end", EVEN + twist(-15.0)
-     + [(40, dict(grippers={"left_gripper": ((0.30, 0.0, TOP + m.SEAT + 0.014), 0.21)}))], 0.0),
-    ("snug but a closed hand resting on the connector top", EVEN + twist(-15.0)
-     + [(40, dict(grippers={"left_gripper": ((0.30, 0.0, TOP + m.SEAT + m.NUT_L + 0.012), 0.0)}))], 0.0),
-    ("snug but the right wire still pinched", EVEN + twist(-15.0)
-     + [(40, dict(grippers={"right_gripper": ((0.25, -0.030, TOP + m.JOG), 0.05)}))], 0.0),
-    ("snug, an open hand 2 cm above the connector", EVEN + twist(-15.0)
-     + [(40, dict(grippers={"left_gripper": ((0.30, 0.0, TOP + m.SEAT + m.NUT_L + 0.02), 1.0)}))], 0.9),
-    ("done, arms at home but still moving", EVEN + twist(-15.0)
-     + [(1, dict(grippers={"right_gripper": (0.18, -0.30 + 0.002 * (k % 2), TOP + 0.22)})) for k in range(40)], 0.9),
+    ("snug but the connector still held at the end (capped at 0.5, not 0)", EVEN + twist(-15.0)
+     + [(40, dict(grippers={"left_gripper": ((0.30, 0.0, TOP + m.SEAT + 0.014), 0.21)}))], 0.5),
+    ("covered but loose (100 degrees short), still held at the end: 0.5 as when let go", EVEN + twist(100.0)
+     + [(40, dict(held=True))], 0.5),
+    ("copper showing (300 degrees short), still held at the end: 0.25 as when let go", EVEN + twist(300.0)
+     + [(40, dict(held=True))], 0.25),
+    ("snug, a closed fist resting on the connector top: on it but not holding it (not clear)", EVEN + twist(-15.0)
+     + [(40, dict(grippers={"left_gripper": ((0.30, 0.0, TOP + m.SEAT + m.NUT_L + 0.012), 0.0)}))], 0.5),
+    ("snug but the right wire still pinched (capped at 0.5, not 0)", EVEN + twist(-15.0)
+     + [(40, dict(grippers={"right_gripper": ((0.25, -0.030, TOP + m.JOG), 0.05)}))], 0.5),
+    ("snug, tool point 3.5 cm above the connector pointing down, pad tips 2.2 cm over it (let go)", EVEN + twist(-15.0)
+     + [(40, dict(grippers={"left_gripper": ((0.30, 0.0, TOP + m.SEAT + m.NUT_L + 0.035), 1.0, 0.0, DOWN)}))], 1.0),
+    ("snug, an open hand let go but its fingers still around the connector's top, 1 cm down over it "
+     "(touching: not let go)", EVEN + twist(-15.0)
+     + [(40, dict(grippers={"left_gripper": ((0.30, 0.0, TOP + m.SEAT + m.NUT_L + 0.01), 1.0)}))], 0.5),
+    ("snug, the gripper pointing down with its pad tips 1.7 cm over the connector, not touching: let go (no distance "
+     "rule; the old 2 cm rule held this at 0.5)", EVEN + twist(-15.0)
+     + [(40, dict(grippers={"left_gripper": ((0.30, 0.0, TOP + m.SEAT + m.NUT_L + 0.03), 1.0, 0.0, DOWN)}))], 1.0),
+    ("snug, an open hand 1.5 cm beside the left wire's run, one finger on the wire (touching: not let go)",
+     EVEN + twist(-15.0)
+     + [(40, dict(grippers={"right_gripper": ((0.30 + m.KNOCKOUT_X / 2, 0.03 + 0.015, TOP + m.JOG), 1.0)}))], 0.5),
+    ("snug, an open hand pointing down 3 cm beside the right wire's run (let go)", EVEN + twist(-15.0)
+     + [(40, dict(grippers={"right_gripper": ((0.30 - m.KNOCKOUT_X / 2, -0.03 - 0.03, TOP + m.JOG), 1.0, 0.0, DOWN)}))],
+     1.0),
+    ("done, an arm still moving", EVEN + twist(-15.0)
+     + [(1, dict(grippers={"right_gripper": (0.18, -0.30 + 0.002 * (k % 2), TOP + 0.22)})) for k in range(40)], 1.0),
 ]
 
 
@@ -186,6 +205,25 @@ def open_roll(a, wider):
     return {"left_gripper": (tuple(pos), ON + wider / (2 * abs(m.FINGER_OPEN)), a)}
 
 
+def right_hand_twist(to, frm):
+    """The right gripper closed on the connector and rolling with it, from `frm` to `to` degrees back."""
+    out, a = [], frm
+    while a > to + 1e-9:
+        a = max(a - 15.0, to)
+        pos = tuple(BASE + (0, 0, m.SEAT + m.THREAD.pitch * max(a, 0.0) / 360.0 + 0.014))
+        out.append((1, dict(nut=a, grippers={"right_gripper": (pos, ON, a)})))
+    return out
+
+
+def off_center(a, shift):
+    """The left hand closed to the connector's width at grip height and rolled with it, shifted `shift` m along its
+    fingers' closing axis."""
+    pos = BASE + (0, 0, m.SEAT + m.THREAD.pitch * max(a, 0.0) / 360.0 + 0.014)
+    pos = pos + shift * np.array([math.cos(math.radians(a)), math.sin(math.radians(a)), 0.0])
+    return {"left_gripper": (tuple(pos), ON, a)}
+
+
+PINCH_B = {"right_gripper": ((m.BOX_C[0] - 0.05, m.BOX_C[1] - m.KNOCKOUT_Y, TOP + m.JOG), 0.04)}
 HOVER = {"left_gripper": ((m.BOX_C[0], m.BOX_C[1], TOP + m.SEAT + 0.024), ON + 0.15, 0.0)}
 cases += [
     ("regrasp loop, demo-like grip", EVEN + regrasp(-15.0) + DONE, 1.0),
@@ -209,8 +247,30 @@ cases += [
      EVEN + twist(-15.0, follow=False) + DONE, 0.0),
     ("laundering: held 915->600, swiped back to 915, held to 600 again, swiped the rest to snug",
      EVEN + twist(600.0) + swipe(915.0, 600.0) + twist(600.0, frm=915.0) + swipe(-15.0, 600.0) + DONE, 0.0),
+    # review, Nov 12: valid ways of turning the connector are all credited
+    ("turned on by the right hand instead of the left", EVEN + right_hand_twist(-15.0, START_DEG) + DONE, 1.0),
+    ("the left hand turns it a turn and a half, the right hand finishes it",
+     EVEN + twist(375.0) + right_hand_twist(-15.0, 375.0) + DONE, 1.0),
+    ("the right hand holds the wire in place while the left twists the connector on",
+     EVEN + twist(-15.0, grippers=PINCH_B) + DONE, 1.0),
+    ("fingertips pinching the tapered top (1.2 cm across) while turning it on",
+     EVEN + twist(-15.0, grip_dz=m.NUT_L - 0.004, grip_open=0.012 / (2 * abs(m.FINGER_OPEN))) + DONE, 1.0),
     ("held to snug, 60 degrees knocked loose and 60 knocked back (under the 90-degree allowance)",
      EVEN + twist(-15.0) + swipe(45.0, -15.0) + swipe(-15.0, 45.0) + DONE, 1.0),
+    # contact, not nearness (Nov 12): a hand near the connector is not on it, and a hand touching it is
+    ("hand closed to the connector's width, shifted 5 mm: one finger on it, the other 5 mm off, rolling with it while "
+     "the other arm turns it on (the old 1.5 cm axis test counted this as a grip)",
+     EVEN + [(1, dict(nut=a, grippers=off_center(a, 0.005))) for a in np.arange(START_DEG - 15, -15.0 - 1e-9, -15.0)]
+     + DONE, 0.0),
+    ("snug, a hand closed to the connector's width with its pad tips 5 mm over its top: not touching it, so let go "
+     "(1.0; no distance rule)", EVEN + twist(-15.0)
+     + [(40, dict(grippers={"left_gripper": ((0.30, 0.0, TOP + m.SEAT + m.NUT_L + 0.0128 + 0.005), ON, 0.0, DOWN)}))],
+     1.0),
+    ("snug, a wide-open hand's outer finger resting on the connector's side, tool point 8 cm away (touching: not "
+     "let go)", EVEN + twist(-15.0)
+     + [(40, dict(grippers={"left_gripper": ((0.30 + m.NUT_R + 0.071, 0.0, TOP + m.SEAT), 1.0, 0.0, DOWN)}))], 0.5),
+    ("snug, the same hand 3 mm farther out (not touching: let go)", EVEN + twist(-15.0)
+     + [(40, dict(grippers={"left_gripper": ((0.30 + m.NUT_R + 0.074, 0.0, TOP + m.SEAT), 1.0, 0.0, DOWN)}))], 1.0),
 ]
 
 for name, frames, want in cases:
@@ -221,17 +281,78 @@ for name, frames, want in cases:
 
 got, ok = run(EVEN + twist(-15.0) + DONE)
 bad += not ok
-print("ok  " if ok else "FAIL", "success once done and the arms home")
+print("ok  " if ok else "FAIL", "success once done")
 got, ok = run(EVEN + twist(-15.0) + [(40, dict(grippers=AWAY))])
-bad += ok
-print("ok  " if not ok else "FAIL", "no success with an arm away from home")
+bad += not ok
+print("ok  " if ok else "FAIL", "success with an arm left away from home")
+ok = not hasattr(m, "CLEAR") and not hasattr(m, "_near_segment")
+bad += not ok
+print("ok  " if ok else "FAIL", "let go is judged by contact only: no distance rule left in the scorer")
 run(EVEN + twist(-15.0) + DONE)  # a reset clears the earlier trial: the connector back at the start, wire short
 got, _ = run([(40, {})])
 bad += got != 0.0 or abs(tk.backed_off_deg(None, m.NUT) - START_DEG) > 1e-9
 print("ok  " if got == 0.0 else "FAIL", got, "after a reset the connector is back off the coil")
-m.REQUIRE_ARMS_HOME = False
-got, _ = run(EVEN + twist(-15.0) + [(40, dict(grippers=AWAY))])
-m.REQUIRE_ARMS_HOME = True
-bad += got != 1.0
-print("ok  " if got == 1.0 else "FAIL", got, "REQUIRE_ARMS_HOME off: done, arm away, scores 1.0")
+
+
+# The settling hold: the simulator steps the scene for 0.5 s after each reset before the first frame, and the coil's
+# drives must act in those steps too (without them the connector dropped onto its slide's stop and rose back in the
+# first second of the video). A fake embodiment checks that every settling step is preceded by the coil's drives, that
+# a second reset does the same, and that control steps after the reset are left as they were.
+import sys  # noqa: E402
+import types  # noqa: E402
+
+
+class _Env:
+    def __init__(self):
+        self.unwrapped, self.log = self, []
+
+    def reset(self):
+        pass
+
+    def step(self, action):
+        self.log.append(len(_calls))
+
+
+class _Emb:
+    def __init__(self):
+        self._env = None
+
+    def _ensure_sim(self, goal):
+        if self._env is None:
+            self._env = _Env()
+
+    def reset(self, *a, **k):
+        self._ensure_sim(None)
+        self._env.reset()
+        for _ in range(10):
+            self._env.step(None)
+        return "obs"
+
+
+_calls = []
+_name = "yam_arena.inspect_embodiment"
+_saved, _drive, _had = sys.modules.get(_name), tk._drive_thread, "box" in kit._MECHS
+sys.modules[_name] = types.SimpleNamespace(YamArenaEmbodiment=_Emb)
+tk._drive_thread = lambda base, spec: _calls.append(spec.name)
+kit._MECHS.setdefault("box", m.OBJECTS[0])
+try:
+    m._hold_thread_while_settling()
+    e = _Emb()
+    e.reset()
+    first = list(e._env.log)
+    e.reset()
+    second = e._env.log[10:]
+    e._env.step(None)  # a control step after the reset: no extra drive call (twistkit sets them as before)
+    after = e._env.log[-1]
+finally:
+    tk._drive_thread = _drive
+    if _saved is None:
+        sys.modules.pop(_name)
+    else:
+        sys.modules[_name] = _saved
+    if not _had:
+        kit._MECHS.pop("box")
+ok = first == list(range(1, 11)) and second == list(range(11, 21)) and after == 20 and _calls == ["box"] * 20
+bad += not ok
+print("ok  " if ok else "FAIL", "the coil's drives act in every settling step after each reset, and only then")
 print("all pass" if not bad else f"{bad} FAILED")

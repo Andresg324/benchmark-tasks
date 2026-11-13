@@ -34,9 +34,9 @@ Scorer API (`objects` is what score() gets; key is "body/cap"):
 - `backed_off_deg(objects, key)`: the opposite sign, degrees loosened past the seat.
 - `rise(objects, key)`: the cap's travel along the axis from the seat (m).
 - `is_off(objects, key)`: off the thread now. `came_off(objects, key)`: off at any point in this trial.
-- `held(objects, key)`: a gripper's fingers closed on the cap: its opening matches the cap's `width` (within 0.15 of
-  fully open; an empty closed hand does not count), its tool point within 1.5 cm of the cap's axis and of the grip
-  point along it.
+- `held(objects, key)`: a gripper's fingers closed on the cap: both fingers touching it (guardkit's contact check on
+  the gripper's own shape) with its opening stopped by the cap's `width` (from 0.15 of full opening narrower to 0.03
+  wider; an empty closed hand does not count) and its pads over the cap's length.
 - `gripped_deg(objects, key)`: degrees the cap was loosened while a gripper held it, net, this trial, counting only
   steps with the cap held at both ends (a cap that turned without a grip on it, e.g. knocked, does not add to this).
 - `state(objects, key)`: all of the above as a `TwistState`.
@@ -71,11 +71,8 @@ import yamkit as kit
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN
 from yam_arena.demo import Waypoint
 
-# A gripper holds a cap when its tool point is within HOLD_AXIS of the cap's axis and HOLD_ALONG of its grip point along
-# the axis, and its fingers are open to the cap's width (opening = width / 94 mm) within HOLD_BAND: closed on the cap,
-# not empty or open.
-HOLD_AXIS = 0.015
-HOLD_ALONG = 0.015
+# A gripper holds a cap when both its fingers touch the cap and its opening is stopped by the cap's width (opening =
+# width / 94 mm, within HOLD_BAND narrower and HOLD_OVER wider): closed on the cap, not empty or open.
 HOLD_BAND = 0.15  # fingers may squeeze up to 15 % of full opening narrower than the cap's width
 HOLD_OVER = 0.03  # and be at most 3 % (2.8 mm) wider: an open hand hovering around the cap does not hold it
 YAW_TOL = math.radians(3.0)  # (kept for reference; replaced by the roll budget below)
@@ -395,9 +392,11 @@ def _held_now(objects, key) -> bool:
 
 
 def _held_by(objects, key, g) -> bool:
-    """Fingers closed on the cap: opening between the cap's width minus HOLD_BAND and plus HOLD_OVER (pads touching,
-    not hovering open around it, and not an empty closed hand), the tool point within HOLD_AXIS of the axis, and the
-    pads (tool point +5 mm to -13 mm along the approach) overlapping the cap's length by at least 3 mm."""
+    """Fingers closed on the cap: both fingers touching it (guardkit.gripping: the gripper's own shape within 2 mm of
+    the cap's colliders) with the opening between the cap's width minus HOLD_BAND and plus HOLD_OVER (stopped by it,
+    not hovering open around it, and not an empty closed hand), and the pads (tool point +5 mm to -13 mm along the
+    approach) overlapping the cap's length by at least 3 mm."""
+    import guardkit as gk
     from yam_arena.constants import FINGER_OPEN
 
     spec = _SPECS[key]
@@ -409,12 +408,22 @@ def _held_by(objects, key, g) -> bool:
     axis = rot[:, "XYZ".index(spec.axis)]
     lo, hi = _cap_span(spec)
     want = spec.cap.width / (2 * abs(FINGER_OPEN))  # the opening with the pads on the cap
-    d = np.asarray(objects[g].pos, float) - np.asarray(s.pos, float)
-    along = float(np.dot(d, axis))
-    across = float(np.linalg.norm(d - along * axis))
-    op = kit.opening(objects, g)
-    return (want - HOLD_BAND <= op <= want + HOLD_OVER and across < HOLD_AXIS
-            and lo - 0.002 <= along <= hi + 0.010)
+    along = float(np.dot(np.asarray(objects[g].pos, float) - np.asarray(s.pos, float), axis))
+    return (lo - 0.002 <= along <= hi + 0.010
+            and g in gk.gripping(objects, key, _cap_parts(spec), (want - HOLD_BAND, want + HOLD_OVER), grippers=(g,)))
+
+
+def _cap_parts(spec):
+    """The cap's colliders as guardkit parts in the cap's frame (cylinders stand along the cap's z axis)."""
+    import guardkit as gk
+
+    out = []
+    for c in spec.cap.colliders:
+        if c.size is not None:
+            out.append(gk.Block(c.center, c.size))
+        else:
+            out.append(gk.Ring(0.0, c.radius, -c.height / 2, c.height / 2, c.center))
+    return tuple(out)
 
 
 def _cap_span(spec):

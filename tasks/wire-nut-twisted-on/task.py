@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np  # noqa: E402
 import twistkit as tk  # noqa: E402  (threaded caps on top of yamkit; nothing on disk changes)
 import yamkit as kit  # noqa: E402
+import guardkit as gk  # noqa: E402  (the gripper's own shape, for holding and let-go)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN  # noqa: E402
 from yam_arena.demo import Waypoint  # noqa: E402
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
@@ -25,9 +26,6 @@ TOP = TABLE_TOP[SCENE]
 SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
 INSTRUCTION = "Finish this wire splice."
-# Arms home: with this on, full credit also needs both arms back where they started, still, so the workspace is clear
-# for the next person or job. Off, the job alone earns full credit.
-REQUIRE_ARMS_HOME = True
 
 # The junction box (fixed): a 4-11/16-inch-square, 2-1/8-inch-deep galvanized steel box, open face up, centered at
 # BOX_C.
@@ -58,12 +56,14 @@ SNUG_DEG = 45.0  # snug: within 45 degrees of the seat (0.5 mm of travel at 4 mm
 COVER_DEG = 180.0  # bare copper shows below the skirt more than 180 degrees back (2 mm of overlap at 4 mm per turn)
 GRIP_SLACK = 90.0  # all but 90 degrees of the connector's turning on must be done with a gripper holding it
 EVEN_TOL = 0.003  # tips even within 3 mm (under one 4 mm turn of the coil) when the coil grips the wires
-MOVE_TOL = 0.002  # a wire pulled more than 2 mm after the coil gripped it has been pulled out of the splice
-HOME_TOL = 0.03  # a gripper is home within 3 cm of where its tool point was at the trial's first scored step
-HOME_STILL = 0.001  # and still: its tool point moved less than 1 mm since the last step (2 cm/s)
-HOLD_OPEN = 0.6  # a gripper holds the connector or a wire when its fingers are under 60 % open with its tool point
-HOLD_MARGIN = 0.02  # within 2 cm of the connector or of the wire's horizontal run
-
+MOVE_TOL = 0.002  # the sim's coil does not hold the wire, so a wire moved more than 2 mm after the bite is counted
+# as pulled out of the splice (a real trial checks retention with a tug test instead; see the README)
+# A gripper holds the connector or the right wire when both its fingers touch it (gk.gripping: the gripper's own shape,
+# palm and fingers at their present opening, within 2 mm, the solver's resting gap plus the fit of its boxes to the
+# meshes) with their opening stopped by it: the connector's 2.0 cm or the wire's 3.3 mm, from 15 % of full opening
+# narrower (never below half of it) to 3 % wider. An open hand around it or a closed fist resting on it does not hold it.
+NUT_GRIP = gk.band(2 * NUT_R)
+WIRE_GRIP = gk.band(2 * WIRE_R)
 STEEL = kit.Look((0.78, 0.79, 0.80), 0.4, metallic=0.35)
 DARK = kit.Look((0.10, 0.10, 0.11), 0.7)
 BLACK = kit.Look((0.06, 0.06, 0.07), 0.45)
@@ -147,6 +147,56 @@ def _splice():
 OBJECTS = [_splice()]
 
 
+def _hold_thread_while_settling():
+    """Hold the connector on its coil from the very first physics step. The simulator settles the scene for 0.5 s after
+    each reset, before the first camera frame, and twistkit sets the coil's drives only from the first control step
+    on; until then the connector's slide has no drive and the connector dropped onto the slide's stop, then was lifted
+    back to its start height in the first second of the video. This applies the same drives before every settling
+    step, so the first frame shows the connector where it starts and nothing moves before a hand touches it."""
+    ie = sys.modules.get("yam_arena.inspect_embodiment")
+    cls = getattr(ie, "YamArenaEmbodiment", None)
+    if cls is None or getattr(cls, "_wire_nut_hold", False):
+        return
+    base_reset = cls.reset
+
+    def reset(self, *a, **k):
+        self._wire_nut_fresh = True  # a new trial: the coil's record starts over at the start angle
+
+        def step(action):
+            env = self._env
+            if getattr(self, "_wire_nut_fresh", False):
+                tk._TRACK.pop(NUT, None)
+                self._wire_nut_fresh = False
+            spec = kit._MECHS.get(NUT.split("/")[0])
+            if spec is not None:
+                tk._drive_thread(env.unwrapped, spec)
+            return env._wire_nut_step(action)
+
+        orig_ensure = self._ensure_sim
+
+        def ensure(goal):
+            orig_ensure(goal)
+            env = self._env
+            if env is not None and not hasattr(env, "_wire_nut_step"):
+                env._wire_nut_step = env.step
+                env.step = step
+
+        self._ensure_sim = ensure
+        try:
+            return base_reset(self, *a, **k)
+        finally:
+            del self._ensure_sim
+            if self._env is not None and hasattr(self._env, "_wire_nut_step"):
+                self._env.step = self._env._wire_nut_step  # control steps run as before
+                del self._env._wire_nut_step
+
+    cls.reset = reset
+    cls._wire_nut_hold = True
+
+
+_hold_thread_while_settling()
+
+
 # --- What happened during the run. success() and score() are called after every control step, so the run's history is
 # kept here. yamkit counts the simulator's scene resets (kit.episode()), so a new trial starts with a clean history.
 class _History:
@@ -155,9 +205,6 @@ class _History:
         self.bitten = False  # the connector is a full turn or more onto the wires (the coil has gripped them)
         self.b_at_bite = None  # the right wire's offset from even when the coil last gripped
         self.pulled = False  # the right wire moved more than 2 mm while the coil gripped it
-        self.home = None
-        self.last_grip = None
-        self.grips_still = False
 
 
 _H = _History()
@@ -172,12 +219,6 @@ def _update(objects):
     global _H
     if _H.episode != kit.episode():  # the simulator reset the scene: a new trial, a clean history
         _H = _History()
-    grips = {g: np.asarray(objects[g].pos, float) for g in ("left_gripper", "right_gripper") if g in objects}
-    if _H.home is None:
-        _H.home = grips
-    _H.grips_still = _H.last_grip is not None and all(
-        g in _H.last_grip and np.linalg.norm(p - _H.last_grip[g]) < HOME_STILL for g, p in grips.items())
-    _H.last_grip = grips
     b = _offset_b(objects)
     bitten = tk.backed_off_deg(objects, NUT) <= BITE_DEG
     if bitten and not _H.bitten:  # the coil grips the wires now: where the right wire is decides whether it's caught
@@ -187,40 +228,39 @@ def _update(objects):
     _H.bitten = bitten
 
 
-
 def _captured():
     """Both wires in the coil: the right wire's tip within 3 mm of the left one's when the coil gripped them, and not
     moved more than 2 mm since. (The left wire is fixed under the connector's axis, so it is always in.)"""
     return _H.bitten and abs(_H.b_at_bite) <= EVEN_TOL and not _H.pulled
 
 
-def _near_segment(p, a, b, r):
-    a, b = np.asarray(a, float), np.asarray(b, float)
-    t = float(np.clip(np.dot(p - a, b - a) / np.dot(b - a, b - a), 0.0, 1.0))
-    return np.linalg.norm(p - (a + t * (b - a))) < r
+NUT_SHAPE = gk.Ring(0.0, NUT_R, 0.0, NUT_L)  # the connector's collider, in its own frame (origin at the skirt)
+
+
+def _wire_shapes(objects, sides=(+1, -1)):
+    """Each conductor's path as capsules in the box's frame (insulation from its bushing up, then its bare tip): the
+    left wire (+1) fixed, the right one (-1) shifted along z by its slide."""
+    out = []
+    for side in sides:
+        dz = 0.0 if side > 0 else _offset_b(objects)
+        xk, yk, yc = side * KNOCKOUT_X, side * KNOCKOUT_Y, side * WIRE_R
+        pts = [(xk, yk, BOX_T + dz), (xk, yk, JOG + dz), (0, yk, JOG + dz), (0, yc, JOG + dz),
+               (0, yc, STRIP + STRIP_LEN + dz)]
+        out += [gk.Seg(a, b, WIRE_R) for a, b in zip(pts, pts[1:])]
+    return tuple(out)
 
 
 def _held(objects):
-    """A gripper with its fingers under 60 % open and its tool point within 2 cm of the connector (from its skirt to
-    its top) or of the right wire's horizontal run."""
-    nut = np.asarray(objects[NUT].pos, float)
-    wb = np.asarray(objects[WIRE_B].pos, float)
-    segs = [(nut, nut + (0, 0, NUT_L)), (wb + (-KNOCKOUT_X, -KNOCKOUT_Y, JOG), wb + (0, -KNOCKOUT_Y, JOG))]
-    for g in ("left_gripper", "right_gripper"):
-        if g not in objects or kit.opening(objects, g) >= HOLD_OPEN:
-            continue
-        p = np.asarray(objects[g].pos, float)
-        if any(_near_segment(p, a, b, HOLD_MARGIN + (NUT_R if k == 0 else 0)) for k, (a, b) in enumerate(segs)):
-            return True
-    return False
+    """A gripper holding the connector or the right wire: both fingers touching it with their opening stopped by it."""
+    return bool(gk.gripping(objects, NUT, NUT_SHAPE, NUT_GRIP)
+                or gk.gripping(objects, "box", _wire_shapes(objects, (-1,)), WIRE_GRIP))
 
 
-def _arms_home(objects):
-    """Each gripper's tool point within 3 cm of where it was at the trial's first scored step, and still."""
-    if not _H.home or not _H.grips_still:
-        return False
-    return all(np.linalg.norm(np.asarray(objects[g].pos, float) - p) < HOME_TOL for g, p in _H.home.items()
-               if g in objects)
+def _clear(objects):
+    """Let go and clear: no gripper touching the connector or either wire (gk.touching: the gripper's own shape, palm and
+    fingers at their present opening, within 2 mm of them), so the finished splice is seen to stay together on its own.
+    A hand resting on it could still be holding it together or pressing it down; a hand off it, however near, is not."""
+    return not (gk.touching(objects, NUT, NUT_SHAPE) or gk.touching(objects, "box", _wire_shapes(objects)))
 
 
 def _score(objects):
@@ -235,33 +275,35 @@ def _score(objects):
     # the right wire wasn't level with the left when the coil gripped them (or was pulled after): it isn't spliced
     if not _captured():
         return 0.0
-    # still holding the connector or the wire: the splice isn't finished
-    if _held(objects):
-        return 0.0
     if back > COVER_DEG:
         return 0.25  # both wires in, but the connector is loose and bare copper shows below its skirt
     if back > SNUG_DEG:
         return 0.5  # copper covered, but the connector isn't snug
-    return 1.0 if (_arms_home(objects) or not REQUIRE_ARMS_HOME) else 0.9
+    if _held(objects) or not _clear(objects):
+        return 0.5  # snug, but a gripper still holds it or a hand rests on it: not shown to stay together on its own
+    return 1.0
 
 
 def success(objects):
-    """Full score: the connector snug (within 45 degrees of its seat) on both wires, let go, and (with
-    REQUIRE_ARMS_HOME) both arms home and still. Called first each step, so it also records the history."""
+    """Full score: the connector snug (within 45 degrees of its seat) on both wires, let go (no gripper touching it or
+    the wires). Called first each step, so it also records the history."""
     _update(objects)
     return _score(objects) == 1.0
 
 
 def score(objects):
     """0 unless the connector ends at least a full turn onto the wires (540 degrees or less back from snug; it first
-    bites 900 degrees back), with all but 90 degrees of its net turning done by a gripper holding it and turning with it
-    (twistkit), and no more than 90 degrees of clockwise turning in all done without such a grip.
+    bites 900 degrees back), with all but 90 degrees of its net turning credited (twistkit: a gripper grips the connector
+    and its wrist rolls), and no more than 90 degrees of clockwise turning in all done without such a grip.
     0 if the right wire's tip was more than 3 mm from the left one's when the connector came a full turn on, or the
-    wire moved more than 2 mm after that (re-judged if the connector is backed off and put on again). 0 if a gripper
-    still holds the connector or the right wire. Otherwise 0.25 if the connector is more than 180 degrees from snug
-    (bare copper below the skirt), 0.5 if 45 to 180 degrees from snug (covered but loose), and 1.0 within 45 degrees
-    of snug with both arms home and still (0.9 if not, with REQUIRE_ARMS_HOME).
-    Possible scores: 0, 0.25, 0.5, 0.9, 1."""
+    wire moved more than 2 mm after that (re-judged if the connector is backed off and put on again). Otherwise 0.25
+    if the connector is more than 180 degrees from snug (bare copper below the skirt), 0.5 if 45 to 180 degrees from
+    snug (covered but loose), and 1.0 within 45 degrees of snug and let go (no gripper touching the connector or either
+    wire; 0.5 if a gripper still holds the connector or the right wire, both fingers touching it with their opening
+    stopped by it, or a hand still touches them).
+    Where the arms end up does not matter. Possible scores: 0, 0.25, 0.5, 1.
+    These angles and the 2 mm limit are the sim's stand-ins for what a real trial observes (copper below the skirt,
+    a snug check by hand and a tug test; see the README)."""
     return _score(objects)
 
 
@@ -279,7 +321,8 @@ def demo():
     """Right arm: grip the right wire's horizontal run with the fingers across it, draw the wire 12 mm up out of the
     box until its tip is level with the left one's, let go and go home. Left arm, once the right arm is home: turn the
     connector clockwise (seen from above) with a regrasp loop (grip, roll the wrist 150 degrees, let go, roll back,
-    repeat; 960 degrees of roll in all), riding down the wires as it threads on, let go, lift clear and go home."""
+    repeat; 960 degrees of roll in all), riding down the wires as it threads on, let go, back off 10 cm above the
+    connector, pause there and go home."""
     x, y = B_GRIP
     z0 = TOP + JOG - SHORT
     up = z0 + SHORT + PULL_EXTRA
@@ -297,7 +340,11 @@ def demo():
     z_bite = NUT_GRIP_Z + THREAD.pitch * 915.0 / 360.0
     left += tk.twist_waypoints(NUT_XY, z_bite, -TURN, side="left", stroke=STROKE, pitch=THREAD.pitch,
                                label="twist the connector on")
-    left += [kit.Home(2.0), kit.Home(2.0, label="hold at home")]
+    last = left[-1]  # opened and lifted 5 cm: back off well clear of the splice and pause there before going home
+    left += [Waypoint(1.0, (last.pos[0], last.pos[1], NUT_GRIP_Z + 0.10), FINGER_OPEN, "back off, clear of the splice",
+                      last.yaw),
+             Waypoint(1.0, (last.pos[0], last.pos[1], NUT_GRIP_Z + 0.10), FINGER_OPEN, "pause clear", last.yaw),
+             kit.Home(2.0), kit.Home(2.0, label="hold at home")]
     total = sum(w.duration for w in left)
     right.append(kit.Home(max(total - t_right, 0.5), label="hold at home"))
     return {"left": left, "right": right}
