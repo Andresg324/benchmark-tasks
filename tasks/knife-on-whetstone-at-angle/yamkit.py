@@ -144,12 +144,15 @@ def band(path, width: float, thickness: float, look: Look, normal=(1, 0, 0)) -> 
 
 @dataclass(frozen=True)
 class Collider:
-    """An invisible box (`size`) or cylinder (`radius`, `height`, along z) collider in the prop's frame."""
+    """An invisible box (`size`) or cylinder (`radius`, `height`, along z) collider in the prop's frame; a box can be
+    turned `rot_z` degrees about the prop's z axis (for a sloped edge;
+    props only, not mechanism links)."""
 
     center: tuple
     size: tuple | None = None
     radius: float = 0.0
     height: float = 0.0
+    rot_z: float = 0.0
 
 
 # -- props -----------------------------------------------------------------------------------
@@ -215,8 +218,12 @@ def _usda(prop: Prop) -> str:
         if c.size is not None:
             out.append("        double size = 1\n"
                        f"        double3 xformOp:translate = {_fmt(c.center)}\n"
-                       f"        float3 xformOp:scale = {_fmt(c.size)}\n"
-                       '        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]\n')
+                       f"        float3 xformOp:scale = {_fmt(c.size)}\n")
+            if c.rot_z:
+                out.append(f"        float xformOp:rotateZ = {c.rot_z:.6g}\n"
+                           '        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ", "xformOp:scale"]\n')
+            else:
+                out.append('        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]\n')
         else:
             out.append(f'        uniform token axis = "Z"\n        double radius = {c.radius}\n'
                        f"        double height = {c.height}\n"
