@@ -13,22 +13,15 @@ pressed as the barrel's face reaches it (its lowest line still sqrt(2 R (t - gap
 the contact patch of a round barrel on thick pastry): t <- gap + (t - gap) * RATIO (the pastry springs back by RATIO of the excess, so it takes several passes to
 come down to the gap). A pressed slice lengthens; the slices on its far side from the strip's anchor (the block's
 middle, held by the bulk of the dough) move outward to make room. A slice is pressed again only once the line has
-gone back REARM behind where the barrel's face meets it (one press per crossing, however the arm jitters).
+gone back REARM behind where the barrel's face meets it (one press per crossing, however the arm jitters). Rolling
+past a strip's end presses the end slice like any other: the rings hold the barrel at the gap there too.
 
-Rolling off the end: when the line rolls past a strip's end by more than OVER with the gap below the end slice's
-thickness, the last EDGE of that strip is pressed to SEAL * gap and marked sealed (the pin's edge drags the cut end
-against the board; for laminated pastry it presses the cut layers together), if the line is still past that mark the
-next step (a 2-step debounce against a one-step physics pop). That is latched: thickness only ever goes down.
-
-Hands (task's `gate`): presses and roll-offs count only while both handles are held (a handled pin's barrel turns on
-its axle between them); pressing with a hand on the barrel or rings, which stops it turning so it skids and drags the
-pastry, latches `torn` (2 steps in a row).
+Hands (the task's `gate(objects) -> bool`): presses count only while it is True (e.g. the pin driven by both handles).
 
     dk.setup(dk.Sheet(...), dk.Pin(...))    once, at import time of task.py
     dk.update(objects)                       each control step (the hook calls it; offline tests call it)
-    dk.grid() -> (t, sealed)                 thickness (m, 0 = no pastry) and sealed flags on the 1 cm display grid
+    dk.grid() -> t                           thickness (m, 0 = no pastry) on the 1 cm display grid
     dk.lengths() -> per-strip lengths (m); dk.volume() total volume (m^3); dk.ends() per-strip (x_min, x_max)
-    dk.torn() -> latched tear flag
 All of it resets when kit.episode() changes.
 
 Visuals: one slab per covered 1 cm cell, as thick as the pastry there, colored by thickness band (Isaac Lab
@@ -36,7 +29,6 @@ VisualizationMarkers, no physics), so the top camera shows the outline growing a
 """
 
 import math
-import os
 import sys
 from dataclasses import dataclass
 
@@ -46,14 +38,11 @@ import yamkit as kit
 
 RATIO = 0.5  # fraction of the excess over the gap left after one press (springback)
 REARM = 0.01  # m: the line must go this far back past a slice before it can press it again
-OVER = 0.005  # m: the line this far past a strip's end, pressing, counts as rolled off the end
-EDGE = 0.01  # m: the strip of pastry at the end that a roll-off presses and seals
-SEAL = 0.6  # a sealed edge is pressed to this fraction of the gap
 
 
 @dataclass(frozen=True)
 class Sheet:
-    """The pastry: a block `size` = (length along x, width along y, thickness) centerd at (cx, cy) on a board whose top
+    """The pastry: a block `size` = (length along x, width along y, thickness) centered at (cx, cy) on a board whose top
     is at world z `board_z`; displayed and scored on `cell` cells over x in `x_range` (world m)."""
 
     center: tuple
@@ -66,7 +55,7 @@ class Sheet:
 
 @dataclass(frozen=True)
 class Pin:
-    """The rolling pin `obj`: a barrel of `radius` along the object's local `axis` (unit), centerd at its origin, `length`
+    """The rolling pin `obj`: a barrel of `radius` along the object's local `axis` (unit), centered at its origin, `length`
     long between the rings."""
 
     obj: str
@@ -89,21 +78,16 @@ class _State:
         self.ys = sh.center[1] - sh.size[1] / 2 + (np.arange(ny) + 0.5) * sh.cell
         self.t = np.full((ny, n), float(sh.size[2]))
         self.vol = np.full((ny, n), sh.size[0] / n * sh.size[2])  # volume per unit width (m^2)
-        self.sealed = np.zeros((ny, n), bool)
         self.armed = np.ones((2, ny, n), bool)  # [0]: may be pressed moving +x; [1]: moving -x
         self.anchor = n // 2  # slice boundary held in place (the block's middle)
         self.anchor_x = float(sh.center[0])
         self.line = None  # per strip: (x, gap) of the barrel's lowest line last step, or None
         self.step = 0
-        self.pending = {}  # strip -> (side, gap, mark): rolled past an end last step, sealed if still past it now
-        self.torn = False  # latched: pastry pressed with a hand on the barrel or rings (the barrel can't turn)
-        self.torn_run = 0
         self.presses = 0  # presses that counted (both handles held)
 
 
 def setup(sheet: Sheet, pin: Pin, gate=None) -> None:
-    """`gate(objects) -> (both_handles_held, hand_on_barrel)`: presses (and roll-offs) count only while both handles
-    are held; pressing with a hand on the barrel or rings latches `torn` (2 steps in a row confirm it)."""
+    """`gate(objects) -> bool`: presses count only while it is True (None: always)."""
     global _S
     _CFG.update(sheet=sheet, pin=pin, gate=gate)
     _S = None
@@ -161,14 +145,9 @@ def update(objects) -> None:
         S.line = lines
         _rearm(S, lines)
         return
-    held, on_barrel = _CFG["gate"](objects) if _CFG.get("gate") else (True, False)
-    t0, armed0, sealed0 = S.t.copy(), S.armed.copy(), S.sealed.copy()
-    pending, S.pending = S.pending, {}
+    held = bool(_CFG["gate"](objects)) if _CFG.get("gate") else True
+    t0, armed0 = S.t.copy(), S.armed.copy()
     for j, (now, before) in enumerate(zip(lines, S.line)):
-        if now is not None and j in pending:  # confirm last step's roll-off: still past the end mark
-            side, g, mark = pending[j]
-            if side * (now[0] - mark) > 0:
-                _seal(S, j, side, g)
         if now is None or before is None:
             continue
         x0, g0 = before
@@ -179,10 +158,10 @@ def update(objects) -> None:
         k = 0 if d > 0 else 1
         n = S.t.shape[1]
         order = range(n) if d > 0 else range(n - 1, -1, -1)
+        e = _edges(S, j)  # recomputed only after a press moves them
         for i in order:
             if not S.armed[k, j, i]:
                 continue
-            e = _edges(S, j)
             c = 0.5 * (e[i] + e[i + 1])
             g = min(g0, g1)
             hit = c - d * _reach(S.t[j, i], g)  # where the line is when the barrel's face meets the slice's top
@@ -193,16 +172,9 @@ def update(objects) -> None:
             if g < S.t[j, i]:
                 S.t[j, i] = g + (S.t[j, i] - g) * RATIO
                 S.armed[k, j, i] = False
-        _roll_off(S, j, x0, x1, g0, g1)
-    worked = (not np.array_equal(S.t, t0)) or bool(S.pending)
-    S.torn_run = S.torn_run + 1 if (worked and on_barrel) else 0
-    if S.torn_run >= 2:
-        S.torn = True
-    if not held:  # the pin rolled or pushed without both handles held does not count (a roll-off already confirmed
-        # this step, from last step's pending, stands)
-        confirmed = S.sealed & ~sealed0
-        t_conf = np.where(confirmed, S.t, t0)
-        S.t, S.armed, S.sealed, S.pending = t_conf, armed0, sealed0 | confirmed, {}
+                e = _edges(S, j)
+    if not held:  # the pin moved without the gate's hold does not count
+        S.t, S.armed = t0, armed0
     elif not np.array_equal(S.t, t0):
         S.presses += 1
     S.line = lines
@@ -218,31 +190,6 @@ def _reach(t: float, g: float) -> float:
     return math.sqrt(max(0.0, 2 * r * h - h * h)) if h < r else r
 
 
-def _roll_off(S, j, x0, x1, g0, g1) -> None:
-    """Seal the end strip that the line rolled past (OVER beyond the end) while pressing."""
-    e = _edges(S, j)
-    for end, sgn, idx in ((e[-1], 1, -1), (e[0], -1, 0)):
-        mark = end + sgn * OVER
-        if not (min(x0, x1) < mark <= max(x0, x1)):
-            continue
-        f = (mark - x0) / (x1 - x0)
-        g = g0 + f * (g1 - g0)
-        if g >= S.t[j, idx]:
-            continue  # the pin went past clear of the pastry
-        S.pending[j] = (sgn, g, mark)  # sealed next step if the line is still past the mark (2-step debounce)
-
-
-def _seal(S, j, sgn, g) -> None:
-    """Press the last EDGE of strip j's end on side `sgn` to SEAL * g and mark it sealed."""
-    e = _edges(S, j)
-    end = e[-1] if sgn > 0 else e[0]
-    lo, hi = (end - EDGE, end) if sgn > 0 else (end, end + EDGE)
-    for i in range(S.t.shape[1]):
-        if e[i + 1] > lo and e[i] < hi:
-            S.t[j, i] = min(S.t[j, i], max(SEAL * g, 1e-4))
-            S.sealed[j, i] = True
-
-
 def _rearm(S, lines) -> None:
     for j, ln in enumerate(lines):
         if ln is None:
@@ -252,10 +199,6 @@ def _rearm(S, lines) -> None:
         r = np.array([_reach(t, ln[1]) for t in S.t[j]])  # back behind where the barrel's face meets each slice
         S.armed[0, j] |= ln[0] < c - r - REARM
         S.armed[1, j] |= ln[0] > c + r + REARM
-
-
-def torn() -> bool:
-    return bool(_state().torn)
 
 
 def volume() -> float:
@@ -276,27 +219,25 @@ def lengths() -> np.ndarray:
 
 
 def strips():
-    """Per strip: (edges, thickness, sealed) arrays (copies)."""
+    """Per strip: (edges, thickness) arrays (copies)."""
     S = _state()
-    return [(_edges(S, j), S.t[j].copy(), S.sealed[j].copy()) for j in range(S.t.shape[0])]
+    return [(_edges(S, j), S.t[j].copy()) for j in range(S.t.shape[0])]
 
 
 def grid():
-    """(t, sealed) on the 1 cm grid: rows = strips (y), columns = cells along x over Sheet.x_range; t is the thickness
+    """Thickness on the 1 cm grid: rows = strips (y), columns = cells along x over Sheet.x_range; t is the thickness
     (m) of the slice under the cell's center, 0 where there is no pastry."""
     sh = _CFG["sheet"]
     S = _state()
     nx = int(round((sh.x_range[1] - sh.x_range[0]) / sh.cell))
     xc = sh.x_range[0] + (np.arange(nx) + 0.5) * sh.cell
     t = np.zeros((S.t.shape[0], nx))
-    sealed = np.zeros_like(t, bool)
     for j in range(S.t.shape[0]):
         e = _edges(S, j)
         i = np.searchsorted(e, xc, side="right") - 1
         ok = (i >= 0) & (i < S.t.shape[1])
         t[j, ok] = S.t[j, i[ok]]
-        sealed[j, ok] = S.sealed[j, i[ok]]
-    return t, sealed
+    return t
 
 
 def cell_x() -> np.ndarray:
@@ -307,7 +248,7 @@ def cell_x() -> np.ndarray:
 
 # -- visuals --------------------------------------------------------------------------------------------------------
 
-# thickness bands (mm, upper bound) and their colors: thin/sealed dark, on spec golden, thicker paler
+# thickness bands (mm, upper bound) and their colors: thin dark, on spec golden, thicker paler
 BANDS = ((2.0, (0.45, 0.25, 0.10)), (2.5, (0.70, 0.45, 0.20)), (3.5, (0.90, 0.68, 0.30)),
          (4.5, (0.95, 0.82, 0.55)), (6.5, (0.97, 0.90, 0.72)), (1e9, (0.99, 0.97, 0.90)))
 
@@ -342,7 +283,7 @@ def _draw(origin) -> None:
     if m is None:
         return
     sh = _CFG["sheet"]
-    t, _ = grid()
+    t = grid()
     xc = cell_x()
     S = _state()
     tr, sc, ids = [], [], []
@@ -380,8 +321,6 @@ def _patch_embodiment() -> None:
                 self._env.step(self._ready)  # one more settle step at the ready pose, so the cameras update
                 for _ in range(getattr(ie, "RESET_RENDERS", 4)):
                     self._base.sim.render()
-                if os.environ.get("DOUGHKIT_DEBUG"):
-                    print("doughkit: drew the block at reset", flush=True)
             except Exception as e:  # noqa: BLE001  (never let the visuals break a run)
                 print(f"doughkit: no reset draw ({e!r})", file=sys.stderr, flush=True)
         return original(self)
@@ -405,14 +344,6 @@ def _patch(scene) -> None:
         if key[1] is None or key != last["key"]:  # once per control step
             last["key"] = key
             update(out)
-            if os.environ.get("DOUGHKIT_DEBUG"):
-                lns = [pin_line(out, y) for y in (_S.ys[0], _S.ys[-1])]
-                t, _ = grid()
-                print("doughkit", _S.step, [ln and (round(ln[0], 4), round(ln[1] * 1000, 2)) for ln in lns],
-                      np.round(ends()[[0, -1]], 3).tolist(), round(float(t[t > 0].min()) * 1000, 2),
-                      round(float(t.max()) * 1000, 2), round(float(lengths().min()), 4), int(_S.sealed.sum()),
-                      _CFG["gate"](out) if _CFG.get("gate") else None, _S.torn, _S.presses,
-                      [round(kit.opening(out, g), 3) for g in ("left_gripper", "right_gripper")], flush=True)
             try:
                 _draw(base.scene.env_origins[0].detach().cpu().numpy())
             except Exception as e:  # noqa: BLE001  (never let the visuals break a run)

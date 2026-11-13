@@ -2,17 +2,17 @@
 barrel, lying in its rest behind the pastry.
 
 The pastry is rolled into a sheet 3 mm thick and at least 20 cm long (to line the floor of a 20 cm square pan), with
-both hands on the pin's handles so that both rings ride on the board: then the barrel runs 3 mm above the board all the
-way across. A pin with one end lifted leaves a wedge (thick on that side), and the dough springs back, so it takes
-several passes to come down to the rings. Bakers roll from the middle out to each end and stop short of the edge
-(Food Republic, "The Part Of Puff Pastry Dough You Should Never Roll Out": put the pin over the center and roll
-outward; America's Test Kitchen: "roll dough outward from center to edge"): a pin rolled off the end flattens the cut
-edge and seals puff pastry's layers there, so that edge does not rise.
+both hands on the pin (on its handles or palms on the barrel) so that both rings ride on the board: then the barrel
+runs 3 mm above the board all the way across. A pin with one end lifted leaves a wedge (thick on that side), and the
+dough springs back, so it takes several passes to come down to the rings.
 
 Model (doughkit): the pastry has no collider; the pin rides on its rings. Each slice of pastry that the barrel rolls
 across with its lowest line below the slice's top is pressed to gap + half its excess over the gap (the gap is the
 barrel's height above the board where it crosses), the slice lengthens and the pastry beyond it moves out, volume
-kept. A pin rolled more than 5 mm past an end while pressing seals that end's last 1 cm, pressed to 0.6 x the gap.
+kept. Rolling past an end presses the end like any other slice (the rings hold the barrel 3 mm up there too).
+The model gives the pin no rolling resistance (the pastry pushes back on nothing), so in the sim the rings keep the
+pin level on the flat board whatever the hands do; a real trial checks the sheet's evenness directly (a needle gauge
+across the width).
 """
 
 import math
@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np  # noqa: E402
 import yamkit as kit  # noqa: E402  (spawns the modeled props; nothing on disk changes)
-import guardkit as gk  # noqa: E402  (grip, release and arms-home checks)
+import guardkit as gk  # noqa: E402  (grip and contact checks)
 import doughkit as dk  # noqa: E402  (the rolling model, updated every control step)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN  # noqa: E402
 from yam_arena.demo import Waypoint  # noqa: E402
@@ -34,7 +34,6 @@ TOP = TABLE_TOP[SCENE]
 SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
 INSTRUCTION = "Roll this puff pastry out into a 3 mm sheet at least 20 cm long."
-REQUIRE_ARMS_HOME = True  # full score also needs both arms back where they started, still
 
 # --- Scene, in world coordinates (m): x forward from the arm bases, y to the robot's left, z up from the table top.
 BOARD = (0.295, 0.0)  # the pastry board's center (x, y)
@@ -65,12 +64,16 @@ TARGET_T = 0.003  # m: the sheet's thickness (the rings' gap)
 TOL_T = 0.0005  # m: a cell counts as on spec within 0.5 mm of 3 mm
 SPEC_SHARE = 0.90  # share of the sheet's cells that must be on spec (the 1 cm trimmed off each end is ~10 %)
 MIN_LEN = 0.20  # m: every strip of the sheet at least this long (the pan's floor)
-PART_LEN = 0.18  # m: 90 % of that (about one more pass to go) earns the partial score
+PART_LEN = 0.18  # m: 90 % of that (about one more pass to go) earns half
+START_LEN = 0.16  # m: 80 % of it, what about two even passes reach (two level passes make 17.2 cm, one makes 11.8 cm;
+#                   1 cm to spare for strokes that stop short of the ends) earns a quarter
+WEDGE_MAX = 0.0005  # m: the 1 cm strips' average thicknesses may differ by at most this across the width (the same
+#                     0.5 mm a cell is allowed off 3 mm); a pin rolled with one end lifted leaves the sheet thicker on
+#                     that side, and puff pastry rises higher and bakes slower where it is thicker, so a wedge can
+#                     bake lopsided
 PIN_DOWN = 0.005  # m: rings within 5 mm of the board, or axis within 5 mm of its rest seat, level within LEVEL_DEG: set down
 LEVEL_DEG = 3.0
-CLEAR = 0.01  # m: both hands this far clear of the pin is let go
 
-GRIPPERS = ("left_gripper", "right_gripper")
 GRIP_Y = 0.165  # where the hands take the handles (|y|), inboard of the rest
 
 WOOD = kit.Look((0.80, 0.62, 0.40), 0.6)
@@ -116,34 +119,26 @@ def _rest():
 
 OBJECTS = [_board(), _rest(), _pin()]
 
-# the pin's parts in its own frame, for the release check
-PIN_PARTS = (gk.Seg((0, -BARREL_HALF, 0), (0, BARREL_HALF, 0), R_RING),
-             gk.Seg((0, -HANDLE_OUT, 0), (0, HANDLE_OUT, 0), R_HANDLE))
-
-# the handles (left at +y, right at -y) and the barrel with its rings, in the pin's own frame
-HANDLES = (gk.Seg((0, HANDLE_IN, 0), (0, HANDLE_OUT, 0), R_HANDLE),
-           gk.Seg((0, -HANDLE_IN, 0), (0, -HANDLE_OUT, 0), R_HANDLE))
-BARREL = gk.Block((0.0, 0.0, 0.0), (2 * R_RING, 2 * BARREL_HALF, 2 * R_RING))
-HANDLE_BAND = gk.band(2 * R_HANDLE)  # fingers closed on a 2.5 cm handle
-TOUCH = 0.01  # m: a tool point or pad tip this close to the barrel or rings is a hand on them
-
+# The pin's shape in its own frame (axis along y), as its colliders: the barrel, a spacer ring on each end of it, and
+# the handles (left at +y, right at -y), as flat-ended cylinders.
+PIN_SHAPE = (gk.Cyl((0, -BARREL_HALF, 0), (0, BARREL_HALF, 0), R_BARREL),
+             gk.Cyl((0, RING_IN, 0), (0, RING_OUT, 0), R_RING),
+             gk.Cyl((0, -RING_IN, 0), (0, -RING_OUT, 0), R_RING),
+             gk.Cyl((0, HANDLE_IN, 0), (0, HANDLE_OUT, 0), R_HANDLE),
+             gk.Cyl((0, -HANDLE_IN, 0), (0, -HANDLE_OUT, 0), R_HANDLE))
 
 def _gate(objects):
-    """(both handles held, a hand on the barrel or rings). The barrel of a handled pin turns on its axle between the
-    handles: rolled by both handles it turns over the pastry; a hand on the barrel stops it, and it skids and drags."""
-    left = gk.grip_on(objects, "pin", HANDLES[0], HANDLE_BAND)
-    right = gk.grip_on(objects, "pin", HANDLES[1], HANDLE_BAND)
-    both = any(a != b for a in left for b in right)
-    on_barrel = any(gk.dist(objects, "pin", p, BARREL) < TOUCH
-                    for g in GRIPPERS if g in objects for p in gk.tool_points(objects, g))
-    return both, on_barrel
+    """True while both hands are on the pin: each gripper's own shape (palm and fingers at their present opening)
+    touching it within 2 mm (gk.touching), anywhere on its handles, barrel or rings, gripping it or pressing on it with
+    a closed hand. The sim's pin slides on its rings instead of turning, so the model cannot tell rolling from pushing
+    the pin along; it counts presses only while two hands are on the pin, so that both ends can be kept down. A hand
+    hovering off the pin does not count, and strokes made with one hand (or none) just do not press."""
+    return len(set(gk.touching(objects, "pin", PIN_SHAPE))) >= 2
 
 
 dk.setup(dk.Sheet(center=PASTRY, size=PASTRY_SIZE, board_z=BZ, x_range=(BOARD[0] - BOARD_SIZE[0] / 2,
                                                                          BOARD[0] + BOARD_SIZE[0] / 2)),
          dk.Pin("pin", radius=R_BARREL, length=2 * BARREL_HALF), gate=_gate)
-
-HOME = gk.ArmsHome()
 
 
 def _rotm(q):
@@ -163,38 +158,45 @@ def pin_down(objects):
 
 
 def released(objects):
-    return gk.released_clear(objects, "pin", PIN_PARTS, CLEAR)
+    """Let go: no gripper touching the pin's barrel, rings or handles (gk.touching, the gripper's own shape within
+    2 mm). An open hand still around a handle without touching it has let go; the pin rests on its own."""
+    return not gk.touching(objects, "pin", PIN_SHAPE)
 
 
 def sheet(objects=None):
-    """(on-spec share, shortest strip length m, thinnest cell m, sealed cells) of the pastry now."""
-    t, sealed = dk.grid()
+    """(on-spec share, shortest strip length m, thinnest cell m) of the pastry now."""
+    t = dk.grid()
     cov = t > 0
     on = (np.abs(t[cov] - TARGET_T) <= TOL_T + 1e-9).mean()
-    return float(on), float(dk.lengths().min()), float(t[cov].min()), int(sealed.sum())
+    return float(on), float(dk.lengths().min()), float(t[cov].min())
+
+
+def wedge(objects=None):
+    """How much thicker the thickest 1 cm strip is than the thinnest, each averaged over its length (m): 0 for a pin
+    kept level, which presses every strip alike; a pin with one end lifted leaves that side thicker."""
+    t = dk.grid()
+    means = [row[row > 0].mean() for row in t if (row > 0).any()]
+    return float(max(means) - min(means)) if means else 0.0
 
 
 def _job(objects):
+    on, length, thin = sheet(objects)
+    even = wedge(objects) <= WEDGE_MAX + 1e-9
+    if length >= MIN_LEN and on >= SPEC_SHARE and even:
+        s = 1.0
+    elif length >= PART_LEN:
+        s = 0.5  # most of the way: at least 18 cm long but short of the pan or uneven (about one pass to go)
+    elif length >= START_LEN and even:
+        s = 0.25  # about two even passes: rolled level, but still thick and a few passes short
+    else:
+        return 0.0  # nothing done, one pass, or a strip left thick and short (a wedge from a tilted pin)
     if not released(objects) or not pin_down(objects):
-        return 0.0  # the pin still in a hand, or not set down (in its rest or on the board)
-    if dk.torn():
-        return 0.0  # pressed with a hand on the barrel: it skidded and dragged the pastry, for good
-    on, length, thin, sealed = sheet(objects)
-    if sealed:
-        return 0.0  # rolled off an end: the cut edge is pressed thin and its layers sealed, for good
-    if length >= MIN_LEN and on >= SPEC_SHARE:
-        return 1.0
-    if length >= PART_LEN:
-        return 0.5  # most of the way: at least 18 cm long but short of the pan or uneven (about one pass to go)
-    return 0.0  # barely started, or a strip left thick and short (a wedge from a tilted pin)
+        return min(s, 0.5)  # a hand still touching the pin, or the pin not set down (in its rest or on the board)
+    return s
 
 
 def _score(objects):
-    HOME.feed(objects)
-    job = _job(objects)
-    if job == 1.0 and REQUIRE_ARMS_HOME and not HOME.home(objects):
-        return 0.9
-    return job
+    return _job(objects)
 
 
 def success(objects):
@@ -202,18 +204,18 @@ def success(objects):
 
 
 def score(objects):
-    """The pastry is read on a 1 cm grid. Only rolling with both handles held counts (the barrel turns on its axle
-    between them). 1.0 if every 1 cm strip of the sheet is at least 20 cm long (the floor of a 20 cm square pan), at
-    least 90 % of its cells are 3 mm thick within 0.5 mm (the rings' gap; the remaining 10 % is about the 1 cm a baker
-    trims off each end of a 21 cm sheet), no end has been rolled over, the pastry is not torn, the pin is set down
-    level (within 3 degrees) in its rest or on its rings on the board (within 5 mm) with both hands 1 cm clear of it,
-    and both arms are back home and still (0.9 if not home). 0.5 if, with the same pin, end and tear conditions, every
-    strip is at least 18 cm long (90 % of the length, about one pass to go) but the sheet is short of 20 cm or fewer
-    than 90 % of its cells are on spec. 0 if an end was rolled over (the pin more than 5 mm past it while pressing, two
-    steps in a row: sealed, latched), the pastry was pressed with a hand on the barrel or rings (a tool point or pad
-    tip within 1 cm, two steps in a row: the barrel skids and drags it; torn, latched), any strip is shorter than 18 cm
-    (barely started, or a wedge left by a tilted pin), or the pin is still held or not set down. Possible scores: 0,
-    0.5, 0.9, 1.0."""
+    """The pastry is read on a 1 cm grid. Doing nothing scores 0. Only rolling with both hands on the pin counts (each
+    gripper touching it, on its handles or barrel, within 2 mm; the sim's pin slides rather than turns, so this
+    stands in for a pin rolled under two hands, which can keep both ends down). 1.0 if every 1 cm strip of the sheet
+    is at least 20 cm long (the floor of a 20 cm square pan), at least 90 % of its cells are 3 mm thick within 0.5
+    mm (the rings' gap; the remaining 10 % is about the 1 cm a baker trims off each end of a 21 cm sheet), the
+    strips' average thicknesses differ by at most 0.5 mm across the width (a pin with one end lifted leaves a wedge,
+    and a wedge can bake lopsided), and the pin is set down level (within 3 degrees) in its rest or on its rings on
+    the board (within 5 mm) with no hand touching it (2 mm contact tolerance). 0.5 if every strip is at least 18 cm
+    long (90 % of the length, about one pass to go) but the sheet is not finished, or if the sheet is done but a
+    hand still touches the pin or it is not set down. 0.25 if every strip is at least 16 cm long (about two even
+    passes) and the strips are within 0.5 mm of each other. 0 otherwise (nothing done, one pass, or a wedge left by
+    a tilted pin). Where the arms end is not scored. Possible scores: 0, 0.25, 0.5, 1.0."""
     return _score(objects)
 
 
