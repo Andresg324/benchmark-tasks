@@ -1,9 +1,10 @@
 """A 3-cup aluminum stovetop moka pot, taken apart: its empty water chamber (the base, with the brass safety valve on
 its side) already stands on the cold burner grate of a gas stove, its upper chamber stands upright on the counter to
-the left of the stove, and a glass carafe of water stands on the counter to the right. Making moka coffee
-means filling the base with water up to just below the safety valve, never over it (the valve could then not vent the
-steam if the funnel clogs) and not far under it (weak, under-extracted coffee), and screwing the upper chamber onto
-the base until it is snug, so steam cannot escape at the gasket and the pot is safe to heat.
+the left of the stove, a glass carafe of water stands on the counter to the right, and the funnel basket, already
+filled with ground coffee, stands in an espresso cup behind it. Making moka coffee means filling the base with water up
+to just below the safety valve, never over it (the valve could then not vent the steam if the funnel clogs) and not
+far under it (weak, under-extracted coffee), dropping the filled basket into the base, and screwing the upper chamber
+onto the base until it is snug, so steam cannot escape at the gasket and the pot is safe to heat.
 """
 
 import math
@@ -16,6 +17,7 @@ import numpy as np  # noqa: E402
 import pourkit as pk  # noqa: E402  (the water: volumes, pours, spills)
 import twistkit as tk  # noqa: E402  (regrasp twist plans and the signed wrist-roll grip accounting reused below)
 import yamkit as kit  # noqa: E402  (modeled props, gripper states, tilted grips)
+import guardkit as gk  # noqa: E402  (gripper contact: holding and letting go)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN, PAD_TIP_PAST_TCP  # noqa: E402
 from yam_arena.demo import Waypoint  # noqa: E402
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
@@ -25,7 +27,6 @@ TOP = TABLE_TOP[SCENE]
 SUCCESS_HOLD_S = 1.0
 SCORE_OVER = "end"
 INSTRUCTION = "Get the moka pot ready to brew."
-REQUIRE_ARMS_HOME = True  # full score also needs both arms back where they started, still (see _arms_home)
 D = math.radians
 
 # Real size throughout (a 3-cup moka pot is 15.9 cm tall assembled).
@@ -35,9 +36,10 @@ PLATE = (0.14, 0.14, 0.004)
 GRATE_H = 0.014
 FLOOR_Z = TOP + PLATE[2] + GRATE_H  # the grate fingers' top: the pot's base stands here
 
-# The base (fixed on the grate: in a real kitchen the other hand steadies it): an aluminum water chamber 8.2 cm
-# across at the foot, 7.2 cm tall, tapering to a threaded collar 6.6 cm across. Heights are in its own frame (origin
-# on its foot, on its axis). Inside it steps in three times (cast wall); the water is modeled in these three sections.
+# The base (in a fixed holder on the grate, in the sim and the real build; in a kitchen the other hand steadies it):
+# an aluminum water chamber 8.2 cm across at the foot, 7.2 cm tall, tapering to a threaded collar 6.6 cm across.
+# Heights are in its own frame (origin on its foot, on its axis). Inside it steps in three times (cast wall); the
+# water is modeled in these three sections.
 B_FOOT_R, B_COLLAR_R, RIM = 0.041, 0.033, 0.072
 B_FLOOR = 0.004
 SECTIONS = ((0.036, 0.020), (0.033, 0.020), (0.031, 0.028))  # (inside radius, height) from the floor up
@@ -80,11 +82,34 @@ JUG_POS = (*JUG_XY, TOP + JUG_H / 2)
 FOOT = 0.001
 TOP_XY = (0.24, 0.19)
 
+# The funnel basket (free, 40 g: 25 g of stainless steel and 15 g of ground coffee), a stainless replacement funnel for
+# a 3-cup pot: a flange 6.5 cm across and 1.5 mm thick, a cup 6.1 cm across at the top tapering to 4.6 cm at its
+# perforated floor 2.0 cm down, and a stem 1.0 cm across and 3.8 cm long. Frame origin: the center of the flange's
+# bottom face, which rests on the base's rim when it is in (the upper chamber then sits on the flange, 1.5 mm higher).
+# The coffee is level with the flange.
+K_FLANGE_R, K_FLANGE_T = 0.0325, 0.0015
+K_TOP_R, K_FLOOR_R, K_DEPTH = 0.0305, 0.023, 0.020
+K_STEM_R, K_STEM_L = 0.005, 0.038
+# It starts standing in a ceramic espresso cup (5.4 cm across, 5.0 cm tall, 4.2 cm across inside its mouth): the
+# basket's floor rests on the cup's rim and its stem hangs inside, the way it is set down to be filled.
+CUP_XY, CUP_R, CUP_IN, CUP_H = (0.36, -0.07), 0.027, 0.021, 0.050
+BASKET_POS = (*CUP_XY, TOP + CUP_H + K_DEPTH + 0.0005)
+# The base's wall inside the collar, as 24 posts round the 6.2 cm opening (the cup and stem go down inside them, the
+# flange rests on their tops at the rim): center radius and post radius
+WALL_R, POST_R, N_POSTS = 0.0325, 0.0016, 24
+# The basket and the base's mouth are bare metal: they get METAL_MU (static, dynamic), a handbook dry value for steel
+# on aluminum (the stainless basket on the aluminum base), instead of yam_arena's rubber-like default (1.2, 1.0) for
+# things a gripper picks up. With the rubber value a basket dropped 14 degrees crooked wedged on the square-edged posts
+# that model the mouth, 7 mm up (sim runs); with this one it slides down flat.
+METAL_MU = (0.6, 0.47)
+
 ALU = kit.Look((0.78, 0.79, 0.80), 0.35, metallic=1.0)
 DARK_ALU = kit.Look((0.45, 0.46, 0.48), 0.5, metallic=1.0)
 BRASS = kit.Look((0.86, 0.66, 0.22), 0.3, metallic=1.0)
 BLACK = kit.Look((0.06, 0.06, 0.07), 0.5)
 IRON = kit.Look((0.12, 0.12, 0.13), 0.7)
+COFFEE = kit.Look((0.20, 0.12, 0.07), 0.9)
+CERAMIC = kit.Look((0.93, 0.92, 0.89), 0.25)
 STEEL = kit.Look((0.55, 0.56, 0.58), 0.35, metallic=1.0)
 GLASS_LOOK = kit.Look((0.86, 0.92, 0.95), 0.05, opacity=0.28)
 WATER_RGB = (0.25, 0.52, 0.95)
@@ -128,10 +153,15 @@ def _base():
               kit.cylinder((-xr - 0.009, 0, VALVE_Z), 0.002, 0.004, BRASS, axis="x"),
               # its bore inside the wall, a brass ring you see when you look into the base
               kit.cylinder((-SECTIONS[2][0] + 0.0004, 0, VALVE_Z), VALVE_BORE_R, 0.001, BRASS, axis="x")]
-    cols = [kit.Collider((0, 0, 0.015), radius=0.039, height=0.030),
-            kit.Collider((0, 0, (0.030 + RIM) / 2), radius=0.034, height=RIM - 0.030)]
+    # hollow, so the basket's cup and stem go down inside: a solid bottom 1 cm thick (the stem's end stops 2.5 mm
+    # over it), then the wall as posts up to the rim (the base is fixed, nothing else reaches inside)
+    cols = [kit.Collider((0, 0, 0.005), radius=0.039, height=0.010)]
+    for k in range(N_POSTS):
+        u = 2 * math.pi * k / N_POSTS
+        cols.append(kit.Collider((WALL_R * math.cos(u), WALL_R * math.sin(u), (0.010 + RIM) / 2), radius=POST_R,
+                                 height=RIM - 0.010))
     return kit.Prop("base", pos=(BX, BY, FLOOR_Z), size=(2 * B_FOOT_R, 2 * B_FOOT_R, RIM),
-                    meshes=tuple(meshes), colliders=tuple(cols))
+                    meshes=tuple(meshes), colliders=tuple(cols), friction=METAL_MU)
 
 
 def _top():
@@ -169,7 +199,34 @@ def _jug():
                                kit.Collider((0, 0, z0 + 0.002), size=(0.032, 0.032, 0.004))))
 
 
-OBJECTS = [_stove(), _base(), _top(), _jug()]
+def _basket():
+    f, d = K_FLANGE_T, K_DEPTH
+    prof = [(0.0, -d - K_STEM_L), (K_STEM_R, -d - K_STEM_L), (K_STEM_R, -d), (K_FLOOR_R, -d), (K_TOP_R, 0.0),
+            (K_FLANGE_R, 0.0), (K_FLANGE_R, f), (0.029, f), (0.029, f - 0.001), (0.0, f - 0.001)]
+    meshes = [kit.lathe(prof, ALU),
+              kit.cylinder((0, 0, f - 0.0008), 0.0288, 0.0012, COFFEE)]  # the ground coffee, level with the flange
+    # the tapered cup as two straight bands (its mean width over each), so a gripper's pads bear on a flat face
+    cols = [kit.Collider((0, 0, f / 2), radius=K_FLANGE_R, height=f),
+            kit.Collider((0, 0, -0.007), radius=0.028, height=0.014),
+            kit.Collider((0, 0, -0.017), radius=0.0245, height=0.006),
+            kit.Collider((0, 0, -d - K_STEM_L / 2), radius=K_STEM_R, height=K_STEM_L)]
+    return kit.Prop("basket", pos=BASKET_POS, size=(2 * K_FLANGE_R, 2 * K_FLANGE_R, d + K_STEM_L + f), mass=0.04,
+                    meshes=tuple(meshes), colliders=tuple(cols), friction=METAL_MU)
+
+
+def _cup():
+    h = CUP_H
+    prof = [(0.0, 0.0), (0.022, 0.0), (CUP_R, 0.006), (CUP_R, h), (CUP_IN, h), (CUP_IN, 0.008), (0.0, 0.008)]
+    cols = [kit.Collider((0, 0, 0.004), radius=CUP_R, height=0.008)]
+    for k in range(12):  # its wall as posts, so the stem hangs inside
+        u = 2 * math.pi * k / 12
+        cols.append(kit.Collider((0.024 * math.cos(u), 0.024 * math.sin(u), (0.008 + h) / 2), radius=0.003,
+                                 height=h - 0.008))
+    return kit.Prop("cup", pos=(*CUP_XY, TOP), size=(2 * CUP_R, 2 * CUP_R, h), meshes=(kit.lathe(prof, CERAMIC),),
+                    colliders=tuple(cols))
+
+
+OBJECTS = [_stove(), _base(), _top(), _jug(), _basket(), _cup()]
 
 
 def _rot(q):
@@ -204,9 +261,31 @@ def top_on(objects):
 
 
 def _lets_water_in(objects):
-    """The base's mouth is open unless the upper chamber sits over it (within 3 cm above the rim and 5 cm across)."""
-    d = np.asarray(objects["top"].pos, float) - _rim(objects)
-    return not (math.hypot(d[0], d[1]) < 0.05 and -0.005 < d[2] < 0.03)
+    """The base's mouth is open unless the upper chamber sits over it (within 3 cm above the rim and 5 cm across), or
+    the basket is in it or just over it: a stream then lands on the grounds and runs off over the rim (spilled)."""
+    rim = _rim(objects)
+    d = np.asarray(objects["top"].pos, float) - rim
+    k = np.asarray(objects["basket"].pos, float) - rim
+    return not ((math.hypot(d[0], d[1]) < 0.05 and -0.005 < d[2] < 0.03)
+                or (math.hypot(k[0], k[1]) < 0.035 and -0.01 < k[2] < 0.04))
+
+
+# The basket is in: its flange's bottom within 2 mm of the rim (resting on it, not propped on something), its axis
+# within 4 mm of the base's (the modeled cup, a band 5.6 cm across, can sit 2.9 mm off center in the 6.2 cm opening)
+# and within 5 degrees of it.
+SEAT_DZ, SEAT_DXY, SEAT_TILT = 0.002, 0.004, 5.0
+COFFEE_TIP = 45.0  # degrees: tipped further, the grounds slide out of a 2 cm deep cup filled to its brim
+
+
+def _tilt_deg(q, ref=(0.0, 0.0, 1.0)):
+    return math.degrees(math.acos(max(-1.0, min(1.0, float(_rot(q)[:, 2] @ np.asarray(ref, float))))))
+
+
+def basket_seated(objects):
+    k, b = objects["basket"], objects["base"]
+    d = np.asarray(k.pos, float) - _rim(objects)
+    return (abs(d[2]) < SEAT_DZ and math.hypot(d[0], d[1]) < SEAT_DXY
+            and _tilt_deg(k.quat_xyzw, _rot(b.quat_xyzw)[:, 2]) < SEAT_TILT)
 
 
 pk.setup([pk.Vessel("base", sections=SECTIONS, floor=B_FLOOR, fill={}, accepts=_lets_water_in),
@@ -215,34 +294,41 @@ pk.setup([pk.Vessel("base", sections=SECTIONS, floor=B_FLOOR, fill={}, accepts=_
 pk.set_floor(TOP)
 
 # Scoring
-SNUG_MIN, SNUG_MAX = 450.0, 720.0  # degrees of screwing (see README: catch to gasket is 1.25 turns; past 2 turns a
-# real thread has stopped, so a top that kept turning was not biting: cross-threaded or stripped)
+SEAT = 450.0  # degrees of screwing from sitting on the collar to the gasket meeting the filter plate (a 3-cup pot's
+#               1.25 turns, see README): snug is reaching this seat by the gripper's own turning
+STOP = SEAT + 90.0  # degrees: the thread's hard stop, a quarter turn of gasket squeeze past the seat (model choice);
+#                    the upper chamber turns no further clockwise on the base, so it cannot be over-turned
 SPILL_MAX = 5.0  # mL, a teaspoon on the stove
 UPRIGHT = 10.0  # degrees
-BASE_MOVED = 0.02  # m: the base more than 2 cm off the burner's center is off the grate
-HOLD_R, HOLD_OPEN = 0.07, 0.6  # a gripper holds the carafe: tool point within 7 cm and fingers under 60 % open
-HOME_TOL, HOME_STILL = 0.03, 0.002
 GRIPPERS = ("left_gripper", "right_gripper")
 HOLD_MIN = 0.45  # the pads squeeze the 7 cm body to a reading of 0.55-0.65 in the sim (0.74 nominal)
 DEBT_MAX = D(720)  # counterclockwise wrist roll kept as debt against later credit (see _account)
 
 
+# Contact is judged with the gripper's own shape (palm and both fingers at their present opening, guardkit boxes fitted
+# to the simulator's collision meshes) against these shapes in each object's frame: within 2 mm counts as touching
+# (the solver's resting gap plus the box fit), so a hand hovering near a part is not on it.
+TOP_SHAPE = (gk.Ring(0.0, T_R, 0.0, 0.040), gk.Ring(0.0, T_TOP_R, 0.040, T_H),  # the lower and upper body
+             gk.Ring(SKIRT_IN, SKIRT_OUT, -COLLAR_H, 0.0),  # the skirt
+             gk.Seg((0.0, 0.0, T_H), (0.0, 0.0, T_H + 0.010), 0.008),  # the lid knob
+             *[gk.Block((math.cos(HANDLE_ANG) * (0.046 + 0.010 * k), math.sin(HANDLE_ANG) * (0.046 + 0.010 * k),
+                         0.060 - 0.012 * k), (0.012, 0.012, 0.022)) for k in range(3)])  # the handle
+JUG_SHAPE = gk.Ring(0.0, JUG_R, -JUG_H / 2, JUG_H / 2)
+
+
 def top_held_by(objects, g):
-    """Fingers closed on the upper chamber: opening between HOLD_MIN and its 7 cm width + 3 % (stopped by its body: an
-    empty closed hand reads 0, an open one 1), the tool point within 1.5 cm of its axis and at its grip band."""
+    """Fingers closed on the upper chamber: the gripper touching it (guardkit contact) with an opening between
+    HOLD_MIN and its 7 cm width + 3 %, i.e. stopped by its body (an empty closed hand reads 0, an open one 1)."""
     if g not in objects:
         return False
     t = objects["top"]
     r = _rot(t.quat_xyzw)
-    d = np.asarray(objects[g].pos, float) - np.asarray(t.pos, float)
-    along = float(d @ r[:, 2])
-    across = float(np.linalg.norm(d - along * r[:, 2]))
-    # the body is 7 cm across up to 4 cm up and the upper body 8 cm above that: the fingers' stop follows the width
-    # at the grip's height, so a grip anywhere on the chamber's side counts (up to its full height)
+    along = float((np.asarray(objects[g].pos, float) - np.asarray(t.pos, float)) @ r[:, 2])
+    # the body is 7 cm across up to 4 cm up and 8 cm above that: the fingers' stop follows the width at the grip's
+    # height, so a grip anywhere on the chamber's side counts
     want = (T_WIDTH if along <= 0.040 else 2 * T_TOP_R) / (2 * abs(FINGER_OPEN))
     op = kit.opening(objects, g)
-    return (HOLD_MIN <= op <= want + tk.HOLD_OVER and across < tk.HOLD_AXIS
-            and 0.005 <= along <= T_H)
+    return HOLD_MIN <= op <= want + tk.HOLD_OVER and bool(gk.touching(objects, "top", TOP_SHAPE, grippers=(g,)))
 
 
 def top_held(objects):
@@ -257,13 +343,15 @@ class _History:
         self.on = False  # the upper chamber was on the thread (engaged) at the last step
         self.rel = 0.0  # its yaw relative to the base at the last step
         self.screwed = 0.0  # rad screwed on (clockwise seen from above) with a gripper's own roll, since it went on
+        self.turned = 0.0  # rad it has turned clockwise on the base since it went on, however (the thread's position)
         self.unheld = 0.0  # rad it turned on the base without that credit (knocked, swiped, dragged)
+        self.reached = False  # a gripper's own turning has brought it down to the seat since it went on
         self.budget = 0.0  # signed wrist roll not yet matched by the top (twistkit's roll budget)
         self.yaw_last = {}
         self.was_held = False
-        self.home = None
-        self.last = None
-        self.still = False
+        self.under = False  # the basket was in the base when the upper chamber last went on
+        self.tipped = 0  # consecutive steps the basket has been tipped past COFFEE_TIP
+        self.coffee_lost = None  # where the grounds fell out (latched), else None
 
 
 _H = _History()
@@ -292,10 +380,14 @@ def _account(objects):
     rel = _yaw(objects["top"].quat_xyzw) - _yaw(objects["base"].quat_xyzw)
     yaws = {g: tk._grip_yaw(objects[g]) for g in GRIPPERS if g in objects}
     holder = next((g for g in GRIPPERS if top_held_by(objects, g)), None)
+    if eng and not _H.on:  # it just went on: was the basket already in under it?
+        _H.under = basket_seated(objects) and _H.coffee_lost is None
     if eng and _H.on:
         du = -tk._wrap(rel - _H.rel)  # clockwise seen from above = tightening
         g = holder or _H.was_held
         credit = 0.0
+        if not (_H.under and basket_seated(objects)):
+            g = None  # screwing counts only with the basket in under it, put in before the top went on
         if g and g in yaws and g in _H.yaw_last:
             _H.budget += tk.ROLL_GAIN * -tk._wrap(yaws[g] - _H.yaw_last[g])
             if du * _H.budget > 0:
@@ -311,24 +403,135 @@ def _account(objects):
             credit = du  # loosening counts whoever does it
         _H.screwed += credit
         _H.unheld += abs(du - credit)
+        _H.turned += du
     elif not eng:
-        _H.screwed, _H.budget = 0.0, 0.0
+        _H.screwed, _H.budget, _H.turned, _H.reached = 0.0, 0.0, 0.0, False
+    _H.reached = _H.reached or (eng and _H.screwed >= math.radians(SEAT))
+    # past the seat (the stop is then within 90 degrees): the stop's relative yaw, handed to the physics-step hook,
+    # which also holds the top on its seat from the first step it is down on the base there
+    seated = eng and _H.turned > math.radians(SEAT)
+    _STOP["yaw"] = rel - (math.radians(STOP) - _H.turned) if seated else None
+    _STOP["seat"] = seated and (on or _STOP["seat"])
     _H.on, _H.rel = eng, rel
     _H.was_held = holder
     _H.yaw_last = yaws
+
+
+def _watch_coffee(objects):
+    """The grounds fall out if the basket is tipped past 45 degrees for two steps running (one step is a physics pop);
+    latched, with where they fell."""
+    k = objects["basket"]
+    _H.tipped = _H.tipped + 1 if _tilt_deg(k.quat_xyzw) > COFFEE_TIP else 0
+    if _H.tipped >= 2 and _H.coffee_lost is None:
+        _H.coffee_lost = (float(k.pos[0]), float(k.pos[1]))
 
 
 def _update(objects):
     global _H
     if _H.episode != kit.episode():
         _H = _History()
+        _clear_stop()
+    _watch_coffee(objects)
     _account(objects)
-    now = {g: np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects}
-    if _H.home is None and len(now) == 2:
-        _H.home = now
-    _H.still = _H.last is not None and all(g in _H.last and np.linalg.norm(now[g] - _H.last[g]) < HOME_STILL
-                                           for g in now)
-    _H.last = now
+
+
+# --- The thread's stop and seat. There is no modeled thread (the upper chamber is a free body on the collar), so the
+# sim applies what the thread does once the top is screwed down to the seat (the gasket on the filter plate): before
+# every physics step (240 Hz) a hook holds the top where it sat down on the seat, on the base's axis and level with
+# it, free only to turn about that axis (a seated thread lets it turn, not lift, tip or slide), and turns it back to
+# the hard stop if it has gone past it clockwise, taking away its clockwise spin there. Turned back counterclockwise
+# off the seat, the hold lets go. The scorer (20 Hz) says when the top is seated and where the stop is.
+_STOP = {"yaw": None, "seat": False, "pose": None}  # the stop's relative yaw (rad) past the seat, else None; whether
+#   the top is seated; and its pose (position, quaternion) on the seat, taken by the hook when it first sees it seated
+
+
+def _clear_stop() -> None:
+    _STOP.update(yaw=None, seat=False, pose=None)
+
+
+def _hold_at_stop(base) -> None:
+    if not _STOP["seat"]:
+        _STOP["pose"] = None
+    if _STOP["yaw"] is None:
+        return
+    import torch
+
+    t = lambda a: getattr(a, "torch", a)  # noqa: E731
+    top, bas = base.scene["top"], base.scene["base"]
+    pose = t(top.data.root_link_pose_w)[0].clone()  # (x, y, z, then the quaternion x, y, z, w)
+    q = t(top.data.root_link_quat_w)[0].detach().cpu().numpy().astype(np.float64)
+    qb = t(bas.data.root_link_quat_w)[0].detach().cpu().numpy().astype(np.float64)
+    if _STOP["seat"] and _STOP["pose"] is None:  # it has just come down on the seat: there the thread holds it
+        _STOP["pose"] = (pose[:3].clone(), q.copy())
+    past = -tk._wrap(_yaw(q) - _yaw(qb) - _STOP["yaw"])  # clockwise past the stop (rad)
+    vel = t(top.data.root_com_vel_w)[0].clone()  # (vx, vy, vz, wx, wy, wz)
+    if _STOP["pose"] is not None:  # on the seat: back where it sat, turned only about the vertical (and not past the
+        #                            stop), with no sliding, lifting or tipping
+        pos0, q0 = _STOP["pose"]
+        h = tk._wrap(_yaw(q) - _yaw(q0) + max(past, 0.0)) / 2
+        pose[:3] = pos0
+        pose[3:7] = torch.tensor(kit._quat_mul(np.array([0.0, 0.0, math.sin(h), math.cos(h)]), q0),
+                                 dtype=pose.dtype, device=pose.device)
+        top.write_root_pose_to_sim_index(root_pose=pose[None])
+        vel[0:5] = 0.0
+    elif past > 0.0:  # past the seat but not down on the base (crooked): only turned back to the stop
+        h = past / 2
+        pose[3:7] = torch.tensor(kit._quat_mul(np.array([0.0, 0.0, math.sin(h), math.cos(h)]), q),
+                                 dtype=pose.dtype, device=pose.device)
+        top.write_root_pose_to_sim_index(root_pose=pose[None])
+    if past > -0.01:  # at the stop: no clockwise spin (clockwise seen from above is -z)
+        vel[5] = max(float(vel[5]), 0.0)
+    top.write_root_velocity_to_sim_index(root_velocity=vel[None])
+
+
+def _hook_physics() -> None:
+    try:
+        from yam_arena import inspect_embodiment as ie
+    except Exception:  # noqa: BLE001  (offline: no embodiment)
+        return
+    cls = ie.YamArenaEmbodiment
+    if getattr(cls, "_moka_stop", False):
+        return
+    cls._moka_stop = True
+    ensure = cls._ensure_sim
+
+    def _ensure_sim(self, *a, **k):
+        ensure(self, *a, **k)
+        env = self._env
+        if env is None:
+            return
+        isc = env.unwrapped.scene
+        if getattr(isc, "_moka_stop", False):
+            return
+        write = isc.write_data_to_sim
+
+        def write_data_to_sim(*wa, **wk):
+            try:
+                _hold_at_stop(env.unwrapped)
+            except Exception as e:  # noqa: BLE001
+                if not _STOP.get("failed"):
+                    print(f"moka: thread stop off ({e!r})", file=sys.stderr, flush=True)
+                _STOP["failed"] = True
+            return write(*wa, **wk)
+
+        isc.write_data_to_sim, isc._moka_stop = write_data_to_sim, True
+        base, reset = env.unwrapped, env.unwrapped.reset
+
+        def reset_and_clear(*ra, **rk):  # a new trial: no seat or stop left over from the last one
+            _clear_stop()
+            return reset(*ra, **rk)
+
+        base.reset = reset_and_clear
+
+    cls._ensure_sim = _ensure_sim
+
+
+_hook_physics()
+
+
+def basket_ok(objects):
+    """The basket in the base with its coffee still in it."""
+    return basket_seated(objects) and _H.coffee_lost is None
 
 
 def screwed_deg():
@@ -336,99 +539,128 @@ def screwed_deg():
 
 
 def screwed_snug(objects):
-    """On the base and screwed 450 to 720 degrees (1.25 to 2 turns) by a gripper's own roll."""
-    return top_on(objects) and SNUG_MIN <= screwed_deg() <= SNUG_MAX
-
-
-def _arms_home(objects):
-    if _H.home is None or not _H.still:
-        return False
-    return all(g in objects and np.linalg.norm(np.asarray(objects[g].pos) - _H.home[g]) < HOME_TOL for g in GRIPPERS)
+    """On the base and screwed down to the seat (450 degrees, 1.25 turns, the gasket on the filter plate) by a gripper's
+    own roll, with the basket in under it before it went on, and still at or past the seat: turned back
+    counterclockwise off the seat (by anything) it is loose again, while a few degrees of give at the stop (the
+    fingers letting go of a top they pressed against it, the next stroke turning it back) leave it snug. The thread's stop (_hold_at_stop) keeps it from turning more than a
+    quarter turn past the seat."""
+    return top_on(objects) and _H.under and _H.reached and math.degrees(_H.turned) >= SEAT
 
 
 def _jug_held(objects):
-    s = objects["jug"]
-    return any(g in objects and kit.opening(objects, g) < HOLD_OPEN
-               and np.linalg.norm(np.asarray(objects[g].pos) - np.asarray(s.pos)) < HOLD_R for g in GRIPPERS)
+    """A gripper still touching the carafe (guardkit contact, within 2 mm)."""
+    return bool(gk.touching(objects, "jug", JUG_SHAPE))
 
 
 def _put_away(objects):
-    """The carafe upright, let go and off the stove plate; the base upright on the grate; nothing holding the pot."""
-    j, b = objects["jug"], objects["base"]
+    """The carafe upright, let go and off the stove plate; nothing holding the pot (the base is held in a fixed holder
+    on the grate, so it cannot be knocked over)."""
+    j = objects["jug"]
     jug_ok = (pk.tilt(objects, "jug") < UPRIGHT and not _jug_held(objects)
               and not (abs(j.pos[0] - BX) < PLATE[0] / 2 and abs(j.pos[1] - BY) < PLATE[1] / 2))
-    base_ok = pk.tilt(objects, "base") < UPRIGHT and math.hypot(b.pos[0] - BX, b.pos[1] - BY) < BASE_MOVED
-    return jug_ok and base_ok and not top_held(objects) and not _hand_on_top(objects)
-
-
-LET_GO = 0.015  # m: at the end no closed hand within 1.5 cm of the upper chamber's outline (the lid knob included)
+    return jug_ok and not top_held(objects) and not _hand_on_top(objects)
 
 
 def _hand_on_top(objects):
-    """A gripper with its fingers closed (under HOLD_OPEN) and its tool point within LET_GO of the upper chamber's
-    bounding box: still holding the pot, by its body, its lid knob or anywhere else."""
-    t = objects["top"]
-    lo, hi = np.asarray(t.low, float) - LET_GO, np.asarray(t.high, float) + LET_GO
-    knob = np.asarray(t.pos, float) + _rot(t.quat_xyzw) @ np.array([0.0, 0.0, T_H + 0.005])  # the lid knob's center
-    for g in GRIPPERS:
-        if g not in objects or kit.opening(objects, g) >= HOLD_OPEN:
-            continue
-        p = np.asarray(objects[g].pos, float)
-        if (np.all(p >= lo) and np.all(p <= hi)) or np.linalg.norm(p - knob) < 0.008 + LET_GO:
-            return True
-    return False
+    """A gripper (palm or either finger) still touching the upper chamber anywhere: its body, skirt, lid knob or
+    handle (guardkit contact, within 2 mm)."""
+    return bool(gk.touching(objects, "top", TOP_SHAPE))
+
+
+# The grounds, once fallen out, are drawn for the cameras: a disc of bare steel over the coffee in the basket and a
+# brown patch where they fell (Isaac Lab visualization markers, drawn after pourkit's water; no physics).
+_CV = {"markers": None, "failed": False}
+
+
+def _coffee_markers():
+    if _CV["markers"] is None and not _CV["failed"]:
+        try:
+            import isaaclab.sim as sim_utils
+            from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+
+            def disc(look):
+                mat = sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(kit._linear(c) for c in look.color),
+                                                  roughness=look.roughness, metallic=look.metallic)
+                return sim_utils.CylinderCfg(radius=1.0, height=1.0, axis="Z", visual_material=mat)
+            _CV["markers"] = VisualizationMarkers(VisualizationMarkersCfg(
+                prim_path="/World/Visuals/moka_coffee", markers={"bare": disc(ALU), "grounds": disc(COFFEE)}))
+        except Exception as e:  # noqa: BLE001  (visuals are optional: scoring never depends on them)
+            print(f"moka: no coffee visuals ({e!r})", file=sys.stderr, flush=True)
+            _CV["failed"] = True
+    return _CV["markers"]
+
+
+def _draw_coffee(objects, origin):
+    lost = _H.coffee_lost if _H.episode == kit.episode() else None
+    if lost is None and _CV["markers"] is None:
+        return  # nothing to draw yet (markers are made on the first spill, so the first frames are untouched)
+    m = _coffee_markers()
+    if m is None:
+        return
+    hide = ((0.0, 0.0, -10.0), (0, 0, 0, 1), (1e-5, 1e-5, 1e-5))
+    if lost is None:
+        items = [hide, hide]
+    else:
+        k = objects["basket"]
+        top = np.asarray(k.pos, float) + _rot(k.quat_xyzw) @ np.array([0.0, 0.0, K_FLANGE_T - 0.0001])
+        on_plate = abs(lost[0] - BX) < PLATE[0] / 2 and abs(lost[1] - BY) < PLATE[1] / 2
+        z = TOP + (PLATE[2] if on_plate else 0.0) + 0.0005
+        items = [(tuple(top), tuple(float(q) for q in k.quat_xyzw), (0.0292, 0.0292, 0.0006)),
+                 ((lost[0], lost[1], z), (0, 0, 0, 1), (0.035, 0.028, 0.001))]
+    m.visualize(translations=np.array([np.asarray(p, float) + origin for p, _, _ in items]),
+                orientations=np.array([q for _, q, _ in items], float),
+                scales=np.array([sc for _, _, sc in items], float), marker_indices=np.array([0, 1]))
+
+
+_pk_draw = pk._draw
+
+
+def _draw_all(objects, origin):
+    _pk_draw(objects, origin)
+    try:
+        _draw_coffee(objects, origin)
+    except Exception as e:  # noqa: BLE001  (never let the visuals break a run)
+        if not _CV["failed"]:
+            print(f"moka: coffee visuals off ({e!r})", file=sys.stderr, flush=True)
+        _CV["failed"] = True
+
+
+pk._draw = _draw_all
 
 
 def _job(objects):
     water = pk.volume(objects, "base")
     if water > VALVE_ML or water < DRY_ML:
         return 0.0
-    snug = screwed_snug(objects)
-    if water < LOW_ML and not snug:  # a short pour and no top on: neither half done, no credit for a dribble
-        return 0.0
-    if water < LOW_ML or not snug:
+    basket, snug = basket_ok(objects), screwed_snug(objects)
+    if water < LOW_ML:  # weak coffee: some credit only if the pot is otherwise put together
+        return 0.25 if basket and snug else 0.0
+    if not basket:
         return 0.25
-    if pk.spilled(objects) > SPILL_MAX or not _put_away(objects):
+    if not snug:
         return 0.5
+    if pk.spilled(objects) > SPILL_MAX or not _put_away(objects):
+        return 0.75
     return 1.0
 
 
-def _debug(objects):
-    if os.environ.get("MOKA_DEBUG"):
-        t, b = objects["top"], objects["base"]
-        d = np.asarray(t.pos, float) - _rim(objects)
-        g = objects.get("left_gripper")
-        print("MOKA", pk.step(), "water", round(pk.volume(objects, "base"), 1), "jug",
-              round(pk.volume(objects, "jug"), 1), "spill", round(pk.spilled(objects), 1),
-              "top-rim mm", np.round(d * 1000, 1), "on", top_on(objects), "held", top_held(objects),
-              "screwed", round(screwed_deg(), 1), "unheld", round(math.degrees(_H.unheld), 1),
-              "yaw", round(math.degrees(_yaw(t.quat_xyzw)), 1),
-              "tilt", round(math.degrees(math.acos(min(1.0, float(_rot(t.quat_xyzw)[2, 2])))), 1),
-              "left", None if g is None else np.round(np.asarray(g.pos) - [0, 0, TOP], 4),
-              "open", None if g is None else round(kit.opening(objects, "left_gripper"), 3), flush=True)
-
-
 def success(objects):
-    """The job done and, with REQUIRE_ARMS_HOME, both arms home and still. Called first each step, so it also records
-    the history."""
+    """The job done; where the arms end up is not scored. Called first each step, so it also records the history."""
     _update(objects)
-    _debug(objects)
-    return _job(objects) == 1.0 and (_arms_home(objects) or not REQUIRE_ARMS_HOME)
+    return _job(objects) == 1.0
 
 
 def score(objects):
-    """0 with more than 155.8 mL in the base at the end (water above the bottom of the safety valve's bore) or under
-    30 mL (nothing to brew; includes doing nothing), and with 30 to 122.5 mL when the top is not screwed snug either.
-    0.25 with 30 to 122.5 mL (more than 1 cm under the valve: weak coffee) and the top snug, or with the base filled
-    between the lines and the upper chamber not screwed snug: not on the base (bottom within 4 mm of the rim, axis
-    within 4 mm and 4 degrees of the base's), or screwed on by a gripper's own wrist roll less than 450 or more than
-    720 degrees since it went on. 0.5 with more than 5 mL spilled, the carafe not set down upright, let go and off the
-    stove, the base knocked over or off the grate (over 10 degrees, over 2 cm), or a gripper still holding the upper
-    chamber. 1.0 otherwise with both arms home and still; 0.9 if not. Possible scores: 0, 0.25, 0.5, 0.9, 1."""
-    job = _job(objects)
-    if job == 1.0 and REQUIRE_ARMS_HOME and not _arms_home(objects):
-        return 0.9
-    return job
+    """0 with more than 155.8 mL in the base at the end (water above the bottom of the safety valve's bore) or under 30
+    mL (nothing to brew; includes doing nothing), and with 30 to 122.5 mL unless the pot is otherwise ready (then
+    0.25: weak coffee). With the base filled between the lines: 0.25 if the basket is not in it with its coffee
+    (flange within 2 mm of the rim, axis within 4 mm and 5 degrees; tipped past 45 degrees on the way, the grounds
+    fell out); 0.5 if the upper chamber is not screwed snug over it (on the base, put on after the basket went in and
+    turned clockwise to the seat, 450 degrees, by a gripper's own wrist roll since; a hard stop 90 degrees past the
+    seat keeps it from turning further); 0.75 with more than 5 mL spilled, the carafe not set down upright, let go
+    and off the stove, or a gripper still touching the upper chamber. 1.0 otherwise. Possible scores: 0, 0.25, 0.5,
+    0.75, 1."""
+    return _job(objects)
 
 
 # --- Demo
@@ -436,7 +668,8 @@ YAW, ROLL = math.pi / 2, 1.35  # the right hand comes in from -y, fingers closin
 GRIP_Z = 0.065
 LIP_ABOVE = 0.05
 POUR_PITCH = 1.40  # rad: tuned in the sim so the base ends between the lines (see README)
-TWIST_DEG = 630.0  # 7 strokes of 90 degrees; the pads slip a little: the top turns about 615 (run 7: 87.9 a stroke)
+TWIST_DEG = 630.0  # up to 7 strokes of 90 degrees; the pads slip a little (about 86 degrees a stroke), so the run
+# ends in success after the sixth, with the top screwed about 514 degrees
 STROKE = 90.0  # a 90-degree stroke keeps the handle 45 degrees off the fingers at every regrasp
 
 
@@ -458,9 +691,52 @@ def pour_plan(pitch=POUR_PITCH):
              t(1.2, (sx, sy, gz + 0.003), FINGER_CLOSED, "set down"),
              t(1.0, (sx, sy, gz + 0.003), FINGER_OPEN, "let go"),
              t(1.0, (sx, sy - 0.06, gz + 0.016), FINGER_OPEN, "back out"),
-             t(1.0, (sx, sy - 0.10, gz + 0.08), FINGER_OPEN, "up and away"),
-             kit.Home(2.0), kit.Home(1.5, label="hold at home")]
+             t(1.0, (sx, sy - 0.10, gz + 0.08), FINGER_OPEN, "up and away")]
     return plan
+
+
+# The basket: gripped straight down across its cup (tool point 7.5 mm under the flange, the pad tips level with the
+# cup's floor), carried over the base and let go with the flange 3.2 cm over the rim, the cup's floor 1.2 cm over it
+# and its stem already inside; the tapered cup centers itself as it drops.
+K_GRIP_DZ = -0.0075
+K_RELEASE = 0.032
+# The fingers close along the carry from the cup to the base (toward -x and +y, 45 degrees off each): a pinched basket
+# swings about the line through the two pads, so a carry across that line tipped it 13 degrees in the grip (sim runs).
+K_YAW = math.pi / 4
+# In the grip the basket sits 1.5 cm off the tool point along the fingers' line: the first finger to touch it pushes it
+# along until its stem meets the espresso cup's wall, and the two pads then hold it wherever it is. Opened all at once,
+# the fingers flick it back toward the tool point and it lands crooked on the rim (sim runs). So the tool point is
+# carried over the base's axis and the grip is eased in two steps: the basket slides back between the pads to the axis,
+# still held, and then drops in level.
+
+
+def basket_plan():
+    kx, ky, kz = BASKET_POS
+    gz = kz + K_GRIP_DZ
+    rz = FLOOR_Z + RIM + K_RELEASE + K_GRIP_DZ
+    travel = TOP + 0.20
+    y = K_YAW
+    return [Waypoint(2.0, (kx, ky, travel), FINGER_OPEN, "over the basket", y),
+            Waypoint(1.5, (kx, ky, gz + 0.03), FINGER_OPEN, "down to it", y),
+            Waypoint(1.0, (kx, ky, gz), FINGER_OPEN, "around the cup", y),
+            Waypoint(1.0, (kx, ky, gz), FINGER_CLOSED, "grip the basket", y),
+            Waypoint(1.5, (kx, ky, rz + 0.06), FINGER_CLOSED, "lift it out of the cup", y),
+            Waypoint(3.5, (BX, BY, rz + 0.06), FINGER_CLOSED, "over the base", y),
+            Waypoint(1.0, (BX, BY, rz + 0.06), FINGER_CLOSED, "let it stop swinging", y),
+            Waypoint(2.0, (BX, BY, rz), FINGER_CLOSED, "stem into the base", y),
+            Waypoint(0.8, (BX, BY, rz), FINGER_CLOSED, "steady", y),
+            Waypoint(1.0, (BX, BY, rz), 0.35 * FINGER_OPEN, "ease the grip", y),
+            Waypoint(1.0, (BX, BY, rz), 0.45 * FINGER_OPEN, "let it slide over the axis", y),
+            Waypoint(0.6, (BX, BY, rz), FINGER_OPEN, "let it drop in", y),
+            Waypoint(1.0, (BX, BY, rz + 0.06), FINGER_OPEN, "up off it", y)]
+
+
+def right_plan():
+    """Pour, set the carafe down, then put the basket in; returns the plan and when the right hand is clear of the
+    base (s)."""
+    plan = pour_plan() + basket_plan()
+    clear = sum(w.duration for w in plan)
+    return plan + [kit.Home(2.0), kit.Home(1.5, label="hold at home")], clear
 
 
 # Measured in the sim (demo runs): with a straight-down grip over the base the left arm's tool point settles about
@@ -533,14 +809,16 @@ def left_plan(wait):
     tx, ty = TOP_XY
     gz = TOP + COLLAR_H + 0.0005 + GRIP_DZ
     cx, cy = _about_axis(0.0)
-    seat_gz = FLOOR_Z + RIM + GRIP_DZ - PRESS
+    seat_gz = FLOOR_Z + RIM + K_FLANGE_T + GRIP_DZ - PRESS  # the top sits on the basket's flange
     plan = [Waypoint(2.0, (tx, ty, gz + 0.10), FINGER_OPEN, "over the upper chamber", 0.0),
             Waypoint(1.0, (tx, ty, gz + 0.10), FINGER_OPEN, "steady", 0.0),
             Waypoint(2.0, (tx, ty, gz), FINGER_OPEN, "around it", 0.0),
             Waypoint(0.8, (tx, ty, gz), FINGER_CLOSED, "grip", 0.0),
             Waypoint(1.2, (tx, ty, seat_gz + 0.03), FINGER_CLOSED, "lift", 0.0)]
-    plan.append(Waypoint(max(0.5, wait - sum(w.duration for w in plan)), (tx, ty - 0.03, seat_gz + 0.03),
-                         FINGER_CLOSED, "hold it while the base is filled", 0.0))
+    # held 2 cm further back and to the left than where it stood: nearer, the right arm reaching over the base with the
+    # basket brushed the held chamber and was pushed 3 cm off the base's axis (sim runs)
+    plan.append(Waypoint(max(0.5, wait - sum(w.duration for w in plan)), (tx - 0.02, ty + 0.02, seat_gz + 0.03),
+                         FINGER_CLOSED, "hold it aside while the base is filled", 0.0))
     plan += [Waypoint(2.0, (cx, cy, seat_gz + 0.03), FINGER_CLOSED, "over the base", 0.0),
              Waypoint(1.5, (cx, cy, seat_gz + 0.016), FINGER_CLOSED, "lower to the collar", 0.0),
              Waypoint(1.0, (cx, cy, seat_gz + 0.016), FINGER_CLOSED, "settle", 0.0),
@@ -556,9 +834,8 @@ def left_plan(wait):
 
 
 def demo():
-    """The right arm pours from the carafe into the base, tipping it about its lip 5 cm over the rim, and sets it back
-    down. The left arm then sets the upper chamber on the base and screws it on with seven 90-degree wrist strokes,
-    and both go home."""
-    right = pour_plan()
-    wait = sum(w.duration for w in right[:-6])  # the carafe is back over its spot, clear of the base
-    return {"right": right, "left": left_plan(wait)}
+    """The right arm pours from the carafe into the base, tipping it about its lip 5 cm over the rim, sets it back
+    down, then lifts the basket out of its cup and drops it into the base. The left arm then sets the upper chamber on
+    the base and screws it on with 90-degree wrist strokes (up to seven); once it is snug and let go the run ends."""
+    right, clear = right_plan()
+    return {"right": right, "left": left_plan(clear)}

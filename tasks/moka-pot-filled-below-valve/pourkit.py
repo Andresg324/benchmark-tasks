@@ -438,10 +438,6 @@ def _patch(scene) -> None:
         if key[1] is None or key != last["key"]:  # once per control step
             last["key"] = key
             update(out)
-            if os.environ.get("POURKIT_DEBUG"):
-                print("pourkit", _S.step, {n: round(_S.tilt.get(n, 0), 1) for n in _CFG["vessels"]},
-                      {n: {k: round(q, 1) for k, q in c.items()} for n, c in _S.contents.items()},
-                      {k: round(q, 1) for k, q in _S.spilled.items()}, flush=True)
             try:
                 _draw(out, base.scene.env_origins[0].detach().cpu().numpy())
             except Exception as e:  # noqa: BLE001  (never let the visuals break a run)
@@ -458,6 +454,63 @@ class _Hook(kit._Hook):
         self._inner.exec_module(module)
         kit._patch(module)
         _patch(module)
+
+
+# -- draw the starting contents right after each scene reset, before the first rendered frame -----
+# (object_states only runs after a step, so without this the first frames show the vessels empty: pop-in)
+
+
+def _draw_start(env) -> None:
+    from types import SimpleNamespace
+    global _S
+    base = env.unwrapped
+    origin = base.scene.env_origins[0].detach().cpu().numpy()
+    objs = {}
+    for n in _CFG["vessels"]:
+        try:
+            pose = base.arena_world.get_pose_w(n)[0].detach().cpu().numpy().astype(np.float64)
+        except Exception:  # noqa: BLE001
+            continue
+        objs[n] = SimpleNamespace(pos=pose[:3] - origin, quat_xyzw=pose[3:])
+    keep, _S = _S, _State()
+    try:
+        _draw(objs, origin)
+    finally:
+        _S = keep  # the trial state is untouched
+
+
+def _patch_embodiment() -> None:
+    try:
+        from yam_arena import inspect_embodiment as ie
+    except Exception:  # noqa: BLE001  (offline: no embodiment)
+        return
+    cls = ie.YamArenaEmbodiment
+    if getattr(cls, "_pourkit_start", False):
+        return
+    cls._pourkit_start = True
+    ensure = cls._ensure_sim
+
+    def _ensure_sim(self, *a, **k):
+        ensure(self, *a, **k)
+        env = self._env
+        if env is None or getattr(env, "_pourkit_reset", False):
+            return
+        reset = env.reset
+
+        def reset_and_draw(*ra, **rk):
+            out = reset(*ra, **rk)
+            try:
+                _draw_start(env)
+            except Exception as e:  # noqa: BLE001  (never let the visuals break a run)
+                print(f"pourkit: no start visuals ({e!r})", file=sys.stderr, flush=True)
+            return out
+
+        env.reset, env._pourkit_reset = reset_and_draw, True
+
+    cls._ensure_sim = _ensure_sim
+
+
+_patch_embodiment()
 
 
 if "yam_arena.scene" in sys.modules:

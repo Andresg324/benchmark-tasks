@@ -160,7 +160,8 @@ class Prop(Box):
     """A modeled object. `pos`, `yaw`, `mass` and `name` work as for `Box`; `size` should bound the colliders (yam_arena
     checks it, and scorers can use it). `meshes` are what the cameras see and `colliders` what the physics touches,
     both in the prop's own frame with its origin at `pos`. `tilt_xyzw` turns the whole prop before `yaw` (for a part
-    that starts leaning).
+    that starts leaning). `friction` (static, dynamic) replaces yam_arena's rubber-like default (1.2, 1.0) for a bare
+    metal part that should slide; PhysX averages the two touching surfaces' values.
 
     Scorers get a prop's `pos` as its origin (where `pos` put it), and `low` and `high` as the bounds of its visible
     meshes."""
@@ -168,6 +169,7 @@ class Prop(Box):
     meshes: tuple = field(default=())
     colliders: tuple = field(default=())
     tilt_xyzw: tuple = (0.0, 0.0, 0.0, 1.0)
+    friction: tuple | None = None
 
 
 def _linear(c: float) -> float:
@@ -529,8 +531,6 @@ def _mech_states(base, name: str, origin) -> dict:
             _LATCHED[key] = _EPISODE["count"]
             latched = True
         _JOINTS[key] = JointState(pos=float(q[j]), vel=float(qd[j]), latched=latched)
-        if os.environ.get("YAMKIT_DEBUG_JOINTS"):
-            print(f"yamkit joint {key} q={q[j]:.4f} qd={qd[j]:.4f} latched={latched}", flush=True)
         ext = [max(abs(c.center[k]) + (c.size[k] / 2 if c.size is not None else c.radius) for c in lk.colliders)
                for k in range(3)] if lk.colliders else [0.01] * 3
         out[key] = state(bodies.index(lk.name), [2 * e for e in ext])
@@ -640,7 +640,10 @@ def _patch(scene) -> None:
             return original_task_object(spec)
         _PROPS.add(spec.name)
         yaw = (0.0, 0.0, math.sin(spec.yaw / 2), math.cos(spec.yaw / 2))
-        addon = {"physics_material": scene._grippy()}
+        mat = scene._grippy()
+        if spec.friction is not None:
+            mat = type(mat)(static_friction=spec.friction[0], dynamic_friction=spec.friction[1])
+        addon = {"physics_material": mat}
         if spec.mass is None:
             addon.update(func=scene._spawn_fixture,
                          rigid_props=scene.PhysxRigidBodyPropertiesCfg(kinematic_enabled=True))
@@ -663,8 +666,6 @@ def _patch(scene) -> None:
             if _EPISODE["last"] is not None and n < _EPISODE["last"]:
                 _EPISODE["count"] += 1
             _EPISODE["last"] = n
-            if os.environ.get("YAMKIT_DEBUG_EPISODE"):
-                print(f"yamkit episode {_EPISODE['count']} step {n}", flush=True)
         origin = base.scene.env_origins[0].detach().cpu().numpy()
         if _MECHS:
             _watch_resets(base)

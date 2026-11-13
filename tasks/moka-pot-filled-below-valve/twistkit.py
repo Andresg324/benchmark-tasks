@@ -305,9 +305,6 @@ def _drive_thread(base, spec: Threaded) -> None:
     t.off = t.u > end
     t.came_off = t.came_off or t.off
     lo = math.radians(-th.max_tight)
-    if os.environ.get("TWISTKIT_DEBUG"):
-        print(f"twistkit {key} u={math.degrees(t.u):.1f}deg q={math.degrees(qc):.1f} rise={t.rise*1000:.2f}mm "
-              f"off={t.off} held={t.held} gripped={math.degrees(t.gripped):.1f}", flush=True)
     # the slide: held to the thread, or (off the thread) held up where it was left, free to lift
     if t.off:
         kit._set_drive(art, jl, target=max(t.rise, th.pitch * th.turns), stiffness=200.0, effort=0.0)
