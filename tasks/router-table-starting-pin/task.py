@@ -634,6 +634,15 @@ BRACED_LEAD = _rot(-LEAD) @ C_L - C_L  # the slides of that pose: the board 4.1 
 PIVOT_R = 0.090  # m: the pads' distance from the pin
 PIVOT_IN = math.radians(25.0)  # the push's angle in from the edge's tangent at the pin (toward the pin)
 PIVOT_F = 3.2  # N
+# Sliding the board onto the pin turns it further than START: in the sim it settles braced at 17.8 deg, slides
+# (5.8, -32.1) mm (identical in sims 8 and 9). The pivot is planned from there, so the pads' push points at the pin.
+# (Planned from START, the push missed the pin, turned the board 4.6 deg the wrong way and left it 9 deg behind the
+# hand all through the swing, short of the bearing.)
+PIVOT_POSE = (math.radians(17.8), np.array([0.0058, -0.0321]))
+# The hand swings on past the turn that puts the curve on the bearing (about -6 deg in the sim) and holds there: the
+# board lags the hand by the arm's give under the push and the cutter's first bite. The bearing stops the board, and
+# the overshoot then only presses the curve onto it, so the curve is on the bearing before the pads lift.
+PIVOT_OVER = math.radians(5.0)
 # The feed. Fed right to left, the cutter pushes back on the curve at the bearing, about 3.3 N along it, and pulls
 # it about 2 N toward the bit's axis, which the bearing takes. With nothing else to steady the board's turn, the
 # pads' push must point through that contact, or the board swings about the pads. Where the board reaches far enough
@@ -642,6 +651,8 @@ PIVOT_F = 3.2  # N
 # Toward the trailing end there is no board that far behind, so the pads press ahead of the contact, near the curve,
 # and pull the board on, straight away from the contact, 3.3 N along the curve: their pull off the bearing is then
 # under 0.45 of that, well under the cutter's own pull onto it (0.66 of its push back).
+# (Pushing from ahead instead, along the curve tilted toward the bit, was tried in the sim: it drew the board off
+# the pin and swung it back about the bearing after 11 cm. Neither way from ahead has yet routed the trailing end.)
 FEED_FX = 1.25 * 3.3  # N: the push along the curve, from behind
 FEED_PULL = 3.3  # N: the pull along the curve, from ahead
 FEED_STRETCHES = 7
@@ -764,28 +775,29 @@ def demo():
         left.append(Waypoint(0.5, _press_at(th0, s), C, "brace the board against the starting pin"))
     left.append(Waypoint(0.5, _press_at(th0, braced_s + into_pin), C, "settle on the pin"))
     lift = PZ + 0.015
-    th1 = LEAD - math.radians(1.0)  # a degree past the braced pose: into the bearing, which stops it
-    pin_b = -braced_s  # the pin's center in the board's frame
+    th1 = LEAD - math.radians(1.0) - PIVOT_OVER  # past the braced pose: into the bearing, which stops the board
+    th_b, s_b = PIVOT_POSE
+    pin_b = -s_b  # the pin's center in the board's frame
     out = (pin_b - C_L) / np.linalg.norm(pin_b - C_L)  # the edge's outward normal where it bears on the pin
     along = np.array([-out[1], out[0]])  # the edge's tangent there, toward the leading end
     push = math.cos(PIVOT_IN) * along + math.sin(PIVOT_IN) * out
     pv_pad = pin_b - PIVOT_R * push  # the pads, so their push toward the pin is along `push`
     left += [Waypoint(0.5, _press_at(th0, braced_s, lift), C, "lift the pads"),
-             Waypoint(1.0, _point_at(th0, braced_s, pv_pad, lift), C, "behind the pin"),
-             Waypoint(0.6, _point_at(th0, braced_s, pv_pad, PZ_FIRM), C, "press")]
+             Waypoint(1.0, _point_at(th_b, s_b, pv_pad, lift), C, "behind the pin"),
+             Waypoint(0.6, _point_at(th_b, s_b, pv_pad, PZ_FIRM), C, "press")]
     for k in range(1, 9):  # load the push gradually, the board still against the pin
-        left.append(Waypoint(0.1, _point_at(th0, braced_s, pv_pad + _lead(th0, push * PIVOT_F * k / 8), PZ_FIRM), C,
+        left.append(Waypoint(0.1, _point_at(th_b, s_b, pv_pad + _lead(th_b, push * PIVOT_F * k / 8), PZ_FIRM), C,
                              "push along the pin and onto it"))
     # The pivot and the feed are paths of short 0.1 s steps: each waypoint eases in and out, so long ones would move
     # the board in jerks, and a jerk can draw it a millimeter off the pin or off the bearing.
-    n = 120
+    n = int(round(120 * (th_b - th1) / (th0 - LEAD + math.radians(1.0))))  # the same pace as a swing to 1 deg past
     for k in range(1, n + 1):  # pivot about the pin
-        th = th0 + (th1 - th0) * k / n
-        left.append(Waypoint(0.1, _point_at(th, braced_s, pv_pad + _lead(th, push * PIVOT_F), PZ_FIRM), C,
+        th = th_b + (th1 - th_b) * k / n
+        left.append(Waypoint(0.1, _point_at(th, s_b, pv_pad + _lead(th, push * PIVOT_F), PZ_FIRM), C,
                              "pivot about the pin into the bit"))
-    left += [Waypoint(0.5, _point_at(th1, braced_s, pv_pad + _lead(th1, push * PIVOT_F), PZ_FIRM), C,
-                      "on the bearing"),
-             Waypoint(0.5, _point_at(th1, braced_s, pv_pad, lift), C, "lift the pads")]
+    on_b = _point_at(th1, s_b, pv_pad + _lead(th1, push * PIVOT_F), PZ_FIRM)
+    left += [Waypoint(1.0, on_b, C, "on the bearing"),
+             Waypoint(0.5, (on_b[0], on_b[1], lift), C, "lift the pads")]  # straight up: no drag back
     # Feed in stretches, the pads moved along the board between them. On the bearing the curve also stays on the pin
     # (the cutter's pull and the pads' push hold it on both), so its center stays put and the board turns about it:
     # the curve runs round between the pin and the bearing like a wheel (seen in the sim, the center within 0.3 mm).
