@@ -269,6 +269,7 @@ def test_still_pressing():
     t.move(10, board_x=float(s[0]), board=float(s[1]))
     check(t.rest(25, left=t.press())[0], 0.0, "board routed and past but still pressed at the end")
     p = t.press()
+    p = (p[0], p[1], p[2] + (m.TOP + m.GAP + m.T + m.TIP - 0.004) - m.PZ)  # the pad tips 4 mm below the board's top
     away = t.rest(25, left=(p[0], p[1], p[2] + 0.10))[0]  # what the board earns with the hand lifted away
     check(float(away > 0), 1.0, f"hand lifted 10 cm: {away}")
     check(t.rest(25, left=(p[0], p[1], p[2] + 0.0045))[0], 0.0,
@@ -449,6 +450,47 @@ def test_model():
     check(float(0.03 < d_on < 0.1 and d_off > 5 * d_on), 1.0, f"turn damping {d_on:.3f} on the pin, {d_off:.3f} off it")
     links = {lk.name: lk for lk in m.OBJECTS[0].links}
     check(float(abs(links["board"].anchor[0] - m.CENTRE[0]) < 1e-9), 1.0, "slides act at the board's center")
+
+
+def test_cutting_force():
+    """The cutter's force (Curti et al. 2021): about 3 N against a slow feed for this 1/8 in pass, a pull toward the
+    bit the bearing takes, double for a 1/4 in pass; along a braced feed it opposes the right-to-left feed (-y) and
+    stays under 5 N; out of the cutter it is 0; a board shoved straight in off the pin is pushed to the right (the
+    cutter's grab)."""
+    fx, fy = m.cutting_force(m.RC - m.RB, m.CUT_H, 0.0125, 0.0)
+    check(float(2.7 < fx < 3.4 and 1.7 < fy < 2.4), 1.0, f"steady pass at 0.75 m/min: {fx:.2f} N against the feed, "
+          f"{fy:.2f} N toward the bit")
+    fx2, _ = m.cutting_force(m.RC - m.RB, 2 * m.CUT_H, 0.0125, 0.0)
+    check(float(abs(fx2 - 2 * fx) < 1e-9), 1.0, "a 1/4 in pass is twice the force")
+    check(float(m.cutting_force(0.0, m.CUT_H, 0.02, 0.0) == (0.0, 0.0)), 1.0, "no engagement, no force")
+    lead = PHI0 - m.ALPHA
+    peak, against = 0.0, []
+    t = Trial()
+    for k in range(6):
+        m.cut_load(dict(t.j))
+    check(float(np.linalg.norm(m.cut_force_now()) < 1e-6), 1.0, "at the start, clear of the cutter: 0 N")
+    s = braced_slides(lead)
+    for k in range(20):  # pivot about the pin onto the bearing, then feed
+        th = lead + m.START[2] * (1 - (k + 1) / 20)
+        m.cut_load({"board_turn": th, "board_x": float(s[0]), "board": float(s[1])})
+    for phi in np.linspace(m.ALPHA, -m.ALPHA, 400):
+        sl = slides_at(phi, lead)
+        m.cut_load({"board_turn": lead, "board_x": float(sl[0]), "board": float(sl[1])})
+        f = m.cut_force_now()
+        u = (m._C.at - m.BIT) / np.linalg.norm(m._C.at - m.BIT)
+        peak = max(peak, float(np.linalg.norm(f)))
+        against.append((float(f @ np.array([-u[1], u[0]])), float(-f @ u), float(f[1])))
+    mid = np.median(np.array(against[50:350]), axis=0)
+    check(float(2.7 < mid[0] < 3.6 and 1.7 < mid[1] < 2.5 and mid[2] < 0 and peak < 5.0), 1.0,
+          f"braced feed: {mid[0]:.2f} N along the cutting edge (against the feed), {mid[1]:.2f} N toward the bit, "
+          f"{mid[2]:.2f} N along y; peak {peak:.2f} N")
+    kit._EPISODE["count"] += 1  # a new trial: a board shoved straight in, off the pin
+    sx, sy = m.START[0], m.START[1]
+    right = 0.0
+    for k in range(30):
+        m.cut_load({"board_turn": m.START[2], "board_x": sx + 0.0025 * k, "board": sy})
+        right = min(right, float(m.cut_force_now()[1]))
+    check(float(right < -2.0), 1.0, f"shoved straight in: pushed up to {-right:.2f} N to the right (-y), the grab")
 
 
 if __name__ == "__main__":

@@ -37,8 +37,9 @@ INSTRUCTION = ("Rout the rabbet along the board's curved edge on the router tabl
 BIT = np.array([0.330, 0.060])  # the bit's axis
 RB = 0.00635  # m: the bearing's radius (a 0.5 in ball bearing on the bit's tip)
 RC = 0.0159  # m: the cutter's radius (a 1.25 in rabbeting bit): the rabbet is RC - RB = 9.5 mm (3/8 in) wide
-CUT_H = 0.0064  # m: the cutter stands 0.25 in above the table (the rabbet's depth); the bearing rides above it
-BEAR_Z = (0.0066, 0.0114)  # m: the bearing's bottom and top above the table (3/16 in thick)
+CUT_H = 0.0032  # m: the cutter stands 1/8 in above the table: the first pass of a 1/4 in deep rabbet (the usual
+#                 "no more than 1/8 in per pass"; a second pass at full height finishes it, outside this task)
+BEAR_Z = (0.0034, 0.0082)  # m: the bearing's bottom and top above the table (3/16 in thick, on the bit's tip)
 PIN = np.array([BIT[0] + 0.0075, BIT[1] - 0.050])  # the starting pin: 5 cm to the bit's right, in the insert plate
 RP = 0.0032  # m: the pin's radius (a 0.25 in steel pin)
 PIN_H = 0.030  # m: it stands 3 cm above the table
@@ -180,7 +181,104 @@ def drag(J):
     return SLIDE_DAMP, turn if braced(J) else FREE_TURN * turn
 
 
-PIVOT = pv.Pivot("board", engaged=braced, free="slide", resist=drag)
+# --- The cutter's force on the board. Curti, Marcon, Denaud, Togni, Furferi and Goli (2021), "Generalized cutting
+# force model for peripheral milling of wood, based on the effect of density and fibre orientation", Eur. J. Wood
+# Prod. 79:667-678, Table 5 (up-milling, straight edge): per tooth Ft = (Ks*h + Int)*ap, with Ks and Int per unit of
+# wood density as functions of the grain angle GA (deg). Their model reproduces the router forces Goli et al. (2003)
+# measured. Averaged over a turn of a 2-flute cutter engaged over phi_e = acos(1 - 2 ae / D), with chip thickness
+# h = fz sin(phi): the mean force against the feed (along the cutting edge's motion at the contact) is
+#   Fx = z ap / (2 pi) * (Ks fz sin^2(phi_e) / 2 + Int sin(phi_e))
+# and the mean pull toward the bit's axis is
+#   Fy = z ap / (2 pi) * (Ks fz (phi_e / 2 - sin(2 phi_e) / 4) + Int (1 - cos(phi_e))).
+# For this pass (ae 9.5 mm, ap 3.2 mm, 22,000 rpm) that is about 3.0-3.3 N against the feed and 2.0-2.2 N toward the
+# bit at 0.75-1 m/min, rising to 3.6-5.0 N at 5 m/min; a full 1/4 in pass would double it. Feed rates here
+# (chip 10-60 um) are below the 40-100 um the model was fitted on, so the chip-independent term Int dominates.
+RHO = 561.0  # kg/m3: black cherry at 12% moisture (AHEC)
+RPM = 22000.0  # the router's speed
+FLUTES = 2
+DT = 0.05  # s: one control step at 20 Hz (the run's control rate)
+_CUT_A = np.array([-ALPHA + (k + 0.5) * BIN / R for k in range(int(round(ARC / BIN)))])  # the curve's 2 mm bins
+_CUT_P = np.stack([C_L + R * np.array([math.cos(a), math.sin(a)]) for a in _CUT_A])  # their points (board frame)
+
+
+def cutting_force(ae, ap, vf, ga_deg):
+    """(Fx, Fy) in N: the mean force against the feed and the pull toward the bit's axis, for a radial depth ae (m),
+    cut height ap (m), feed speed vf (m/s) and grain angle ga_deg (deg), Curti et al. 2021 (see above)."""
+    if ae <= 0.0:
+        return 0.0, 0.0
+    ga = min(abs(ga_deg), 90.0)
+    ks = (-5e-6 * ga * ga + 1e-3 * ga + 26e-3) * RHO  # N/mm2
+    it = (-1e-7 * ga * ga + 1e-5 * ga + 55e-4) * RHO  # N/mm
+    fz = 1000.0 * max(vf, 0.0) / (RPM / 60.0 * FLUTES)  # mm per tooth
+    pe = math.acos(max(-1.0, 1.0 - 2.0 * ae / (2 * RC)))
+    k = FLUTES * 1000.0 * ap / (2 * math.pi)
+    fx = k * (ks * fz * math.sin(pe) ** 2 / 2 + it * math.sin(pe))
+    fy = k * (ks * fz * (pe / 2 - math.sin(2 * pe) / 4) + it * (1 - math.cos(pe)))
+    return fx, fy
+
+
+class _Cut:
+    """Per trial: how deep (m, from the uncut curve) the cutter has reached at each 2 mm bin, the force now, and the
+    last joints (to tell the board's speed)."""
+
+    def __init__(self):
+        self.episode = kit.episode()
+        self.depth = np.zeros(len(_CUT_A))
+        self.key = None
+        self.prev = None  # the deepest-cutting bin's world point at the last step
+        self.force = np.zeros(2)  # N, world (x, y), smoothed
+        self.at = BIT.copy()  # where it acts (world)
+        self.load = (0.0, 0.0, 0.0)
+
+
+_C = _Cut()
+
+
+def cut_load(J):
+    """The cutter's force on the board as efforts on the board's joints (turn about the pin, x slide, y slide), and
+    its bookkeeping. The cutter removes the board's curve inside its radius; each bin's fresh depth this step is what
+    it cuts. The force acts at the deepest fresh bin along the cutting edge's motion there (the bit turns
+    counterclockwise seen from above), which is against a right-to-left feed and with a climb cut, plus a pull toward
+    the bit's axis that the bearing takes. Called once per control step per joint; it computes once per step."""
+    global _C
+    if _C.episode != kit.episode():
+        _C = _Cut()
+    key = (round(J["board_turn"], 9), round(J["board_x"], 9), round(J["board"], 9))
+    if key == _C.key:
+        return _C.load
+    _C.key = key
+    w = np.array([to_world(J, p) for p in _CUT_P])
+    r = np.linalg.norm(w - BIT, axis=1)
+    reach = np.clip(RC - r, 0.0, RC - RB)  # how deep the cutter reaches into the curve at each bin now
+    fresh = reach > _C.depth + 1e-5
+    if fresh.any():
+        k = int(np.argmax(np.where(fresh, reach, -1.0)))
+        ae = float(reach[k])
+        vf = 0.0 if _C.prev is None else float(np.linalg.norm(w[k] - _C.prev)) / DT
+        fx, fy = cutting_force(ae, CUT_H, min(vf, 0.2), math.degrees(_CUT_A[k]))
+        u = (w[k] - BIT) / max(float(r[k]), 1e-6)  # out from the bit's axis to the contact
+        edge = np.array([-u[1], u[0]])  # the cutting edge's motion there (counterclockwise)
+        target = fx * edge - fy * u
+        _C.at, _C.prev = w[k], w[k]
+        _C.depth = np.maximum(_C.depth, reach)
+    else:
+        target = np.zeros(2)
+        _C.prev = None
+    _C.force = _C.force + 0.5 * (target - _C.force)  # a 0.1 s lag: the mean of the tooth pulses, not each pulse
+    f, c = _C.force, _C.at
+    th = J["board_turn"]
+    tau = float((c - PIN)[0] * f[1] - (c - PIN)[1] * f[0])
+    ex, ey = _rot(th) @ np.array([1.0, 0.0]), _rot(th) @ np.array([0.0, 1.0])
+    _C.load = (tau, float(f @ ex), float(f @ ey))
+    return _C.load
+
+
+def cut_force_now():
+    """The cutter's force on the board at the last step, (x, y) in N (world), for logs and tests."""
+    return _C.force.copy()
+
+
+PIVOT = pv.Pivot("board", engaged=braced, free="slide", resist=drag, load=cut_load)
 
 # The board starts on the table to the right of the bit, turned 14 deg counterclockwise from the braced pose (its
 # leading end swung back toward the robot) and 1.5 cm nearer the robot and 2.5 cm further right: 2.4 cm off the pin.
@@ -296,6 +394,22 @@ def _bin(ang):
     return min(max(int((ang + ALPHA) * R / BIN), 0), N_BINS - 1)
 
 
+_DBG = {"n": 0}
+
+
+def _dbg(J, ang):
+    """ROUTER_DEBUG=1: print the board's pose, the bearing contact, the routed length and the cutter's force every 20 steps."""
+    if not os.environ.get("ROUTER_DEBUG"):
+        return
+    _DBG["n"] += 1
+    if _DBG["n"] % 20 == 0:
+        f = cut_force_now()
+        print(f"router dbg {_DBG['n']}: turn {math.degrees(J['board_turn']):.1f} slides {J['board_x']*100:.2f} "
+              f"{J['board']*100:.2f} cm; pin gap {pin_gap(J)*1000:.1f} mm; bit dist {bit_dist(J)*1000:.1f} mm; "
+              f"on bearing {ang is not None}; routed {routed_cm():.1f} cm; force ({f[0]:.2f}, {f[1]:.2f}) N; "
+              f"grab {_H.grab} hands {_H.hands}", file=sys.stderr, flush=True)
+
+
 def _update(objects):
     global _H
     if _H.episode != kit.episode():  # the simulator reset the scene: a new trial, a clean history
@@ -322,6 +436,7 @@ def _update(objects):
         elif _H.angle is None:
             _H.routed[_bin(ang)] = True
     _H.angle = ang
+    _dbg(J, ang)
     now = {g: np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects}
     for g in now:  # hands near the bit
         low = float(np.asarray(objects[g].low)[2]) - TOP < HANDS_LOW
@@ -468,6 +583,8 @@ def _draw(J):
 # --- The scripted demo (left arm; the right arm stays home).
 TIP = PAD_TIP_PAST_TCP  # the tool point is this far above the pad tips
 PZ = TOP + GAP + T + TIP - 0.004  # the pads 4 mm into the board's top: pressing on it
+PZ_FEED = TOP + GAP + T + TIP - 0.010  # while feeding round the bearing, aimed 10 mm in: a firmer press, so the pads'
+#                                        grip holds the board against the cutter's push (about 3 N) as well as the drag
 
 
 def _board_world(turn, slides, p):
@@ -529,7 +646,10 @@ def demo():
     lift = PZ + 0.015
     th1 = LEAD - math.radians(1.0)  # a degree past the braced pose: into the bearing, which stops it
     pivot_pt = PIVOT_PT - braced_s  # PIVOT_PT is from the pin; the pin sits at -slides in the board's frame
-    lean = pivot_pt + np.array([0.003, 0.0])
+    # the pads also lean 3 mm toward the leading end (+y on the board): the cutter's first bite drags the board toward
+    # the trailing end along the pin (2.8 mm in a sim run with the lean only toward the pin), which put the bearing
+    # past the curve's leading end on the end grain
+    lean = pivot_pt + np.array([0.003, 0.003])
     left += [Waypoint(0.5, _press_at(th0, braced_s, lift), C, "lift the pads"),
              Waypoint(1.0, _point_at(th0, braced_s, pivot_pt, lift), C, "over the pivot point"),
              Waypoint(0.6, _point_at(th0, braced_s, lean), C, "press, leaning on the pin")]
@@ -552,12 +672,13 @@ def demo():
         if k:
             left.append(Waypoint(0.4, _point_at(LEAD, s_k, pad_prev, lift), C, "lift the pads"))
         left += [Waypoint(0.8 if k else 1.0, _point_at(LEAD, s_k, pad, lift), C, "move the pads along the board"),
-                 Waypoint(0.5, _point_at(LEAD, s_k, pad), C, "press")]
+                 Waypoint(0.5, _point_at(LEAD, s_k, pad, PZ_FEED), C, "press")]
         for phi in part:
-            left.append(Waypoint(0.1, _point_at(LEAD, _feed_slides(phi, turn=LEAD), pad), C, "feed round the bearing"))
+            left.append(Waypoint(0.1, _point_at(LEAD, _feed_slides(phi, turn=LEAD), pad, PZ_FEED), C,
+                                 "feed round the bearing"))
         pad_prev = pad
     s_end = _feed_slides(phis[-1], into=-0.004, turn=LEAD) + _rot(-LEAD) @ np.array([0.0, 0.030])
-    left += [Waypoint(1.0, _point_at(LEAD, s_end, pad_prev), C, "on past the bit"),
+    left += [Waypoint(1.0, _point_at(LEAD, s_end, pad_prev, PZ_FEED), C, "on past the bit"),
              Waypoint(0.8, _point_at(LEAD, s_end, pad_prev, TOP + 0.10), C, "lift off"),
              kit.Home(2.0), kit.Home(1.5, label="hold at home")]
     right = [kit.Home(1.0, label="stay home")]

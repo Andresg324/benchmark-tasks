@@ -78,6 +78,8 @@ class Pivot:
     turn_tol: float = 0.004  # rad: the turn's narrowed stop either side when free="fixed" (0.2 degrees)
     jitter: float = math.radians(0.05)  # rad: free turn is counted only once it moves this far from where it was
     #   last counted (a dead band): sim jitter at rest (under 0.005 deg a step) never adds up, a real turn does
+    load: object = None  # local addition (router task): load(J) -> (turn N*m, x N, y N), efforts on the three joints
+    #   (an outside force on the part, e.g. a cutter's), applied every control step; None = no load
     def damps(self, J):
         r = self.resist(J) if self.resist is not None else None
         return r if r is not None else (self.slide_damp, self.turn_damp)
@@ -147,17 +149,19 @@ class _Joint:
         part = key.rsplit("/", 1)[0] + "/" + self.pivot.name
         st = step(part, J) if self.role == "turn" else state(part)
         slide_d, turn_d = self.pivot.damps(J)
+        ld = self.pivot.load(J) if self.pivot.load is not None else None
+        effort = float(ld[("turn", "x", "y").index(self.role)]) if ld is not None else 0.0
         mem["limits"] = None
         if self.role == "turn":
             if st["hold"] is not None:  # free="fixed" and the pin is out: the part stays where it is
                 t = st["hold"][0]
                 mem["limits"] = (max(self.lower, t - self.pivot.turn_tol), min(self.upper, t + self.pivot.turn_tol))
-            return q, 0.0, 0.0, turn_d
+            return q, 0.0, effort, turn_d
         k = 0 if self.role == "x" else 1
         at = st["entered_at"] if st["engaged"] else (st["hold"][1] if st["hold"] is not None else None)
         if at is not None:  # the pin is in (or the part is held fixed): narrow this slide's stops around there
             mem["limits"] = (max(self.lower, at[k] - self.pivot.tol), min(self.upper, at[k] + self.pivot.tol))
-        return q, 0.0, 0.0, slide_d
+        return q, 0.0, effort, slide_d
 
 
 def planar(pivot: Pivot, pin, reach, turn, mass: float, meshes=(), colliders=(), start=(0.0, 0.0, 0.0),
