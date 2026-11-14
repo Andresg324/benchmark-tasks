@@ -581,10 +581,15 @@ def _draw(J):
 
 
 # --- The scripted demo (left arm; the right arm stays home).
+# --- The scripted demo (left arm; the right arm stays home).
 TIP = PAD_TIP_PAST_TCP  # the tool point is this far above the pad tips
 PZ = TOP + GAP + T + TIP - 0.004  # the pads 4 mm into the board's top: pressing on it
-PZ_FEED = TOP + GAP + T + TIP - 0.010  # while feeding round the bearing, aimed 10 mm in: a firmer press, so the pads'
-#                                        grip holds the board against the cutter's push (about 3 N) as well as the drag
+PZ_FIRM = TOP + GAP + T + TIP - 0.020  # aimed 20 mm in: a firm press (about 5-8 N, the arm giving 2.3-3.8 mm/N
+#                                       downward there), so the pads' grip carries the 3-4 N push against the cutter
+# The arm gives under a sideways push at the pads (J K^-1 J^T with the YAM's 80 and 10 N*m/rad servos, at the pads
+# over the board): 6.2-7.6 mm per newton (here 6.7-7.1), mostly in the wrist. A hand that pushes the board with a few newtons must be
+# aimed that far past where the pads are; aimed at the pads, it holds nothing.
+GIVE = np.array([[6.8, -0.8], [-0.8, 7.0]]) * 1e-3  # m/N, world x and y
 
 
 def _board_world(turn, slides, p):
@@ -600,18 +605,19 @@ def _press_at(turn, slides, z=PZ):
     return _point_at(turn, slides, PRESS_PT, z)
 
 
+def _lead(turn, force):
+    """Where to aim the hand, past the pads (board frame, m), for it to push the board with `force` (board frame, N)."""
+    return _rot(-turn) @ GIVE @ _rot(turn) @ np.asarray(force, float)
+
+
 # the pads press on the board's middle along its length, 1.2 cm behind its center (8.7 cm in from the top of the
 # curve): a push there barely turns the board (a board pushed at one point swings until its center trails behind)
 PRESS_PT = np.array([CENTRE[0] - 0.012, CENTRE[1]])
-FEED_IN = 0.09  # m: while feeding, the pads press 9 cm in from the curve, square to it, behind the stretch being fed
-PIVOT_PT = np.array([-0.095, 0.0])  # the pads during the pivot, from the pin: 9.5 cm straight in from it (the tool
-#                                     point stays over 8.6 cm from the bit's axis through the swing)
 
 
 def _feed_slides(phi, into=0.0005, turn=0.0):
     """The slides (at board turn `turn`) that put the curve's contact with the bearing at angle `phi` on the curve,
-    `into` m into the bearing. Kept small: the bearing's push on the curve, behind the pads, would turn the board about
-    them."""
+    `into` m into the bearing."""
     c_world = BIT - (R + RB - into) * np.array([math.cos(phi + turn), math.sin(phi + turn)])
     return _rot(-turn) @ (c_world - PIN) - C_L
 
@@ -620,13 +626,130 @@ PHI0 = math.atan2(*(BIT - PIN - C_L)[::-1])  # where the bearing meets the curve
 LEAD = PHI0 - ALPHA  # the turn whose braced pose puts the bearing right at the curve's leading end (-7.8 deg)
 BRACED_LEAD = _rot(-LEAD) @ C_L - C_L  # the slides of that pose: the board 4.1 cm further along the pin
 
+# The pivot. The cutter's first bite pushes the board about 2 N toward its trailing end along the pin, and once the
+# curve reaches the bearing the board is off the brace with only the hand to hold it there. So the pads push it on
+# toward the leading end and onto the pin through the whole pivot: they press 9 cm from the pin toward the trailing
+# end, 25 deg in from the edge's tangent there, and push straight at the pin (a push through the pin does not turn
+# the board, so it holds as the board turns), 3.2 N: 2.9 N along the pin toward the leading end, 1.4 N onto it.
+PIVOT_R = 0.090  # m: the pads' distance from the pin
+PIVOT_IN = math.radians(25.0)  # the push's angle in from the edge's tangent at the pin (toward the pin)
+PIVOT_F = 3.2  # N
+# The feed. Fed right to left, the cutter pushes back on the curve at the bearing, about 3.3 N along it, and pulls
+# it about 2 N toward the bit's axis, which the bearing takes. With nothing else to steady the board's turn, the
+# pads' push must point through that contact, or the board swings about the pads. Where the board reaches far enough
+# behind the stretch on the bearing (the hands kept 9 cm from the bit's axis), the pads press there and push toward the
+# contact, 1.25 times the cutter's 3.3 N along the curve; the rest of their push presses the curve onto the bearing.
+# Toward the trailing end there is no board that far behind, so the pads press ahead of the contact, near the curve,
+# and pull the board on, straight away from the contact, 3.3 N along the curve: their pull off the bearing is then
+# under 0.45 of that, well under the cutter's own pull onto it (0.66 of its push back).
+FEED_FX = 1.25 * 3.3  # N: the push along the curve, from behind
+FEED_PULL = 3.3  # N: the pull along the curve, from ahead
+FEED_STRETCHES = 7
+HAND_PAD = 0.090  # m: the pads' least distance from the bit's axis while feeding (the hazard zone is 7.6 cm)
+HAND_AIM = 0.080  # m: and the hand's aim's (the pads plus the lead), should the pads slip
+
+
+def _contact(phi):
+    """The curve's point at angle phi (board frame), its tangent toward the leading end and its outward normal."""
+    ph = max(float(phi), -ALPHA)
+    return (C_L + R * np.array([math.cos(ph), math.sin(ph)]), np.array([-math.sin(ph), math.cos(ph)]),
+            np.array([math.cos(ph), math.sin(ph)]))
+
+
+def _feed_force(pad, phi, pull):
+    """The pads' force on the board (board frame, N): along the line from the pads through the contact."""
+    k_pt, along, _ = _contact(phi)
+    u = (pad - k_pt) if pull else (k_pt - pad)
+    u = u / np.linalg.norm(u)
+    return u * (FEED_PULL if pull else FEED_FX) / float(u @ along)
+
+
+def _feed_pad(part):
+    """The pads for a stretch of contact angles (pads, pull): on the board, 2.5 cm in from its ends and back edge and
+    2 cm in from the curve or more, HAND_PAD from the bit's axis through the stretch. Pushing from behind if that
+    puts 0.6 of the push along the curve or more all through the stretch; else pulling from ahead, the pull off the
+    bearing smallest."""
+    push = pull = None
+    for a_p in np.linspace(-ALPHA + 0.025 / R, ALPHA - 0.025 / R, 120):
+        for h in np.arange(0.02, 0.121, 0.005):
+            pad = C_L + (R - h) * np.array([math.cos(a_p), math.sin(a_p)])
+            if pad[0] < BACK + 0.025:
+                continue
+            w_push, w_pull = 1.0, 0.0
+            for phi in part:
+                k_pt, along, out = _contact(phi)
+                bit = k_pt + RB * out
+                u = (k_pt - pad) / np.linalg.norm(k_pt - pad)  # toward the contact
+                w_push = min(w_push, float(u @ along))
+                # pulling: the pull off the bearing over the pull along the curve (u points back at the contact)
+                w_pull = max(w_pull, float((u @ out) / -(u @ along)) if -(u @ along) > 0.05 else 9.0)
+                near = np.linalg.norm(pad - bit) < HAND_PAD
+                if near or (w_push > 0.05 and np.linalg.norm(pad + GIVE @ _feed_force(pad, phi, False) - bit) < HAND_AIM):
+                    w_push = -1.0
+                if near or (w_pull < 9.0 and np.linalg.norm(pad + GIVE @ _feed_force(pad, phi, True) - bit) < HAND_AIM):
+                    w_pull = 9.0
+            if push is None or w_push > push[0]:
+                push = (w_push, pad)
+            if pull is None or w_pull < pull[0]:
+                pull = (w_pull, pad)
+    if push[0] >= 0.6:
+        return push[1], False
+    return pull[1], True
+
+
+CENTER_ON = PIN + _rot(LEAD) @ (C_L + BRACED_LEAD)  # the curve's center (world) with the curve on pin and bearing
+
+
+def _wheel(phi):
+    """The board's (turn, slides) with the curve's center at CENTER_ON and the bearing on the curve at angle phi:
+    the board turned about that center. Capped at the board's 0.79 rad turn (its joint stops at 0.8)."""
+    th = min(LEAD + ALPHA - float(phi), 0.79)
+    return th, _rot(-th) @ (CENTER_ON - PIN) - C_L
+
+
+SWEEPS = (1.6, 1.5, 1.4, 1.3, 1.2)  # each feed stretch's hand path over the stretch: the longest that suits the pads
+
+
+def _stretch(part):
+    """(hand path's contact angles, pads, pull) for a stretch: the longest sweep in SWEEPS whose pads push from behind
+    with 0.6 or more of the push along the curve and at most 5.5 N in all, or pull from ahead with their pull off the
+    bearing at most 0.45 of the pull along it (the cutter's own pull onto it is 0.66); else the shortest."""
+    span = float(part[0] - part[-1])
+    for sw in SWEEPS:
+        sweep = np.linspace(part[0], part[0] - sw * span, int(round(len(part) * sw)))
+        pad, pull = _feed_pad(sweep)
+        ok = True
+        for phi in sweep:
+            f = _feed_force(pad, phi, pull)
+            _, along, out = _contact(phi)
+            if (pull and -(f @ out) > 0.45 * (f @ along)) or (not pull and np.linalg.norm(f) > 5.5):
+                ok = False
+                break
+        if ok:
+            return sweep, pad, pull
+    return sweep, pad, pull
+HIGH = TOP + 0.09  # pad tips 6.5 cm above the table: well clear of the 5 cm hand rule
+
+
+def _over(a, b, C):
+    """Waypoints to move the hand from a to b (both just above the board): straight if the path stays 10 cm from the
+    bit's axis, else up to HIGH, across and down, so it never passes low near the bit."""
+    a2, b2 = np.array(a[:2]), np.array(b[:2])
+    d = b2 - a2
+    u = float(np.clip(np.dot(BIT - a2, d) / max(float(d @ d), 1e-12), 0.0, 1.0))
+    if np.linalg.norm(a2 + u * d - BIT) >= 0.10:
+        return []
+    return [Waypoint(0.4, (a[0], a[1], HIGH), C, "up, clear of the bit"),
+            Waypoint(0.8, (b[0], b[1], HIGH), C, "across, above the bit's 3 in circle"),
+            Waypoint(0.4, (b[0], b[1], b[2]), C, "down")]
+
 
 def demo():
     """Left arm: press the pads on the board and slide it onto the starting pin at the spot where pivoting it about
-    the pin brings the curve's leading end onto the bearing, move the pads to a point level with the pin and swing the
-    board 22 deg clockwise about the pin until the curve rides the bearing, then feed it right to left round the
-    bearing, keeping the curve on it, all the way to the trailing end and on past the bit, moving the pads along the
-    board between four stretches; lift off and go home. One braced feed routes the whole curve."""
+    the pin brings the curve's leading end onto the bearing; move the pads behind the pin and, pushing the board on
+    along the pin and onto it, swing it about the pin until the curve rides the bearing; then feed it right to left
+    round the bearing over the whole curve and on past the bit, pushing from behind toward the contact with the
+    bearing, then near the trailing end pulling from ahead, moving the pads along the board between seven stretches; lift off and go home. One braced feed routes the whole curve."""
     C, O = FINGER_CLOSED, FINGER_OPEN
     s0 = np.array(START[:2])
     th0 = START[2]
@@ -640,46 +763,56 @@ def demo():
         s = s0 + (braced_s + into_pin - s0) * k / n
         left.append(Waypoint(0.5, _press_at(th0, s), C, "brace the board against the starting pin"))
     left.append(Waypoint(0.5, _press_at(th0, braced_s + into_pin), C, "settle on the pin"))
-    # Shift the hand for the pivot to a point level with the pin along the board, 9.5 cm in from it (PIVOT_PT): there
-    # the push that swings the board about the pin runs along the curve's edge, not away from the pin, so the board
-    # stays braced; the pads lean 3 mm on toward the pin as well.
     lift = PZ + 0.015
     th1 = LEAD - math.radians(1.0)  # a degree past the braced pose: into the bearing, which stops it
-    pivot_pt = PIVOT_PT - braced_s  # PIVOT_PT is from the pin; the pin sits at -slides in the board's frame
-    # the pads also lean 3 mm toward the leading end (+y on the board): the cutter's first bite drags the board toward
-    # the trailing end along the pin (2.8 mm in a sim run with the lean only toward the pin), which put the bearing
-    # past the curve's leading end on the end grain
-    lean = pivot_pt + np.array([0.003, 0.003])
+    pin_b = -braced_s  # the pin's center in the board's frame
+    out = (pin_b - C_L) / np.linalg.norm(pin_b - C_L)  # the edge's outward normal where it bears on the pin
+    along = np.array([-out[1], out[0]])  # the edge's tangent there, toward the leading end
+    push = math.cos(PIVOT_IN) * along + math.sin(PIVOT_IN) * out
+    pv_pad = pin_b - PIVOT_R * push  # the pads, so their push toward the pin is along `push`
     left += [Waypoint(0.5, _press_at(th0, braced_s, lift), C, "lift the pads"),
-             Waypoint(1.0, _point_at(th0, braced_s, pivot_pt, lift), C, "over the pivot point"),
-             Waypoint(0.6, _point_at(th0, braced_s, lean), C, "press, leaning on the pin")]
+             Waypoint(1.0, _point_at(th0, braced_s, pv_pad, lift), C, "behind the pin"),
+             Waypoint(0.6, _point_at(th0, braced_s, pv_pad, PZ_FIRM), C, "press")]
+    for k in range(1, 9):  # load the push gradually, the board still against the pin
+        left.append(Waypoint(0.1, _point_at(th0, braced_s, pv_pad + _lead(th0, push * PIVOT_F * k / 8), PZ_FIRM), C,
+                             "push along the pin and onto it"))
     # The pivot and the feed are paths of short 0.1 s steps: each waypoint eases in and out, so long ones would move
     # the board in jerks, and a jerk can draw it a millimeter off the pin or off the bearing.
     n = 120
     for k in range(1, n + 1):  # pivot about the pin
         th = th0 + (th1 - th0) * k / n
-        left.append(Waypoint(0.1, _point_at(th, braced_s, lean), C, "pivot about the pin into the bit"))
-    # Feed in four stretches, the pads moved along the board between them so they stay behind the stretch of curve on
-    # the bearing (9 cm in from it, square to the curve): the bearing's push on the curve then runs back toward the
-    # pads and barely turns the board about them, where pads fixed at the board's middle let it swing 10 degrees.
-    phis = np.linspace(ALPHA, -ALPHA - math.radians(4.0), 210)
-    left += [Waypoint(0.5, _point_at(th1, braced_s, lean), C, "on the bearing"),
-             Waypoint(0.5, _point_at(th1, braced_s, pivot_pt, lift), C, "lift the pads")]
-    for k, part in enumerate(np.array_split(phis, 4)):
-        mid = min(float(np.mean(part)), ALPHA - math.radians(2.0))
-        pad = C_L + (R - FEED_IN) * np.array([math.cos(mid), math.sin(mid)])  # behind the curve at `mid`
-        s_k = _feed_slides(part[0], turn=LEAD)
-        if k:
-            left.append(Waypoint(0.4, _point_at(LEAD, s_k, pad_prev, lift), C, "lift the pads"))
-        left += [Waypoint(0.8 if k else 1.0, _point_at(LEAD, s_k, pad, lift), C, "move the pads along the board"),
-                 Waypoint(0.5, _point_at(LEAD, s_k, pad, PZ_FEED), C, "press")]
-        for phi in part:
-            left.append(Waypoint(0.1, _point_at(LEAD, _feed_slides(phi, turn=LEAD), pad, PZ_FEED), C,
-                                 "feed round the bearing"))
-        pad_prev = pad
-    s_end = _feed_slides(phis[-1], into=-0.004, turn=LEAD) + _rot(-LEAD) @ np.array([0.0, 0.030])
-    left += [Waypoint(1.0, _point_at(LEAD, s_end, pad_prev, PZ_FEED), C, "on past the bit"),
-             Waypoint(0.8, _point_at(LEAD, s_end, pad_prev, TOP + 0.10), C, "lift off"),
+        left.append(Waypoint(0.1, _point_at(th, braced_s, pv_pad + _lead(th, push * PIVOT_F), PZ_FIRM), C,
+                             "pivot about the pin into the bit"))
+    left += [Waypoint(0.5, _point_at(th1, braced_s, pv_pad + _lead(th1, push * PIVOT_F), PZ_FIRM), C,
+                      "on the bearing"),
+             Waypoint(0.5, _point_at(th1, braced_s, pv_pad, lift), C, "lift the pads")]
+    # Feed in stretches, the pads moved along the board between them. On the bearing the curve also stays on the pin
+    # (the cutter's pull and the pads' push hold it on both), so its center stays put and the board turns about it:
+    # the curve runs round between the pin and the bearing like a wheel (seen in the sim, the center within 0.3 mm).
+    # Each stretch's hand path sweeps up to 1.6 times the stretch: the board lags the hand (in the sim it turned 0.6 of each
+    # sweep, held back by the cutter and by the curve's rub on the pin and bearing), and the next stretch starts from
+    # where the board should be. A board that keeps up simply turns further along the bearing.
+    phis = np.linspace(ALPHA, -ALPHA - math.radians(3.5), 210)
+    last = None
+    for k, part in enumerate(np.array_split(phis, FEED_STRETCHES)):
+        sweep, pad, pull = _stretch(part)
+        th_k, s_k = _wheel(part[0])
+        if last is not None:
+            left.append(Waypoint(0.4, (last[0], last[1], lift), C, "lift the pads"))
+            left += _over((last[0], last[1], lift), _point_at(th_k, s_k, pad, lift), C)
+        left += [Waypoint(0.8 if k else 1.0, _point_at(th_k, s_k, pad, lift), C, "move the pads along the board"),
+                 Waypoint(0.5, _point_at(th_k, s_k, pad, PZ_FIRM), C, "press")]
+        for j, phi in enumerate(sweep):
+            th, sl = _wheel(phi)
+            f = _feed_force(pad, phi, pull) * min(1.0, (j + 1) / 6)  # loaded over 0.6 s
+            last = _point_at(th, sl, pad + _lead(th, f), PZ_FIRM)
+            left.append(Waypoint(0.1, last, C, "pull the board round the bearing" if pull else "feed round the bearing"))
+        pad_prev, f_prev = pad, f
+    # on past the bit: the trailing end off the bearing, then the board drawn 2 cm back from the bit and 3 cm on
+    th_e, s_e = _wheel(phis[-1] - math.radians(2.0))
+    s_end = s_e + _rot(-th_e) @ np.array([-0.020, 0.030])
+    left += [Waypoint(1.0, _point_at(th_e, s_end, pad_prev + _lead(th_e, f_prev), PZ_FIRM), C, "on past the bit"),
+             Waypoint(0.8, _point_at(th_e, s_end, pad_prev, TOP + 0.10), C, "lift off"),
              kit.Home(2.0), kit.Home(1.5, label="hold at home")]
     right = [kit.Home(1.0, label="stay home")]
     return {"left": left, "right": right}
