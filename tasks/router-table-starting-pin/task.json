@@ -18,6 +18,6 @@
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "Lay a fresh board flat on the table to the right of the bit at its start pose (corners as in the setup), curve toward the bit, 2.4 cm off the pin. A real trial cuts the board's edge, so each trial uses a new board band-sawn to the same 30 cm radius template from the same cherry stock.",
   "fidelity": "The bit does not spin; its cut is the board's outline inside the cutter's radius, drawn as a pale band. Its push on the board is modeled: the mean of Curti et al. 2021's wood-milling force model for cherry, applied where it cuts (about 3 N against the feed, 2 N toward the bit). Tooth pulses and burning are not. The board slides on joints with drag as damping; braced on the pin it only turns about it, a stand-in for the hand's press. No bit guard, for the cameras.",
-  "scores": "Dream-1 run: 0 on the previous version (not rerun on this version); demo: 1.0 on this version (1,875 steps; the whole 25.8 cm curve routed)",
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0 (1,875 steps)",
   "media": "M-46W35F"
 }
