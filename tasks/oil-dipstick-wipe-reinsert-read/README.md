@@ -1,10 +1,10 @@
-# Check a small engine's oil: pull, wipe, reseat, pull again to read, and report the level
+# Check a lawn mower engine's oil with the dipstick, wiping and re-reading it, and mark the level on the check card
 
-A bench model of a small four-stroke engine (the kind on a lawn mower or a portable generator) stands on the table
+A bench model of a walk-behind lawn mower's small four-stroke engine stands on the table
 with its yellow dipstick seated in the oil fill tube. A folded blue shop rag lies beside it, next to an oil check card
 with ADD, OK and OVER pockets and a white marker puck. "Check the oil level on the engine with the dipstick, mark it
-on the check card with the puck, then put everything back." means the procedure every small-engine and quick-lube
-technician follows: pull the dipstick, wipe the blade clean on the rag, push it back in until the cap seats, pull it
+on the check card with the puck, then put everything back." means the procedure every mower manual gives before
+mowing: pull the dipstick, wipe the blade clean on the rag, push it back in until the cap seats, pull it
 again and hold it still to read the level, push it back in until it seats, put the rag down, and record what the
 blade showed. The level changes from trial to trial (below ADD, between the marks, or above FULL), so the puck lands
 in the right pocket only if the blade was read. The tempting wrong answer is to read the first pull, which shows a
@@ -44,22 +44,27 @@ for a run. The band appears while the blade is inside the tube (after the full s
 
 "Check the oil level on the engine with the dipstick, mark it on the check card with the puck, then put everything
 back." The wipe-and-reread rule, the full seat and the closing seat are not stated. The instruction names the card
-and the puck because a robot cannot speak its reading; the card stands in for the inspection checklist.
+and the puck because a robot cannot speak its reading; the card stands in for writing the level down.
 
 ### Rule and why
 
-Engine manuals (Briggs & Stratton, Honda, Kohler) and quick-lube procedures say to remove the dipstick, wipe it
+Engine manuals (Briggs & Stratton, Honda, Kohler) say to remove the dipstick, wipe it
 clean, reinsert it fully and remove it again to read. Oil splashed up the fill tube while the engine ran (or while it
 was carried) coats the blade above the true level, so a first-pull reading overstates the oil and a low engine gets
 run. A dipstick pushed only part way in before the second pull reads low or picks up the tube's splash again. The
 dipstick goes back in until its cap seats, so dirt cannot get into the crankcase, and the rag goes back down. The
-level found goes on the shop's inspection checklist (quick-lube checklists have ADD / OK / OVER boxes), because it
-decides the next job: top up a low engine, or drain an overfilled one.
+level found decides what comes next: top up a low engine, mow, or drain an overfilled one.
 
-Category: Impact on jobs. Automotive service technicians and mechanics (BLS Occupational Outlook Handbook, SOC
-49-3023, about 826,000 jobs) check the oil with a dipstick on every oil service and inspection, and small engine
-mechanics (SOC 49-3053) do the same on mowers and generators; the push-in dipstick and the wipe-and-reread rule are the
-same on both.
+Category: Societal relatability. Checking the oil before mowing is the first step in the owner's manuals of walk-behind
+mowers (Briggs & Stratton: remove the dipstick, wipe it, reinsert it and read the level "between the two holes";
+Honda GCV160: "Remove the oil filler cap/dipstick and wipe it clean", reinsert, "then remove it to check the oil
+level"), and it is the owner who does it: many households mow their own lawn. The engine is a mower engine, not a car
+engine, so the dipstick is a mower's. Small-engine dipsticks are short: Honda's gauge sticks for its GX120-GX200
+engines are 1-5/16 in (3.3 cm, Stens 125-692, replacing Honda 15600-ZE1-003) and for GX240-GX390 2-1/8 in (5.4 cm,
+Stens 125-696, replacing 15600-735-003). The modeled stick, 12.5 cm with an 8 cm blade, is the longer tube-type stick
+of a vertical-shaft mower engine whose fill tube rises above the deck; it is already longer than either Honda stick. A
+car's dipstick (for example 50 to 63 cm, Dorman 917-390 and 917-322) belongs to a different engine, a different job
+and a different category; it is not what this task claims.
 
 ### Scoring (thresholds and reasons)
 
@@ -83,21 +88,21 @@ shape), and the trial's level.
   and the crosshatch, and 80% lets a stroke start or stop 8 mm short (the arm lags its target about 1.6 cm).
   Touching is not wiping: a dab, or dabs at several heights, slide over nothing, and half a stroke (2 cm) leaves the
   marks smeared. Strokes add up within one pull, so two half strokes that together cover the span count, since a
-  mechanic who wipes in two passes also ends with a clean blade; the tip going back into the tube clears the count.
-  Either hand may move: drawing the rag along a blade held still is how most mechanics do it.
+  person who wipes in two passes also ends with a clean blade; the tip going back into the tube clears the count.
+  Either hand may move: drawing the rag along a blade held still is how most people do it.
 - Reseat = the wiped blade pushed back in, by hand (held), until seated. A dipstick dropped back in, or seated without
   a wipe, starts the procedure again. A wiped blade that goes back into the tube part way and comes out again is
   smeared again and needs a new wipe.
 - Reading = after the reseat, the dipstick pulled out again and held, out and still (moving under 1 cm/s), for 1 s.
   The dipstick stays on the tube's axis, so it is read tip down, as manuals advise (tipping it up runs oil up the
   blade).
-- Report = the puck down in a pocket. The robot cannot speak its reading, so it marks it the way a mechanic ticks a
+- Report = the puck down in a pocket. The robot cannot speak its reading, so it marks it the way one ticks a
   checklist box. Down in a pocket means: its middle within 1.2 cm of the pocket's middle along x and y (a puck lying
   flat in the 4.4 cm pocket can be at most 7 mm off; one hanging on a wall with its middle outside does not count)
   and its bottom at least 2 mm below the card's top (in the 5 mm pocket, not lying on the rim or on a wall between
   two pockets). The report counts at the end, with the puck at rest and let go (no gripper touching it),
   because a puck still in the hand has not marked anything. The pocket it ends in is the report; moving it after
-  the reading is allowed, as a mechanic may correct a checklist. A real trial reads the pocket off a top photo and
+  the reading is allowed, as anyone may correct a note. A real trial reads the pocket off a top photo and
   checks from the side that the puck sits below the card's top.
 - Guess = the puck down in any pocket for 2 control steps (0.1 s) in a row before the reading has been taken: the
   level was not known yet, so whatever pocket it went into was chosen without looking. A guess scores 0 even if the
@@ -217,8 +222,8 @@ its own camera would be future work; it is not needed to show the task can be do
 
 ## Fidelity
 
-The dipstick is real size for a mower or generator engine (12.5 cm overall); a longer one cannot be pulled clear by
-arms that lift about 22 cm above the table. It slides on the tube's axis even when out of the tube (a guide), so it
+The dipstick is real size for a mower engine (12.5 cm overall, longer than Honda's 3.3 and 5.4 cm GX gauge sticks;
+see Rule and why). It slides on the tube's axis even when out of the tube (a guide), so it
 cannot be laid down or tilted; it falls back down the tube if let go. The guide means the sim never asks the robot to
 line the tip up with the tube's 2.0 cm bore on the way back in (the blade, 1.0 x 0.3 cm, has about 5 mm of play each
 side). A real trial uses a free dipstick, so it does test that reinsertion; a dipstick dropped on the bench there is
@@ -228,9 +233,9 @@ its removal by the rag and the trial's level are visuals driven by the scorer's 
 
 ## Real-world build
 
-A small-engine bench model or a real mower or generator engine (cold) with a push-in dipstick and fill tube, and a
-folded shop towel. Before each trial, roll a die for the level (1-2 below ADD, 3-4 between the marks, 5-6 above
-FULL), set the oil to 0.4, 1.4 or 2.7 cm on the blade with a syringe (check it with a pull and a wipe, out of the
+A walk-behind mower engine (cold, off the mower or on it) with a push-in dipstick and fill tube, or a bench model of
+one, and a folded shop towel. Trials run in blocks of three, one at each level, in an order shuffled by a die roll, so
+every level is tested equally often. Before each trial, set the oil to 0.4, 1.4 or 2.7 cm on the blade with a syringe (check it with a pull and a wipe, out of the
 camera's view), wipe the blade, smear oil on its lower 6 cm and up the inside of the tube, and seat it. The check card
 is a tray of two layers of 5 mm foam board (or a 3D print), 6 x 16 cm, with three 4.4 cm square holes cut in the top
 layer, the floors painted amber, green and red, labelled ADD, OK and OVER and marked with the same white minus sign, check
@@ -238,6 +243,31 @@ mark and plus sign as the sim, taped to the bench at x 35, y 10. The
 puck is a white checkers piece glued to a second one (3 cm across, about 2 cm tall). Score from the video as described
 under Scoring: the level a real trial shows on the blade is the oil itself, and the report is which pocket the puck
 ends in.
+
+## Results by level
+
+Every trial records the level it was set to and the level the robot reported, so results can be compared level by
+level.
+
+Sim (scripted demo, `OIL_CASE` set per run; the demo is told the level, see The demo):
+
+| Level | Oil band from the tip | Pocket reported | Score | Steps |
+|---|---|---|---|---|
+| below ADD (`low`) | 0.4 cm | ADD | 1.0 | 589 |
+| between the marks (`ok`) | 1.4 cm | OK | 1.0 | 589 |
+| above FULL (`over`) | 2.7 cm | OVER | 1.0 | 589 |
+
+A scored model is run at all three levels and reported the same way, one row per trial, with the per-level count of
+right reports.
+
+Real trial: after each trial the tester pulls the dipstick, wipes it, reseats it, pulls it again and measures the
+oil band from the tip with a steel rule to the millimetre, photographed against the blade. One row per trial:
+
+| Trial | Block | Level set (die) | Band measured (mm from tip) | Level by the marks | Pocket the puck is in | Puck in before the 1 s hold? | Score |
+|---|---|---|---|---|---|---|---|
+
+The measured band, not the planned one, decides the right pocket (ADD under 8 mm, OK 8-20 mm, OVER over 20 mm);
+a set level that lands within 3 mm of a mark is reset and the trial rerun.
 
 ## Licenses
 
