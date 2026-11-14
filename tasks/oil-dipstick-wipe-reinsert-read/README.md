@@ -58,13 +58,32 @@ level found decides what comes next: top up a low engine, mow, or drain an overf
 Category: Societal relatability. Checking the oil before mowing is the first step in the owner's manuals of walk-behind
 mowers (Briggs & Stratton: remove the dipstick, wipe it, reinsert it and read the level "between the two holes";
 Honda GCV160: "Remove the oil filler cap/dipstick and wipe it clean", reinsert, "then remove it to check the oil
-level"), and it is the owner who does it: many households mow their own lawn. The engine is a mower engine, not a car
+level"), and it is the owner who does it. In a 2018 Harris Poll of over 2,000 US adults for the Outdoor Power
+Equipment Institute, 63% owned outdoor power equipment, and NielsenIQ's 2024 Lawn and Garden Consumer Study found that
+nearly 65% of the push-mower market is still gas-powered. With about 130 million US households (Census Bureau), that is
+tens of millions of households; no survey we found counts households with a gas mower directly. The EPA has estimated
+that about 54 million Americans mow with gas mowers (as reported by the National Wildlife Federation, 2007). The engine is a mower engine, not a car
 engine, so the dipstick is a mower's. Small-engine dipsticks are short: Honda's gauge sticks for its GX120-GX200
 engines are 1-5/16 in (3.3 cm, Stens 125-692, replacing Honda 15600-ZE1-003) and for GX240-GX390 2-1/8 in (5.4 cm,
 Stens 125-696, replacing 15600-735-003). The modeled stick, 12.5 cm with an 8 cm blade, is the longer tube-type stick
 of a vertical-shaft mower engine whose fill tube rises above the deck; it is already longer than either Honda stick. A
 car's dipstick (for example 50 to 63 cm, Dorman 917-390 and 917-322) belongs to a different engine, a different job
 and a different category; it is not what this task claims.
+
+Swapping in a car dipstick. The same task works on a car engine unchanged: the pull, wipe, reseat, second pull, report
+and reseat, and the scoring, are what an automotive technician does at every oil service. It is not built at car scale
+because of the arms' reach, measured with the arms' inverse kinematics:
+- A car's stick is 50 to 63 cm long (Dorman 917-390, 917-322) and its tube drops 35 to 50 cm from the mouth to the oil
+  pan. The arms grip no higher than 14 to 24 cm above the table near the middle, so the mouth must sit a few cm above
+  the table and the tube would pass through it. The table's side edge, where a tube could drop past it, is in reach of
+  one arm only (the other cannot reach within 20 cm of it), and a ribbon-type stick needs two hands taking turns.
+- With the tube through the table, the pull itself would fit: each regrasp is made at the mouth, where the tube holds
+  the blade, and one stroke draws 8 to 26 cm, so a pull takes 2 to 6 strokes. But the steel ribbon (about 6 x 0.6 mm)
+  does not droop out of the way: under its own weight it stands up to about 85 cm, so the drawn part sticks up 30 to
+  50 cm above the hand, and the hands pinch it with about 1.5 N each. The whole check takes 10 to 18 grips and two
+  feeds of the tip into an 8 mm tube to about 1 mm, in a 2-minute run, and a real trial would need a hole through the
+  robot's bench.
+So the task stays on the mower engine, whose stick the arms handle at its real size.
 
 ### Scoring (thresholds and reasons)
 
