@@ -580,8 +580,7 @@ def _draw(J):
                 marker_indices=np.zeros(N_BINS, int))
 
 
-# --- The scripted demo (left arm; the right arm stays home).
-# --- The scripted demo (left arm; the right arm stays home).
+# --- The scripted demo (both arms: the left pivots the board onto the bearing, then both feed it round from its back edge).
 TIP = PAD_TIP_PAST_TCP  # the tool point is this far above the pad tips
 PZ = TOP + GAP + T + TIP - 0.004  # the pads 4 mm into the board's top: pressing on it
 PZ_FIRM = TOP + GAP + T + TIP - 0.020  # aimed 20 mm in: a firm press (about 5-8 N, the arm giving 2.3-3.8 mm/N
