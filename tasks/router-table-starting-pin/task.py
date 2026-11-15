@@ -315,7 +315,7 @@ PLATE = kit.Look((0.12, 0.12, 0.13), 0.4)  # phenolic insert plate
 STEEL = kit.Look((0.78, 0.79, 0.80), 0.25, metallic=0.8)
 CARBIDE = kit.Look((0.80, 0.18, 0.10), 0.35, metallic=0.4)  # the bit's coated body and carbide wings
 DARK = kit.Look((0.20, 0.20, 0.21), 0.5)
-POLYCARB = kit.Look((0.86, 0.92, 0.95), 0.05, opacity=0.25)  # the guard's clear polycarbonate shield
+POLYCARB = kit.Look((0.70, 0.84, 0.93), 0.05)  # the clear polycarbonate shield's edge (its face is clear: not drawn)
 ALUMINUM = kit.Look((0.74, 0.75, 0.77), 0.35, metallic=0.8)  # its anodized aluminum body
 # The plate's overhead pin guard, after the Bench Dog ProGuard (Bench Dog Tools catalog, 2008, p. 16: a polycarbonate
 # shield on an aluminum body bolted to the plate, "1-1/2\" stock clearance under the guard", usable as a starting pin's
@@ -401,7 +401,12 @@ def _bit():
               kit.cylinder((px, py, PIN_H / 2), RP, PIN_H, STEEL, n=20),  # the starting pin
               kit.cylinder((px, py, 0.0014), 0.0060, 0.0002, DARK),  # its threaded hole's rim
               # the overhead guard: shield, arm and post (see GUARD_R)
-              kit.cylinder((0.0, 0.0, sum(GUARD_Z) / 2), GUARD_R, GUARD_Z[1] - GUARD_Z[0], POLYCARB, n=48),
+              # the shield is clear, so only its 3 mm edge is drawn (the renderer here draws no see-through surface);
+              # its collider is the whole disc
+              *[_prism([(r * math.cos(a), r * math.sin(a)) for r, a in ((GUARD_R - 0.003, a0), (GUARD_R, a0),
+                                                                       (GUARD_R, a0 + math.pi / 24),
+                                                                       (GUARD_R - 0.003, a0 + math.pi / 24))],
+                       GUARD_Z[0], GUARD_Z[1], POLYCARB) for a0 in (k * math.pi / 24 for k in range(48))],
               kit.box(((GUARD_R - 0.02 + GUARD_POST_X) / 2, 0.0, GUARD_Z[1] + 0.004),
                       (GUARD_POST_X - GUARD_R + 0.02, 0.030, 0.008), ALUMINUM),
               kit.box((GUARD_POST_X, 0.0, (GUARD_Z[1] + 0.008) / 2), (0.025, 0.040, GUARD_Z[1] + 0.008), ALUMINUM)]
