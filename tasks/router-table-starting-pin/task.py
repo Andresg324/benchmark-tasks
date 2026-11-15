@@ -315,6 +315,16 @@ PLATE = kit.Look((0.12, 0.12, 0.13), 0.4)  # phenolic insert plate
 STEEL = kit.Look((0.78, 0.79, 0.80), 0.25, metallic=0.8)
 CARBIDE = kit.Look((0.80, 0.18, 0.10), 0.35, metallic=0.4)  # the bit's coated body and carbide wings
 DARK = kit.Look((0.20, 0.20, 0.21), 0.5)
+POLYCARB = kit.Look((0.86, 0.92, 0.95), 0.05, opacity=0.25)  # the guard's clear polycarbonate shield
+ALUMINUM = kit.Look((0.74, 0.75, 0.77), 0.35, metallic=0.8)  # its anodized aluminum body
+# The plate's overhead pin guard, after the Bench Dog ProGuard (Bench Dog Tools catalog, 2008, p. 16: a polycarbonate
+# shield on an aluminum body bolted to the plate, "1-1/2\" stock clearance under the guard", usable as a starting pin's
+# guard): a clear 10 cm shield centered over the bit, its underside 1-1/2 in (38 mm) above the table, held by an
+# aluminum arm from a post bolted to the plate's far side (away from the robot). The board passes under it; the 3 in
+# rule already keeps the hands' low parts out from under it.
+GUARD_R = 0.051  # m: the shield's radius (a 4 in disc; the diameter is assumed, the height is the maker's)
+GUARD_Z = (0.0381, 0.0445)  # m: the shield's underside and top above the table (1/4 in polycarbonate)
+GUARD_POST_X = 0.100  # m: the post's center, from the bit's axis, on the far side (+x)
 
 
 def _prism(poly, z0, z1, look):
@@ -389,14 +399,24 @@ def _bit():
               kit.cylinder((0.0, 0.0, sum(BEAR_Z) / 2), RB, BEAR_Z[1] - BEAR_Z[0], STEEL),  # the bearing
               kit.cylinder((0.0, 0.0, BEAR_Z[1] + 0.0008), 0.0035, 0.0016, DARK),  # its retaining screw
               kit.cylinder((px, py, PIN_H / 2), RP, PIN_H, STEEL, n=20),  # the starting pin
-              kit.cylinder((px, py, 0.0014), 0.0060, 0.0002, DARK)]  # its threaded hole's rim
+              kit.cylinder((px, py, 0.0014), 0.0060, 0.0002, DARK),  # its threaded hole's rim
+              # the overhead guard: shield, arm and post (see GUARD_R)
+              kit.cylinder((0.0, 0.0, sum(GUARD_Z) / 2), GUARD_R, GUARD_Z[1] - GUARD_Z[0], POLYCARB, n=48),
+              kit.box(((GUARD_R - 0.02 + GUARD_POST_X) / 2, 0.0, GUARD_Z[1] + 0.004),
+                      (GUARD_POST_X - GUARD_R + 0.02, 0.030, 0.008), ALUMINUM),
+              kit.box((GUARD_POST_X, 0.0, (GUARD_Z[1] + 0.008) / 2), (0.025, 0.040, GUARD_Z[1] + 0.008), ALUMINUM)]
     tx, ty = 0.29 - BIT[0], 0.04 - BIT[1]  # the table top's middle, from the bit
     cols = [kit.Collider((0.0, 0.0, sum(BEAR_Z) / 2), radius=RB, height=BEAR_Z[1] - BEAR_Z[0], slick=True),  # it rolls
             kit.Collider((px, py, PIN_H / 2), radius=RP, height=PIN_H),
+            # the guard is solid: a thrown board or a hand meets it
+            kit.Collider((0.0, 0.0, sum(GUARD_Z) / 2), radius=GUARD_R, height=GUARD_Z[1] - GUARD_Z[0]),
+            kit.Collider(((GUARD_R - 0.02 + GUARD_POST_X) / 2, 0.0, GUARD_Z[1] + 0.004),
+                         size=(GUARD_POST_X - GUARD_R + 0.02, 0.030, 0.008)),
+            kit.Collider((GUARD_POST_X, 0.0, (GUARD_Z[1] + 0.008) / 2), size=(0.025, 0.040, GUARD_Z[1] + 0.008)),
             # the table top's surface under the board (its top at the board's underside, GAP above the drawn top):
             # hardwood on phenolic or laminate, the board's sliding friction on it (MU_TABLE, above)
             kit.Collider((tx, ty, GAP / 2), size=(0.40, 0.62, GAP), friction=(MU_TABLE_STATIC, MU_TABLE))]
-    return kit.Prop("router_bit", pos=(float(BIT[0]), float(BIT[1]), TOP), size=(0.235, 0.300, PIN_H), meshes=tuple(meshes),
+    return kit.Prop("router_bit", pos=(float(BIT[0]), float(BIT[1]), TOP), size=(0.235, 0.300, GUARD_Z[1] + 0.008), meshes=tuple(meshes),
                     colliders=tuple(cols))
 
 
