@@ -59,11 +59,11 @@ grippers' palm and finger shapes used by the touching-the-board check):
   collider is frictionless (local yamkit addition `Collider.slick`), since a real bearing rolls along the edge. The cutter has no
   collider: the board passes into it, which is how the scorer sees a cut. The board's curve collider is 26 chord boxes
   1 cm long, each within 0.04 mm of the true curve (local yamkit addition: yawed box colliders).
-- The plate's clear overhead pin guard is modeled as in the real trial: a see-through polycarbonate shield over the
-  bit, 38 mm above the table, on an aluminum arm and post at the plate's far side. Its colliders are solid, so a
-  thrown board or a hand meets it; the board passes under it, and the top camera sees the bit and the cut through it.
-  The sim's renderer draws no see-through surface, so the clear shield is drawn as its 3 mm edge; its collider is
-  the whole disc.
+- The plate's overhead pin guard is modeled as in the real trial: a clear polycarbonate shield over the bit, 38 mm
+  above the table, on an aluminum arm and post at the plate's far side. Its colliders are solid (the whole disc), so
+  a thrown board or a hand meets it; the board passes under it. The sim's renderer can't draw clear plastic, so the
+  shield appears as its gray 3 mm rim only, which keeps the bit and the cut in view of the top camera; the real one is
+  a clear disc.
 - The routed stretch is drawn as a pale band of fresh-cut cherry on the board's top along the curve, as wide as the
   rabbet (visual only; the real rabbet is on the board's underside).
 
