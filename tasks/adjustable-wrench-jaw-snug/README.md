@@ -94,7 +94,10 @@ Torque. Nylon 6/6 M5 fasteners are rated at 0.73-0.79 N*m recommended torque and
 Nuts & Bolts, nylon 6/6 mechanical data, dry as molded, 23 C). Tighten each nut to 0.76 N*m with an adjustable torque
 screwdriver (0.3 to 1.2 N*m range) driving an 8 mm socket, wait 5 minutes and start the trial. At 0.76 N*m the pull is
 5.8 N at the grip, 13 cm from the nut, and at the nut's 0.93 N*m strength 7.2 N; the YAM's shoulder and elbow
-servos (Damiao DM4340, 9 N*m rated) give about 30 N at the hand.
+servos (Damiao DM-J4340, 9 N*m rated, 27 N*m peak) and wrist servos (DM-J4310, 3 N*m rated, 7 N*m peak) give,
+worked through the arm's Jacobian with the torque that holds the arm up included, about 11 N or more in any
+horizontal direction at rated (continuous) torque in typical tabletop poses (about 17 N typical) and about 28 N at
+peak, so 7.2 N is within the arm's continuous rating.
 
 Breakaway after relaxation. Nylon relaxes under load, so the torque that breaks the nut loose after 5 minutes can be
 lower than the 0.76 N*m it was tightened to. We found no published minute-scale relaxation figure for nylon 6/6 nuts
