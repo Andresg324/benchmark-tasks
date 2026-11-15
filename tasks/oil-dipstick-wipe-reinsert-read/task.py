@@ -110,14 +110,19 @@ IN_POCKET = 0.012  # m: the puck's middle within this of a pocket's middle along
 SUNK = 0.002  # m: and its bottom at least 2 mm below the card's top (down in the 5 mm pocket, not lying on the rim)
 DEBOUNCE = 2  # control steps: the puck in a pocket for 2 steps is a report made (one step can be a physics pop)
 
-ALU = kit.Look((0.62, 0.64, 0.66), 0.4, metallic=0.6)  # cast crankcase
+ALU = kit.Look((0.62, 0.64, 0.66), 0.4, metallic=0.6)  # cast aluminum crankcase and oil pan
+FINS = kit.Look((0.46, 0.47, 0.49), 0.5, metallic=0.5)  # the cylinder's cast cooling fins
 DARK = kit.Look((0.14, 0.14, 0.15), 0.6)
-RED = kit.Look((0.72, 0.12, 0.10), 0.5)  # engine shroud
-YELLOW = kit.Look((0.95, 0.75, 0.10), 0.45)  # dipstick cap and handle (yellow, as on most small engines)
+SHROUD = kit.Look((0.05, 0.05, 0.055), 0.45)  # black painted sheet steel: blower housing and cylinder shroud
+SCREEN = kit.Look((0.16, 0.16, 0.17), 0.6)  # the rotating grass screen over the flywheel
+YELLOW = kit.Look((0.96, 0.76, 0.08), 0.45)  # Kohler yellow: dipstick cap and handle, the housing's stripe
 STEEL = kit.Look((0.82, 0.83, 0.85), 0.25, metallic=0.9)
 BLACK = kit.Look((0.06, 0.06, 0.06), 0.7)
+PLATE = kit.Look((0.24, 0.25, 0.27), 0.5, metallic=0.4)  # the engine's steel mounting plate (tractor frame section)
+EXHAUST = kit.Look((0.30, 0.27, 0.25), 0.55, metallic=0.7)  # heat-darkened muffler steel
+CERAMIC = kit.Look((0.93, 0.93, 0.90), 0.3)  # spark plug insulator
+FUEL = kit.Look((0.85, 0.55, 0.15), 0.2, opacity=0.6)  # the inline fuel filter's clear amber bowl
 RAGLOOK = kit.Look((0.20, 0.35, 0.70), 0.9)  # blue shop towel
-WOOD = kit.Look((0.55, 0.40, 0.25), 0.7)
 CARDLOOK = kit.Look((0.20, 0.21, 0.23), 0.6)  # dark gray card
 POCKET_LOOK = {"low": kit.Look((0.95, 0.55, 0.05), 0.5), "ok": kit.Look((0.10, 0.65, 0.20), 0.5),
                "over": kit.Look((0.80, 0.08, 0.06), 0.5)}  # amber ADD, green OK, red OVER
@@ -142,33 +147,123 @@ def _parts(boxes):
     return tuple(meshes), tuple(colliders)
 
 
-BLOCK_C = (0.555, SY)  # the crankcase model's middle on the table (world x, y)
+# The engine: a lawn tractor's vertical-shaft single (Kohler Courage SV class: about 49 x 42 x 33 cm overall, Kohler
+# catalog), bolted to a section of the tractor's frame on the bench. Its middle (the crankshaft's axis) sits 24 cm beyond
+# the fill tube's mouth; the cylinder points away from the robot. Everything but the colliders below is looks only.
+ENGINE_C = (SX + 0.24, SY)  # the crankshaft's axis on the table (world x, y)
+CASE_R = 0.14  # the crankcase / oil pan's radius: its near face 10 cm beyond the mouth (world x 0.48)
+HOUSING_R = 0.155  # the blower housing over the flywheel
+
+
+def _ring_slats(z, r0, r1, n, width, look):
+    """The grass screen's radial slats, flat on top of the screen disc."""
+    out = []
+    for k in range(n):
+        a = 2 * math.pi * (k + 0.5) / n
+        c, s_ = math.cos(a), math.sin(a)
+        out.append(kit.band([(r0 * c, r0 * s_, z), (r1 * c, r1 * s_, z)], width, 0.002, look, normal=(0, 0, 1)))
+    return out
+
+
+def _tab(center, w, t, h, r, look):
+    """A flat tab with rounded corners: w across (x), t thick (y), h tall (z)."""
+    cx, cy, cz = center
+    parts = [kit.box(center, (w, t, h - 2 * r), look), kit.box(center, (w - 2 * r, t, h), look)]
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            parts.append(kit.cylinder((cx + sx * (w / 2 - r), cy, cz + sz * (h / 2 - r)), r, t, look, axis="y", n=16))
+    return parts
 
 
 def _block():
-    """The engine's crankcase side, fixed to the table beyond the tube's mouth. The fill tube enters its near face about
-    8 cm up and runs down inside it; no collider sits on the tube's line (the dipstick slides down it untouched)."""
-    cx = BLOCK_C[0]
-    body = [  # (low corner, high corner, look, collides), in the block's frame (origin on the table at BLOCK_C)
-        ((0.45 - cx, -0.10, 0.0), (0.66 - cx, 0.10, 0.008), WOOD, True),  # bench mounting board
-        ((0.47 - cx, -0.09, 0.008), (0.64 - cx, -0.02, 0.13), ALU, True),  # crankcase, right of the tube's line
-        ((0.47 - cx, 0.02, 0.008), (0.64 - cx, 0.09, 0.13), ALU, True),  # crankcase, left of it
-        ((0.47 - cx, -0.02, 0.10), (0.64 - cx, 0.02, 0.13), ALU, True),  # crankcase top over the tube's line
-        ((0.47 - cx, -0.02, 0.008), (0.64 - cx, 0.02, 0.10), ALU, False),  # crankcase round the tube (seen only)
-        ((0.49 - cx, -0.08, 0.13), (0.63 - cx, 0.08, 0.17), RED, True),  # shroud over the flywheel
-        ((0.64 - cx, -0.04, 0.03), (0.645 - cx, 0.0, 0.06), BLACK, False),  # oil drain plug on the far side
-    ]
-    meshes, colliders = _parts(body)
-    return kit.Prop("block", pos=(*BLOCK_C, TOP), size=(0.21, 0.20, 0.17), meshes=meshes, colliders=colliders)
+    """The engine round the fill tube, in its own frame (origin on the table at ENGINE_C). The fill tube rises out of the
+    oil pan's near face about 8 cm up; no collider sits on the tube's line inside the case, so the dipstick slides down
+    it untouched."""
+    meshes = []
+    # Frame section the engine bolts to, and the crankcase / oil pan (cast aluminum, its mounting flange darker)
+    meshes.append(kit.box((0.07, 0.0, 0.004), (0.46, 0.44, 0.008), PLATE))
+    meshes.append(kit.lathe([(0.0, 0.008), (0.145, 0.008), (0.145, 0.018), (0.0, 0.018)], DARK))
+    meshes.append(kit.lathe([(0.0, 0.018), (0.132, 0.018), (0.138, 0.03), (CASE_R, 0.06), (CASE_R, 0.11),
+                             (0.134, 0.13), (0.0, 0.13)], ALU, n=48))
+    for a in range(6):  # the case's flange bolts
+        t = 2 * math.pi * (a + 0.5) / 6
+        meshes.append(kit.cylinder((0.152 * math.cos(t), 0.152 * math.sin(t), 0.021), 0.006, 0.006, STEEL, n=6))
+    # Boss where the fill tube enters the case, on the tube's line (U), and the oil drain plug on the far side
+    entry = (SX - ENGINE_C[0] + 0.105 * -U[0], 0.0, MOUTH + 0.105 * -U[2])
+    meshes.append(kit.cylinder(entry, 0.018, 0.03, ALU, axis=tuple(U), n=24))
+    meshes.append(kit.cylinder((0.0, 0.142, 0.022), 0.008, 0.012, BLACK, axis="y", n=6))
+    # Blower housing over the flywheel (black), Kohler's yellow stripe, and the rotating grass screen on top
+    meshes.append(kit.lathe([(0.0, 0.13), (0.15, 0.13), (HOUSING_R, 0.145), (HOUSING_R, 0.225), (0.145, 0.245),
+                             (0.12, 0.255), (0.0, 0.255)], SHROUD, n=56))
+    meshes.append(kit.lathe([(HOUSING_R + 0.001, 0.19), (HOUSING_R + 0.001, 0.205)], YELLOW, n=56))
+    meshes.append(kit.cylinder((0.0, 0.0, 0.258), 0.105, 0.006, SCREEN, n=48))
+    meshes += _ring_slats(0.2615, 0.03, 0.103, 24, 0.007, BLACK)
+    meshes.append(kit.cylinder((0.0, 0.0, 0.262), 0.03, 0.006, BLACK, n=32))
+    # Cylinder pointing away from the robot: finned barrel and head (cast), the black sheet-steel shroud over it
+    fins = [(0.05, 0.12)]
+    x = 0.12
+    while x < 0.22:
+        fins += [(0.05, x), (0.064, x + 0.001), (0.064, x + 0.004), (0.05, x + 0.005)]
+        x += 0.009
+    fins += [(0.05, 0.22), (0.0, 0.22)]
+    meshes.append(kit.lathe(fins, FINS, center=(0.0, 0.0, 0.075), axis="x", n=40))
+    for k in range(5):  # the head's straight fins
+        meshes.append(kit.box((0.226 + 0.008 * k, 0.0, 0.075), (0.004, 0.13, 0.125), FINS))
+    meshes.append(kit.box((0.24, 0.0, 0.075), (0.04, 0.10, 0.10), FINS))
+    meshes.append(kit.box((0.272, 0.0, 0.08), (0.016, 0.11, 0.09), SHROUD))  # valve cover on the head's end
+    meshes.append(kit.box((0.17, 0.0, 0.142), (0.12, 0.14, 0.012), SHROUD))  # cylinder shroud over the barrel
+    meshes.append(kit.box((0.17, 0.073, 0.10), (0.12, 0.006, 0.08), SHROUD))
+    meshes.append(kit.box((0.17, -0.073, 0.10), (0.12, 0.006, 0.08), SHROUD))
+    # Spark plug in the head's side, its boot and lead running back to the housing
+    meshes.append(kit.cylinder((0.245, -0.068, 0.10), 0.008, 0.024, CERAMIC, axis="y", n=16))
+    meshes.append(kit.cylinder((0.245, -0.088, 0.10), 0.012, 0.03, BLACK, axis="y", n=16))
+    meshes.append(kit.band([(0.245, -0.10, 0.10), (0.20, -0.11, 0.13), (0.12, -0.12, 0.17)], 0.007, 0.007, BLACK,
+                           normal=(0, 0, 1)))
+    # Carburetor and the air cleaner on top of it (black cover, yellow knob)
+    meshes.append(kit.box((0.20, 0.06, 0.135), (0.05, 0.05, 0.05), ALU))
+    meshes.append(kit.lathe([(0.0, 0.16), (0.062, 0.16), (0.066, 0.17), (0.066, 0.20), (0.058, 0.212), (0.0, 0.212)],
+                            SHROUD, center=(0.20, 0.03, 0.0), n=40))
+    meshes.append(kit.cylinder((0.20, 0.03, 0.218), 0.012, 0.012, YELLOW, n=20))
+    # Fuel line from the carburetor down through an inline filter and off the plate (to the tractor's tank)
+    line = [(0.21, 0.087, 0.12), (0.20, 0.13, 0.10), (0.18, 0.15, 0.085)]
+    meshes.append(kit.band(line, 0.007, 0.007, BLACK, normal=(0, 0, 1)))
+    meshes.append(kit.cylinder((0.18, 0.15, 0.06), 0.012, 0.045, FUEL, n=20))
+    meshes.append(kit.band([(0.18, 0.15, 0.036), (0.16, 0.17, 0.02), (0.12, 0.215, 0.012)], 0.007, 0.007, BLACK,
+                           normal=(0, 0, 1)))
+    # Exhaust from the head's other side to the muffler
+    meshes.append(kit.band([(0.235, -0.065, 0.06), (0.235, -0.11, 0.055), (0.225, -0.15, 0.05)], 0.022, 0.022,
+                           EXHAUST, normal=(0, 0, 1)))
+    meshes.append(kit.cylinder((0.215, -0.19, 0.05), 0.042, 0.12, EXHAUST, axis="y", n=32))
+    # Electric starter on the case's left side
+    meshes.append(kit.cylinder((-0.02, 0.15, 0.075), 0.035, 0.10, BLACK, n=32))
+    meshes.append(kit.cylinder((-0.02, 0.15, 0.13), 0.03, 0.012, STEEL, n=32))
+    colliders = (
+        kit.Collider((0.07, 0.0, 0.004), size=(0.46, 0.44, 0.008)),  # frame section
+        # oil pan / crankcase, leaving the tube's line free inside it (y within 2 cm of the axis, below 10 cm)
+        kit.Collider((0.0, -0.075, 0.069), size=(0.27, 0.11, 0.122)),
+        kit.Collider((0.0, 0.075, 0.069), size=(0.27, 0.11, 0.122)),
+        kit.Collider((0.0, 0.0, 0.115), size=(0.27, 0.04, 0.03)),
+        kit.Collider((0.075, 0.0, 0.054), size=(0.12, 0.04, 0.092)),
+        kit.Collider((0.0, 0.0, 0.192), size=(0.30, 0.30, 0.124)),  # blower housing
+        kit.Collider((0.20, 0.0, 0.075), size=(0.16, 0.13, 0.13)),  # cylinder and head
+        kit.Collider((0.215, -0.19, 0.05), size=(0.084, 0.12, 0.084)),  # muffler
+        kit.Collider((0.20, 0.03, 0.186), size=(0.132, 0.132, 0.05)),  # air cleaner
+    )
+    return kit.Prop("block", pos=(*ENGINE_C, TOP), size=(0.60, 0.50, 0.27), meshes=tuple(meshes),
+                    colliders=colliders)
 
 
 def _engine():
     """The fill tube and its dipstick, in the tube frame (origin at the mouth's middle, z along the tube)."""
-    meshes = (kit.cylinder((0.0, 0.0, -TUBE_IN / 2), TUBE_R, TUBE_IN, YELLOW),
-              kit.cylinder((0.0, 0.0, -0.002), TUBE_R + 0.002, 0.004, DARK))  # fill tube and its rim
+    meshes = (kit.cylinder((0.0, 0.0, -TUBE_IN / 2), TUBE_R, TUBE_IN, BLACK),  # 1 in fill tube (Kohler's metal tube)
+              kit.lathe([(TUBE_R, -0.012), (TUBE_R + 0.002, -0.006), (TUBE_R + 0.002, 0.0)], DARK))  # flared neck
     colliders = (kit.Collider((0.0, 0.0, -TUBE_IN + 0.004), size=(0.02, 0.02, 0.006)),)  # the tube's buried end
-    # Dipstick (link frame at the cap's underside, on the tube's axis): blade below, cap disc and T-handle above.
+    # Dipstick (link frame at the cap's underside, on the tube's axis): blade below, cap and T-handle above.
     marks = FULL_MARK - ADD_MARK  # the crosshatch between ADD and FULL near the tip
+    cap = [(0.0, 0.0), (CAP_R - 0.001, 0.0), (CAP_R, 0.002)]
+    for k in range(4):  # ribbed grip round the cap
+        cap += [(CAP_R, 0.002 + 0.002 * k), (CAP_R - 0.001, 0.003 + 0.002 * k)]
+    cap += [(CAP_R - 0.002, CAP_H), (0.0, CAP_H)]
     s_meshes = (
         kit.box((0.0, 0.0, -BLADE / 2), (BLADE_W, BLADE_T, BLADE), STEEL),
         kit.box((0.0, 0.0, -BLADE + ADD_MARK + marks / 2), (BLADE_W * 1.02, BLADE_T * 1.2, marks),
@@ -177,8 +272,8 @@ def _engine():
         # beside the oil band from every side
         kit.box((0.0, 0.0, -BLADE + ADD_MARK), (BLADE_W + 0.004, BLADE_T * 1.5, 0.0015), TICK),
         kit.box((0.0, 0.0, -BLADE + FULL_MARK), (BLADE_W + 0.004, BLADE_T * 1.5, 0.0015), TICK),
-        kit.cylinder((0.0, 0.0, CAP_H / 2), CAP_R, CAP_H, YELLOW),
-        kit.box((0.0, 0.0, HANDLE_C), HANDLE, YELLOW),
+        kit.lathe(cap, YELLOW, n=32),
+        *_tab((0.0, 0.0, HANDLE_C), HANDLE[0], HANDLE[1], HANDLE[2], 0.008, YELLOW),
     )
     s_colliders = (
         kit.Collider((0.0, 0.0, -BLADE / 2), size=(BLADE_W, BLADE_T, BLADE)),
