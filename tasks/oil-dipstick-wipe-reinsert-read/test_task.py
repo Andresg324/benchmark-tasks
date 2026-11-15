@@ -19,13 +19,17 @@ PUCK_GRIP = m.PUCK_R / abs(m.FINGER_OPEN)  # opening of fingers closed on the 3 
 HANDLE_GRIP = m.HANDLE[1] / 2 / abs(m.FINGER_OPEN)  # opening of fingers closed across the handle's 1.8 cm thickness
 BLADE_GRIP = m.BLADE_T / 2 / abs(m.FINGER_OPEN)  # opening of fingers pinching the blade's 3 mm thickness
 TILT = np.array(m.TILT)
-# the handle's half extent up and down (world z), as it lies along the sloping tube
+# the handle's half extent up and down (world z), as it lies along the tube
 HANDLE_HALF_Z = 0.5 * (m.HANDLE[0] * abs(m.R_TUBE[2, 0]) + m.HANDLE[2] * abs(m.R_TUBE[2, 2]))
 
 
+THICK = m.R_TUBE[:, 1]  # the blade's and handle's thickness axis in the world (tube frame y; world -x here)
+
+
 def tube_pt(a, dy=0.0):
-    """The world point a m along the tube's axis from the mouth's middle, dy along y."""
-    return tuple(m.MOUTH_W + a * m.U + np.array([0.0, dy, 0.0]))
+    """The world point a m along the tube's axis from the mouth's middle, dy across the blade's faces (along its
+    thickness axis, THICK)."""
+    return tuple(m.MOUTH_W + a * m.U + dy * THICK)
 
 
 def st(pos, half=0.01):
@@ -79,7 +83,7 @@ class Trial:
         self.q, self.qd = 0.0, 0.0
         self.right, self.ropen = HOME["right_gripper"], 1.0
         self.left, self.lopen = HOME["left_gripper"], 1.0
-        self.across_y = True  # the fingers close across world y (the handle's and blade's thickness)
+        self.across_y = bool(abs(THICK[1]) > 0.5)  # the fingers close across the handle's and blade's thickness
         self.grip_a = None  # where on the stick the right hand rides: None = the handle, else a link coordinate
         self.off = (0.0, 0.0, 0.0)  # the right hand's offset from the handle's middle while it rides along
         self.rag = RAG_HOME
@@ -139,7 +143,7 @@ class Trial:
         from the mouth, `dy` beside the blade's axis."""
         for k in range(n + 1):
             self.rag = tube_pt(z0 + (z1 - z0) * k / n - T - m.MOUTH, dy)
-            self.left = self.rag
+            self.left = tube_pt(z0 + (z1 - z0) * k / n - T - m.MOUTH, dy + 0.05)  # the hand at the pad's far edge
             self.step()
         self.rag = tube_pt(z1 - T - m.MOUTH, 0.08)  # rag lifted off the blade for `off` steps
         self.left = self.rag
@@ -178,7 +182,8 @@ class Trial:
         return self.step(3)
 
 
-WT, WB = T + m.MOUTH + 0.055, T + m.MOUTH + 0.016  # a full wipe stroke (rag middle)
+WT, WB = T + m.MOUTH + OUTQ - m.BLADE + 0.066, T + m.MOUTH + OUTQ - m.BLADE - 0.004  # a full wipe stroke (rag
+# middle), from 4 mm under the tip to 6.6 cm above it
 
 
 def full(t, reseat_q=0.0, read=30, final_q=0.0, put_rag=True, release=True, wipe=(WT, WB), dy=0.0225, report=True,
@@ -238,7 +243,9 @@ t = Trial()  # a rag passed 3 cm from the axis hovers about 8 mm clear of the bl
 results.append(check("rag hovering 3 cm from the blade", full(t, dy=0.03)[0], 0.0))
 
 t = Trial()
-results.append(check("short wipe (3 cm of the 4 cm span)", full(t, wipe=(WB + 0.03, WB))[0], 0.0))
+results.append(check("short wipe (3 cm of the 6 cm oiled length)", full(t, wipe=(WB + 0.03, WB))[0], 0.0))
+t = Trial()
+results.append(check("part wipe (4.5 cm of the 6 cm oiled length)", full(t, wipe=(WB + 0.045, WB))[0], 0.0))
 
 S0 = T + m.MOUTH + OUTQ - m.BLADE  # the tip's height when the test pulls the blade out (the rag's middle here: s = 0)
 
@@ -260,49 +267,49 @@ t = Trial()  # several dabs up and down the blade, lifted off between them: no s
 results.append(check("dabs at 4, 2.5 and 0.5 cm, lifted between", strokes(t, (0.04, 0.04), (0.025, 0.025), (0.005, 0.005)),
                      0.0))
 
-t = Trial()  # the middle slid from 4 cm to 2 cm: the tip and the crosshatch stay smeared
-results.append(check("half the length (4 to 2 cm)", strokes(t, (0.04, 0.02)), 0.0))
+t = Trial()  # the middle slid from 6 cm to 3 cm: the tip and the crosshatch stay smeared
+results.append(check("half the length (6 to 3 cm)", strokes(t, (0.06, 0.03)), 0.0))
 
 t = Trial()  # scrubbed up and down the upper half ten times: the union is still half the span
-results.append(check("half the length scrubbed back and forth", strokes(t, *[(0.04, 0.02), (0.02, 0.04)] * 5, off=0), 0.0))
+results.append(check("half the length scrubbed back and forth", strokes(t, *[(0.06, 0.03), (0.03, 0.06)] * 5, off=0), 0.0))
 
 t = Trial()  # review, Nov 10: a full stroke with the rigid pad held 4.5 mm clear of the blade (middle still in RAG_TOUCH)
 results.append(check("full procedure, rag 4.5 mm clear of the blade", full(t, dy=0.026)[0], 0.0))
 
-t = Trial()  # review: two dabs 4.2 cm apart with 3 steps off between: nothing credited across the gap
-results.append(check("dab at 4.2 cm, 3 steps off, dab at the tip", strokes(t, (0.042, 0.042), (0.0, 0.0), off=3), 0.0))
+t = Trial()  # review: two dabs 6.2 cm apart with 3 steps off between: nothing credited across the gap
+results.append(check("dab at 6.2 cm, 3 steps off, dab at the tip", strokes(t, (0.062, 0.062), (0.0, 0.0), off=3), 0.0))
 
-t = Trial()  # review: one touching step at 4.2 cm, the next at the tip: a jump, not a slide
+t = Trial()  # review: one touching step at 6.2 cm, the next at the tip: a jump, not a slide
 t.grab(); t.slide(OUTQ); t.take_rag()
-t.wipe(S0 + 0.042, S0 + 0.0, n=1, off=10)  # two touching steps, 4.2 cm apart
+t.wipe(S0 + 0.062, S0 + 0.0, n=1, off=10)  # two touching steps, 6.2 cm apart
 t.slide(0.0); t.hold(5); t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.rag_down()
-results.append(check("one-step jump from 4.2 cm to the tip", t.hold(25)[0], 0.0))
+results.append(check("one-step jump from 6.2 cm to the tip", t.hold(25)[0], 0.0))
 
-t = Trial()  # one stroke, middle from 4.2 cm to the tip
-results.append(check("full stroke (4.2 cm to the tip)", strokes(t, (0.042, 0.0)), 1.0))
+t = Trial()  # one stroke, middle from 6.2 cm to the tip
+results.append(check("full stroke (6.2 cm to the tip)", strokes(t, (0.062, 0.0)), 1.0))
 
 t = Trial()  # the same stroke drawn upward
-results.append(check("full stroke upward", strokes(t, (0.0, 0.042)), 1.0))
+results.append(check("full stroke upward", strokes(t, (0.0, 0.062)), 1.0))
 
-t = Trial()  # 3.4 cm of the 4 cm: 85%
-results.append(check("stroke stopping 6 mm short of the tip", strokes(t, (0.04, 0.006)), 1.0))
+t = Trial()  # 5.4 cm of the 6 cm: 90%
+results.append(check("stroke stopping 6 mm short of the tip", strokes(t, (0.06, 0.006)), 1.0))
 
 t = Trial()  # two strokes, rag lifted off 0.5 s between, together covering the span (each alone is half): counted,
 # because together they rub every part of the blade a single stroke would
-results.append(check("two half strokes covering the span", strokes(t, (0.042, 0.02), (0.021, 0.0)), 1.0))
+results.append(check("two half strokes covering the span", strokes(t, (0.062, 0.03), (0.031, 0.0)), 1.0))
 
 t = Trial()  # half a stroke, the tip dipped back into the tube (smeared again), out, the other half: not a wipe
-t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(S0 + 0.042, S0 + 0.02, off=10); t.slide(0.06); t.slide(OUTQ)
-t.wipe(S0 + 0.021, S0, off=10); t.slide(0.0); t.hold(5); t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.rag_down()
+t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(S0 + 0.062, S0 + 0.03, off=10); t.slide(0.06); t.slide(OUTQ)
+t.wipe(S0 + 0.031, S0, off=10); t.slide(0.0); t.hold(5); t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.rag_down()
 results.append(check("half stroke, tip back in the tube, other half", t.hold(25)[0], 0.0))
 
 t = Trial()  # a full stroke with the contact lost 2 steps in the middle (the pad chattering): still one stroke
-t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(S0 + 0.042, S0 + 0.022, n=15, off=2); t.wipe(S0 + 0.02, S0, n=15, off=10)
+t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(S0 + 0.062, S0 + 0.032, n=15, off=2); t.wipe(S0 + 0.03, S0, n=15, off=10)
 t.slide(0.0); t.hold(5); t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.rag_down(); t.report()
 results.append(check("full stroke with a 2-step contact gap", t.hold(25)[0], 1.0))
 
 t = Trial()  # rag touched at the top, lifted 0.5 s, touched at the bottom: the gap is not counted as slid over
-results.append(check("touch at the top, lift, touch at the bottom", strokes(t, (0.042, 0.042), (0.0, 0.0)), 0.0))
+results.append(check("touch at the top, lift, touch at the bottom", strokes(t, (0.062, 0.062), (0.0, 0.0)), 0.0))
 
 t = Trial()
 results.append(check("half-seated reinsert before the second pull (never seated)", full(t, reseat_q=0.045)[0], 0.0))
@@ -354,11 +361,11 @@ t.grab(); t.slide(0.1475); t.ropen = 1.0; t.step(3); t.grab_blade(0.1125); t.sli
 t.slide(0.1475); t.ropen = 1.0; t.step(3); t.grab(); t.slide(0.0); t.hold(5)
 t.slide(0.1475); t.ropen = 1.0; t.step(3); t.grab_blade(0.1125); t.slide(OUTQ); t.hold(30)
 t.slide(0.1475); t.ropen = 1.0; t.step(3); t.grab(); t.slide(0.0); t.let_go(); t.rag_down(); t.report()
-results.append(check("hand over hand: blade pinched for the pulls, the wipe and the reading", t.hold(25)[0], 1.0))
+results.append(check("hand over hand with the blade pinched: the blade handled, 0", t.hold(25)[0], 0.0))
 t = Trial()  # an empty fist (opening 0) beside the blade during the reading is not a hold
 t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(WT, WB); t.slide(0.0); t.hold(5); t.slide(OUTQ)
 t.grab_blade(0.1125); t.ropen = 0.0
-results.append(check("reading 'held' by an empty fist at the blade: no reading", t.hold(30)[0], 0.25))
+results.append(check("an empty fist at the blade during the reading: the blade handled, 0", t.hold(30)[0], 0.0))
 
 # Holding is contact (Nov 12): both fingers on the handle, their opening stopped by it. A hand riding along beside the
 # handle without both fingers on it is not pushing it home; the reseat does not count and nothing true is read.
@@ -370,7 +377,7 @@ t.ropen = HANDLE_GRIP; t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.ra
 results.append(check("reseated with an open hand round the handle, not touching it", t.hold(25)[0], 0.0))
 t = Trial()  # closed to the handle's thickness but 5 mm to one side: one finger on it, the other 5 mm off
 t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(WT, WB)
-t.off = (0.0, 0.005, 0.0); t.slide(0.0, n=3); t.hold(5)
+t.off = tuple(0.005 * THICK); t.slide(0.0, n=3); t.hold(5)
 t.off = (0.0, 0.0, 0.0); t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.rag_down(); t.report()
 results.append(check("reseated with one finger on the handle", t.hold(25)[0], 0.0))
 t = Trial()  # the same hand closed to the handle's thickness with its pad tips 5 mm above the handle's top

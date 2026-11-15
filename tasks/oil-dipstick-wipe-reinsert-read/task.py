@@ -1,5 +1,7 @@
-"""A bench model of a small four-stroke engine (a mower or generator engine) with its dipstick seated in the oil fill
-tube, a folded shop rag, and an oil check card with ADD, OK and OVER pockets and a marker puck. Checking the oil means
+"""A lawn tractor's Kohler 7000 Series KT725 V-twin engine, modeled at its real size from Kohler's dimension drawing,
+standing on a section of the tractor's frame, with its yellow-handled dipstick seated in the near-vertical oil fill
+tube at the engine's front corner, a folded shop rag, and an oil check card with ADD, OK and OVER pockets and a marker
+puck. Checking the oil means
 pulling the dipstick, wiping the blade clean on the rag (the first pull reads a false, smeared level because oil
 splashes up the tube while the engine runs), pushing it back in until the cap seats, pulling it again and holding it
 still to read the level, then seating it again, putting the rag down and reporting the level by leaving the puck in
@@ -27,29 +29,30 @@ SCORE_OVER = "end"
 INSTRUCTION = ("Check the oil level on the engine with the dipstick, mark it on the check card with the puck, then put "
                "everything back.")
 
-# The engine (a lawn tractor's single-cylinder engine, modeled as its crankcase side) is fixed to the table. Its oil fill
-# tube rises out of the crankcase and slopes up toward the robot at 25 degrees; the dipstick slides along the tube's
-# axis. The tube frame has its origin at the middle of the tube's mouth (top rim) and its z axis along the tube, out of
-# the mouth; its y axis is world y, and its x axis lies in the vertical plane through the tube (up and away).
-SX, SY = 0.38, -0.10  # the tube's mouth in world x, y
-MOUTH = 0.125  # the mouth's middle above the table
-TUBE_DEG = 25.0  # the tube's slope above horizontal
-_TH = math.radians(TUBE_DEG)
-U = np.array([-math.cos(_TH), 0.0, math.sin(_TH)])  # the tube's axis, out of the mouth: up and toward the robot
-_PHI = _TH - math.pi / 2  # the tube frame is the world frame turned by this about y (its z axis then along U)
-TILT = (0.0, float(math.sin(_PHI / 2)), 0.0, float(math.cos(_PHI / 2)))  # x, y, z, w (plain floats: Warp rejects float64)
-R_TUBE = np.array([[math.cos(_PHI), 0.0, math.sin(_PHI)], [0.0, 1.0, 0.0], [-math.sin(_PHI), 0.0, math.cos(_PHI)]])
+# The engine (Kohler KT725, Kohler service manual 32 690 03 Rev. H, dimension drawing p.5) is fixed to the table, its
+# mounting surface on an 8 mm frame plate. Its oil fill tube rises straight up at the engine's front corner (p.5 top
+# view: "OIL FILL & DIPSTICK (YELLOW)"); the dipstick slides along the tube's axis. The tube frame has its origin at the
+# middle of the tube's mouth (the collar's top rim) and its z axis along the tube, out of the mouth (here world z).
+SX, SY = 0.36, -0.12  # the tube's mouth in world x, y (the robot's near right corner of the engine)
+PLATE_T = 0.008  # the frame plate under the engine's mounting surface
+MOUTH = PLATE_T + 0.275  # the collar's top 27.5 cm above the mounting surface (read off the p.5 oil-filter-side view)
+U = np.array([0.0, 0.0, 1.0])  # the tube's axis, out of the mouth: straight up (the drawing's tube is near vertical)
+# The tube frame is the world frame turned a quarter turn about z: the blade's width (tube x) runs along world y and its
+# thickness (tube y) along world x, so its flat faces look toward and away from the robot.
+TILT = (0.0, 0.0, float(math.sqrt(0.5)), float(math.sqrt(0.5)))  # x, y, z, w (plain floats: Warp rejects float64)
+R_TUBE = np.array([[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
 MOUTH_W = np.array([SX, SY, TOP + MOUTH])  # the mouth's middle in world coordinates
-BLADE = 0.245  # the dipstick blade, from the cap's underside to the tip
+BLADE = 0.245  # the dipstick blade, from the cap's underside to the tip: to 3 cm above the mounting surface, in the sump
 BLADE_W, BLADE_T = 0.010, 0.003  # blade width (along the tube frame's x) and thickness (along y)
 CAP_R, CAP_H = 0.016, 0.010  # the cap's disc, which seats on the tube's rim
 HANDLE = (0.035, 0.018, 0.035)  # the T-handle above the cap: width (tube x), thickness (y), length along the tube (z)
 HANDLE_C = CAP_H + HANDLE[2] / 2  # the handle's middle along the tube from the link origin (the cap's underside)
-STICK_LEN = BLADE + CAP_H + HANDLE[2]  # 0.29 m overall (Kohler 32 038 08-S class, about 11-1/2 in)
-TUBE_R = 0.012  # the fill tube's outside radius
-TUBE_IN = 0.26  # the tube runs this far down into the crankcase below its mouth
+STICK_LEN = BLADE + CAP_H + HANDLE[2]  # 0.29 m overall, sized to the drawing's tube (handle top ~31 cm up)
+TUBE_R = 0.0105  # the fill tube's outside radius (about 2.1 cm across in the drawing)
+COLLAR_R, COLLAR_H = 0.018, 0.05  # the wider collar at the tube's top, which the cap seats on
+TUBE_IN = 0.20  # the tube runs this far down to where it enters the crankcase
 RAG = (0.04, 0.04, 0.025)  # the folded shop rag (pad): x, y, z
-RAG_START = (0.26, 0.10, TOP + RAG[2] / 2)
+RAG_START = (0.20, 0.0, TOP + RAG[2] / 2)
 
 # The oil level, set per trial (a real trial sets it with a syringe before each run). ADD is 0.8 cm and FULL 2.0 cm
 # above the tip; each case sits 4 mm or more from the nearest mark, so it reads the same by eye from any camera.
@@ -58,7 +61,7 @@ LEVELS = {"low": 0.004, "ok": 0.014, "over": 0.027}  # m above the tip: below AD
 CASES = ("low", "ok", "over")
 # The oil check card (fixed to the bench, beside the rag) and its marker puck. The pockets run ADD, OK, OVER from the
 # robot's left to its right (left to right in the top camera).
-CARD_C = (0.35, 0.10)  # the card's middle, x, y
+CARD_C = (0.20, 0.13)  # the card's middle, x, y (in front of the engine, on the robot's left)
 CARD = (0.06, 0.16, 0.010)  # x, y, z: 6 x 16 cm, 1 cm tall
 FLOOR = 0.005  # each pocket is 5 mm deep: its floor 5 mm above the table, the card's top 1 cm
 POCKET = 0.044  # pockets 4.4 cm square
@@ -66,17 +69,18 @@ POCKET_DY = 0.052  # pocket middles 5.2 cm apart along y (0.8 cm walls between t
 POCKETS = {"low": (CARD_C[0], CARD_C[1] + POCKET_DY), "ok": CARD_C, "over": (CARD_C[0], CARD_C[1] - POCKET_DY)}
 POCKET_NAME = {"low": "ADD", "ok": "OK", "over": "OVER"}
 PUCK_R, PUCK_H = 0.015, 0.02  # the marker puck: 3 cm across, 2 cm tall
-PUCK_START = (0.20, 0.15, TOP + PUCK_H / 2)
+PUCK_START = (0.14, 0.22, TOP + PUCK_H / 2)
 
 # Scoring (the dipstick's joint position q is how far the cap is above its seat, m)
 SEAT = 0.003  # m: q at or under this is seated (cap down on the rim; a 3 mm gap is a visible lift of the cap)
 OUT = BLADE + 0.005  # m: the blade's tip at least 5 mm above the mouth: the dipstick is out of the tube
 TIP_IN = BLADE - 0.005  # m: under this the tip is back inside the tube (it picks up the splash on the tube wall)
-WIPE_ZONE = 0.06  # m: the lower 6 cm of the blade, the part the splash and the FULL/ADD crosshatch are on (drawn smear)
-WIPE_SPAN = 0.04  # m: the stretch from the tip that the rag's middle must slide over: the pad, about 4 cm tall when held
-# on edge, reaches 2 cm either side of its middle, so a middle drawn from 4 cm down to the tip rubs the whole 6 cm smear
-WIPE_FRAC = 0.8  # the middle must slide over 80% of that span (3.2 cm) in contact: a stroke may stop up to 8 mm short
-# (the arm lags its target about 1.6 cm), but a dab (no slide) or half a stroke (2 cm) leaves the marks smeared
+WIPE_ZONE = 0.06  # m: the oiled length of the blade (estimated): from the tip up past the highest level set (2.7 cm, the
+# "over" case) and the FULL/ADD crosshatch, plus the splash film the running engine throws up the tube; drawn as the smear
+WIPE_SPAN = WIPE_ZONE  # m: the stretch from the tip that the rag's middle must slide over in contact: the whole oiled
+# length, so the pad (about 4 cm tall on edge, 2 cm either side of its middle) rubs from below the tip to 2 cm above it
+WIPE_FRAC = 0.9  # the middle must slide over 90% of that span (5.4 cm) in contact: a stroke may stop up to 6 mm short
+# (the arm lags its target), but a dab (no slide), a spot wipe or a stroke over part of the oiled length does not count
 GAP_STEPS = 3  # control steps (0.15 s): kept for the drawn oil only; the wipe credits only slides between two steps
 # that are both in contact, so nothing is credited across a gap (a dab, a lift and a dab elsewhere add up to nothing)
 SLIDE_MAX = 0.005  # m per control step (10 cm/s): a faster jump between two touching steps is not credited (the demo's
@@ -89,13 +93,12 @@ RAG_GAP = 0.002  # m: and the rag's outline within 2 mm of the blade's faces (th
 READ_STEPS = 20  # control steps (1 s at 20 Hz) the dipstick must be held out and still to read it
 STILL = 0.01  # m/s: the dipstick moving slower than this (its travel per control step) counts as still
 CONTROL_HZ = 20
-# Held: a gripper with both fingers touching the T-handle or the blade (gk.gripping, contact as below) and their opening
+# Held: a gripper with both fingers touching the yellow T-handle (gk.gripping, contact as below) and their opening
 # stopped by it: across the handle's 1.8 cm thickness or 3.5 cm width (from 1.8 cm less 15 % of full opening to 3.5 cm
-# plus 3 %), or pinching the blade across its 3 mm thickness or 1 cm width. On a stick this long a hand pulls it out
-# hand over hand, pinching the blade near the mouth, as a person does. An empty fist (0) or an open hand around the
-# stick does not hold it.
+# plus 3 %). The dipstick is drawn and pushed by its handle only: the blade carries the oil, so a gripper touching the
+# blade (its own shape within 2 mm) while the dipstick is off its seat ends the trial at 0 (a pinched blade smears the
+# band and the reading). An empty fist or an open hand around the handle does not hold it.
 HANDLE_GRIP = (gk.band(HANDLE[1])[0], gk.band(HANDLE[0])[1])
-BLADE_GRIP = (gk.band(BLADE_T)[0], gk.band(BLADE_W)[1])
 # Let go at the end: no gripper touching the dipstick's cap and handle, the rag or the puck, judged by the gripper's own
 # shape (palm and both fingers at their present opening, gk.touching: within 2 mm, the solver's resting gap plus the box
 # fit to the meshes). A hand hovering beside them, however close, has let go.
@@ -147,12 +150,18 @@ def _parts(boxes):
     return tuple(meshes), tuple(colliders)
 
 
-# The engine: a lawn tractor's vertical-shaft single (Kohler Courage SV class: about 49 x 42 x 33 cm overall, Kohler
-# catalog), bolted to a section of the tractor's frame on the bench. Its middle (the crankshaft's axis) sits 24 cm beyond
-# the fill tube's mouth; the cylinder points away from the robot. Everything but the colliders below is looks only.
-ENGINE_C = (SX + 0.24, SY)  # the crankshaft's axis on the table (world x, y)
-CASE_R = 0.14  # the crankcase / oil pan's radius: its near face 10 cm beyond the mouth (world x 0.48)
-HOUSING_R = 0.155  # the blower housing over the flywheel
+# The engine: Kohler KT725 (Kohler 7000 Series V-twin, 725 cc), sized from the service manual's dimension drawing (p.5):
+# 423 mm front to back, about 445 mm across, 300 mm to the blower housing's flat top, 329 mm to the top of the air
+# cleaner, all above the mounting surface. Its frame: x along the drawing's left-to-right, y from its front to its back
+# (the robot sees the drawing's "oil filter side"), origin on the crankshaft's axis at the table. The 90-degree V of
+# cylinders opens toward the back; the blower housing with its round rotating screen covers the top; the oil fill tube
+# stands at the front-left corner. Everything but the colliders below is looks only.
+DIP_LOCAL = (-0.152, -0.112)  # the tube's axis from the crankshaft's axis (drawing: about 152 mm left, 112 mm front)
+ENGINE_C = (SX - DIP_LOCAL[0], SY - DIP_LOCAL[1])  # the crankshaft's axis on the table (world x, y)
+MS = PLATE_T  # the mounting surface's height above the table
+VALVE = kit.Look((0.07, 0.07, 0.075), 0.35, metallic=0.3)  # black valve covers
+FILTER = kit.Look((0.10, 0.12, 0.14), 0.5)  # the oil filter's can
+AIRC = kit.Look((0.09, 0.09, 0.095), 0.5)  # the air cleaner cover
 
 
 def _ring_slats(z, r0, r1, n, width, look):
@@ -175,89 +184,123 @@ def _tab(center, w, t, h, r, look):
     return parts
 
 
+def _rslab(x0, x1, y0, y1, z0, z1, r, look):
+    """A slab with rounded vertical edges (radius r) from (x0, y0, z0) to (x1, y1, z1)."""
+    cx, cy, cz, h = (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, z1 - z0
+    parts = [kit.box((cx, cy, cz), (x1 - x0 - 2 * r, y1 - y0, h), look),
+             kit.box((cx, cy, cz), (x1 - x0, y1 - y0 - 2 * r, h), look)]
+    for x in (x0 + r, x1 - r):
+        for y in (y0 + r, y1 - r):
+            parts.append(kit.cylinder((x, y, cz), r, h, look, n=20))
+    return parts
+
+
+def _rrect(x0, x1, y0, y1, radii, z, n=10):
+    """A rounded rectangle's outline at height z, counterclockwise from above; radii for the corners (x0, y0), (x1, y0),
+    (x1, y1), (x0, y1)."""
+    corners = ((x0, y0, -1, -1), (x1, y0, 1, -1), (x1, y1, 1, 1), (x0, y1, -1, 1))
+    start = (math.pi, 1.5 * math.pi, 0.0, 0.5 * math.pi)
+    pts = []
+    for (cx, cy, sx, sy), r, a0 in zip(corners, radii, start):
+        for k in range(n):
+            a = a0 + 0.5 * math.pi * k / (n - 1)
+            pts.append((cx - sx * r + r * math.cos(a), cy - sy * r + r * math.sin(a), z))
+    return pts
+
+
+def _loft(sections, look):
+    """A closed smooth shell through rounded-rectangle sections (x0, x1, y0, y1, radii, z), bottom to top."""
+    rings = [_rrect(*sec) for sec in sections]
+    n = len(rings[0])
+    pts = [p for ring in rings for p in ring]
+    counts, idx = [], []
+    for i in range(len(rings) - 1):
+        for k in range(n):
+            a, b = i * n + k, i * n + (k + 1) % n
+            counts.append(4)
+            idx += [a, b, b + n, a + n]
+    counts += [n, n]
+    idx += list(range(n))[::-1] + [(len(rings) - 1) * n + k for k in range(n)]
+    return kit._mesh(pts, counts, idx, look)
+
+
+def _cylinder_bank(sx):
+    """One cylinder of the V: finned barrel, head and black valve cover, pointing back-left (sx -1) or back-right
+    (sx +1) at 45 degrees, its axis 134 mm above the mounting surface (the drawing's spark plug height). The valve
+    covers' outer faces come to 33.4 cm apart (the drawing's 334.3 mm across the valve covers)."""
+    d = np.array([sx * math.sqrt(0.5), math.sqrt(0.5), 0.0])
+    zc = MS + 0.134
+    out = []
+    for k in range(7):  # cooling fins round the barrel (83 mm bore)
+        c = d * (0.07 + 0.0095 * k)
+        out.append(kit.cylinder((c[0], c[1], zc), 0.06, 0.004, FINS, axis=tuple(d), n=28))
+    c = d * 0.10
+    out.append(kit.cylinder((c[0], c[1], zc), 0.05, 0.07, FINS, axis=tuple(d), n=28))
+    a, b = d * 0.13, d * 0.155  # the head
+    out.append(kit.band([(a[0], a[1], zc), (b[0], b[1], zc)], 0.12, 0.12, ALU, normal=(0, 0, 1)))
+    a, b = d * 0.155, d * 0.178  # the valve cover
+    out.append(kit.band([(a[0], a[1], zc), (b[0], b[1], zc)], 0.105, 0.115, VALVE, normal=(0, 0, 1)))
+    p = d * 0.142 + np.array([-d[1], d[0], 0.0]) * 0.066 * sx  # spark plug and its boot on the head's side
+    out.append(kit.cylinder((p[0], p[1], zc), 0.011, 0.04, BLACK, axis=(-d[1] * sx, d[0] * sx, 0.0), n=12))
+    return out
+
+
 def _block():
-    """The engine round the fill tube, in its own frame (origin on the table at ENGINE_C). The fill tube rises out of the
-    oil pan's near face about 8 cm up; no collider sits on the tube's line inside the case, so the dipstick slides down
-    it untouched."""
-    meshes = []
-    # Frame section the engine bolts to, and the crankcase / oil pan (cast aluminum, its mounting flange darker)
-    meshes.append(kit.box((0.07, 0.0, 0.004), (0.46, 0.44, 0.008), PLATE))
-    meshes.append(kit.lathe([(0.0, 0.008), (0.145, 0.008), (0.145, 0.018), (0.0, 0.018)], DARK))
-    meshes.append(kit.lathe([(0.0, 0.018), (0.132, 0.018), (0.138, 0.03), (CASE_R, 0.06), (CASE_R, 0.11),
-                             (0.134, 0.13), (0.0, 0.13)], ALU, n=48))
-    for a in range(6):  # the case's flange bolts
-        t = 2 * math.pi * (a + 0.5) / 6
-        meshes.append(kit.cylinder((0.152 * math.cos(t), 0.152 * math.sin(t), 0.021), 0.006, 0.006, STEEL, n=6))
-    # Boss where the fill tube enters the case, on the tube's line (U), and the oil drain plug on the far side
-    entry = (SX - ENGINE_C[0] + 0.105 * -U[0], 0.0, MOUTH + 0.105 * -U[2])
-    meshes.append(kit.cylinder(entry, 0.018, 0.03, ALU, axis=tuple(U), n=24))
-    meshes.append(kit.cylinder((0.0, 0.142, 0.022), 0.008, 0.012, BLACK, axis="y", n=6))
-    # Blower housing over the flywheel (black), Kohler's yellow stripe, and the rotating grass screen on top
-    meshes.append(kit.lathe([(0.0, 0.13), (0.15, 0.13), (HOUSING_R, 0.145), (HOUSING_R, 0.225), (0.145, 0.245),
-                             (0.12, 0.255), (0.0, 0.255)], SHROUD, n=56))
-    meshes.append(kit.lathe([(HOUSING_R + 0.001, 0.19), (HOUSING_R + 0.001, 0.205)], YELLOW, n=56))
-    meshes.append(kit.cylinder((0.0, 0.0, 0.258), 0.105, 0.006, SCREEN, n=48))
-    meshes += _ring_slats(0.2615, 0.03, 0.103, 24, 0.007, BLACK)
-    meshes.append(kit.cylinder((0.0, 0.0, 0.262), 0.03, 0.006, BLACK, n=32))
-    # Cylinder pointing away from the robot: finned barrel and head (cast), the black sheet-steel shroud over it
-    fins = [(0.05, 0.12)]
-    x = 0.12
-    while x < 0.22:
-        fins += [(0.05, x), (0.064, x + 0.001), (0.064, x + 0.004), (0.05, x + 0.005)]
-        x += 0.009
-    fins += [(0.05, 0.22), (0.0, 0.22)]
-    meshes.append(kit.lathe(fins, FINS, center=(0.0, 0.0, 0.075), axis="x", n=40))
-    for k in range(5):  # the head's straight fins
-        meshes.append(kit.box((0.226 + 0.008 * k, 0.0, 0.075), (0.004, 0.13, 0.125), FINS))
-    meshes.append(kit.box((0.24, 0.0, 0.075), (0.04, 0.10, 0.10), FINS))
-    meshes.append(kit.box((0.272, 0.0, 0.08), (0.016, 0.11, 0.09), SHROUD))  # valve cover on the head's end
-    meshes.append(kit.box((0.17, 0.0, 0.142), (0.12, 0.14, 0.012), SHROUD))  # cylinder shroud over the barrel
-    meshes.append(kit.box((0.17, 0.073, 0.10), (0.12, 0.006, 0.08), SHROUD))
-    meshes.append(kit.box((0.17, -0.073, 0.10), (0.12, 0.006, 0.08), SHROUD))
-    # Spark plug in the head's side, its boot and lead running back to the housing
-    meshes.append(kit.cylinder((0.245, -0.068, 0.10), 0.008, 0.024, CERAMIC, axis="y", n=16))
-    meshes.append(kit.cylinder((0.245, -0.088, 0.10), 0.012, 0.03, BLACK, axis="y", n=16))
-    meshes.append(kit.band([(0.245, -0.10, 0.10), (0.20, -0.11, 0.13), (0.12, -0.12, 0.17)], 0.007, 0.007, BLACK,
-                           normal=(0, 0, 1)))
-    # Carburetor and the air cleaner on top of it (black cover, yellow knob)
-    meshes.append(kit.box((0.20, 0.06, 0.135), (0.05, 0.05, 0.05), ALU))
-    meshes.append(kit.lathe([(0.0, 0.16), (0.062, 0.16), (0.066, 0.17), (0.066, 0.20), (0.058, 0.212), (0.0, 0.212)],
-                            SHROUD, center=(0.20, 0.03, 0.0), n=40))
-    meshes.append(kit.cylinder((0.20, 0.03, 0.218), 0.012, 0.012, YELLOW, n=20))
-    # Fuel line from the carburetor down through an inline filter and off the plate (to the tractor's tank)
-    line = [(0.21, 0.087, 0.12), (0.20, 0.13, 0.10), (0.18, 0.15, 0.085)]
-    meshes.append(kit.band(line, 0.007, 0.007, BLACK, normal=(0, 0, 1)))
-    meshes.append(kit.cylinder((0.18, 0.15, 0.06), 0.012, 0.045, FUEL, n=20))
-    meshes.append(kit.band([(0.18, 0.15, 0.036), (0.16, 0.17, 0.02), (0.12, 0.215, 0.012)], 0.007, 0.007, BLACK,
-                           normal=(0, 0, 1)))
-    # Exhaust from the head's other side to the muffler
-    meshes.append(kit.band([(0.235, -0.065, 0.06), (0.235, -0.11, 0.055), (0.225, -0.15, 0.05)], 0.022, 0.022,
-                           EXHAUST, normal=(0, 0, 1)))
-    meshes.append(kit.cylinder((0.215, -0.19, 0.05), 0.042, 0.12, EXHAUST, axis="y", n=32))
-    # Electric starter on the case's left side
-    meshes.append(kit.cylinder((-0.02, 0.15, 0.075), 0.035, 0.10, BLACK, n=32))
-    meshes.append(kit.cylinder((-0.02, 0.15, 0.13), 0.03, 0.012, STEEL, n=32))
+    """The KT725 round the fill tube, in its own frame (origin on the table at ENGINE_C)."""
+    tx, ty = DIP_LOCAL
+    m = []
+    m.append(kit.box((0.0, 0.07, PLATE_T / 2), (0.47, 0.50, PLATE_T), PLATE))  # tractor frame section
+    m += _rslab(-0.145, 0.15, -0.125, 0.165, MS, MS + 0.095, 0.04, ALU)  # oil pan
+    m.append(kit.box((0.0, 0.02, MS + 0.006), (0.30, 0.30, 0.012), DARK))  # its mounting flange
+    m += _rslab(-0.12, 0.13, -0.10, 0.13, MS + 0.095, MS + 0.14, 0.03, ALU)  # crankcase
+    m += _cylinder_bank(-1) + _cylinder_bank(1)
+    # Blower housing (black sheet steel), one smooth shell: the flywheel's housing at the front reaching down to the
+    # crankcase, the hood over the V with a rounded top edge, the front-left corner swept round wide where the fill tube
+    # stands (drawing, top view)
+    hood_r = (0.20, 0.12, 0.13, 0.13)  # corner radii: front-left (round the tube), front-right, back-right, back-left
+    m.append(_loft([(-0.17, 0.17, -0.137, 0.06, (0.165, 0.09, 0.03, 0.03), MS + 0.10),
+                    (-0.17, 0.17, -0.137, 0.06, (0.165, 0.09, 0.03, 0.03), MS + 0.205)], SHROUD))
+    m.append(_loft([(-0.205, 0.205, -0.137, 0.27, hood_r, MS + 0.20),
+                    (-0.205, 0.205, -0.137, 0.27, hood_r, MS + 0.275),
+                    (-0.198, 0.198, -0.130, 0.263, hood_r, MS + 0.292),
+                    (-0.185, 0.185, -0.117, 0.25, hood_r, MS + 0.30)], SHROUD))
+    # Rotating debris screen over the flywheel on the housing's top (drawing: about 206 mm across, on the crankshaft)
+    m.append(kit.cylinder((0.0, 0.0, MS + 0.303), 0.103, 0.006, SCREEN, n=48))
+    m += _ring_slats(MS + 0.3065, 0.025, 0.10, 24, 0.007, BLACK)
+    m.append(kit.cylinder((0.0, 0.0, MS + 0.307), 0.022, 0.006, BLACK, n=32))
+    # Air cleaner: oval black cover at the back, its top 329 mm up
+    m += _rslab(-0.10, 0.10, 0.135, 0.255, MS + 0.30, MS + 0.322, 0.055, AIRC)
+    m += _rslab(-0.075, 0.075, 0.155, 0.235, MS + 0.322, MS + 0.329, 0.04, SHROUD)
+    # Oil filter on the front-left, its axis toward the robot, below the fill tube's bracket
+    m.append(kit.cylinder((-0.17, 0.0, MS + 0.075), 0.038, 0.07, FILTER, axis="x", n=28))
+    m.append(kit.cylinder((-0.207, 0.0, MS + 0.075), 0.03, 0.006, STEEL, axis="x", n=24))
+    # Electric starter on the right side
+    m.append(kit.cylinder((0.175, -0.04, MS + 0.10), 0.036, 0.10, BLACK, axis="y", n=28))
+    # Fill tube's boss on the crankcase and its bracket to the housing
+    m += _rslab(tx - 0.02, tx + 0.04, ty - 0.02, ty + 0.03, MS, MS + 0.085, 0.015, ALU)
+    m.append(kit.box((tx + 0.03, ty, MS + 0.20), (0.06, 0.012, 0.012), STEEL))
     colliders = (
-        kit.Collider((0.07, 0.0, 0.004), size=(0.46, 0.44, 0.008)),  # frame section
-        # oil pan / crankcase, leaving the tube's line free inside it (y within 2 cm of the axis, below 10 cm)
-        kit.Collider((0.0, -0.075, 0.069), size=(0.27, 0.11, 0.122)),
-        kit.Collider((0.0, 0.075, 0.069), size=(0.27, 0.11, 0.122)),
-        kit.Collider((0.0, 0.0, 0.115), size=(0.27, 0.04, 0.03)),
-        kit.Collider((0.075, 0.0, 0.054), size=(0.12, 0.04, 0.092)),
-        kit.Collider((0.0, 0.0, 0.192), size=(0.30, 0.30, 0.124)),  # blower housing
-        kit.Collider((0.20, 0.0, 0.075), size=(0.16, 0.13, 0.13)),  # cylinder and head
-        kit.Collider((0.215, -0.19, 0.05), size=(0.084, 0.12, 0.084)),  # muffler
-        kit.Collider((0.20, 0.03, 0.186), size=(0.132, 0.132, 0.05)),  # air cleaner
+        kit.Collider((0.0, 0.07, PLATE_T / 2), size=(0.47, 0.50, PLATE_T)),  # frame section
+        kit.Collider((0.005, 0.035, MS + 0.07), size=(0.26, 0.25, 0.14)),  # oil pan and crankcase
+        kit.Collider((0.0, -0.016, MS + 0.16), size=(0.28, 0.11, 0.12)),  # flywheel housing (front)
+        kit.Collider((0.0, 0.06, MS + 0.25), size=(0.41, 0.18, 0.10)),  # hood over the V
+        kit.Collider((0.0, 0.20, MS + 0.25), size=(0.30, 0.10, 0.10)),  # its back, inside the rounded corners
+        kit.Collider((0.0, -0.035, MS + 0.20), size=(0.26, 0.09, 0.20)),  # housing round its rounded front-left corner
+        kit.Collider((0.07, -0.10, MS + 0.20), size=(0.27, 0.07, 0.20)),
+        # each cylinder, head and valve cover as three boxes along its 45-degree axis
+        *[kit.Collider((sx * r * math.sqrt(0.5), r * math.sqrt(0.5), MS + 0.134), size=(w, w, 0.12))
+          for sx in (-1, 1) for r, w in ((0.08, 0.09), (0.125, 0.09), (0.16, 0.08))],
+        kit.Collider((0.0, 0.195, MS + 0.315), size=(0.20, 0.12, 0.03)),  # air cleaner
     )
-    return kit.Prop("block", pos=(*ENGINE_C, TOP), size=(0.60, 0.50, 0.27), meshes=tuple(meshes),
-                    colliders=colliders)
+    return kit.Prop("block", pos=(*ENGINE_C, TOP), size=(0.47, 0.50, 0.33), meshes=tuple(m), colliders=colliders)
 
 
 def _engine():
-    """The fill tube and its dipstick, in the tube frame (origin at the mouth's middle, z along the tube)."""
-    meshes = (kit.cylinder((0.0, 0.0, -TUBE_IN / 2), TUBE_R, TUBE_IN, BLACK),  # 1 in fill tube (Kohler's metal tube)
-              kit.lathe([(TUBE_R, -0.012), (TUBE_R + 0.002, -0.006), (TUBE_R + 0.002, 0.0)], DARK))  # flared neck
-    colliders = (kit.Collider((0.0, 0.0, -TUBE_IN + 0.004), size=(0.02, 0.02, 0.006)),)  # the tube's buried end
+    """The fill tube and its dipstick, in the tube frame (origin at the mouth's middle, z straight up)."""
+    meshes = (kit.cylinder((0.0, 0.0, -TUBE_IN / 2), TUBE_R, TUBE_IN, BLACK),  # the tube
+              kit.lathe([(TUBE_R, -COLLAR_H - 0.01), (COLLAR_R, -COLLAR_H), (COLLAR_R, -0.003), (COLLAR_R - 0.002, 0.0),
+                         (0.012, 0.0), (0.012, -0.005)], BLACK, n=32))  # the collar the cap seats on
+    colliders = (kit.Collider((0.0, 0.0, -0.27), size=(0.02, 0.02, 0.006)),)  # the tube's base, below the blade's tip
     # Dipstick (link frame at the cap's underside, on the tube's axis): blade below, cap and T-handle above.
     marks = FULL_MARK - ADD_MARK  # the crosshatch between ADD and FULL near the tip
     cap = [(0.0, 0.0), (CAP_R - 0.001, 0.0), (CAP_R, 0.002)]
@@ -280,10 +323,9 @@ def _engine():
         kit.Collider((0.0, 0.0, CAP_H / 2), size=(2 * CAP_R, 2 * CAP_R, CAP_H)),
         kit.Collider((0.0, 0.0, HANDLE_C), size=HANDLE),
     )
-    # The stick stays where it is let go: in the real curved tube the bent blade's friction holds it against its 50 g
-    # weight (about 0.2 N along this slope), so the sim switches its weight off (floating) rather than model the bend.
+    # The stick has its weight (50 g): let go part way out, it slides back down the vertical tube onto its seat.
     stick = kit.Link("stick", "prismatic", "Z", (0.0, 0.0, 0.0), lower=0.0, upper=0.30, start=0.0, mass=0.05,
-                     meshes=s_meshes, colliders=s_colliders, damping=0.5, floating=True)
+                     meshes=s_meshes, colliders=s_colliders, damping=0.5)
     return kit.Mechanism("engine", pos=tuple(float(v) for v in MOUTH_W), size=(0.04, 0.04, 0.60), tilt_xyzw=TILT, meshes=meshes,
                          colliders=colliders, links=(stick,))
 
@@ -361,6 +403,7 @@ class _History:
         self.case = None  # this trial's oil level: "low", "ok" or "over" (set at the first step)
         self.in_steps = 0  # control steps in a row the puck has been down in a pocket
         self.early = False  # the puck went into a pocket before the true reading: a guess, not a report
+        self.blade_touched = False  # a gripper touched the blade while the dipstick was off its seat
 
 
 _H = _History()
@@ -407,14 +450,13 @@ def _q(objects):
 
 
 def _holding(objects):
-    """A gripper holding the dipstick: both fingers touching its T-handle or its blade with their opening stopped by
-    it, not an empty fist or an open hand beside it."""
-    return bool(gk.gripping(objects, "engine/stick", HANDLE_SHAPE, HANDLE_GRIP)
-                or gk.gripping(objects, "engine/stick", BLADE_SHAPE, BLADE_GRIP))
+    """A gripper holding the dipstick: both fingers touching its T-handle with their opening stopped by it, not an
+    empty fist or an open hand beside it."""
+    return bool(gk.gripping(objects, "engine/stick", HANDLE_SHAPE, HANDLE_GRIP))
 
 
 def _wiped():
-    """The rag's middle has slid over at least 80% of the blade's lower 4 cm, in contact, during this pull."""
+    """The rag's middle has slid over at least 90% of the blade's 6 cm oiled length, in contact, during this pull."""
     return _H.swept.sum() >= WIPE_FRAC * len(_H.swept) - 1e-9
 
 
@@ -484,6 +526,8 @@ def _update(objects):
         _H.early = True
     js = kit.joint(objects, "engine/stick")
     q, held = js.pos, _holding(objects)
+    if q > SEAT and gk.touching(objects, "engine/stick", BLADE_SHAPE):  # the oily blade handled: smeared, no reading
+        _H.blade_touched = True
     speed = abs(q - _H.last_q) * CONTROL_HZ if _H.last_q is not None else 0.0  # from the joint's travel per step
     _H.last_q, _H.speed = q, speed
     ph = _H.phase
@@ -608,6 +652,8 @@ def _rag_down(objects):
 
 def _job(objects):
     report = _report(objects)
+    if _H.blade_touched:  # the blade gripped or touched by a gripper off its seat: handled by the handle only
+        return 0.0
     if _H.early or (_pocket(objects) is not None and not _H.read):  # reported before the true reading: a guess
         return 0.0
     if report is not None and report != _H.case:  # a wrong report: worse than none, so guessing never pays
@@ -630,140 +676,114 @@ def success(objects):
 
 
 def score(objects):
-    """0 unless the blade was pulled out, wiped (the rag's middle slid, in contact, over at least 3.2 cm of the blade's
-    lower 4 cm in that pull, so its face rubbed the 6 cm smear; a dab is not a wipe) and pushed back in by hand
-    until the cap seated (within 3 mm). Also 0 for a wrong report (the puck left in another level's pocket) or a
-    report made before the true reading (the puck in any pocket before then). 0.25 for the wipe and reseat without a
+    """0 unless the blade was pulled out by the handle, wiped (the rag's middle slid, in contact, over at least 5.4 cm of
+    the blade's 6 cm oiled length in that pull; a dab or a spot wipe is not a wipe) and pushed back in by the handle
+    until the cap seated (within 3 mm). Also 0 if a gripper touched the blade while it was off its seat, for a wrong
+    report (the puck left in another level's pocket) or a report made before the true reading (the puck in any pocket
+    before then). 0.25 for the wipe and reseat without a
     true second reading (pulled again from a full seat and held out and still for 1 s). 0.5 for a true reading with
     no report (the puck not let go in a pocket). 0.75 for the right report with the dipstick not seated by hand and
     let go, or the rag not put down. 1.0 for all of it. Possible scores: 0, 0.25, 0.5, 0.75, 1."""
     return _job(objects)
 
 
-# --- Scripted demo: the right arm works the dipstick hand over hand along the sloping tube, the left arm the rag.
-YAW = 0.0  # the right grip: straight down, fingers closing across world y (across the blade's and handle's thickness)
-GRIP_UP = 0.003  # the tool point 3 mm above the gripped part's axis: the pad tips (12.8 mm past it) reach 1 cm below it
-A_HANDLE = 0.030  # the handle is gripped 3 cm up the tube from the cap's underside (its middle is at 2.75 cm), so the
-# pad tips stay over 1 cm clear of the cap's disc
-A_LOW = 0.035  # the hand-over-hand regrasp pinches the blade 3.5 cm out of the mouth: the fingers stay clear of its rim
-A_HIGH = 0.1775  # the farthest a stroke carries the hand up the tube (the arm's reach at this height, with margin)
-Q_REGRASP = A_HIGH - A_HANDLE  # 0.1475: the first stroke, on the handle, pulls the cap this far out
-Q_WIPE = 0.285  # each pull is planned to leave the tip 4 cm out of the mouth; in the sim the pinches give about 1.6 cm
-Q_READ = Q_WIPE  # (the stick ends about 0.269, the tip 2.4 cm out), still well past "out" (0.25) for the reading
+# --- Scripted demo: the right arm draws the dipstick straight up by its handle and pushes it home, the left arm wipes
+# the blade with the rag and reports with the puck.
+R_PITCH, R_ROLL = -math.pi / 2, math.pi / 2  # the right grip level, pointing along +y (into the corner from the
+# engine's open front side), its fingers closing along x across the handle's 1.8 cm thickness
+A_HANDLE = 0.032  # the tool point 3.2 cm above the cap's underside (the handle's middle is at 2.75 cm): the pads (4 cm
+# wide, here up and down) stay clear of the cap's disc
+R_UP = 0.07  # the open hand waits this far above its grip on the handle, its fingers either side of the handle
+R_OPEN = 0.45 * FINGER_OPEN  # opened 4.2 cm round the 1.8 cm handle: 1.2 cm each side, and the fingers clear of
+# the blower housing beside the corner
+Q_PULL = 0.275  # each pull draws the cap 27.5 cm up: the blade's tip 3 cm out of the mouth (the tool point ~59 cm up,
+# inside the arm's reach for this level grip, about 61-62 cm here)
 DEMO_PUSH = -0.004  # push 4 mm past the seat so the cap is pressed down
-RAG_DY = 0.017  # the rag's middle 1.7 cm from the blade's axis (along +y): the pad, held on edge and tilted 15 deg,
-# reaches about 1.8 cm out from its middle, so the arm presses it about 1 mm onto the blade's face
-RAG_CARRY = 0.018  # a held object rides about this far toward -y of the tool point (straight-down grip)
-ROLL = -1.3  # for the wipe the left wrist rolls about 75 deg: the gripper reaches in from the left side, away from the
-# right gripper, and holds the pad on edge with its broad face to the blade
+L_PITCH = -1.3  # for the wipe the left wrist pitches about 75 deg: the gripper reaches in from the robot's side, level
+# with the blade, and holds the pad on edge with its broad face to the blade's near face
+RAG_DX = 0.0145  # the rag's middle 1.45 cm in front of (toward the robot from) the blade's axis: the pad, held on
+# edge, reaches 1.25-1.7 cm out from its middle (more if it tilts in the grip), so its face rests on the blade's face
 RAG_GRIP_DZ = 0.012  # the rag is picked with the tool point 1.2 cm above its middle, so the fingers hold only its upper
 # half and the pad stands out past the fingertips
-ROLLED_CARRY = (-0.017, 0.017)  # in that grip the pad's middle rides this far along y and z of the tool point
-WIPE_A = (0.02, 0.085)  # the rag's middle drawn up the blade from 2 cm to 8.5 cm out of the mouth: from just past the
-# tip (which ends 2.4-4 cm out) to over 4 cm above it, whatever the pinches' give. Drawn up the blade (toward the
-# robot), the pad's tilted leading edge rides off the blade instead of digging into it
-
-
-PUCK_CARRY = 0.0  # the puck is gripped round its middle (the rag is held near one edge)
+PITCHED_CARRY = (0.012, 0.011)  # in that grip the pad's middle rides this far along x and z of the tool point (as
+# measured in the sim)
+WIPE_A = (0.035, 0.11)  # the rag's middle set on the blade 5 mm above the tip (3 cm out of the mouth; a pad brought
+# up from under the tip catches on its end) and drawn up to 8 cm above it, past the 6 cm oiled length with 2 cm to
+# spare: the slid stretch is 7.5 cm. Drawn up the blade, the pad's leading edge rides off the blade instead of digging in
 PUCK_GRIP_Z = PUCK_H + 0.003  # tool point 3 mm above the puck's top: the pads (13 mm past it) hold its upper 1 cm
 PUCK_DROP_Z = FLOOR + PUCK_GRIP_Z + 0.002  # let go with the puck's bottom 2 mm above the pocket's floor
 
 
-def _on_tube(a, dy=0.0, dz=0.0):
-    """The world point a m along the tube's axis from the mouth's middle, shifted dy along y and dz up."""
+def _on_tube(a, dx=0.0, dy=0.0, dz=0.0):
+    """The world point a m along the tube's axis from the mouth's middle, shifted dx, dy, dz."""
     p = MOUTH_W + a * U
-    return (float(p[0]), float(p[1] + dy), float(p[2] + dz))
+    return (float(p[0] + dx), float(p[1] + dy), float(p[2] + dz))
 
 
-def _grip(a):
-    return _on_tube(a, dz=GRIP_UP)
+def _r(t, q, finger, label, up=0.0):
+    """The right hand at the handle with the dipstick's cap q m above its seat (up: that much higher)."""
+    return kit.Tilted(t, _on_tube(q + A_HANDLE, dz=up), finger, label, roll=R_ROLL, pitch=R_PITCH)
 
 
-def _stroke(a0, a1, what, hover=0.015, t_move=1.4, t_stroke=2.0):
-    """One hand-over-hand stroke of the right hand along the tube: over the spot, down, pinch, carry from a0 to a1
-    along the tube. Between strokes the open hand slides along the tube 1.5 cm above the stick, its open fingers (9.4 cm
-    apart) straddling the blade and handle, so it never knocks the stick."""
-    up = lambda a: _on_tube(a, dz=GRIP_UP + hover)  # noqa: E731
-    return [Waypoint(t_move, up(a0), FINGER_OPEN, f"over the {what}", YAW),
-            Waypoint(0.8, _grip(a0), FINGER_OPEN, f"down on the {what}", YAW),
-            Waypoint(0.6, _grip(a0), FINGER_CLOSED, f"pinch the {what}", YAW),
-            Waypoint(t_stroke, _grip(a1), FINGER_CLOSED, f"{'pull' if a1 > a0 else 'push'} along the tube", YAW)]
-
-
-def _release(a, hover=0.015):
-    return [Waypoint(0.5, _grip(a), FINGER_OPEN, "let go", YAW),
-            Waypoint(0.5, _on_tube(a, dz=GRIP_UP + hover), FINGER_OPEN, "hand up", YAW)]
+def _pull_and_push(t_hold, hold_label):
+    """Down round the handle, grip it, draw the dipstick straight up, hold it out t_hold s, push it home, let go."""
+    return [_r(1.0, 0.0, R_OPEN, "fingers down round the handle"),
+            _r(0.6, 0.0, FINGER_CLOSED, "grip the handle"),
+            _r(5.0, Q_PULL, FINGER_CLOSED, "draw the dipstick straight up"),
+            _r(t_hold, Q_PULL, FINGER_CLOSED, hold_label),
+            _r(5.0, DEMO_PUSH, FINGER_CLOSED, "push it back down the tube"),
+            _r(0.8, DEMO_PUSH, FINGER_CLOSED, "press the cap down"),
+            _r(0.5, DEMO_PUSH, R_OPEN, "let go"),
+            _r(0.8, 0.0, R_OPEN, "hand up off the handle", up=R_UP)]
 
 
 def demo():
-    # first pull: the handle up the tube as far as the hand reaches, let go (the stick stays), pinch the blade at the
-    # mouth and draw it out the rest of the way
-    right = (_stroke(A_HANDLE, A_HIGH, "handle", hover=0.03, t_move=1.5) + _release(A_HIGH)
-             + _stroke(A_LOW, A_LOW + Q_WIPE - Q_REGRASP, "blade"))
-    t_out = sum(w.duration for w in right)
-    a_hold = A_LOW + Q_WIPE - Q_REGRASP  # where the hand holds the blade, 13.75 cm above its tip
+    right = [_r(3.0, 0.0, R_OPEN, "over the handle", up=R_UP)]
+    t_out = 3.0 + 1.0 + 0.6 + 5.0  # the first pull is out
 
-    lyaw = -math.pi / 2  # the left grip turned the other way round, so its wrist has room to roll
-    ry = RAG_START[1] + RAG_CARRY
-    rz = RAG_START[2] - TOP
-    left = [Waypoint(2.5, (RAG_START[0], ry, TOP + rz + 0.06), FINGER_OPEN, "over the rag", lyaw),
-            Waypoint(1.0, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ), FINGER_OPEN, "down on the rag", lyaw),
-            Waypoint(0.6, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ), FINGER_CLOSED, "pick up the rag", lyaw),
-            Waypoint(1.0, (RAG_START[0], ry, TOP + 0.18), FINGER_CLOSED, "lift", lyaw)]
+    ry, rz = RAG_START[1], RAG_START[2] - TOP
+    left = [Waypoint(2.0, (0.24, 0.24, TOP + 0.18), FINGER_OPEN, "in toward the robot, clear of the engine"),
+            Waypoint(1.6, (RAG_START[0], ry, TOP + rz + 0.06), FINGER_OPEN, "over the rag"),
+            Waypoint(1.0, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ), FINGER_OPEN, "down on the rag"),
+            Waypoint(0.6, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ), FINGER_CLOSED, "pick up the rag"),
+            Waypoint(1.0, (RAG_START[0], ry, TOP + 0.20), FINGER_CLOSED, "lift")]
+    rag_tcp = lambda a, dx=0.0, dz=0.0: _on_tube(a, -RAG_DX - PITCHED_CARRY[0] + dx,  # noqa: E731
+                                                  dz=-PITCHED_CARRY[1] + dz)
     wait = t_out - sum(w.duration for w in left)
-    rag_tcp = lambda a, dy=0.0, dz=0.0: _on_tube(a, RAG_DY - ROLLED_CARRY[0] + dy,  # noqa: E731
-                                                  -ROLLED_CARRY[1] + dz)
-    # the rag waits up high until the right hand has drawn the blade out, then comes in beside the tip
-    left += [Waypoint(max(wait - 3.0, 0.2), (RAG_START[0], ry, TOP + 0.18), FINGER_CLOSED, "wait with the rag", lyaw),
-             kit.Tilted(3.0, rag_tcp(WIPE_A[0], 0.04), FINGER_CLOSED, "beside the blade's tip", lyaw, roll=ROLL),
-             kit.Tilted(1.0, rag_tcp(WIPE_A[0]), FINGER_CLOSED, "rag on the blade", lyaw, roll=ROLL),
-             kit.Tilted(4.0, rag_tcp(WIPE_A[1]), FINGER_CLOSED, "wipe up the blade", lyaw, roll=ROLL),
-             kit.Tilted(0.8, rag_tcp(WIPE_A[1], 0.05, 0.01), FINGER_CLOSED, "rag off", lyaw, roll=ROLL)]
+    left += [Waypoint(max(wait - 3.0, 0.2), (RAG_START[0], ry, TOP + 0.20), FINGER_CLOSED, "wait with the rag"),
+             kit.Tilted(3.0, rag_tcp(WIPE_A[0], -0.05), FINGER_CLOSED, "in front of the blade's tip", pitch=L_PITCH),
+             kit.Tilted(1.0, rag_tcp(WIPE_A[0]), FINGER_CLOSED, "rag on the blade", pitch=L_PITCH),
+             kit.Tilted(5.0, rag_tcp(WIPE_A[1]), FINGER_CLOSED, "wipe up the blade", pitch=L_PITCH),
+             kit.Tilted(0.8, rag_tcp(WIPE_A[1], -0.05, 0.01), FINGER_CLOSED, "rag off", pitch=L_PITCH)]
     t_wiped = sum(w.duration for w in left)
 
-    # push back in until the cap seats: the blade in to the mouth, then the handle the rest of the way
-    right += [Waypoint(max(t_wiped - t_out, 0.2), _grip(a_hold), FINGER_CLOSED, "hold out while wiped", YAW),
-              Waypoint(2.0, _grip(A_LOW), FINGER_CLOSED, "push the blade back in", YAW)]
-    right += _release(A_LOW)
-    right += _stroke(A_HIGH, A_HANDLE + DEMO_PUSH, "handle")
-    right += [Waypoint(0.8, _grip(A_HANDLE + DEMO_PUSH), FINGER_CLOSED, "seated", YAW)]
-    right += _release(A_HANDLE + DEMO_PUSH)
-    # second pull, held still to read
-    a_read = A_LOW + Q_READ - Q_REGRASP
-    right += _stroke(A_HANDLE, A_HIGH, "handle") + _release(A_HIGH) + _stroke(A_LOW, a_read, "blade")
-    t_hold = sum(w.duration for w in right)  # the second pull is out
-    right += [Waypoint(2.5, _grip(a_read), FINGER_CLOSED, "hold still and read", YAW)]
-    t_read = sum(w.duration for w in right)  # the reading is taken
-    # push back in until the cap seats, let go
-    right += [Waypoint(2.0, _grip(A_LOW), FINGER_CLOSED, "push the blade back in", YAW)]
-    right += _release(A_LOW)
-    right += _stroke(A_HIGH, A_HANDLE + DEMO_PUSH, "handle")
-    right += [Waypoint(0.8, _grip(A_HANDLE + DEMO_PUSH), FINGER_CLOSED, "seated", YAW)]
-    right += _release(A_HANDLE + DEMO_PUSH, hover=0.03)
-    right += [kit.Home(2.0), kit.Home(1.5, label="hold at home")]
+    right += _pull_and_push(max(t_wiped - t_out, 0.2), "hold it out for the wipe")
+    right += _pull_and_push(2.5, "hold still and read")
+    t_hold = sum(w.duration for w in right) - (2.5 + 5.0 + 0.8 + 0.5 + 0.8)  # the second pull is out and still
+    t_read = t_hold + 2.5  # the reading is taken
+    right += [kit.Home(2.5), kit.Home(1.5, label="hold at home")]
     total = sum(w.duration for w in right)
 
-    left += [Waypoint(2.5, (RAG_START[0], ry, TOP + rz + 0.05), FINGER_CLOSED, "rag back over its place", lyaw),
-             Waypoint(1.0, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ + 0.002), FINGER_CLOSED, "rag down", lyaw),
-             Waypoint(0.6, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ + 0.002), FINGER_OPEN, "let go of the rag", lyaw),
-             Waypoint(0.8, (RAG_START[0], ry, TOP + rz + 0.07), FINGER_OPEN, "hand up", lyaw)]
+    left += [Waypoint(2.5, (RAG_START[0], ry, TOP + rz + 0.05), FINGER_CLOSED, "rag back over its place"),
+             Waypoint(1.0, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ + 0.002), FINGER_CLOSED, "rag down"),
+             Waypoint(0.6, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ + 0.002), FINGER_OPEN, "let go of the rag"),
+             Waypoint(0.8, (RAG_START[0], ry, TOP + rz + 0.07), FINGER_OPEN, "hand up")]
     # The report. This scripted demonstration is told this trial's level (OIL_CASE, or between the marks with no
     # jitter); it does not read the blade, so it only shows the motions can be done. The scored policy is told nothing
     # and has to read the oil band off the blade.
     case = _trial_case(RAG_START[:2])
-    px, py = PUCK_START[0], PUCK_START[1] + PUCK_CARRY
-    kx, ky = POCKETS[case][0], POCKETS[case][1] + PUCK_CARRY
+    px, py = PUCK_START[0], PUCK_START[1]
+    kx, ky = POCKETS[case]
     left += [Waypoint(max(t_hold - 3.0 - sum(w.duration for w in left), 1.5), (px, py, TOP + PUCK_GRIP_Z + 0.06),
-                      FINGER_OPEN, "over the puck", lyaw),
-             Waypoint(1.0, (px, py, TOP + PUCK_GRIP_Z), FINGER_OPEN, "down on the puck", lyaw),
-             Waypoint(0.6, (px, py, TOP + PUCK_GRIP_Z), FINGER_CLOSED, "pick up the puck", lyaw),
-             Waypoint(1.0, (px, py, TOP + PUCK_GRIP_Z + 0.05), FINGER_CLOSED, "lift the puck", lyaw),
-             Waypoint(1.5, (kx, ky, TOP + PUCK_GRIP_Z + 0.04), FINGER_CLOSED, f"over the {POCKET_NAME[case]} pocket",
-                      lyaw)]
+                      FINGER_OPEN, "over the puck"),
+             Waypoint(1.0, (px, py, TOP + PUCK_GRIP_Z), FINGER_OPEN, "down on the puck"),
+             Waypoint(0.6, (px, py, TOP + PUCK_GRIP_Z), FINGER_CLOSED, "pick up the puck"),
+             Waypoint(1.0, (px, py, TOP + PUCK_GRIP_Z + 0.05), FINGER_CLOSED, "lift the puck"),
+             Waypoint(1.5, (kx, ky, TOP + PUCK_GRIP_Z + 0.04), FINGER_CLOSED, f"over the {POCKET_NAME[case]} pocket")]
     left += [Waypoint(max(t_read + 0.5 - sum(w.duration for w in left), 0.2), (kx, ky, TOP + PUCK_GRIP_Z + 0.04),
-                      FINGER_CLOSED, "wait for the reading", lyaw),
-             Waypoint(1.0, (kx, ky, TOP + PUCK_DROP_Z), FINGER_CLOSED, "puck into the pocket", lyaw),
-             Waypoint(0.6, (kx, ky, TOP + PUCK_DROP_Z), FINGER_OPEN, "let go of the puck", lyaw),
-             Waypoint(0.8, (kx, ky, TOP + PUCK_DROP_Z + 0.07), FINGER_OPEN, "hand up", lyaw)]
+                      FINGER_CLOSED, "wait for the reading"),
+             Waypoint(1.0, (kx, ky, TOP + PUCK_DROP_Z), FINGER_CLOSED, "puck into the pocket"),
+             Waypoint(0.6, (kx, ky, TOP + PUCK_DROP_Z), FINGER_OPEN, "let go of the puck"),
+             Waypoint(0.8, (kx, ky, TOP + PUCK_DROP_Z + 0.07), FINGER_OPEN, "hand up")]
     left += [kit.Home(max(total - 1.5 - sum(w.duration for w in left), 1.0)), kit.Home(1.5, label="hold at home")]
     return {"left": left, "right": right}
