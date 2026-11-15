@@ -59,9 +59,11 @@ at home. Then both hands take the wrench's handle where it lies (the right near 
 left 0.22 m out), lift it, carry the cap over the filter and lower it onto the can. They swing the handle clockwise in
 30-degree strokes (handle from 280 to 250 degrees), ratcheting back between them without letting go, pushing with what
 the gasket takes plus 1 N·m (up to 19 N·m: about 23 N at the right hand, 29 N at the left), each hand taking a share in proportion to what its arm can push there, and each aimed past the handle by its
-arm's give (J K^-1 J^T from the servos' stiffness). The plan stops at 300 degrees past contact (the middle of the
+arm's give (J K^-1 J^T from the servos' stiffness; while carrying the wrench, a further 7-8 mm that the sim showed
+the heavier load needs), and bearing down on the handle (3 N each plus 0.6 N per N·m of the stroke's torque) so the cap
+stays on the flutes. The plan stops at 300 degrees past contact (the middle of the
 full-credit range). They ease off, lift the wrench off the can, set it on the bench beside the head, let go and go
-home. Result on this version: PENDING.
+home. Result on this version: 1.0 in 1,861 steps (93 s).
 
 ## Scoring
 
@@ -135,7 +137,7 @@ moves first, the trial scores at most 0.5.
 
 ## Runtime and seeds
 
-- Demo: PENDING (planned about 98 s, 1,960 steps).
+- Demo: 1.0 in 1,861 steps (93 s; the run ends 1 s after full credit is held).
 - Model run limit: 2,400 steps (2 minutes at 20 Hz).
 - Seed 0, one fixed layout (`object_jitter=0`).
 
