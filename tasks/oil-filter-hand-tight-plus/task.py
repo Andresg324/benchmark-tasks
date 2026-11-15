@@ -1,7 +1,7 @@
 """A new spin-on oil filter (Kawasaki 49065-0710, the Teryx and Teryx4 filter) has been started on the threaded nipple
 of a remote oil filter mount (a filter head) bolted to the bench, filter pointing up, three quarters of a turn short of
 its gasket touching the head. Beside it on the bench lies the tool Kawasaki's torque figure assumes: a 65 mm, 14-flute
-cap-type filter wrench on a 24-inch, 1/2-inch-drive ratchet. Fitting it is the engine maker's service procedure: spin
+cap-type filter wrench (3/8-inch drive) on a 24-inch, 1/2-inch-drive ratchet through a 1/2 to 3/8-inch adapter. Fitting it is the engine maker's service procedure: spin
 it on by hand until the gasket contacts the head, then tighten it with the wrench to the specified 18 N*m, about three
 quarters of a turn past contact, then take the wrench off. Left at contact or a little past it, the filter can work
 loose under engine vibration and leak; cranked much past it, the gasket can be crushed, roll out of its groove and blow
@@ -144,9 +144,10 @@ def _head():
                        meshes=tuple(meshes), colliders=colliders, cap=_filter_cap(), thread=THREAD)
 
 
-# --- The wrench: a 65 mm, 14-flute cap-type filter wrench on a 24-inch, 1/2-inch-drive ratchet (GearWrench 81364XP,
+# --- The wrench: a 65 mm, 14-flute, 3/8-inch-drive cap-type filter wrench (Parts Unlimited 3801-0295) on a 24-inch,
+# 1/2-inch-drive ratchet (GearWrench 81364XP) through a 1/2 to 3/8-inch adapter (GearWrench 81354;
 # 24.0 in overall). Modeled like the accepted compression-joint task's spanner: the cap is drawn only, and once it is
-# down on the can, centered within 3 mm, the model holds it on the flutes and couples it to the filter. The ratchet
+# down on the can, centered within 3 mm, the model holds it on the flutes (until it is lifted 8 mm) and couples it to the filter. The ratchet
 # drives the cap when turned clockwise (seen from above: tightening) and freewheels the other way (pawl drag 0.2 N*m),
 # so the handle swings back for the next stroke without letting go. Its handle is the only collider (the hands hold
 # it). An articulation on the bench: lift (z) -> turn about the filter's axis -> slide x -> slide y (the wrench), in
@@ -157,9 +158,11 @@ CUP_R, CUP_DEPTH = 0.0355, 0.015  # the cap: 65 mm across the flutes inside, 3 m
 HEAD_R, HEAD_TOP = 0.022, 0.040  # the ratchet's head (and the square drive in the cap) above the cap's inside floor
 HANDLE_Z, HANDLE_R = 0.026, 0.011  # the handle's axis above the cap's floor; it is 22 mm thick at the grip
 HANDLE_X = (-0.600, -0.035)  # along the tool's -x: the handle from the head (24.0 in overall from the cap's axis)
-TOOL_MASS = 1.0  # kg: the 81364XP (about 0.9 kg) plus the cap
+TOOL_MASS = 1.45  # kg: the 81364XP (GearWrench catalog 3.0 lb, 1.36 kg) plus the cap and adapter (about 0.1 kg, estimated)
 SEAT_TOL = 0.002  # m: the cap down on the can (the lift within 2 mm of resting on its top)
 CENTER_TOL = 0.003  # m: and centered on its axis within 3 mm (the flutes engage)
+CUP_PLAY = 0.002  # m: over the can, the cup's wall lets each slide move this far off the axis (the flutes' play)
+ENGAGE_LIFT = 0.008  # m: once seated, the cap stays on the flutes until lifted this far (about half its 15 mm depth)
 LIFT_FREE = 0.017  # m: lifted this far the cap's rim clears the can's top
 CLEAR = 0.10  # m: the cap 10 cm or more off the filter's axis is clear of the head and can lie on the bench
 LIFT_TABLE = CUP_DEPTH - (SEAT + CAN_H)  # the lift with the wrench lying on the bench, cap down (-9.5 cm)
@@ -216,7 +219,8 @@ def tool_step(J: dict) -> ToolModel:
     tm.drive_u = None  # the head's thread (earlier in the step: OBJECTS order) has applied the last step's
     lift, q, x, y = J["t_lift"], J["t_turn"], J["t_x"], J["tool"]
     off = math.hypot(x, y)
-    seated = lift <= SEAT_TOL and off <= CENTER_TOL
+    # once on the flutes, the 15 mm-deep cup stays on them until lifted ENGAGE_LIFT (it can't slide off sideways)
+    seated = off <= CENTER_TOL and (lift <= SEAT_TOL or (tm.coupled and lift <= ENGAGE_LIFT))
     u = _filter_u()
     if seated and not tk._track(KEY).off:
         if not tm.coupled:
@@ -288,6 +292,10 @@ class ToolSlideLaw:
         if tm.lock_xy is not None:
             at = tm.lock_xy[self.k]
             mem["limits"] = (max(self.lower, at - 0.0005), min(self.upper, at + 0.0005))
+        elif J["t_lift"] < LIFT_FREE - 0.002 and math.hypot(J["t_x"], J["tool"]) <= CENTER_TOL:
+            # the cup is down over the can's top: its wall keeps it centered within the flutes' play (each slide
+            # within 2 mm, so the cap stays within 2.8 mm of the axis)
+            mem["limits"] = (max(self.lower, -CUP_PLAY), min(self.upper, CUP_PLAY))
         elif J["t_lift"] < LIFT_FREE - 0.002 and abs(q) >= CLEAR:
             # carried low, clear of the head: it can't slide in over the head until lifted over the can's top
             mem["limits"] = (CLEAR, self.upper) if q > 0 else (self.lower, -CLEAR)
@@ -535,6 +543,13 @@ def _hand_on_filter(objects):
 
 def _score(objects):
     past = tk.past_seat_deg(objects, KEY)  # degrees past gasket contact now (negative: not yet touching)
+    if os.environ.get("OIL_DEBUG"):  # DEBUG-ONLY (remove before commit)
+        _score.n = getattr(_score, "n", 0) + 1
+        if _score.n % 20 == 0:
+            J = tool_joints(objects)
+            print(f"[odbg] n={_score.n} past={past:.1f} peak={_H.peak:.1f} unheld={_H.unheld:.1f} off={tk.came_off(objects, KEY)} "
+                  f"hand_on={_hand_on_filter(objects)} set_down={tool_set_down(J)} holders={tool_holders(objects, J)} "
+                  f"J={ {k: round(float(v), 3) for k, v in J.items()} if isinstance(J, dict) else J}", flush=True)
     # irreversible: unscrewed off the nipple at any point, or tightened more than 1.25 turns past contact (can crush the gasket)
     if tk.came_off(objects, KEY) or _H.peak > CRUSH:
         return 0.0
@@ -596,10 +611,10 @@ PAD_BELOW = 0.006  # the pad tips this far below the handle's axis: the fingers 
 CARRY_LIFT = 0.021  # the wrench carried with its cap 6 mm over the can's top (it clears it at 1.7 cm of lift)
 
 
-def _wrench_J(a_deg, lift=0.0, side=0.0):
+def _wrench_J(a_deg, lift=0.0, side=0.0, tx=0.0):
     """The wrench's joints with its handle along `a_deg` (from the filter's axis, degrees from +x), lifted `lift` and
-    slid `side` along its y."""
-    return {"t_lift": lift, "t_turn": math.radians(a_deg - 180.0), "t_x": 0.0, "tool": side}
+    slid `side` along its y (and `tx` along its x)."""
+    return {"t_lift": lift, "t_turn": math.radians(a_deg - 180.0), "t_x": tx, "tool": side}
 
 
 _GIVE = {}
@@ -639,11 +654,11 @@ def _yaw(a_deg, side="right"):
     return math.radians((a_deg - 180.0 + YAW_TURN[side] + 180.0) % 360.0 - 180.0)
 
 
-def _hand(side, a_deg, lift=0.0, slide=0.0, force=(0.0, 0.0, 0.0), up=0.0):
+def _hand(side, a_deg, lift=0.0, slide=0.0, force=(0.0, 0.0, 0.0), up=0.0, tx=0.0):
     """A hand's tool point on the wrench's handle (wrench at a_deg, lift, slide), aimed past the pads by the arm's give
     so that the pads push `force` (N, world) on the handle and hold `up` N of its weight."""
     from yam_arena.constants import PAD_TIP_PAST_TCP
-    p = tool_point(_wrench_J(a_deg, lift, slide), (-R_GRIP[side], 0.0, HANDLE_Z))
+    p = tool_point(_wrench_J(a_deg, lift, slide, tx), (-R_GRIP[side], 0.0, HANDLE_Z))
     tcp = p + np.array([0.0, 0.0, PAD_TIP_PAST_TCP - PAD_BELOW])
     yaw = _yaw(a_deg, side)
     f = np.asarray(force, float) + np.array([0.0, 0.0, up])
@@ -658,6 +673,10 @@ def _push(side, a_deg, torque):
     return (f * math.sin(a), -f * math.cos(a), 0.0)
 
 
+CARRY_FIX = (0.007, 0.008)  # m (wrench x, y): the carried 1.45 kg wrench lands this far short (measured in sim o3dbg:
+# t_x -7 mm, tool -8 mm as the cap met the can's top), more than the arms' give model predicts; aimed past by it
+CARRY_FIX_STEPS = ("over the filter", "cap onto the can")
+PRESS_DOWN = 3.0  # N: each hand bears down on the handle while it pulls, keeping the cap on the flutes
 WEIGHT_SHARE = {"right": 0.30, "left": 0.70}  # the wrench's 9.8 N between the hands, by where they hold it
 
 
@@ -666,8 +685,9 @@ def _pair(dur, label, a_deg, lift=0.0, slide=0.0, torque=0.0, finger=None, carry
     from yam_arena.constants import FINGER_CLOSED
     out = {}
     for side in ("left", "right"):
-        up = WEIGHT_SHARE[side] * TOOL_MASS * 9.81 if carry else 0.0
-        pos, yaw = _hand(side, a_deg, lift, slide, _push(side, a_deg, torque), up)
+        up = WEIGHT_SHARE[side] * TOOL_MASS * 9.81 if carry else (-PRESS_DOWN if torque > 0.0 else 0.0)
+        fx, fy = CARRY_FIX if label in CARRY_FIX_STEPS else (0.0, 0.0)
+        pos, yaw = _hand(side, a_deg, lift, slide + fy, _push(side, a_deg, torque), up, fx)
         out[side] = Waypoint(dur, pos, FINGER_CLOSED if finger is None else finger, label, yaw)
     return out
 
