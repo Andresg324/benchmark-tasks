@@ -70,7 +70,7 @@ Model run (Dream-1): the same command with `--policy dream`. Render the videos o
 ## Runtime and seeds
 
 One trial takes up to 1,200 steps (60 seconds at 20 Hz); the scripted demo is planned at about 32 s (about 640
-steps). Demo result on this version: PENDING. No seeds: the layout is fixed (`object_jitter=0`).
+steps). Demo result on this version: 1.0 in 598 steps (30 s); Dream-1: 0 in 1,200 steps. No seeds: the layout is fixed (`object_jitter=0`).
 
 ## The demo
 
@@ -84,7 +84,7 @@ steps). Demo result on this version: PENDING. No seeds: the layout is fixed (`ob
    bead takes there plus 5 N (13 N while the sidewall rolls down, rising to 35 N as the lip goes over the flange), in
    finer, slower steps over the flange, until the bead snaps in; it presses 30 N once seated, eases off to 4 N and
    lifts. Both hands lift off (the held arc springs back up onto its shoulder; the section stays in) and go home; the
-   run ends once the bead is on, the valve straight and both hands clear for a second (PENDING: steps).
+   run ends once the bead is on, the valve straight and both hands clear for a second (598 steps in all).
 
 ## Scoring
 
