@@ -485,8 +485,9 @@ VALVE_R = 0.0045  # the stem's collider is 9 mm square
 
 
 def valve_shape(objects):
-    """The valve stem as a capsule in the wheel's frame: from the hole in the rim bed (at 90 degrees) 3.1 cm toward the
-    hub, turned about the vertical by the valve's angle (positive: its tip toward +x)."""
+    """The valve stem as a capsule in the wheel's frame, for the hands-clear check: its core line runs 2.6 cm toward the
+    hub from 5 mm inside the rim bed (at 90 degrees), and its 4.5 mm radius covers the whole 3.2 cm stem (its rounded
+    end reaches about 3.5 cm); turned about the vertical by the valve's angle (positive: its tip toward +x)."""
     a = valve_angle(objects)
     return gk.Seg((0.0, R_BED - 0.005, 0.0), (0.026 * math.sin(a), R_BED - 0.005 - 0.026 * math.cos(a), 0.0), VALVE_R)
 
