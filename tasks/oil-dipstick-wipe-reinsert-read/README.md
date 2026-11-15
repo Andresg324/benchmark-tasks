@@ -1,10 +1,10 @@
-# Check a lawn mower engine's oil with the dipstick, wiping and re-reading it, and mark the level on the check card
+# Check a lawn tractor's oil with its 29 cm dipstick, wiping and re-reading it, and mark the level on the check card
 
-A bench model of a walk-behind lawn mower's small four-stroke engine stands on the table
-with its yellow dipstick seated in the oil fill tube. A folded blue shop rag lies beside it, next to an oil check card
+A bench model of a lawn tractor's engine stands on the table with its yellow 29 cm dipstick seated in the oil fill
+tube, which slopes up out of the crankcase toward the robot. A folded blue shop rag lies beside it, next to an oil check card
 with ADD, OK and OVER pockets and a white marker puck. "Check the oil level on the engine with the dipstick, mark it
-on the check card with the puck, then put everything back." means the procedure every mower manual gives before
-mowing: pull the dipstick, wipe the blade clean on the rag, push it back in until the cap seats, pull it
+on the check card with the puck, then put everything back." means the procedure every lawn tractor manual gives before
+mowing: pull the dipstick (hand over hand: it is longer than one arm's stroke), wipe the blade clean on the rag, push it back in until the cap seats, pull it
 again and hold it still to read the level, push it back in until it seats, put the rag down, and record what the
 blade showed. The level changes from trial to trial (below ADD, between the marks, or above FULL), so the puck lands
 in the right pocket only if the blade was read. The tempting wrong answer is to read the first pull, which shows a
@@ -16,9 +16,9 @@ false smeared level past FULL from oil splashed up the tube.
 
 | Part | What it is | Where |
 |---|---|---|
-| Engine | Fixed bench model: wooden mounting board (16 x 15 x 0.8 cm), aluminum crankcase and cylinder block (10 x 12 x 6 cm) with a red flywheel shroud on top (z 7 to 10), and a fill boss on the crankcase's front | board x 22 to 38, y -22 to -7 |
-| Oil fill tube | Yellow tube, 2.4 cm across with a 2.0 cm bore, rising from the fill boss to its mouth at z 8.5 | axis at x 25, y -12 |
-| Dipstick | Prismatic link sliding along the tube's axis: steel blade 1.0 x 0.3 x 8 cm with black ADD and FULL marks 0.8 and 2.0 cm from the tip and a crosshatch between them, a yellow cap disc 3.2 cm across and 1 cm tall that seats on the tube's rim, and a yellow T-handle 3.5 cm wide, 1.8 cm thick, 3.5 cm tall. 12.5 cm overall, 40 g. Starts seated; it falls back down the tube if let go | cap on the rim at z 8.5 |
+| Engine | Fixed bench model of a lawn tractor engine's crankcase side: wooden mounting board (21 x 20 x 0.8 cm), aluminum crankcase (17 x 18 x 12 cm) with a red flywheel shroud on top (to z 17) | board x 45 to 66, y -20 to 0 |
+| Oil fill tube | Yellow tube, 2.4 cm across, sloping up at 25 degrees toward the robot: it leaves the crankcase's near face about 8 cm up and its mouth is 10 cm out, at z 12.5; it runs 26 cm down inside the crankcase | mouth at x 38, y -10 |
+| Dipstick | Prismatic link sliding along the tube's axis: steel blade 1.0 x 0.3 x 24.5 cm with black ADD and FULL marks 0.8 and 2.0 cm from the tip and a crosshatch between them, a yellow cap disc 3.2 cm across and 1 cm thick that seats on the tube's rim, and a yellow T-handle 3.5 cm wide, 1.8 cm thick, 3.5 cm long. 29 cm overall, 50 g, the length of a Kohler SV-series lawn tractor engine's dipstick. Starts seated; it stays where it is let go | cap on the rim at the mouth |
 | Shop rag | Folded blue shop towel pad, 4 x 4 x 2.5 cm, 40 g, loose | centered x 26, y 10 |
 | Oil check card | Dark gray tray 6 x 16 x 1 cm, fixed: three pockets 4.4 cm square and 5 mm deep, 0.8 cm walls between them. Each floor carries a white symbol (2.8 cm, 6 mm strokes) so the pockets read without color: ADD amber with a minus sign, OK green with a check mark, OVER red with a plus sign | centered x 35, y 10; pockets at y 15.2 (ADD), 10 (OK), 4.8 (OVER) |
 | Marker puck | White puck, 3 cm across, 2 cm tall, 15 g, loose | x 20, y 15 |
@@ -55,35 +55,27 @@ run. A dipstick pushed only part way in before the second pull reads low or pick
 dipstick goes back in until its cap seats, so dirt cannot get into the crankcase, and the rag goes back down. The
 level found decides what comes next: top up a low engine, mow, or drain an overfilled one.
 
-Category: Societal relatability. Checking the oil before mowing is the first step in the owner's manuals of walk-behind
-mowers (Briggs & Stratton: remove the dipstick, wipe it, reinsert it and read the level "between the two holes";
-Honda GCV160: "Remove the oil filler cap/dipstick and wipe it clean", reinsert, "then remove it to check the oil
-level"), and it is the owner who does it. In a 2018 Harris Poll of over 2,000 US adults for the Outdoor Power
-Equipment Institute, 63% owned outdoor power equipment, and NielsenIQ's 2024 Lawn and Garden Consumer Study found that
-nearly 65% of the push-mower market is still gas-powered. With about 130 million US households (Census Bureau), that is
-tens of millions of households; no survey we found counts households with a gas mower directly. The EPA has estimated
-that about 54 million Americans mow with gas mowers (as reported by the National Wildlife Federation, 2007). The engine is a mower engine, not a car
-engine, so the dipstick is a mower's. Small-engine dipsticks are short: Honda's gauge sticks for its GX120-GX200
-engines are 1-5/16 in (3.3 cm, Stens 125-692, replacing Honda 15600-ZE1-003) and for GX240-GX390 2-1/8 in (5.4 cm,
-Stens 125-696, replacing 15600-735-003). The modeled stick, 12.5 cm with an 8 cm blade, is the longer tube-type stick
-of a vertical-shaft mower engine whose fill tube rises above the deck; it is already longer than either Honda stick. A
-car's dipstick (for example 50 to 63 cm, Dorman 917-390 and 917-322) belongs to a different engine, a different job
-and a different category; it is not what this task claims.
+Category: Societal relatability. Checking the oil before mowing is the first maintenance step in a lawn tractor's
+manuals, and the owner does it. Kohler's owner's manual for its Courage SV470-SV620 engines (single-cylinder
+vertical-shaft engines on lawn tractors and riding mowers) gives exactly this procedure: "Remove dipstick; wipe oil off.
+Reinsert dipstick into tube; press completely down. Remove dipstick; check oil level. Level should be at top of
+indicator on dipstick," and "Never run engine with oil level below or above operating range indicator on dipstick."
+In a 2018 Harris Poll of over 2,000 US adults for the Outdoor Power Equipment Institute, 63% owned outdoor power
+equipment, and a lawn tractor's owner checks its oil the same way before each mowing.
+Automotive technicians and small-engine mechanics are not claimed.
 
-Swapping in a car dipstick. The same task works on a car engine unchanged: the pull, wipe, reseat, second pull, report
-and reseat, and the scoring, are what an automotive technician does at every oil service. It is not built at car scale
-because of the arms' reach, measured with the arms' inverse kinematics:
-- A car's stick is 50 to 63 cm long (Dorman 917-390, 917-322) and its tube drops 35 to 50 cm from the mouth to the oil
-  pan. The arms grip no higher than 14 to 24 cm above the table near the middle, so the mouth must sit a few cm above
-  the table and the tube would pass through it. The table's side edge, where a tube could drop past it, is in reach of
-  one arm only (the other cannot reach within 20 cm of it), and a ribbon-type stick needs two hands taking turns.
-- With the tube through the table, the pull itself would fit: each regrasp is made at the mouth, where the tube holds
-  the blade, and one stroke draws 8 to 26 cm, so a pull takes 2 to 6 strokes. But the steel ribbon (about 6 x 0.6 mm)
-  does not droop out of the way: under its own weight it stands up to about 85 cm, so the drawn part sticks up 30 to
-  50 cm above the hand, and the hands pinch it with about 1.5 N each. The whole check takes 10 to 18 grips and two
-  feeds of the tip into an 8 mm tube to about 1 mm, in a 2-minute run, and a real trial would need a hole through the
-  robot's bench.
-So the task stays on the mower engine, whose stick the arms handle at its real size.
+The dipstick is a lawn tractor's, at its real size: 29 cm overall (24.5 cm blade, 1 cm cap, 3.5 cm T-handle), sliding
+in a fill tube that leaves the crankcase low and slopes up to a mouth at the engine's side. Kohler sells it as a part
+(20 040 08-S, "Dipstick, bent tube", for SV470-SV620 in Kohler's accessories guide; 32 038 08-S for SV715-SV840) but
+publishes no length; an SV720 owner measured his at about 11-1/2 in (29 cm). The real trial uses the Kohler part and
+records its measured length. A walk-behind mower's stick is shorter (Honda's GX gauge sticks are 3.3 and 5.4 cm) and a
+car's is longer (50 to 63 cm, Dorman 917-390 and 917-322); a car's tube drops 35 to 50 cm to the oil pan, past the
+reach of arms that grip no higher than about 25 cm above the table, so the task uses the lawn tractor's.
+
+A stick this long is longer than one arm's stroke, so it comes out hand over hand, as a person draws one out: grip the
+handle and draw it as far as the hand goes, then pinch the blade at the mouth and draw it the rest of the way; going
+back in, push the blade in to the mouth, then the handle home. The scorer counts a pinch on the blade as holding the
+dipstick, as it does a grip on the handle.
 
 ### Scoring (thresholds and reasons)
 
@@ -93,14 +85,16 @@ shape), and the trial's level.
 
 - Out = q at least the blade's length plus 5 mm (the tip clear of the mouth).
 - Seated = q of 3 mm or less (a 3 mm lift of the cap is visible against the rim).
-- Held = a gripper with both fingers touching the T-handle (contact, as for let go below) and their opening stopped by
-  it, across its 1.8 cm thickness or its 3.5 cm width (0.10 to 0.40 of full opening: the 1.8 cm less 15 %, to the
-  3.5 cm plus 3 %). An empty fist, an open hand round the handle, one finger on it or a hand hovering over it does not
-  hold it, so a dipstick that falls back into the tube beside a hand has not been pushed home by hand.
+- Held = a gripper with both fingers touching the T-handle or the blade (contact, as for let go below) and their
+  opening stopped by it: across the handle's 1.8 cm thickness or 3.5 cm width (the 1.8 cm less 15 % of full opening,
+  to the 3.5 cm plus 3 %), or pinching the blade across its 3 mm thickness or 1 cm width (hand over hand). An empty
+  fist, an open hand round the stick, one finger on it or a hand hovering over it does not hold it, so a dipstick
+  slid home beside a hand that is not holding it has not been pushed home by hand.
 - Wipe = while the blade is out and still smeared, the rag touches it when its middle is within 2.7 cm of the blade's
   axis (half the pad, 2 cm, plus the blade's half-thickness and about 0.5 cm of cloth pressed round it; a rag hovering
-  clear sits farther out), its outline is within 2 mm of the blade's faces (a rigid pad held 5 mm clear does not
-  count) and its height overlaps the blade above the mouth. The scorer follows the rag's middle along the blade in
+  clear sits farther out), its own shape, turned as it lies, is within 2 mm of the blade's faces (a rigid pad held 5 mm clear
+  does not count) and its extent along the tube overlaps the blade out of the mouth. All of this is measured in the
+  tube's frame, along and across its 25 degree slope. The scorer follows the rag's middle along the blade in
   1 mm bins from the tip and marks the stretch it slides over between two touching steps, at most 5 mm a step;
   nothing is credited across a step without contact, so a lift and a touch elsewhere adds nothing. The blade is wiped once the middle has slid over 80% (3.2 cm) of the blade's lower 4 cm in that pull: the pad
   reaches 2 cm either side of its middle, so a stroke between 4 cm and the tip drags cloth over the whole 6 cm smear
@@ -191,8 +185,8 @@ given; the drawn band follows the level.
 | File | What it is |
 |---|---|
 | `task.py` | Scene, scorer (`score()`, `success()`) and scripted demo (`demo()`), for the `yam_arena` embodiment (Isaac Lab-Arena, bimanual YAM, `station` scene). Its docstrings explain every rule. |
-| `yamkit.py` | Helper that spawns the engine as an articulation (the sliding dipstick), the rag, the card and the puck, gives the scorer the joint state and the grippers, and adds tilted demo waypoints. It patches `yam_arena` in memory at import; no files change. |
-| `guardkit.py` | Contact with the gripper's own shape (palm and fingers at their present opening): the let-go checks use its `touching()`, the held check its `gripping()` (both fingers on the handle, the opening stopped by it). Trimmed to these two checks. |
+| `yamkit.py` | Helper that spawns the fill tube as a tilted articulation (the sliding dipstick), the crankcase, the rag, the card and the puck, gives the scorer the joint state and the grippers, and adds tilted demo waypoints. It patches `yam_arena` in memory at import; no files change. |
+| `guardkit.py` | Contact with the gripper's own shape (palm and fingers at their present opening): the let-go checks use its `touching()`, the held check its `gripping()` (both fingers on the handle or the blade, the opening stopped by it), the wipe its box gap between the rag and the blade. Trimmed to these two checks. |
 | `test_task.py` | Offline scorer checks (the self-QC cases above). No simulator needed. |
 | `task.json` | The task card. |
 
@@ -212,56 +206,61 @@ Scorer tests: `python tasks/oil-dipstick-wipe-reinsert-read/test_task.py` (print
 
 ## The demo
 
-1. Right arm: grips the dipstick's handle from above and pulls it until the tip is 3 cm clear of the mouth.
-2. Left arm: picks up the rag, rolls its wrist about 75 degrees so the gripper reaches in from the left side (away
-   from the right hand) holding the pad on edge, presses the pad's broad face onto the blade beside the tip and
-   draws it up the blade over 3 s until its middle is about 4 cm above the tip, then takes it away. (Drawn downward,
-   the tilted pad's leading edge dug into the blade and stalled after about 1 cm.)
-3. Right arm: pushes the dipstick back in until the cap seats, pulls it again (tip 2 cm clear) and holds it still
-   2.5 s (the reading), pushes it back in until it seats and lets go.
-4. Left arm: puts the rag back down where it was, then, while the right arm holds the second pull, rolls its wrist as
-   for the wipe and stops 5 cm beside the blade, so its wrist camera shows the oil band against the ADD and FULL marks.
-5. Left arm: picks up the puck, waits over the pocket until the reading has been taken, sets the puck in the pocket
-   and lets go. Both arms go home and hold.
+1. Right arm, hand over hand: grips the dipstick's handle from above (fingers across its 1.8 cm thickness) and draws
+   it 14.75 cm up the tube, as far as the hand reaches; lets go (the stick stays), slides back down the stick with the
+   fingers open, pinches the blade 3.5 cm out of the mouth and draws it on until the tip is 4 cm clear of the mouth.
+2. Left arm: picks up the rag and waits; once the blade is out it rolls its wrist about 75 degrees so the gripper
+   reaches in from the left side (away from the right hand) holding the pad on edge, presses the pad's broad face onto
+   the blade beside the tip and draws it up the blade over 3 s until its middle is 4.5 cm above the tip, then takes it
+   away. (Drawn downward, the tilted pad's leading edge dug into the blade and stalled after about 1 cm.)
+3. Right arm: pushes the blade back in to the mouth, lets go, takes the handle and pushes it home until the cap seats;
+   pulls it out again the same way (tip 2.5 cm clear), holds it still 2.5 s (the reading), pushes it back in until it
+   seats and lets go.
+4. Left arm: puts the rag back down where it was, picks up the puck, waits over the pocket until the reading has been
+   taken, sets the puck in the pocket and lets go. Both arms go home and hold.
 
 The demo is a scripted demonstration, not a policy: it is told the trial's level (`OIL_CASE`, or between the marks
 with no jitter) and aims for that pocket; it does not read the blade. The scored policy is told nothing and has to
 read the oil band off the blade against the ADD and FULL marks. The demo shows that every motion, including the report, can be done within the run
-limit, and its left wrist camera shows that the level can be read from the robot's own view. The top camera, about
-55 cm away, sees the blade edge-on as a line about 2 pixels wide at 320 x 176, too small to read; a policy has to
-bring a wrist camera to the blade during the second pull and read the level itself. A demo that reads the level from
+limit. The top camera sees the blade as a thin line, too small to read the band at 320 x 176; a policy has to bring a
+wrist camera to the blade during the second pull and read the level itself. A demo that reads the level from
 its own camera would be future work; it is not needed to show the task can be done.
 
 ## Runtime and seeds
 
-- Demo: 589 control steps (29.5 s simulated) at each of the three levels.
+- Demo: 981 control steps (49 s simulated) at each of the three levels, ended on success.
 - Model run limit: 2,400 steps (2 minutes at 20 Hz).
 - One fixed layout (`object_jitter=0`); the oil level is the one thing that changes between trials. Score a model on
   all three levels (`OIL_CASE=low`, `ok`, `over`), or on seeded resets, which also pick the level.
 
 ## Fidelity
 
-The dipstick is real size for a mower engine (12.5 cm overall, longer than Honda's 3.3 and 5.4 cm GX gauge sticks;
-see Rule and why). It slides on the tube's axis even when out of the tube (a guide), so it
-cannot be laid down or tilted; it falls back down the tube if let go. The guide means the sim never asks the robot to
-line the tip up with the tube's 2.0 cm bore on the way back in (the blade, 1.0 x 0.3 cm, has about 5 mm of play each
-side). A real trial uses a free dipstick, so it does test that reinsertion; a dipstick dropped on the bench there is
-left out (0.75 after a right report), which matches what the scorer gives a dipstick let fall down the guide
-without a hand pushing it. The oil is drawn, not simulated: the smear,
-its removal by the rag and the trial's level are visuals driven by the scorer's state. The rag is a rigid pad.
+The dipstick is a lawn tractor's at its real size (29 cm overall; see Rule and why). It slides on the tube's axis even
+when out of the tube (a guide), so it cannot be laid down or tilted. The guide means the sim never asks the robot to
+line the tip up with the tube's bore on the way back in (the blade, 1.0 x 0.3 cm, has a few mm of play); a real trial
+uses a free dipstick, so it does test that reinsertion, and a dipstick dropped on the bench there is left out (0.75
+after a right report). The real fill tube curves on its way down to the crankcase, and the bent blade's friction in it
+holds the stick where it is let go (its 50 g weight pulls about 0.2 N along the slope); the sim's tube is straight and
+the stick's weight is switched off, so it stays where it is let go and moves only when pushed. The oil is drawn, not
+simulated: the smear, its removal by the rag and the trial's level are visuals driven by the scorer's state. The rag is
+a rigid pad.
 
 ## Real-world build
 
-A walk-behind mower engine (cold, off the mower or on it) with a push-in dipstick and fill tube, or a bench model of
-one, and a folded shop towel. Trials run in blocks of three, one at each level, in an order shuffled by a die roll, so
-every level is tested equally often. Before each trial, set the oil to 0.4, 1.4 or 2.7 cm on the blade with a syringe (check it with a pull and a wipe, out of the
-camera's view), wipe the blade, smear oil on its lower 6 cm and up the inside of the tube, and seat it. The check card
-is a tray of two layers of 5 mm foam board (or a 3D print), 6 x 16 cm, with three 4.4 cm square holes cut in the top
-layer, the floors painted amber, green and red, labelled ADD, OK and OVER and marked with the same white minus sign, check
-mark and plus sign as the sim, taped to the bench at x 35, y 10. The
-puck is a white checkers piece glued to a second one (3 cm across, about 2 cm tall). Score from the video as described
-under Scoring: the level a real trial shows on the blade is the oil itself, and the report is which pocket the puck
-ends in.
+A lawn tractor or riding mower engine (cold, on the machine or on a stand) with its Kohler-type tube dipstick (for
+example Kohler 20 040 08-S on a Courage SV470-SV620, or 32 038 08-S on an SV715-SV840; measure and record its length),
+or a bench model with the same tube slope and a real 29 cm stick, and a folded shop towel. The fill tube's mouth sits
+12.5 cm above the robot's bench, 38 cm in front of the arms' base line, the tube sloping up toward the robot at about
+25 degrees. Trials run in blocks of three, one at each level, in an order shuffled by a die roll, so every level is
+tested equally often. Before each trial, set the oil to 0.4, 1.4 or 2.7 cm on the blade (above the tip, against the
+stick's own marks scaled as in the sim, or the real marks with the levels set just under ADD, mid-range and just over
+FULL) with a syringe, check it with a pull and a wipe out of the camera's view, wipe the blade, smear oil on its lower
+6 cm and up the inside of the tube, and seat it. The check card is a tray of two layers of 5 mm foam board (or a 3D
+print), 6 x 16 cm, with three 4.4 cm square holes cut in the top layer, the floors painted amber, green and red,
+labelled ADD, OK and OVER and marked with the same white minus sign, check mark and plus sign as the sim, taped to the
+bench at x 35, y 10. The puck is a white checkers piece glued to a second one (3 cm across, about 2 cm tall). Score
+from the video as described under Scoring: the level a real trial shows on the blade is the oil itself, and the report
+is which pocket the puck ends in.
 
 ## Results by level
 
@@ -272,9 +271,9 @@ Sim (scripted demo, `OIL_CASE` set per run; the demo is told the level, see The 
 
 | Level | Oil band from the tip | Pocket reported | Score | Steps |
 |---|---|---|---|---|
-| below ADD (`low`) | 0.4 cm | ADD | 1.0 | 589 |
-| between the marks (`ok`) | 1.4 cm | OK | 1.0 | 589 |
-| above FULL (`over`) | 2.7 cm | OVER | 1.0 | 589 |
+| below ADD (`low`) | 0.4 cm | ADD | 1.0 | 981 |
+| between the marks (`ok`) | 1.4 cm | OK | 1.0 | 981 |
+| above FULL (`over`) | 2.7 cm | OVER | 1.0 | 981 |
 
 A scored model is run at all three levels and reported the same way, one row per trial, with the per-level count of
 right reports.
