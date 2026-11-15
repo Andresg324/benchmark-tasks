@@ -39,11 +39,18 @@ Why each rule and level:
   degrees or more, summed over every pull, while the play is over 0.4 mm (or the wrench turning 30 degrees round a
   nut its jaws cannot grip, over 1.24 mm of play). Where "loosely adjusted" starts: a new adjustable wrench's own jaw
   clearance is at most 0.25 mm (ISO 6787:2001, Table 1), so a jaw rolled snug on the flats reads 0.25 mm or less, and
-  0.4 mm (a standard feeler gauge, between that and the 0.5 mm scale step) is the first reading no snugged wrench can
+  0.4 mm (a standard feeler gauge size) is the first reading no snugged wrench can
   give. It is also where the jaws start to slip: with 0.4 mm of play the 8 mm nut turns 5.4 degrees in the jaws before
   they bear, and they bear on its corners. 2 degrees of turn is more than the reading error of the video angle tool and
-  under the 3.4 degrees the wrench flexes before the nut moves. Whether a loose jaw visibly marks a nylon nut at this
-  load is not claimed: no published data quantify it, so the rule scores the procedure, not damage.
+  under the 3.4 degrees the wrench flexes before the nut moves.
+  Why the rule matters at this load, in the nut's material (hand estimates from the geometry, not a bench test): with
+  the jaw snug, 0.76 N*m goes into the flats as about 190 N on bands about 1.5 mm wide (about 6 mm2), about 30 MPa,
+  well under nylon 6/6's yield (BASF Ultramid A3K data sheet: about 85 MPa dry, about 60 MPa conditioned). With play,
+  the nut turns in the jaws before they bear and the contact moves onto its corners; at the task's starting 1 mm the
+  same torque goes through two corner lines of about 1 mm2 in all, on the order of 140 MPa, above yield. This is the
+  corner loading open-end and adjustable wrench designs try to avoid (e.g. US 5381710, which moves the contact off the
+  corners for that reason). The score still checks the procedure, not damage: whether a loose jaw visibly marks a
+  nylon nut at this load is not claimed.
   Play is tracked over the whole run, so a jaw snugged for the first pull and opened again before a later one is
   caught. A real trial reads the same play and turn from video, frame by frame; before and after photos of the
   nylon nut's corners are a secondary check (see the real-world build).
@@ -99,10 +106,14 @@ worked through the arm's Jacobian with the torque that holds the arm up included
 horizontal direction at rated (continuous) torque in typical tabletop poses (about 17 N typical) and about 28 N at
 peak, so 7.2 N is within the arm's continuous rating.
 
-Breakaway after relaxation. Nylon relaxes under load, so the torque that breaks the nut loose after 5 minutes can be
-lower than the 0.76 N*m it was tightened to. We found no published minute-scale relaxation figure for nylon 6/6 nuts
-(bolted-joint references give preload relaxation over minutes to hours for metal joints, e.g. Machinery's Handbook,
-and nylon creeps more), and no bench measurement was made. The task does not depend on the number: every rule is read
+Breakaway after relaxation. Nylon relaxes under load, so the torque that breaks the nut loose after 5 minutes is
+lower than the 0.76 N*m it was tightened to. Expected value, from published bolting relations: a joint loses about
+10-25 % of its clamp load as it settles after tightening (Bolt Science, "Relaxation"; Boellhoff Bulletin 27 holds 80 %
+as the minimum kept), and breaking a nut loose takes about 80-85 % of the torque that tightened it, since the thread's
+slope helps on the way out (the pitch term of the standard torque-tension relation, Machinery's Handbook; about 0.1 of
+the total for an M5 x 0.8 thread with friction near 0.15). Together: about 0.76 x (0.75 to 0.90) x (0.80 to 0.85), so
+0.46-0.58 N*m. Nylon creeps more than steel, which would put it toward the low end; no minute-scale figure for nylon
+6/6 nuts was found. The task does not depend on the number: every rule is read
 from angles (the play while the nut turns, the nut's clockwise turn, how far it loosened), and the offline checks
 (`scoring_holds_across_breakaway_range`) run the same pulls with the thread breaking loose at 0.10, 0.38, 0.76 and
 0.93 N*m, from a nut that has almost let go to the nut's strength, with the same scores at every one: a snug full job
@@ -119,8 +130,10 @@ in the same raking light and at the same magnification (a record kept with the r
 
 Measuring during the run (the nut's turn and the jaw's play, which decide both faults): fix a camera 25 cm
 above the nut, looking straight down. Paint a thin line across the nut's top and a reference line on the plate. Draw
-a fine line on the movable jaw's top face and stick a 0.5 mm scale on the head beside it, zeroed with the jaw closed
-on the nut's flats; check it with 0.4 mm and 1 mm feeler gauges between jaw and flat. After the run, step through the
+a fine line on the movable jaw's top face and stick a printed 0.1 mm vernier on the head beside it (main scale on the
+head, vernier on the jaw), zeroed with the jaw closed on the nut's flats. Calibrate the reading before the trials: set
+the play with 0.2, 0.3, 0.4, 0.5 and 1.0 mm feeler gauges between jaw and flat, film each from the trial camera, and
+check the video reading is within 0.05 mm of the gauge; record the check with the results. After the run, step through the
 video with an angle tool (Kinovea or similar): in every frame read the nut's angle and the jaw's play. Add up the
 nut's turn in the frames where the play reads over 0.4 mm, and its clockwise turn, across every pull and every worm
 adjustment the robot makes. 2 degrees or more of either is a fault, as in the sim. If the scale is hidden by a finger
