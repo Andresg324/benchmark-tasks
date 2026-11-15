@@ -5,7 +5,7 @@ its barrel. "Roll this puff pastry out into a 3 mm sheet at least 20 cm long." T
 both of them ride on the board, so the pin has to be kept level along its length: with one end lifted the barrel
 leaves a wedge, thick on that side. The pastry springs back, so it takes several passes. Category: Societal relatability.
 Rolling dough out with a rolling pin, for a pie crust, cookies or pastry, is something most people have done at home,
-and rolling-pin spacer rings are a common home tool for an even thickness.
+and spacer rings that slip onto a rolling pin are sold by ordinary kitchen retailers for an even thickness.
 
 Run (from the repo root, Isaac Lab-Arena installed):
 
@@ -161,11 +161,15 @@ its place with a ruler, and check the last frames of the video that no finger to
   silicone rolling pin rings (an 8-piece set, two rings each in four thicknesses from 0.0625 to 0.375 inch, sold for
   pins up to about 2.5 inches across). 0.125 inch is 3.2 mm, inside the 2.5 to 3.5 mm on-spec band; the sim uses 3 mm. Check the rings' height over
   the barrel with calipers.
-- Store-bought puff pastry (frozen sheets or a block, thawed in the fridge), cut and pressed into a 6.5 x 20 x 1 cm block (130 g); one block per trial. Roll it at
-  about 18 C (64 F; 20 to 30 minutes out of the fridge, when a fingertip leaves a dent): straight from the fridge, laminated
-  pastry takes a baker leaning on the pin, more than the arms can push, while at 18 C the pin's weight and a light
-  press from each hand thin it. If the first build shows the arms stalling on the 10 mm block, start from a 7 mm
-  block 9.3 cm long (the same 130 mL) and say so in the setup.
+- Store-bought block puff pastry, thawed in the fridge and cut to a 6.5 x 20 x 1 cm block (130 g); one block per trial.
+  Roll it at about 18 C (64 F; 20 to 30 minutes out of the fridge, when a fingertip leaves a dent). What the arms can
+  apply comes from the YAM's servo ratings (Damiao DM-J4340 on joints 1 to 3, 9 N·m rated and 27 N·m peak; DM-J4310 on
+  joints 4 to 6, 3 N·m rated and 7 N·m peak) through the arm's Jacobian from the URDF, gravity included, at the hands'
+  grip on the handles. Over the block's middle each hand can press down about 54 N continuously (about 110 N peak) and
+  push the pin along the board about 12 N continuously (about 30 N peak); both hands together give twice that. Toward
+  the far end of the strokes, past about x 35 cm, holding the arm out already takes the shoulder joint to its rated
+  torque, so a press there draws on the peak rating (about 90 N down and 29 N along the board per hand). The force a
+  person needs to roll this block has not been measured.
 - Measuring tools, all from a hardware or auto parts store: a digital tire tread depth gauge (the common 0 to 25 mm
   kind reading 0.01 mm, a thin pin sliding out of a flat foot), digital calipers, a 30 cm ruler, a 1 cm grid
   transparency (printed on an overhead sheet), a kitchen scale for the 130 g block, and a phone with a camera and a
