@@ -70,7 +70,7 @@ Model run (Dream-1): the same command with `--policy dream`. Render the videos o
 ## Runtime and seeds
 
 One trial takes up to 1,200 steps (60 seconds at 20 Hz); the scripted demo is planned at about 32 s (about 640
-steps). Demo result on this version: 1.0 in 598 steps (30 s); Dream-1: 0 in 1,200 steps. No seeds: the layout is fixed (`object_jitter=0`).
+steps). Demo result on this version: 1.0 in 598 steps (30 s); Dream-1: PENDING. No seeds: the layout is fixed (`object_jitter=0`).
 
 ## The demo
 
