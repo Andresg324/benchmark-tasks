@@ -17,5 +17,5 @@
   "reset_notes": "After every trial, leak-test the tube inside the mounted tire: roll the last section on by hand first if it is not on, inflate to the pressure printed on the sidewall, dunk the wheel and read the gauge after 5 minutes (a leak scores 0); replace a leaking tube. Let the tire down, then by hand: lift the last section back over the flange at the valve (60 to 120 degrees), pull the bead back up out of the channel onto its shoulder all round (pump the tube briefly to 10 psi and it pops up), let the tube down to 5 psi on a gauge, set the valve to 20 degrees on the protractor card and put the lever back on its tape outline.",
   "fidelity": "Bead arcs slide 9 mm into the channel; the two beside the last section push back 11.7 N unless held. Slack is a scored law: with 10 mm freed the last section rolls over, pushing back 8 N, rising to 30 N over the flange. No published seating force exists, so the rig is checked: the last section must seat with 40 N or less on a scale, under the YAM's 52 N continuous press there. No tube is modeled: lever tip and strike speed stand in for a pinch.",
   "scores": "Dream-1 run: 0 (1,200 steps); demo: 1.0 (598 steps)",
-  "media": "M-WJT6EV"
+  "media": "M-LC3SRZ"
 }
