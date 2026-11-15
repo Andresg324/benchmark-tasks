@@ -1,8 +1,9 @@
-"""doughkit: a block of pastry rolled out under a rolling pin with spacer rings (Nov 11). Import after yamkit:
+"""doughkit: a piece of pastry rolled out under a rolling pin with spacer rings (Nov 11; Nov 15: a sheet, read on a
+2 cm grid). Import after yamkit:
     import doughkit as dk
 
 The pastry is modeled, not simulated: it has no collider, so the pin rides on its rings on the board and the kit works
-out what the barrel does to the pastry under it. The sheet is a row of strips along y (one per 1 cm of width); each
+out what the barrel does to the pastry under it. The sheet is a row of strips along y (one per `cell` of width); each
 strip is a chain of thin slices along x, each with a fixed volume (per unit width) and a thickness, so its length is
 volume / thickness and the total volume never changes.
 
@@ -11,7 +12,7 @@ it is above the board there (the gap: the rings' clearance, plus however far tha
 tilted pin leaves a wedge). A slice whose center the line rolls across, with the gap below the slice's thickness, is
 pressed as the barrel's face reaches it (its lowest line still sqrt(2 R (t - gap)) short of the slice's center,
 the contact patch of a round barrel on thick pastry): t <- gap + (t - gap) * RATIO (the pastry springs back by RATIO of the excess, so it takes several passes to
-come down to the gap). A pressed slice lengthens; the slices on its far side from the strip's anchor (the block's
+come down to the gap). A pressed slice lengthens; the slices on its far side from the strip's anchor (the piece's
 middle, held by the bulk of the dough) move outward to make room. A slice is pressed again only once the line has
 gone back REARM behind where the barrel's face meets it (one press per crossing, however the arm jitters). Rolling
 past a strip's end presses the end slice like any other: the rings hold the barrel at the gap there too.
@@ -20,11 +21,11 @@ Hands (the task's `gate(objects) -> bool`): presses count only while it is True 
 
     dk.setup(dk.Sheet(...), dk.Pin(...))    once, at import time of task.py
     dk.update(objects)                       each control step (the hook calls it; offline tests call it)
-    dk.grid() -> t                           thickness (m, 0 = no pastry) on the 1 cm display grid
+    dk.grid() -> t                           thickness (m, 0 = no pastry) at the grid's cell centers
     dk.lengths() -> per-strip lengths (m); dk.volume() total volume (m^3); dk.ends() per-strip (x_min, x_max)
 All of it resets when kit.episode() changes.
 
-Visuals: one slab per covered 1 cm cell, as thick as the pastry there, colored by thickness band (Isaac Lab
+Visuals: one slab per covered grid cell, as thick as the pastry there, colored by thickness band (Isaac Lab
 VisualizationMarkers, no physics), so the top camera shows the outline growing and any thick or thin band.
 """
 
@@ -42,7 +43,7 @@ REARM = 0.01  # m: the line must go this far back past a slice before it can pre
 
 @dataclass(frozen=True)
 class Sheet:
-    """The pastry: a block `size` = (length along x, width along y, thickness) centered at (cx, cy) on a board whose top
+    """The pastry: a piece `size` = (length along x, width along y, thickness) centered at (cx, cy) on a board whose top
     is at world z `board_z`; displayed and scored on `cell` cells over x in `x_range` (world m)."""
 
     center: tuple
@@ -79,7 +80,7 @@ class _State:
         self.t = np.full((ny, n), float(sh.size[2]))
         self.vol = np.full((ny, n), sh.size[0] / n * sh.size[2])  # volume per unit width (m^2)
         self.armed = np.ones((2, ny, n), bool)  # [0]: may be pressed moving +x; [1]: moving -x
-        self.anchor = n // 2  # slice boundary held in place (the block's middle)
+        self.anchor = n // 2  # slice boundary held in place (the piece's middle)
         self.anchor_x = float(sh.center[0])
         self.line = None  # per strip: (x, gap) of the barrel's lowest line last step, or None
         self.step = 0
@@ -225,7 +226,7 @@ def strips():
 
 
 def grid():
-    """Thickness on the 1 cm grid: rows = strips (y), columns = cells along x over Sheet.x_range; t is the thickness
+    """Thickness on the `cell` grid: rows = strips (y), columns = cells along x over Sheet.x_range; t is the thickness
     (m) of the slice under the cell's center, 0 where there is no pastry."""
     sh = _CFG["sheet"]
     S = _state()
@@ -248,9 +249,9 @@ def cell_x() -> np.ndarray:
 
 # -- visuals --------------------------------------------------------------------------------------------------------
 
-# thickness bands (mm, upper bound) and their colors: thin dark, on spec golden, thicker paler
-BANDS = ((2.0, (0.45, 0.25, 0.10)), (2.5, (0.70, 0.45, 0.20)), (3.5, (0.90, 0.68, 0.30)),
-         (4.5, (0.95, 0.82, 0.55)), (6.5, (0.97, 0.90, 0.72)), (1e9, (0.99, 0.97, 0.90)))
+# thickness bands (mm, upper bound) and their colors: thin dark, on spec (2.9 to 3.5 mm) golden, thicker paler
+BANDS = ((2.5, (0.45, 0.25, 0.10)), (2.9, (0.70, 0.45, 0.20)), (3.5, (0.90, 0.68, 0.30)),
+         (3.7, (0.95, 0.82, 0.55)), (4.2, (0.97, 0.90, 0.72)), (1e9, (0.99, 0.97, 0.90)))
 
 
 def band(t_m: float) -> int:
@@ -303,7 +304,7 @@ def _draw(origin) -> None:
 
 def _patch_embodiment() -> None:
     """Draw the pastry as it starts the trial right after each scene reset, before the first frame is taken (the
-    step hook only runs from the first control step on, so the block would pop in). Wraps the embodiment's
+    step hook only runs from the first control step on, so the pastry would pop in). Wraps the embodiment's
     observation at t = 0 (the task file is loaded inside the first reset, so its reset can't be wrapped in time)."""
     ie = sys.modules.get("yam_arena.inspect_embodiment")
     cls = getattr(ie, "YamArenaEmbodiment", None)
@@ -316,7 +317,7 @@ def _patch_embodiment() -> None:
         global _S
         if getattr(self, "_t", None) == 0.0 and getattr(self, "_base", None) is not None:
             try:
-                _S = None  # a fresh block for the new trial
+                _S = None  # fresh pastry for the new trial
                 _draw(self._base.scene.env_origins[0].detach().cpu().numpy())
                 self._env.step(self._ready)  # one more settle step at the ready pose, so the cameras update
                 for _ in range(getattr(ie, "RESET_RENDERS", 4)):
