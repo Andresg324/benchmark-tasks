@@ -69,19 +69,22 @@ Model run (Dream-1): the same command with `--policy dream`. Render the videos o
 
 ## Runtime and seeds
 
-One trial takes up to 1,200 steps (60 seconds at 20 Hz); the scripted demo ends at full score in 506 steps (about
-25 s). No seeds: the layout is fixed (`object_jitter=0`).
+One trial takes up to 1,200 steps (60 seconds at 20 Hz); the scripted demo is planned at about 32 s (about 640
+steps). Demo result on this version: PENDING. No seeds: the layout is fixed (`object_jitter=0`).
 
 ## The demo
 
 1. Right arm, closed fingers pointing down: presses the tire's sidewall 1 cm outside the flange at 228, 270 and 312
    degrees, 9 mm down each time, pushing those three bead arcs into the channel, then pushes the arc beside the last
-   section down at 170 degrees and holds it (16.8 mm of slack reach the last section).
+   section down at 170 degrees and holds it with 16 N against its 11.7 N push back (16.8 mm of slack reach the last
+   section).
 2. Meanwhile the left arm lowers its closed fingers beside the valve stem, on its leaning side, and pushes it straight
    toward the hub, then backs off.
-3. While the right hand holds, the left arm presses the last section's sidewall down along its arc until the bead drops
-   inside the flange. Both hands lift off (the held arc springs back up onto its shoulder; the section stays in) and start
-   back toward home; the run ends at 1.0 in 506 steps, once both hands have been clear for a second.
+3. While the right hand holds, the left arm presses the last section's sidewall down along its arc, with what the
+   bead takes there plus 5 N (13 N while the sidewall rolls down, rising to 35 N as the lip goes over the flange), in
+   finer, slower steps over the flange, until the bead snaps in; it presses 30 N once seated, eases off to 4 N and
+   lifts. Both hands lift off (the held arc springs back up onto its shoulder; the section stays in) and go home; the
+   run ends once the bead is on, the valve straight and both hands clear for a second (PENDING: steps).
 
 ## Scoring
 
@@ -109,32 +112,42 @@ below and 11 cm outside the rim, so only a hand can put its tip there.
 
 ## Real-world build
 
-- Wheel: any 12-inch (ISO 203) kids' bike wheel with a 12.5 x 2.25 (57-203) gumwall tire and a Schrader tube at 5 psi
-  (0.34 bar, set with a gauge at every reset), on a hub stand (a post 1.8 cm across through the hub in place of its axle, bolted to a weighted plate clamped to the table) with the rim
-  8.5 cm above the table. Mount the first bead, tuck the tube in, and work the second bead on to 60 degrees each side of
-  the valve. Kids' tires on 203 rims are tight: whether a given tire needs exactly three arcs in the channel is
-  checked once by hand (count how much of the bead has to be pushed into the channel before the last section rolls
-  over at 5 psi, and that the bead beside the last section rises back out of the channel when let go). This is done
-  once, when the rig is built: if that tire needs a different pressure to take about half the bead, that pressure is
-  written on the rig and set with the gauge at every reset in place of 5 psi, so every trial starts the same.
-- Bead force. The sim asks for little force. A far arc leaves its shoulder detent at under 1 N (200 N/m over 3 mm).
-  The arc beside the last section pushes back 3.6 N at the channel floor (400 N/m over 9 mm). Once 10 mm of slack is
-  freed, the last section rolls over against only light damping, because rubber stretch is not simulated. A real
-  tight kids' bead takes far more. No published measurement in newtons of the hand force to seat the last section of a
-  bicycle bead was found. Schwalbe's mounting guidance says that when rim and tire are not well matched "it is
-  extremely hard to pull the last piece of the tire over the rim flange" and that "using tire levers helps a lot"
-  ([Schwalbe, Mounting](https://www.schwalbe.com/en/technology-faq/mounting/)). Park Tool says to "use tire lever as a
-  last resort" if the bead will not seat by hand
-  ([Park Tool](https://www.parktool.com/en-us/blog/repair-help/tire-and-tube-removal-and-installation)). An unmeasured
-  estimate for a tight 12-inch bead is tens of newtons of thumb force, well above the arm's press of about 5 N. On a
-  typical tight kids' tire a real trial is therefore likely beyond the arm. The sim tests the method (slack first, the
-  arc beside held, the section rolled over), not the effort. No source was found that names a 203 tire and rim pairing
-  known to mount easily by hand, so none is named here.
-- Out-of-spec check, done when the rig is built and whenever its tire or tube is replaced: push the bead into the
-  channel all round and hold the arc beside the last section down, as in the task, then seat the last section with
-  thumbs alone, with no lever or other tool. If the last section can't be seated with thumbs alone, the setup is out of
-  spec: use a different tire. Passing this check shows the tire can be mounted by hand. It does not show that the force
-  is within the arm's 5 N.
+- Wheel and tire, named so the rig is reproducible: a WheelMaster 12 1/2 x 2 1/4 front wheel (J&B SKU 64185: steel
+  single-wall ISO 203 rim, 20 spokes, bolt-on axle) with a Kenda K124 12 1/2 x 2 1/4 (57-203) wire-bead tire (Kenda
+  00210005, UPC 047853602654) and a 12 1/2 x 2 1/4 Schrader tube at 5 psi (0.34 bar, set with a gauge at every
+  reset). Any other 57-203 tire and 203 wheel may be used only if it passes the setup check below. The wheel sits on a
+  hub stand (a post 1.8 cm across through the hub in place of its axle, bolted to a weighted plate clamped to the
+  table) with the rim 8.5 cm above the table. Mount the first bead, tuck the tube in, and work the second bead on to
+  60 degrees each side of the valve. Kids' tires on 203 rims are tight: whether this tire needs three arcs in the
+  channel is checked once by hand (count how much of the bead has to be pushed into the channel before the last
+  section rolls over at 5 psi, and that the bead beside the last section rises back out of the channel when let go).
+  If it needs a different pressure to take about half the bead, that pressure is written on the rig and set with the
+  gauge at every reset in place of 5 psi, so every trial starts the same.
+- Bead force: the review asked for a pairing the YAM can mount, with the force verified within its capability.
+  - The YAM's capability, from its servos: Damiao DM-J4340 on joints 1-3 (9 N*m rated, 27 N*m peak) and DM-J4310 on
+    joints 4-6 (3 N*m rated, 7 N*m peak); the sim's arm uses the same peak limits (i2rt's yam_v1 config). Worked
+    through the arm's Jacobian, with the torque that holds the arm up included, at this wheel's last section: each arm
+    presses about 52 N straight down there at rated (continuous) torque and about 107 N at peak; at the arc beside the
+    last section (150 or 210 degrees), about 54 N. Our earlier text gave "about 5 N"; that was a planning figure from
+    our first sims, not the hardware.
+  - No published measurement in newtons of the hand force to seat the last section of a bicycle bead was found
+    (Schwalbe and Park Tool describe it only qualitatively:
+    [Schwalbe, Mounting](https://www.schwalbe.com/en/technology-faq/mounting/),
+    [Park Tool](https://www.parktool.com/en-us/blog/repair-help/tire-and-tube-removal-and-installation)). So the force
+    is made a specified, checked property of the rig instead of an estimate.
+  - Setup check, done when the rig is built and whenever its tire or tube is replaced: stand the wheel on its hub
+    stand on a kitchen or bathroom scale and zero it. Do the task's method by hand (arcs in the channel, the arc beside
+    held down with one hand), then seat the last section with the other palm, pressing straight down on its sidewall
+    1 cm outside the flange, no lever. The rig is in spec only if the scale reads 40 N (4.1 kg) or less as the section
+    goes on; repeat three times and log the highest reading with the results. A tire that needs more is out of spec:
+    replace it with one that passes. 40 N is under the arm's 52 N continuous press there.
+  - The sim asks for that force: the last section pushes back 8 N on the hand while its sidewall rolls down to the
+    flange's edge, then a press rising linearly to 30 N as the lip stretches over the flange (the in-spec ceiling,
+    with margin), until it snaps in 2.5 degrees short of seated; let go before that, it springs back up. The arc beside
+    it pushes back 11.7 N at the channel floor (1,300 N/m over 9 mm), so it has to be held down firmly. The demo
+    presses 13 to 35 N on the section (what the bead takes there plus 5 N) and holds the arc beside with 16 N, each
+    aimed past the sidewall by the arm's give (J K^-1 J^T from the servos' stiffness, about 2 mm per newton straight
+    down), all under the arm's 52 N continuous press.
 - The slack law is the sim's stand-in for rubber stretch: it reproduces the real limit (the last section goes on only
   once enough bead sits in the channel), and a real trial checks the outcome, the bead on all round, instead.
 - Slack in a real trial is the bead's own position: the bead visibly sits down in the channel, the rim's bare shoulder showing

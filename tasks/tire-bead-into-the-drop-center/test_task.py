@@ -241,6 +241,16 @@ creep = m.Creep().drive("wheel/s30", -m.DROP, 0.0, {}, {})
 lk = {l.name: l for l in m.OBJECTS[0].links}
 
 
+# The bead's resistance: 8 N to roll the sidewall down to the flange's edge, rising to 30 N over it, none once in.
+_, _, eff_bend, _ = law.drive("wheel/flap", D(-12.0), 0.0, far | {"s30": DOWN}, {})
+_, _, eff_top, _ = law.drive("wheel/flap", D(-2.6), 0.0, far | {"s30": DOWN}, {})
+_, _, eff_in, _ = law.drive("wheel/flap", D(-1.0), 0.0, far | {"s30": DOWN}, {})
+need = [m.press_needed(D(a)) for a in (-20.0, -6.0, -4.25, -2.5)]
+# The demo: every press it plans stays under the YAM's rated (continuous) straight-down press there, 52 N (README).
+plan = m.demo()
+CONT_DOWN_N = 52.0
+press_max = m.SEAT_N + m.ROLL_MARGIN_N
+
 flap_xy = [np.array(m._at(m.LAST_AT + d, r)) for d, (r, _) in m.FLAP_PRESS]
 side_xy = [np.array(c.center[:2]) for n in m.NEXT_TO_LAST for c in lk[n].colliders]
 gap = min(np.linalg.norm(a - b) for a in flap_xy for b in side_xy) - 0.010 - 0.011
@@ -259,7 +269,16 @@ for flag, name in ((sc == 1.0 and su, "done and let go: 1.0 and success"),
                    (b_mid, "pushed past the stop without slack, short of the seat zone: the stop is put back"),
                    (not b_seated, "seated, then the held arc let go: it stays in"),
                    (t == 0.0 and k > 0, "within 2.5 degrees of seated it is pulled in"),
-                   (creep[2] > 3.0, "an arc beside the last section is pushed back up (3.6 N at the floor)"),
+                   (abs(creep[2] - 11.7) < 0.05, "an arc beside the last section is pushed back up (11.7 N at the floor)"),
+                   (abs(eff_bend + 8.0 * m.PRESS_ARM) < 1e-9, "rolling the sidewall down takes 8 N at the press spot"),
+                   (abs(eff_top + m.press_needed(D(-2.6)) * m.PRESS_ARM) < 1e-9 and m.press_needed(D(-2.6)) > 29.0,
+                    "just short of the snap the lip takes about 30 N"),
+                   (eff_in == 0.0, "once within 2.5 degrees it snaps in, no push back"),
+                   (need[0] == need[1] == 8.0 and abs(need[2] - 19.0) < 1e-6 and abs(need[3] - 30.0) < 1e-6,
+                    "the press rises linearly from 8 N at the flange's edge to 30 N at the snap"),
+                   (m.SEAT_N <= 40.0 and press_max < CONT_DOWN_N and m.HOLD_N < CONT_DOWN_N,
+                    "the demo's presses (35 N roll, 16 N hold) are under the rig check's 40 N and the arm's 52 N"),
+                   (len(plan["left"]) > 10 and len(plan["right"]) > 10, "the demo plans both arms"),
                    (m.LastSection.sets_limits, "the law declares it narrows its limits (released at reset)"),
                    (gap > 2 * 0.04695, "no one hand (9.4 cm open) spans an arc beside and the last section"),
                    (2 * m.SLACK_PER_SECTOR < m.SLACK_NEED <= 3 * m.SLACK_PER_SECTOR, "10 mm needs three 4.2 mm arcs"),

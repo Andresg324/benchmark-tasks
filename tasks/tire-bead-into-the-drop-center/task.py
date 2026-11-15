@@ -56,7 +56,7 @@ SEAT_ZONE = 0.003  # m: a sector within 3 mm of its shoulder or the channel floo
 # last section pulls the bead beside it back up onto the shoulder, so one of them has to be held down while the other
 # hand rolls the section over. The arcs farther round stay where they are pushed.
 NEXT_TO_LAST = ("s30", "s150")
-CREEP = 400.0  # N/m: the pull back up onto the shoulder, 3.6 N at the channel floor (a firm thumb holds it)
+CREEP = 1300.0  # N/m: the pull back up onto the shoulder, 11.7 N at the channel floor (a firm palm holds it)
 # Slack reaches the last section only through bead that is in the channel: a stretch still up on its shoulder is held
 # there by the tube's pressure. So the slack counted runs from each end of the last section round the wheel, arc by
 # arc, while each arc is at least 6 mm down (in the channel's click zone).
@@ -69,6 +69,15 @@ FLAP_START = math.radians(-20.0)
 FLAP_LO = math.radians(-25.0)
 BLOCK_AT = math.radians(-6.0)  # the lip reaches the flange's edge here: without slack it can't go further
 FLAP_SEAT_ZONE = math.radians(2.5)  # within 2.5 degrees of seated it snaps in (the lip is below the flange top)
+# The bead's resistance to the press (the review asked for a pairing whose mounting force is within the arm's reach).
+# A hand presses the last section's sidewall straight down at PRESS_ARM from its hinge line. Rolling the section down
+# to the flange's edge bends the sidewall (BEND_N at the hand); from there the lip has to stretch over the flange, and
+# the press needed rises to SEAT_N just before it snaps in. SEAT_N is the in-spec ceiling of the real rig's setup check
+# (README: the named pairing seats with at most 40 N on a scale), with margin. The YAM presses about 52 N straight down
+# there at its servos' rated (continuous) torque, 107 N at peak (README, "Bead force").
+BEND_N = 8.0
+SEAT_N = 30.0
+PRESS_ARM = 0.145 - 0.118  # m: hinge line to the middle press spot, seated (HINGE_R - its radius)
 
 # The valve: a Schrader stem through the rim bed at 90 degrees, pointing to the hub, turning about the vertical when
 # the tube drags it. Positive = its tip toward +x.
@@ -196,16 +205,27 @@ def slack(J):
     return sum(min(-J[n] / DROP, 1.0) * SLACK_PER_SECTOR for n in run)
 
 
+def press_needed(q):
+    """The straight-down press (N) at the middle press spot that holds the last section at flap angle q against the
+    bead: BEND_N while the sidewall rolls down to the flange's edge, then rising linearly to SEAT_N as the lip stretches
+    over the flange, up to the 2.5 degrees where it snaps in."""
+    if q <= BLOCK_AT:
+        return BEND_N
+    u = min((q - BLOCK_AT) / (-FLAP_SEAT_ZONE - BLOCK_AT), 1.0)
+    return BEND_N + (SEAT_N - BEND_N) * u
+
+
 @dataclass(frozen=True)
 class LastSection:
     """The last section's law. Without 10 mm of slack its lip stops on the flange's edge (6 degrees short of seated: the
     joint's upper limit is moved there, a hard stop, whenever it is not yet within 2.5 degrees of seated, so a hard
-    press that overshoots the stop for a step is pushed back); with it, it rolls over. Within 2.5 degrees of seated it
-    snaps in and stays; elsewhere it stays where it is left."""
+    press that overshoots the stop for a step is pushed back); with it, it rolls over. Short of the seat zone the bead
+    pushes back (press_needed: 8 N to roll the sidewall down, rising to 30 N over the flange), so a section let go
+    there springs back up. Within 2.5 degrees of seated it snaps in and stays."""
 
     pull: float = 0.5
     damp: float = 0.02
-    drag: float = 0.02
+    drag: float = 0.05
     sets_limits: bool = True
 
     def drive(self, key, q, qd, J, mem):
@@ -214,7 +234,7 @@ class LastSection:
         mem["limits"] = (FLAP_LO, BLOCK_AT) if blocked else None
         if q >= -FLAP_SEAT_ZONE:
             return 0.0, self.pull, 0.0, self.damp
-        return q, 0.0, 0.0, self.drag
+        return q, 0.0, -press_needed(q) * PRESS_ARM, self.drag
 
 
 def _hinge_vec(r, z, alpha):
@@ -260,7 +280,7 @@ def _valve():
 
 def _wheel():
     meshes, colliders = [], []
-    # Rim: a box-section aluminum rim (bed, sidewalls, flanges) with the red rim strip in its channel.
+    # Rim: a steel single-wall rim (bed, sidewalls, flanges; drawn closed) with the red rim strip in its channel.
     rim = [(R_BED, -0.008), (0.096, -0.0105), (0.1075, -0.0105), (0.1075, -0.0095), (R_FLANGE, -0.008),
            (R_SEAT, -0.0075), (R_SEAT, -0.0045), (R_WELL, -0.003), (R_WELL, 0.003), (R_SEAT, 0.0045),
            (R_SEAT, 0.0075), (R_FLANGE, 0.008), (0.1075, 0.0095), (0.1075, 0.0105), (0.096, 0.0105), (R_BED, 0.008)]
@@ -271,11 +291,11 @@ def _wheel():
     meshes.append(_sweep_mesh(_shell(LOWER), RUBBER, n=90))
     meshes.append(_sweep_mesh(_shell(LOWER[:5], 0.002), GUMWALL, n=90))  # lower sidewall's tan band
     meshes.append(_sweep_mesh(_shell(CROWN), RUBBER, math.radians(LAST_AT + 30), math.radians(LAST_AT + 330)))
-    # Hub, 16 spokes and the stand (a post into the hub from a weighted foot).
+    # Hub, 20 spokes (the named WheelMaster wheel is 20-hole) and the stand (a post into the hub from a weighted foot).
     meshes.append(kit.cylinder((0, 0, 0), 0.016, 0.06, STEEL))
     meshes.append(kit.cylinder((0, 0, 0), 0.024, 0.004, STEEL))
-    for k in range(16):
-        a = 2 * math.pi * k / 16
+    for k in range(20):
+        a = 2 * math.pi * k / 20
         side = 0.012 if k % 2 else -0.012
         p0 = np.array([0.022 * math.cos(a), 0.022 * math.sin(a), side])
         p1 = np.array([R_BED * math.cos(a + 0.2), R_BED * math.sin(a + 0.2), 0.0])
@@ -477,11 +497,50 @@ def score(objects):
 
 # --- Demo -------------------------------------------------------------------------------------------------------------
 TIP_UP = PAD_TIP_PAST_TCP  # the tool point sits this far above the pad tips when the gripper points down
+HOLD_N = 16.0  # N: the right hand's hold on the arc beside the last section (it pushes back 11.7 N at the floor)
+ROLL_MARGIN_N = 5.0  # N: pressed this much past what the bead takes, so the section keeps rolling
 
 
 def _w(x, y, h):
     """Wheel-frame x, y and height above the rim's middle plane to a world point."""
     return (WX + x, WY + y, TOP + ZR + h)
+
+
+_GIVE = {}
+
+
+def _give(side, tcp):
+    """The arm's give at its pad tips (m/N, 3x3, world) with the tool point at `tcp`, gripping straight down (yaw 0):
+    J K^-1 J^T with the YAM's servo stiffness (80 N*m/rad shoulder joints, 10 wrist). Here about 2 mm per newton
+    straight down, 5.5-7 mm per newton sideways, and a downward press drags the pads 0.4-0.7 mm/N sideways."""
+    key = (side, *(round(float(v), 3) for v in tcp))
+    if key not in _GIVE:
+        import yam_arena.demo as yd
+        from yam_arena.constants import SHOULDER, WRIST
+        from yam_arena.station import BASES
+        base = np.asarray(BASES[side], float)
+        q, _, _ = yd.ik.solve(np.asarray(tcp, float), yd.ik.matrix_to_quat_xyzw(yd.grip_rotation(0.0)), q_init=None,
+                              base_pos=base)
+
+        def tip(q):
+            p, rm = yd.ik.tcp_pose(q, base)
+            return np.asarray(p) + TIP_UP * np.asarray(rm)[:, 2]
+
+        jac = np.zeros((3, 6))
+        for i in range(6):
+            dq = np.zeros(6)
+            dq[i] = 1e-6
+            jac[:, i] = (tip(q + dq) - tip(q - dq)) / 2e-6
+        kinv = np.diag([1 / SHOULDER["stiffness"]] * 3 + [1 / WRIST["stiffness"]] * 3)
+        _GIVE[key] = jac @ kinv @ jac.T
+    return _GIVE[key]
+
+
+def _pressed(side, contact, press):
+    """The tool point's target for closed fingers resting on `contact` (wheel frame x, y, h of the pad tips) to press
+    straight down with `press` N: aimed past the pads by the arm's give (so the pads stay over the spot)."""
+    tcp = np.array(_w(contact[0], contact[1], contact[2] + TIP_UP))
+    return tuple(float(v) for v in tcp + _give(side, tcp) @ np.array([0.0, 0.0, -press]))
 
 
 def demo():
@@ -494,13 +553,16 @@ def demo():
     right, left = [], []
     for deg in (228.0, 270.0, 312.0, 170.0):
         x, y = _at(deg)
-        push = 0.010 if deg == 170.0 else 0.004  # the held arc pushes back up (3.6 N): press 1 cm past the floor
+        if deg == 170.0:  # the held arc pushes back up (11.7 N at the floor): press with 16 N at the floor
+            down = _pressed("right", (x, y, PRESS_Z - DROP), HOLD_N)
+        else:
+            down = _w(x, y, PRESS_Z - DROP - 0.004 + TIP_UP)
         if deg == 170.0:  # round the near side of the wheel, clear of the hub and the left arm
             right += [Waypoint(1.6, _w(*_at(215.0, 0.13), PRESS_Z + 0.06 + TIP_UP), shut, "round the near side")]
         right += [Waypoint(1.6, _w(x, y, PRESS_Z + 0.04 + TIP_UP), shut, "over the arc"),
                   Waypoint(0.8, _w(x, y, PRESS_Z + 0.002 + TIP_UP), shut, "onto the sidewall"),
-                  Waypoint(1.0, _w(x, y, PRESS_Z - DROP - push + TIP_UP), shut, "push the bead into the channel"),
-                  Waypoint(0.4, _w(x, y, PRESS_Z - DROP - push + TIP_UP), shut, "hold"),
+                  Waypoint(1.0 if deg != 170.0 else 1.6, down, shut, "push the bead into the channel"),
+                  Waypoint(0.4, down, shut, "hold"),
                   Waypoint(0.6, _w(x, y, PRESS_Z + 0.04 + TIP_UP), shut, "lift")]
     hold_at = right[-2]
     right = right[:-2]  # the arc beside the last section: keep holding it down while the left hand rolls
@@ -521,13 +583,19 @@ def demo():
     r0, z0 = FLAP_PRESS[1][1]
     start = _hinge_vec(r0, z0, FLAP_START)
     left += [Waypoint(wait, _w(0.0, start[0], start[1] + 0.04 + TIP_UP), shut, "over the last section")]
-    n = 8
-    for k in range(n + 1):
-        a = FLAP_START * (1 - k / n)
-        r, h = _hinge_vec(r0, z0 - 0.004, a)  # 4 mm into the sidewall, so the hand keeps pushing
-        left.append(Waypoint(1.2 if k == 0 else 0.4, _w(0.0, r, h + TIP_UP), shut, "roll the bead over"))
-    r, h = _hinge_vec(r0, z0 - 0.006, 0.0)
-    left += [Waypoint(0.6, _w(0.0, r, h + TIP_UP), shut, "seat it")]
+    # Roll it down, pressing with what the bead takes there plus a margin (press_needed + ROLL_MARGIN_N), aimed past
+    # the sidewall by the arm's give. From the flange's edge (-6 deg) the steps are finer and slower, as the press
+    # climbs toward 30 N, so the lip never runs at the bead faster than a careful roll.
+    angles = [FLAP_START + (BLOCK_AT - FLAP_START) * k / 5 for k in range(6)]
+    angles += [BLOCK_AT + (-FLAP_SEAT_ZONE - BLOCK_AT) * k / 6 for k in range(1, 7)] + [0.0]
+    for k, a in enumerate(angles):
+        r, h = _hinge_vec(r0, z0, a)
+        press = press_needed(min(a, -FLAP_SEAT_ZONE)) + ROLL_MARGIN_N
+        dur = 1.2 if k == 0 else (0.4 if a <= BLOCK_AT else 0.6)
+        left.append(Waypoint(dur, _pressed("left", (0.0, r, h), press), shut, "roll the bead over"))
+    r, h = _hinge_vec(r0, z0, 0.0)
+    left += [Waypoint(0.6, _pressed("left", (0.0, r, h), SEAT_N), shut, "seat it"),
+             Waypoint(0.6, _pressed("left", (0.0, r, h), 4.0), shut, "ease off")]
     t_seated = sum(w.duration for w in left)
     left += [Waypoint(0.8, _w(0.0, r, h + 0.05 + TIP_UP), shut, "let go, up"),
              kit.Home(2.0), kit.Home(1.0, label="hold at home")]
