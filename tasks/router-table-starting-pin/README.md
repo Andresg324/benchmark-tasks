@@ -40,6 +40,7 @@ Coordinates in cm from the midpoint between the two arm bases, x forward, y to t
 | Insert plate | black phenolic, 23.5 x 30 cm (9.25 x 11.75 in), 1 mm proud in the drawing, centered on the bit | x 21.3 to 44.8, y -9 to 21 |
 | Bit | 3/8 in rabbeting bit in a 2.25 hp table router at 22,000 rpm: cutter 3.18 cm across (1.25 in), set 3.2 mm (1/8 in) above the table for a 1/8 in deep rabbet (one pass), red coated; 0.5 in ball bearing (1.27 cm across) from 3.4 to 8.2 mm above the table; turns counterclockwise seen from above; pushes on the board where it cuts (see Cutting force) | axis x 33, y 6 |
 | Starting pin | steel, 6.4 mm across (0.25 in), 3 cm tall, screwed into the insert plate | x 33.75, y 1 |
+| Pin guard | clear polycarbonate shield 10 cm across, 6.4 mm thick, its underside 3.8 cm (1-1/2 in) above the table, centered over the bit, on an aluminum arm (3 x 0.8 cm) from an aluminum post (2.5 x 4 cm, 5.3 cm tall) bolted to the plate; after the Bench Dog ProGuard (1-1/2 in stock clearance under the guard; its diameter assumed); solid | shield over the bit; post at x 43, y 6 |
 | Board | cherry, 25 x 15 cm, 1.27 cm thick (0.5 in), 250 g; one long side band-sawn to a 30 cm radius (2.7 cm of bow), toward the bit; a free body on the table, mu 0.25 sliding / 0.3 at rest | square to the table: curve's ends at (29.5, -19.4) and (29.5, 5.6); back corners (17.2, -19.4) and (17.2, 5.6); 2.2 cm off the pin, 3.4 cm from the bit's axis |
 
 Mechanism (`task.py`, built with `yamkit.py` and `guardkit.py`, local copies; `guardkit.py` gives the
@@ -58,6 +59,9 @@ grippers' palm and finger shapes used by the touching-the-board check):
   collider is frictionless (local yamkit addition `Collider.slick`), since a real bearing rolls along the edge. The cutter has no
   collider: the board passes into it, which is how the scorer sees a cut. The board's curve collider is 26 chord boxes
   1 cm long, each within 0.04 mm of the true curve (local yamkit addition: yawed box colliders).
+- The plate's clear overhead pin guard is modeled as in the real trial: a see-through polycarbonate shield over the
+  bit, 38 mm above the table, on an aluminum arm and post at the plate's far side. Its colliders are solid, so a
+  thrown board or a hand meets it; the board passes under it, and the top camera sees the bit and the cut through it.
 - The routed stretch is drawn as a pale band of fresh-cut cherry on the board's top along the curve, as wide as the
   rabbet (visual only; the real rabbet is on the board's underside).
 
@@ -150,6 +154,14 @@ control step, from a published wood-milling force model:
   5 um at the demo's 0.25 m/min, 20 um at 1 m/min), so it is used below its fitted range, where its chip-independent
   term (the force to start a cut at all) dominates. A slow feed burns cherry; burn marks are not scored. The entry bite on end grain,
   bit wear and bearing friction are not modeled.
+- Measured check: the same group measured specific cutting coefficients on a Kistler 9255A piezoelectric
+  dynamometer while routing beech LVL (724 kg/m3) at every 10 degrees of grain angle (Goli, Curti, Marcon, Scippa,
+  Campatelli, Furferi and Denaud 2018, "Specific Cutting Forces of Isotropic and Orthotropic Engineered Wood Products
+  by Round Shape Machining", Materials 11:2575, Table 4). Scaled to cherry's density and applied to this cut (3.2 mm
+  high, 9.5 mm deep, 5-20 um chips, the edge cut along the grain within the curve's 25 degrees either side), they give
+  9-17 N per tooth and 3.2-6.4 N mean along the cutting edge. The model's about 10 N and 3.8 N sit in the low half of
+  that range, so a real cut may take up to about 1.7 times the modeled push; the feed-force check before the trials
+  (Real-world build) measures it on the real board.
 
 ## Real-world build
 
