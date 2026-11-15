@@ -135,8 +135,10 @@ control step, from a published wood-milling force model:
   wood the cutter meets each step.
 - A check on scale: the mean force along the cutting edge, about 3.8 N at the cutter's 37 m/s rim speed, is about
   140 W, a small share of the router's 1.7 kW (2.25 hp), as a light pass should be.
-- Why 1/8 in high. Woodworking guidance (Woodcraft, Fine Woodworking) is to take no more than about 1/8 in per pass,
-  since heavy cuts invite kickback, so this rabbet is 1/8 in deep and 3/8 in wide, cut in one pass; a deeper rabbet
+- Why 1/8 in high. Router makers' manuals cap one pass at 1/8 in: Ridgid R2900, "do not exceed 1/8 in. depth of cut
+  in a single pass, regardless of the bit size or the softness or condition of the workpiece"; Ryobi RE180PL, cuts "at a
+  depth not exceeding 1/8 in. (3.2 mm)", deeper ones in several passes. Woodworking guidance (Woodcraft, Fine
+  Woodworking) agrees, since heavy cuts invite kickback, so this rabbet is 1/8 in deep and 3/8 in wide, cut in one pass; a deeper rabbet
   would take a second pass with the bit raised. A 1/4 in deep cut in one pass would be about 6-9 N against the feed
   (12-17 N at the bit's full 12.7 mm height); the depth is set by that woodworking practice, not by the arm, and a
   1/4 in rabbet is this same pass done twice with the bit raised between them.
