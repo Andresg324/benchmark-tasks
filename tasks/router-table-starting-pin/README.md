@@ -34,11 +34,12 @@ Coordinates in cm from the midpoint between the two arm bases, x forward, y to t
 |---|---|---|
 | Router table top | the robot's table, a light gray laminate area 40 x 62 cm | x 9 to 49, y -27 to 35 |
 | Insert plate | black phenolic, 23.5 x 30 cm (9.25 x 11.75 in), 1 mm proud in the drawing, centered on the bit | x 21.3 to 44.8, y -9 to 21 |
-| Bit | 3/8 in rabbeting bit in a 2.25 hp table router at 22,000 rpm: cutter 3.18 cm across (1.25 in), set 3.2 mm (1/8 in) above the table for the first pass of a 1/4 in deep rabbet, red coated; 0.5 in ball bearing (1.27 cm across) from 3.4 to 8.2 mm above the table; turns counterclockwise seen from above; pushes on the board where it cuts (see Cutting force) | axis x 33, y 6 |
+| Bit | 3/8 in rabbeting bit in a 2.25 hp table router at 22,000 rpm: cutter 3.18 cm across (1.25 in), set 3.2 mm (1/8 in) above the table for a 1/8 in deep rabbet (one pass), red coated; 0.5 in ball bearing (1.27 cm across) from 3.4 to 8.2 mm above the table; turns counterclockwise seen from above; pushes on the board where it cuts (see Cutting force) | axis x 33, y 6 |
 | Starting pin | steel, 6.4 mm across (0.25 in), 3 cm tall, screwed into the insert plate | x 33.75, y 1 |
 | Board | cherry, 25 x 15 cm, 1.27 cm thick (0.5 in), 220 g; one long side band-sawn to a 30 cm radius (2.7 cm of bow), toward the bit | curve's ends at (33.5, -18.1) and (27.4, 6.2); back corners (21.6, -21.0) and (15.5, 3.2): turned 14 deg from square, 2.4 cm off the pin |
 
-Mechanism (`task.py`, built with `pivotkit.py` and `yamkit.py`, local copies):
+Mechanism (`task.py`, built with `pivotkit.py`, `yamkit.py` and `guardkit.py`, local copies; `guardkit.py` gives the
+grippers' palm and finger shapes used by the touching-the-board check):
 
 - The board is `pivotkit.planar`: a turn about the pin's axis, then two slides, carried flat 1 mm above the table.
   While it is braced (any part of it within 1.5 mm of the pin's surface, its curve not yet on the bearing) both slides
@@ -107,7 +108,7 @@ Why these numbers, and how a real trial reads each one (the router setup and fil
   plus the boxes' fit to the meshes, so a hand resting on the board counts and one hovering above it does not.
   Real trial: the side view at the end shows whether any gripper is on the board.
 
-A real trial: the router running at 22,000 rpm with the bit at the first-pass height, filmed from above; the
+A real trial: the router running at 22,000 rpm with the bit 1/8 in high, filmed from above; the
 board's edge pencil-marked every centimeter; check from the video that the board touched the pin before it reached
 the cutter and stayed on it until the edge met the bearing (a board that jumps off the pin or is thrown is a grab),
 then read off the marks along the cut rabbet, checking its full 3/8 in width with a combination square.
@@ -125,17 +126,23 @@ control step, from a published wood-milling force model:
   cut height, which matches the measured range.
 - Here: black cherry (561 kg/m3), a 1.25 in two-flute cutter at 22,000 rpm, a 9.5 mm wide cut set by the bearing,
   3.2 mm high. Averaged over a turn, the force against the feed is 3.0-3.3 N and the pull toward the bit 2.0-2.2 N at
-  0.75-1 m/min, rising to 3.6-5.0 N against the feed at 5 m/min.
-- Why 1/8 in high. Woodworking guidance is to "never remove more than 1/8 in of material per pass" (Woodcraft) and to
-  "take light cuts; heavy cuts invite kickback" (Fine Woodworking), so a 1/4 in deep rabbet is cut in two passes and
-  this task is the first. The full 9.5 x 6.4 mm cut in one pass would be about 6-10 N against the feed, 12-20 N at
-  12.7 mm height, more than the arm presses (about 5 N), and it is what woodworkers are told not to do.
+  0.75-1 m/min (2.9 N and 1.9 N at the demo's 0.25 m/min), rising to 3.6-5.0 N against the feed at 5 m/min. Each
+  tooth's peak is about 10 N. In the demo run the applied push averaged 2.2 N (0.9-3.9 N), since it follows the fresh
+  wood the cutter meets each step.
+- A check on scale: the mean force along the cutting edge, about 3.8 N at the cutter's 37 m/s rim speed, is about
+  140 W, a small share of the router's 1.7 kW (2.25 hp), as a light pass should be.
+- Why 1/8 in high. Woodworking guidance (Woodcraft, Fine Woodworking) is to take no more than about 1/8 in per pass,
+  since heavy cuts invite kickback, so this rabbet is 1/8 in deep and 3/8 in wide, cut in one pass; a deeper rabbet
+  would take a second pass with the bit raised. A 1/4 in deep cut in one pass would be about 6-9 N against the feed,
+  12-17 N at the bit's full 12.7 mm height, more than the arm pushes (about 5 N), and it is what woodworkers are told
+  not to do.
 - How it acts: the force is applied where the cutter takes fresh wood, along the cutting edge's motion there and
   toward the bit's axis (which the bearing takes). In a right-to-left feed it pushes back against the feed; a board
   pushed straight into the bit off the pin is pushed to the right, which is the grab, now with a real force behind it.
   The 733 tooth pulses a second are averaged over 0.1 s, as a hand feels them.
-- Limits, stated plainly: the model was fitted on chips of 40-100 um; this slow robot feed gives 10-60 um, where the
-  chip-independent term dominates. A slow feed burns cherry; burn marks are not scored. The entry bite on end grain,
+- Limits, stated plainly: the model was fitted on chips of 40-100 um; this slow robot feed gives thinner chips (about
+  5 um at the demo's 0.25 m/min, 20 um at 1 m/min), so it is used below its fitted range, where its chip-independent
+  term (the force to start a cut at all) dominates. A slow feed burns cherry; burn marks are not scored. The entry bite on end grain,
   bit wear and bearing friction are not modeled.
 
 ## Real-world build
@@ -150,11 +157,14 @@ Safety. Three safeguards are in place before the router is switched on:
 - Guard: the plate's clear overhead pin guard stays over the bit for every trial, and a polycarbonate screen stands
   between the table and the operator.
 - Stop switch: the operator holds a switch that cuts the router's power and halts both arms at once, and uses it at
-  any sign of a grab, a jam or a hand heading for the bit.
+  any sign of a grab, a jam or a hand heading for the bit. The bit coasts to a stop in a few seconds, under the
+  guard; the arms stay halted until it has stopped.
 - Out of reach: the operator and anyone else stay outside the arms' reach whenever the arms are powered or the router
   runs; boards are changed only with the router off and the arms stopped.
 
 Dust collection runs, and anyone in the room wears eye and hearing protection. The scorer's 3 in rule keeps the
 grippers out of the bit's zone, and a gripper that crosses the 3 in circle low stops the trial. The cutting force is
-about 3 N, within what the arm presses. An unbraced entry can throw the board, which is the hazard the task scores;
+about 3 N, within what the arm pushes. Before the robot trials, one test board is pulled through the cut by a
+push-pull gauge at about 0.3 m/min while pressed down as the hands press (10 N each), and that force is recorded with
+the trial reports. An unbraced entry can throw the board, which is the hazard the task scores;
 the guard and the screen contain a thrown board.
