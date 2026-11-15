@@ -43,11 +43,11 @@ TILT = (0.0, 0.0, float(math.sqrt(0.5)), float(math.sqrt(0.5)))  # x, y, z, w (p
 R_TUBE = np.array([[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
 MOUTH_W = np.array([SX, SY, TOP + MOUTH])  # the mouth's middle in world coordinates
 BLADE = 0.245  # the dipstick blade, from the cap's underside to the tip: to 3 cm above the mounting surface, in the sump
+# (with the cap and T-handle below, the stick is 0.29 m overall, sized to the drawing's tube; handle top ~31 cm up)
 BLADE_W, BLADE_T = 0.010, 0.003  # blade width (along the tube frame's x) and thickness (along y)
 CAP_R, CAP_H = 0.016, 0.010  # the cap's disc, which seats on the tube's rim
 HANDLE = (0.035, 0.018, 0.035)  # the T-handle above the cap: width (tube x), thickness (y), length along the tube (z)
 HANDLE_C = CAP_H + HANDLE[2] / 2  # the handle's middle along the tube from the link origin (the cap's underside)
-STICK_LEN = BLADE + CAP_H + HANDLE[2]  # 0.29 m overall, sized to the drawing's tube (handle top ~31 cm up)
 TUBE_R = 0.0105  # the fill tube's outside radius (about 2.1 cm across in the drawing)
 COLLAR_R, COLLAR_H = 0.018, 0.05  # the wider collar at the tube's top, which the cap seats on
 TUBE_IN = 0.20  # the tube runs this far down to where it enters the crankcase
@@ -81,7 +81,6 @@ WIPE_SPAN = WIPE_ZONE  # m: the stretch from the tip that the rag's middle must 
 # length, so the pad (about 4 cm tall on edge, 2 cm either side of its middle) rubs from below the tip to 2 cm above it
 WIPE_FRAC = 0.9  # the middle must slide over 90% of that span (5.4 cm) in contact: a stroke may stop up to 6 mm short
 # (the arm lags its target), but a dab (no slide), a spot wipe or a stroke over part of the oiled length does not count
-GAP_STEPS = 3  # control steps (0.15 s): kept for the drawn oil only; the wipe credits only slides between two steps
 # that are both in contact, so nothing is credited across a gap (a dab, a lift and a dab elsewhere add up to nothing)
 SLIDE_MAX = 0.005  # m per control step (10 cm/s): a faster jump between two touching steps is not credited (the demo's
 # stroke slides about 0.75 mm per step; a pad yanked along faster skips over the oil rather than wiping it)
@@ -122,9 +121,6 @@ YELLOW = kit.Look((0.96, 0.76, 0.08), 0.45)  # Kohler yellow: dipstick cap and h
 STEEL = kit.Look((0.82, 0.83, 0.85), 0.25, metallic=0.9)
 BLACK = kit.Look((0.06, 0.06, 0.06), 0.7)
 PLATE = kit.Look((0.24, 0.25, 0.27), 0.5, metallic=0.4)  # the engine's steel mounting plate (tractor frame section)
-EXHAUST = kit.Look((0.30, 0.27, 0.25), 0.55, metallic=0.7)  # heat-darkened muffler steel
-CERAMIC = kit.Look((0.93, 0.93, 0.90), 0.3)  # spark plug insulator
-FUEL = kit.Look((0.85, 0.55, 0.15), 0.2, opacity=0.6)  # the inline fuel filter's clear amber bowl
 RAGLOOK = kit.Look((0.20, 0.35, 0.70), 0.9)  # blue shop towel
 CARDLOOK = kit.Look((0.20, 0.21, 0.23), 0.6)  # dark gray card
 POCKET_LOOK = {"low": kit.Look((0.95, 0.55, 0.05), 0.5), "ok": kit.Look((0.10, 0.65, 0.20), 0.5),

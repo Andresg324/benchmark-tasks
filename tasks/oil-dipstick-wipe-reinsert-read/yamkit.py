@@ -521,8 +521,6 @@ def _watch_resets(base) -> None:
 
 def _mech_states(base, name: str, origin) -> dict:
     """The base's and each link's states, the joints into _JOINTS, and each joint's spring or latch target (_drive)."""
-    import torch
-
     spec = _MECHS[name]
     art = base.scene[name]
     np_ = lambda t: getattr(t, "torch", t).detach().cpu().numpy().astype(np.float64)  # noqa: E731
