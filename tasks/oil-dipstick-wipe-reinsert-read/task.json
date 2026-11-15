@@ -20,6 +20,6 @@
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "Seat the dipstick and put the rag back at x 20, y 0 and the puck at x 14, y 22. Real trials run in blocks of three, one per level in a die-shuffled order. Before each, set the level with a syringe of oil (just under the indicator, mid-range, or just over it) and check it with a pull and wipe; smear oil on the blade's lower 6 cm and up the tube. After each, the tester pulls, wipes, reseats and pulls again and measures the oil band from the tip with a steel rule (mm), and records the set level, the measured band, the pocket the puck is in and the score (README, Results). In the sim OIL_CASE=low, ok or over sets the level; seeded resets pick it; with no jitter it is between the marks.",
   "fidelity": "KT725 size and fill tube place: Kohler's drawing; parts simplified, box colliders. The tube is straight and vertical (the real one bends under the cap). The stick has its weight but stays on the tube's axis when out, so the sim skips lining the tip up with the bore; a real trial tests that. Stick length derived, marks modeled. Oil film, wiping and level are drawn from scorer state. The rag is a rigid pad. The scripted demo is told the level; it shows the blade to its left wrist camera.",
-  "scores": "demo: 1.0 (853 steps)",
-  "media": "M-UH4NN9"
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0 (853 steps)",
+  "media": "M-Z365LW"
 }
