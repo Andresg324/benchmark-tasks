@@ -495,6 +495,9 @@ for c in m.CASES:
     labels = [w.label for w in m.demo()["left"]]
     results.append(check(f"demo told {c}: aims for the {m.POCKET_NAME[c]} pocket",
                          float(f"over the {m.POCKET_NAME[c]} pocket" in labels), 1.0))
+labels = [w.label for w in m.demo()["left"]]  # the demo shows the blade to the left wrist camera before the report
+results.append(check("demo: left wrist camera on the blade before the puck is picked up",
+                     float(labels.index("read the level on the wrist camera") < labels.index("pick up the puck")), 1.0))
 t = Trial("over")  # the drawn band follows the case
 t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(WT, WB); t.slide(0.0); t.hold(5)
 results.append(check("over: the drawn band reaches 2.7 cm", m._oil_segments()[0][1], 0.027))

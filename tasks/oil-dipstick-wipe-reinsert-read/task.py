@@ -278,7 +278,8 @@ def _block():
     m.append(kit.cylinder((0.175, -0.04, MS + 0.10), 0.036, 0.10, BLACK, axis="y", n=28))
     # Fill tube's boss on the crankcase and its bracket to the housing
     m += _rslab(tx - 0.02, tx + 0.04, ty - 0.02, ty + 0.03, MS, MS + 0.085, 0.015, ALU)
-    m.append(kit.box((tx + 0.03, ty, MS + 0.20), (0.06, 0.012, 0.012), STEEL))
+    # (from the tube's outside, so it never crosses the tube's bore, to the housing's side)
+    m.append(kit.box((tx + (TUBE_R + 0.06) / 2, ty, MS + 0.20), (0.06 - TUBE_R, 0.012, 0.012), STEEL))
     colliders = (
         kit.Collider((0.0, 0.07, PLATE_T / 2), size=(0.47, 0.50, PLATE_T)),  # frame section
         kit.Collider((0.005, 0.035, MS + 0.07), size=(0.26, 0.25, 0.14)),  # oil pan and crankcase
@@ -712,8 +713,13 @@ WIPE_A = (0.035, 0.11)  # the rag's middle set on the blade 5 mm above the tip (
 # spare: the slid stretch is 7.5 cm. Drawn up the blade, the pad's leading edge rides off the blade instead of digging in
 PUCK_GRIP_Z = PUCK_H + 0.003  # tool point 3 mm above the puck's top: the pads (13 mm past it) hold its upper 1 cm
 PUCK_DROP_Z = FLOOR + PUCK_GRIP_Z + 0.002  # let go with the puck's bottom 2 mm above the pocket's floor
-
-
+# The reading: while the right hand holds the dipstick out and still, the left arm brings its wrist camera up to the
+# blade's oiled end (the oil band and the ADD and FULL marks) and holds it there; only then does it go for the puck.
+READ_PITCH = -1.45  # the left wrist pitched about 83 deg: the camera, above the fingers, looks down about 32 deg
+READ_AT = 0.016  # the camera aims at the blade 1.6 cm above its tip (the band and both marks, 0-2.7 cm, in view)
+READ_D = 0.10  # m from the camera to that point: the 3 cm from the tip up fills about a quarter of the image's height
+READ_BACK = 0.07  # the camera waits and leaves this much farther back along its line of sight
+READ_S = 1.5  # s the camera is held still on the blade
 def _on_tube(a, dx=0.0, dy=0.0, dz=0.0):
     """The world point a m along the tube's axis from the mouth's middle, shifted dx, dy, dz."""
     p = MOUTH_W + a * U
@@ -737,12 +743,29 @@ def _pull_and_push(t_hold, hold_label):
             _r(0.8, 0.0, R_OPEN, "hand up off the handle", up=R_UP)]
 
 
+def _read_tcp(back=0.0):
+    """The left tool point that puts the left wrist camera READ_D (+ back) m from the pulled-out blade, aimed at it."""
+    from yam_arena.ik import quat_xyzw_to_matrix
+    from yam_arena.station import wrist_camera
+    import yam_arena.demo as ydemo
+
+    cam = wrist_camera("left")  # its mount in the gripper link frame
+    rg = kit._rot_xyz(0.0, READ_PITCH) @ ydemo.grip_rotation(0.0)
+    rc = rg @ quat_xyzw_to_matrix(np.array(cam.rot_xyzw, float))
+    look = rc @ np.array([0.0, 0.0, -1.0])  # the camera looks along its -z
+    aim = MOUTH_W + (Q_PULL - BLADE + READ_AT) * U
+    cam_w = aim - (READ_D + back) * look
+    tcp = cam_w - rg @ (np.asarray(cam.pos, float) - np.array([0.0, 0.0, 0.134]))
+    return tuple(float(v) for v in tcp)
+
+
 def demo():
     right = [_r(3.0, 0.0, R_OPEN, "over the handle", up=R_UP)]
     t_out = 3.0 + 1.0 + 0.6 + 5.0  # the first pull is out
 
     ry, rz = RAG_START[1], RAG_START[2] - TOP
-    left = [Waypoint(2.0, (0.24, 0.24, TOP + 0.18), FINGER_OPEN, "in toward the robot, clear of the engine"),
+    # (in low and close to the robot first: a wider sweep brushed the left forearm past the housing's near corner)
+    left = [Waypoint(2.0, (0.16, 0.18, TOP + 0.14), FINGER_OPEN, "in toward the robot, clear of the engine"),
             Waypoint(1.6, (RAG_START[0], ry, TOP + rz + 0.06), FINGER_OPEN, "over the rag"),
             Waypoint(1.0, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ), FINGER_OPEN, "down on the rag"),
             Waypoint(0.6, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ), FINGER_CLOSED, "pick up the rag"),
@@ -756,34 +779,41 @@ def demo():
              kit.Tilted(5.0, rag_tcp(WIPE_A[1]), FINGER_CLOSED, "wipe up the blade", pitch=L_PITCH),
              kit.Tilted(0.8, rag_tcp(WIPE_A[1], -0.05, 0.01), FINGER_CLOSED, "rag off", pitch=L_PITCH)]
     t_wiped = sum(w.duration for w in left)
-
-    right += _pull_and_push(max(t_wiped - t_out, 0.2), "hold it out for the wipe")
-    right += _pull_and_push(2.5, "hold still and read")
-    t_hold = sum(w.duration for w in right) - (2.5 + 5.0 + 0.8 + 0.5 + 0.8)  # the second pull is out and still
-    t_read = t_hold + 2.5  # the reading is taken
-    right += [kit.Home(2.5), kit.Home(1.5, label="hold at home")]
-    total = sum(w.duration for w in right)
-
     left += [Waypoint(2.5, (RAG_START[0], ry, TOP + rz + 0.05), FINGER_CLOSED, "rag back over its place"),
              Waypoint(1.0, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ + 0.002), FINGER_CLOSED, "rag down"),
              Waypoint(0.6, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ + 0.002), FINGER_OPEN, "let go of the rag"),
              Waypoint(0.8, (RAG_START[0], ry, TOP + rz + 0.07), FINGER_OPEN, "hand up")]
+
+    right += _pull_and_push(max(t_wiped - t_out, 0.2), "hold it out for the wipe")
+    t_out2 = sum(w.duration for w in right) + 1.0 + 0.6 + 5.0  # the second pull is out
+    # The left wrist camera waits back along its line of sight, comes up to the blade once it is out and still, holds
+    # READ_S s, and backs off; the right hand holds the dipstick out the whole time.
+    t_look = 1.2  # s from the waiting pose to the reading pose
+    left += [kit.Tilted(max(t_out2 - sum(w.duration for w in left), 2.0), _read_tcp(READ_BACK), FINGER_OPEN,
+                        "wrist camera back from the blade", pitch=READ_PITCH),
+             kit.Tilted(0.4, _read_tcp(READ_BACK), FINGER_OPEN, "wait for the blade to stop", pitch=READ_PITCH),
+             kit.Tilted(t_look, _read_tcp(), FINGER_OPEN, "wrist camera up to the blade", pitch=READ_PITCH),
+             kit.Tilted(READ_S, _read_tcp(), FINGER_OPEN, "read the level on the wrist camera", pitch=READ_PITCH),
+             kit.Tilted(0.8, _read_tcp(READ_BACK), FINGER_OPEN, "camera back off", pitch=READ_PITCH)]
+    t_read = sum(w.duration for w in left) - 0.8  # the reading is taken
+    right += _pull_and_push(max(t_read + 0.3 - t_out2, 1.5), "hold still for the reading")
+    right += [kit.Home(2.5), kit.Home(1.5, label="hold at home")]
+
     # The report. This scripted demonstration is told this trial's level (OIL_CASE, or between the marks with no
-    # jitter); it does not read the blade, so it only shows the motions can be done. The scored policy is told nothing
-    # and has to read the oil band off the blade.
+    # jitter): it shows the blade to its wrist camera but does not read the image, so it only shows the motions can be
+    # done. The scored policy is told nothing and has to read the oil band off the blade (best seen on that camera).
     case = _trial_case(RAG_START[:2])
     px, py = PUCK_START[0], PUCK_START[1]
     kx, ky = POCKETS[case]
-    left += [Waypoint(max(t_hold - 3.0 - sum(w.duration for w in left), 1.5), (px, py, TOP + PUCK_GRIP_Z + 0.06),
-                      FINGER_OPEN, "over the puck"),
+    left += [Waypoint(2.2, (px, py, TOP + PUCK_GRIP_Z + 0.06), FINGER_OPEN, "over the puck"),
              Waypoint(1.0, (px, py, TOP + PUCK_GRIP_Z), FINGER_OPEN, "down on the puck"),
              Waypoint(0.6, (px, py, TOP + PUCK_GRIP_Z), FINGER_CLOSED, "pick up the puck"),
              Waypoint(1.0, (px, py, TOP + PUCK_GRIP_Z + 0.05), FINGER_CLOSED, "lift the puck"),
-             Waypoint(1.5, (kx, ky, TOP + PUCK_GRIP_Z + 0.04), FINGER_CLOSED, f"over the {POCKET_NAME[case]} pocket")]
-    left += [Waypoint(max(t_read + 0.5 - sum(w.duration for w in left), 0.2), (kx, ky, TOP + PUCK_GRIP_Z + 0.04),
-                      FINGER_CLOSED, "wait for the reading"),
+             Waypoint(1.5, (kx, ky, TOP + PUCK_GRIP_Z + 0.04), FINGER_CLOSED, f"over the {POCKET_NAME[case]} pocket"),
              Waypoint(1.0, (kx, ky, TOP + PUCK_DROP_Z), FINGER_CLOSED, "puck into the pocket"),
              Waypoint(0.6, (kx, ky, TOP + PUCK_DROP_Z), FINGER_OPEN, "let go of the puck"),
              Waypoint(0.8, (kx, ky, TOP + PUCK_DROP_Z + 0.07), FINGER_OPEN, "hand up")]
-    left += [kit.Home(max(total - 1.5 - sum(w.duration for w in left), 1.0)), kit.Home(1.5, label="hold at home")]
+    total = max(sum(w.duration for w in right), sum(w.duration for w in left) + 2.5)
+    right[-1] = kit.Home(1.5 + total - sum(w.duration for w in right), label="hold at home")
+    left += [kit.Home(2.5), kit.Home(max(total - sum(w.duration for w in left) - 2.5, 0.0) + 1.5, label="hold at home")]
     return {"left": left, "right": right}

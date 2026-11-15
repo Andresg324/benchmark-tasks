@@ -204,20 +204,27 @@ Model run (Dream-1): the same command with `--policy dream --max-steps 2400`, ru
    length with 2 cm to spare), then takes it away. (A pad brought up from under the tip catches on its end, and one
    drawn downward digs its leading edge into the blade.)
 3. Right arm: pushes the dipstick back down by the handle until the cap seats (4 mm past, so it is pressed down), lets
-   go and lifts its hand; takes the handle again and draws it out the same way, holds it still 2.5 s (the reading),
-   pushes it back down until it seats and lets go.
-4. Left arm: puts the rag back where it was, picks up the puck, waits over the pocket until the reading has been
-   taken, sets the puck in the pocket and lets go. Both arms go home and hold.
+   go and lifts its hand; takes the handle again and draws it out the same way, and holds it out and still (3.4 s)
+   while the left arm reads it.
+4. Left arm: puts the rag back where it was, then reads the level with its wrist camera: it waits 7 cm back, and once
+   the blade is out and still brings the camera to 10 cm from the blade's oiled end (aimed 1.6 cm above the tip,
+   looking down about 32 degrees from the robot's side, the open gripper 4.5 cm or more from the blade), holds it
+   there 1.5 s with the oil band and the ADD and FULL marks in view, and backs off.
+5. Right arm: pushes the dipstick back down until it seats and lets go. Left arm: only after the reading, picks up
+   the puck, sets it in the pocket and lets go. Both arms go home and hold.
 
 The demo is a scripted demonstration, not a policy. It wipes a planned stroke; the scorer checks, from the rag's and
-the blade's states, that the oiled bins were actually slid over in contact. It is told the trial's level (`OIL_CASE`,
-or between the marks with no jitter) and aims for that pocket; it does not read the blade. The scored policy is told
-nothing and has to read the oil band off the blade against the ADD and FULL marks, for example with a wrist camera
-during the second pull (the top camera sees the blade as a thin line at 320 x 176).
+the blade's states, that the oiled bins were actually slid over in contact. It shows the blade to the left wrist
+camera as a reader would, but it is told the trial's level (`OIL_CASE`, or between the marks with no jitter) and aims
+for that pocket; it does not interpret the image. The scored policy is told nothing and has to read the oil band off
+the blade against the ADD and FULL marks. The left wrist camera, held up to the blade as in the demo, shows the band
+and both marks plainly (in the demo's left wrist camera video: the blade about 18 px wide and the 3 cm from the tip about
+45 px tall at 320 x 176); the top camera sees the blade only as a thin line and the right wrist camera sees the
+handle.
 
 ## Runtime and seeds
 
-- Demo: 796 control steps (39.8 s simulated) at each of the three levels, ended on success.
+- Demo: 853 control steps (42.65 s simulated) at each of the three levels, ended on success.
 - Model run limit: 2,400 steps (2 minutes at 20 Hz).
 - One fixed layout (`object_jitter=0`); the oil level is the one thing that changes between trials. Score a model on
   all three levels (`OIL_CASE=low`, `ok`, `over`), or on seeded resets, which also pick the level.
@@ -232,6 +239,10 @@ it cannot be laid down or tilted, and the sim never asks the robot to line the t
 in; a real trial uses the free dipstick, so it does test that. The dipstick's length and its marks are not published:
 the length is derived from the drawing and the marks are modeled. The oil is drawn, not simulated: the smear, its
 removal by the rag and the trial's level are visuals driven by the scorer's state. The rag is a rigid pad.
+Clearances were checked offline along the demo at all three levels (forward kinematics of the demo's joint commands
+against the arms' meshes, the engine's visual shapes and colliders, the dipstick, rag, puck, card and table): apart
+from the intended contacts (the grip on the handle, the blade in its tube, the rag on the blade, the held rag and
+puck), nothing comes within 10 mm, and nothing passes through a visual-only part.
 
 ## Real-world build
 
@@ -258,9 +269,9 @@ Sim (scripted demo, `OIL_CASE` set per run; the demo is told the level, see The 
 
 | Level | Oil band from the tip | Pocket reported | Score | Steps |
 |---|---|---|---|---|
-| below ADD (`low`) | 0.4 cm | ADD | 1.0 | 796 |
-| between the marks (`ok`) | 1.4 cm | OK | 1.0 | 796 |
-| above FULL (`over`) | 2.7 cm | OVER | 1.0 | 796 |
+| below ADD (`low`) | 0.4 cm | ADD | 1.0 | 853 |
+| between the marks (`ok`) | 1.4 cm | OK | 1.0 | 853 |
+| above FULL (`over`) | 2.7 cm | OVER | 1.0 | 853 |
 
 A scored model is run at all three levels and reported the same way, one row per trial, with the per-level count of
 right reports.
