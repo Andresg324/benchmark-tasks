@@ -109,10 +109,10 @@ peak, so 7.2 N is within the arm's continuous rating.
 Breakaway after relaxation. Nylon relaxes under load, so the torque that breaks the nut loose after 5 minutes is
 lower than the 0.76 N*m it was tightened to. Expected value, from published bolting relations: a joint loses about
 10-25 % of its clamp load as it settles after tightening (Bolt Science, "Relaxation"; Boellhoff Bulletin 27 holds 80 %
-as the minimum kept), and breaking a nut loose takes about 80-85 % of the torque that tightened it, since the thread's
-slope helps on the way out (the pitch term of the standard torque-tension relation, Machinery's Handbook; about 0.1 of
-the total for an M5 x 0.8 thread with friction near 0.15). Together: about 0.76 x (0.75 to 0.90) x (0.80 to 0.85), so
-0.46-0.58 N*m. Nylon creeps more than steel, which would put it toward the low end; no minute-scale figure for nylon
+as the minimum kept), and breaking a nut loose takes about 75-85 % of the torque that tightened it, since the thread's
+slope helps on the way out (the pitch term of the standard torque-tension relation, Machinery's Handbook: 0.16 x pitch
+x load, about 12 % of the total for an M5 x 0.8 thread at friction 0.15 and less at nylon's higher friction; loosening
+takes the total less twice that term). Together: about 0.76 x (0.75 to 0.90) x (0.75 to 0.85), so 0.43-0.58 N*m. Nylon creeps more than steel, which would put it toward the low end; no minute-scale figure for nylon
 6/6 nuts was found. The task does not depend on the number: every rule is read
 from angles (the play while the nut turns, the nut's clockwise turn, how far it loosened), and the offline checks
 (`scoring_holds_across_breakaway_range`) run the same pulls with the thread breaking loose at 0.10, 0.38, 0.76 and
