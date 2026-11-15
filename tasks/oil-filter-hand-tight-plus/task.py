@@ -190,6 +190,7 @@ class ToolModel:
     def __init__(self):
         self.episode = kit.episode()
         self.coupled = False
+        self.over_can = False  # the cup is down over the can's top (entered centered below the rim's clearance)
         self.ref = 0.0
         self.drive_u = None  # the unscrew angle (rad) the wrench has turned the filter to this step
         self.lock_xy = None
@@ -219,8 +220,14 @@ def tool_step(J: dict) -> ToolModel:
     tm.drive_u = None  # the head's thread (earlier in the step: OBJECTS order) has applied the last step's
     lift, q, x, y = J["t_lift"], J["t_turn"], J["t_x"], J["tool"]
     off = math.hypot(x, y)
-    # once on the flutes, the 15 mm-deep cup stays on them until lifted ENGAGE_LIFT (it can't slide off sideways)
-    seated = off <= CENTER_TOL and (lift <= SEAT_TOL or (tm.coupled and lift <= ENGAGE_LIFT))
+    # The cup goes down over the can only centered on it; once over it, its wall keeps it there (ToolSlideLaw) until it
+    # is lifted until its rim clears the can's top: it cannot leave the can sideways or be pushed up off it.
+    if lift >= LIFT_FREE:
+        tm.over_can = False
+    elif lift < LIFT_FREE - 0.002 and off <= CENTER_TOL:
+        tm.over_can = True
+    # once on the flutes, the 15 mm-deep cup stays on them until lifted ENGAGE_LIFT
+    seated = tm.over_can and (lift <= SEAT_TOL or (tm.coupled and lift <= ENGAGE_LIFT))
     u = _filter_u()
     if seated and not tk._track(KEY).off:
         if not tm.coupled:
@@ -238,8 +245,10 @@ def tool_step(J: dict) -> ToolModel:
     else:
         tm.coupled = False
     down = lift <= LIFT_TABLE + 0.005 or seated
-    tm.lock_xy = (x, y) if down else None
-    tm.lock_turn = q if lift <= LIFT_TABLE + 0.005 else None
+    # held where it came down (a stop set once, not moved along with it each step)
+    tm.lock_xy = (tm.lock_xy or (x, y)) if down else None
+    on_bench = lift <= LIFT_TABLE + 0.005
+    tm.lock_turn = (q if tm.lock_turn is None else tm.lock_turn) if on_bench else None
     return tm
 
 
@@ -250,9 +259,16 @@ class ToolLiftLaw:
     sets_limits = True
 
     def drive(self, key, q, qd, J, mem):
-        tool_step(J)
+        tm = tool_step(J)
         off = math.hypot(J["t_x"], J["tool"])
-        lo = 0.0 if off <= CENTER_TOL else (LIFT_FREE if off < CLEAR else LIFT_TABLE)
+        if tm.over_can or off <= CENTER_TOL:
+            lo = 0.0  # over the can, or centered above it: it can come down onto the can's top
+        elif off < CLEAR:
+            # off-center near it: above the can's top, the rim rests on it (a stop below the cap, never above it: the
+            # stop does not lift the cap); below the can's top it is beside the head, and comes down onto the bench
+            lo = LIFT_TABLE if q < 0.0 else min(LIFT_FREE, q)
+        else:
+            lo = LIFT_TABLE
         mem["limits"] = (lo, LIFT_MAX)
         return q, 0.0, 0.0, 2.0
 
@@ -289,13 +305,13 @@ class ToolSlideLaw:
     def drive(self, key, q, qd, J, mem):
         tm = tool_model()
         mem["limits"] = None
-        if tm.lock_xy is not None:
+        if tm.over_can:
+            # the cup is down over the can's top (seated on it or not): its wall keeps it centered within the flutes'
+            # play (each slide within 2 mm, so the cap stays within 2.8 mm of the axis), a fixed stop
+            mem["limits"] = (max(self.lower, -CUP_PLAY), min(self.upper, CUP_PLAY))
+        elif tm.lock_xy is not None:
             at = tm.lock_xy[self.k]
             mem["limits"] = (max(self.lower, at - 0.0005), min(self.upper, at + 0.0005))
-        elif J["t_lift"] < LIFT_FREE - 0.002 and math.hypot(J["t_x"], J["tool"]) <= CENTER_TOL:
-            # the cup is down over the can's top: its wall keeps it centered within the flutes' play (each slide
-            # within 2 mm, so the cap stays within 2.8 mm of the axis)
-            mem["limits"] = (max(self.lower, -CUP_PLAY), min(self.upper, CUP_PLAY))
         elif J["t_lift"] < LIFT_FREE - 0.002 and abs(q) >= CLEAR:
             # carried low, clear of the head: it can't slide in over the head until lifted over the can's top
             mem["limits"] = (CLEAR, self.upper) if q > 0 else (self.lower, -CLEAR)
@@ -543,13 +559,6 @@ def _hand_on_filter(objects):
 
 def _score(objects):
     past = tk.past_seat_deg(objects, KEY)  # degrees past gasket contact now (negative: not yet touching)
-    if os.environ.get("OIL_DEBUG"):  # DEBUG-ONLY (remove before commit)
-        _score.n = getattr(_score, "n", 0) + 1
-        if _score.n % 20 == 0:
-            J = tool_joints(objects)
-            print(f"[odbg] n={_score.n} past={past:.1f} peak={_H.peak:.1f} unheld={_H.unheld:.1f} off={tk.came_off(objects, KEY)} "
-                  f"hand_on={_hand_on_filter(objects)} set_down={tool_set_down(J)} holders={tool_holders(objects, J)} "
-                  f"J={ {k: round(float(v), 3) for k, v in J.items()} if isinstance(J, dict) else J}", flush=True)
     # irreversible: unscrewed off the nipple at any point, or tightened more than 1.25 turns past contact (can crush the gasket)
     if tk.came_off(objects, KEY) or _H.peak > CRUSH:
         return 0.0
@@ -676,7 +685,9 @@ def _push(side, a_deg, torque):
 CARRY_FIX = (0.007, 0.008)  # m (wrench x, y): the carried 1.45 kg wrench lands this far short (measured in sim o3dbg:
 # t_x -7 mm, tool -8 mm as the cap met the can's top), more than the arms' give model predicts; aimed past by it
 CARRY_FIX_STEPS = ("over the filter", "cap onto the can")
-PRESS_DOWN = 3.0  # N: each hand bears down on the handle while it pulls, keeping the cap on the flutes
+PRESS_DOWN = 3.0  # N: each hand bears down on the handle while it pulls, keeping the cap on the flutes,
+PRESS_PER_NM = 0.6  # plus this much per N*m of the stroke's torque (about 14 N each at 19 N*m): in sim o7dbg, with 3 N
+# only, the hands rose about 13 mm on the hardest strokes and lifted the cap off the flutes
 WEIGHT_SHARE = {"right": 0.30, "left": 0.70}  # the wrench's 9.8 N between the hands, by where they hold it
 
 
@@ -685,7 +696,8 @@ def _pair(dur, label, a_deg, lift=0.0, slide=0.0, torque=0.0, finger=None, carry
     from yam_arena.constants import FINGER_CLOSED
     out = {}
     for side in ("left", "right"):
-        up = WEIGHT_SHARE[side] * TOOL_MASS * 9.81 if carry else (-PRESS_DOWN if torque > 0.0 else 0.0)
+        up = WEIGHT_SHARE[side] * TOOL_MASS * 9.81 if carry else (
+            -(PRESS_DOWN + PRESS_PER_NM * torque) if torque > 0.0 else 0.0)
         fx, fy = CARRY_FIX if label in CARRY_FIX_STEPS else (0.0, 0.0)
         pos, yaw = _hand(side, a_deg, lift, slide + fy, _push(side, a_deg, torque), up, fx)
         out[side] = Waypoint(dur, pos, FINGER_CLOSED if finger is None else finger, label, yaw)

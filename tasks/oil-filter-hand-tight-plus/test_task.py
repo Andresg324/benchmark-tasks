@@ -519,6 +519,23 @@ lim_ok = lim_ok and smem["limits"] == (m.CLEAR, 0.3)
 m.tool_step(tjoints(q0, lift=0.03, y=m.TOOL_SIDE))
 sl.drive("tool/tool", m.TOOL_SIDE, 0.0, tjoints(q0, lift=0.03, y=m.TOOL_SIDE), smem)
 lim_ok = lim_ok and smem["limits"] is None
+# Down over the can, the cup stays on it: pushed sideways it stays over the can (the stop below it stays at the can's
+# top, nothing lifts it), and it leaves the can only lifted until its rim clears the top.
+kit._EPISODE["count"] += 1
+law, mem = m.ToolLiftLaw(), {}
+law.drive("tool/t_lift", 0.03, 0.0, tjoints(q0, lift=0.03), mem)
+law.drive("tool/t_lift", 0.006, 0.0, tjoints(q0, lift=0.006, y=0.001), mem)
+law.drive("tool/t_lift", 0.006, 0.0, tjoints(q0, lift=0.006, y=0.005), mem)
+cup_ok = mem["limits"][0] == 0.0 and m.tool_model().over_can
+law.drive("tool/t_lift", 0.016, 0.0, tjoints(q0, lift=0.016, y=0.012), mem)  # off-center, not over the can
+cup_ok = cup_ok and mem["limits"][0] == 0.0  # still over it: the rim has not cleared the top
+law.drive("tool/t_lift", 0.018, 0.0, tjoints(q0, lift=0.018, y=0.012), mem)
+cup_ok = cup_ok and not m.tool_model().over_can and mem["limits"][0] == m.LIFT_FREE
+law.drive("tool/t_lift", 0.016, 0.0, tjoints(q0, lift=0.016, y=0.012), mem)
+cup_ok = cup_ok and mem["limits"][0] == 0.016  # resting on the can's top from above: the stop is under the cap
+law.drive("tool/t_lift", -0.09, 0.0, tjoints(q0, lift=-0.09, x=-0.02, y=0.097), mem)  # laid beside the head
+cup_ok = cup_ok and mem["limits"][0] == m.LIFT_TABLE  # on the bench, not sinking through it
+lim_ok = lim_ok and cup_ok
 bad += not lim_ok
 print("ok  " if lim_ok else "FAIL", "the wrench sits down on the can only centered; near it, on its top; clear of it, on the bench; carried low it cannot slide in over the head")
 

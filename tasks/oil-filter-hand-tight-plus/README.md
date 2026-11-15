@@ -2,7 +2,7 @@
 
 A new spin-on oil filter (Kawasaki 49065-0710, the Teryx/Teryx4 filter) has been started on the threaded nipple of a
 remote oil filter mount (a filter head) bolted to the bench, pointing up, and stops three quarters of a turn short of
-its gasket touching the head. Beside it lies a 65 mm, 14-flute cap-type filter wrench on a 24-inch ratchet. "Fit the new
+its gasket touching the head. Beside it lies a 65 mm, 14-flute cap-type filter wrench (3/8-inch drive, on an adapter) on a 24-inch ratchet. "Fit the new
 oil filter." means the engine maker's service procedure, which mechanics follow at every oil change: spin it on by hand
 until the gasket contacts the head, then tighten it to the specified torque, 18 N·m for this filter (about three
 quarters of a turn past contact, the turn filter makers print), with the wrench, then take the wrench off. Stopping at
@@ -158,10 +158,15 @@ between them is our model of the gasket's squeeze, stated as such. Before contac
 two pads at the gripper's 50 N on a 3.3 cm radius), which the gasket reaches about 40 degrees past contact. So the rest
 needs the wrench, as on a real engine.
 
-The wrench: a 65 mm, 14-flute cap filter wrench on a 24-inch ratchet, as a second articulation (lift, turn about the
-filter's axis, two slides; 1.0 kg, the ratchet's weight; only its handle collides). The cap is drawn only. Once it is down
-on the can and centered within 3 mm, the model holds it on the flutes, as the accepted compression-joint task's model
-holds its spanner's jaws on the nut. While the ratchet drives (the handle turned clockwise), the cap couples to the
+The wrench: a 65 mm, 14-flute, 3/8-inch-drive cap filter wrench on a 24-inch, 1/2-inch-drive ratchet through a 1/2 to
+3/8-inch adapter, as a second articulation (lift, turn about the filter's axis, two slides; 1.45 kg: GearWrench's
+catalog weight for the ratchet, 3.0 lb or 1.36 kg, plus about 0.1 kg for the cap and adapter, estimated; only its
+handle collides). The cap is drawn only. It goes down over the can only centered within 3 mm of its axis; once its rim
+is below the can's top, the cup's wall keeps it within 2 mm of the axis each way (its play on the flutes) until it is
+lifted clear (1.7 cm), so it cannot leave the can sideways and nothing pushes it up. Down on the can, the model holds
+it on the flutes until it is lifted 8 mm (about half the cup's 15 mm depth), as the accepted compression-joint task's
+model holds its spanner's jaws on the nut. The demo's hands bear down on the handle while they push, 3 N each plus 0.6 N per N·m of the stroke's torque (about
+14 N each on the last strokes; the arm presses down about 52 N continuously). While the ratchet drives (the handle turned clockwise), the cap couples to the
 filter through a stiff spring (400 N·m/rad: the cap, the drive and the can flexing, 2.6 degrees at 18 N·m), and the
 filter turns once that spring's torque passes the gasket's; turned back, the ratchet freewheels with 0.2 N·m of pawl
 drag. Lifted 1.7 cm the cap clears the can; lying on the bench the wrench stays where it was set down.
@@ -188,11 +193,14 @@ click torque wrench.
 - Filter: Kawasaki 49065-0710 (Teryx, Teryx4 and other models), its gasket lightly oiled, a paint-pen index stripe down
   the can's side (the top left plain), three black quarter-turn ticks, and a black witness line on the front of the head,
   set as in the real-trial steps.
-- Wrench: a 65 mm, 14-flute cap-type oil filter wrench (for example Parts Unlimited 3801-0295, listed for Honda and
-  Kawasaki filters of this size; check its fit on the filter's flutes when the rig is built) on a GearWrench 81364XP
-  ratchet (1/2-inch drive, 24.0 inches overall), with a 1/2 to 3/8-inch adapter if the cap is 3/8-inch drive. It lies
+- Wrench: a 65 mm, 14-flute cap-type oil filter wrench (Parts Unlimited 3801-0295, 65 mm (2-9/16 in), 14 flutes,
+  3/8-inch drive, sold for Honda and Kawasaki filters; 65 mm / 14 flutes is the size listed for the Hiflo HF204 /
+  K&N KN-204, which cross to this filter on the Teryx4 750; check its fit on the filter's flutes when the rig is built)
+  on a GearWrench 81364XP ratchet (1/2-inch drive, 24.0 inches overall, catalog weight 3.0 lb) through a GearWrench
+  81354 adapter (1/2-inch female to 3/8-inch male). It lies
   on the bench cap down at the start, its handle where the setup gives.
-- Torque check after each trial: a 1/2-inch-drive click torque wrench set to 18 N·m (13 ft·lb), on the cap.
+- Torque check after each trial: a 3/8-inch-drive click torque wrench whose range covers 18 N·m (13 ft·lb), set to
+  18 N·m, in the cap's square drive (no adapter needed).
 - Torque spec source: Kawasaki Teryx4 750 owner's manual, torque table (p. 101): "Oil Filter 18 N·m (1.8 kgf·m,
   13 ft·lb)"; the manual says to apply a thin film of oil to the gasket and tighten the filter to the specified torque.
 
