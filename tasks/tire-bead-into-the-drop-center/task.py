@@ -145,16 +145,26 @@ def _sweep_mesh(profile, look, a0=0.0, a1=2 * math.pi, n=None, shift=(0.0, 0.0, 
 
 def _shell(outer, t=0.003):
     """A closed profile of a tire wall `t` thick along an (r, z) polyline (inner face toward the section's middle)."""
-    c = np.array([0.126, 0.0])
+    c = np.array([R_SEAT + (0.126 - R_SEAT) * TIRE_SCALE, 0.0])
     inner = [tuple(c + (np.array(p) - c) * (1 - t / max(np.linalg.norm(np.array(p) - c), 1e-6))) for p in outer]
     return list(outer) + inner[::-1]
 
 
-# The tire's outer face from the lower bead round the tread to the upper bead (r, z).
+# The tire's outer face from the lower bead round the tread to the upper bead (r, z): a 57 mm-wide section, drawn to a
+# 30.3 cm tread and scaled out from the bead seat to the K124's nominal 12.5 in (31.75 cm) across the tread.
+R_TREAD = 0.15875  # m: half of 12.5 in, the tire's nominal size
+TIRE_SCALE = (R_TREAD - R_SEAT) / (0.1515 - R_SEAT)
+
+
+def _scaled(profile):
+    return [(R_SEAT + (r - R_SEAT) * TIRE_SCALE, z) for r, z in profile]
+
+
 LOWER = [(0.1015, -0.0085), (0.106, -0.0125), (0.113, -0.022), (0.122, -0.0275), (0.133, -0.0285), (0.143, -0.024),
          (0.149, -0.014), (0.1515, 0.0)]
 CROWN = [(0.1515, 0.0), (0.149, 0.014), (0.143, 0.024), (0.133, 0.0285)]
 INNER = [(0.133, 0.0285), (0.122, 0.0275), (0.113, 0.022), (0.106, 0.0125), (0.1015, Z_BEAD)]
+LOWER, CROWN, INNER = _scaled(LOWER), _scaled(CROWN), _scaled(INNER)
 PRESS_R = 0.116  # where a hand pushes a sector down: on the sidewall 1 cm outside the flange
 PRESS_Z = 0.025  # its top there
 
@@ -253,11 +263,38 @@ ANCHOR = (0.0, HINGE_R, HINGE_Z)  # the hinge line's point on the 90-degree radi
 FLAP_PRESS = [(d, (0.118, 0.026)) for d in (-10.0, 0.0, 10.0)]  # press spots: angle offset, (r, z) seated
 
 
+FLAP_CORE = 15.0  # deg each side of the last section's middle drawn on its (rigid) link: its press spots (10 deg out, 1.1 cm round) lie inside
+BLEND_SLICES = 6  # drawn-only slices on each side, from FLAP_CORE out to 30 deg, following the flap at a falling share
+
+
+def _flap_meshes(lo_deg, hi_deg):
+    a0, a1 = math.radians(lo_deg), math.radians(hi_deg)
+    return (_sweep_mesh(_shell(CROWN), RUBBER, a0, a1, shift=ANCHOR),
+            _sweep_mesh(_shell(INNER), GUMWALL, a0, a1, shift=ANCHOR),
+            _sweep_mesh(_shell(INNER[-2:] + [(0.1005, 0.0045)], 0.002), RUBBER, a0, a1, shift=ANCHOR))
+
+
+def _blend_slices():
+    """The last section's rubber either side of its rigid middle, drawn as thin slices that follow the flap's angle at
+    a share falling linearly to the arcs beside it (11/12 down to 1/12), so the lifted bead tapers down into the
+    seated tire instead of standing up as one block. Drawn only: no colliders, no mass to speak of, no effect on the
+    physics or the score; seated, every slice lines up with the rest of the tire."""
+    links = []
+    width = (30.0 - FLAP_CORE) / BLEND_SLICES
+    for side in (-1, 1):
+        for k in range(BLEND_SLICES):
+            lo, hi = FLAP_CORE + k * width, FLAP_CORE + (k + 1) * width
+            w = 1.0 - (k + 0.5) / BLEND_SLICES
+            a, b = (LAST_AT + lo, LAST_AT + hi) if side > 0 else (LAST_AT - hi, LAST_AT - lo)
+            links.append(kit.Link(f"flapblend{'p' if side > 0 else 'm'}{k}", "revolute", "X", ANCHOR, lower=FLAP_LO,
+                                  upper=0.0, start=FLAP_START * w, mass=0.002, meshes=_flap_meshes(a, b),
+                                  floating=True, follow=lambda qs, w=w: w * qs["flap"], follow_hold=1.0,
+                                  follow_rate=0.25))
+    return tuple(links)
+
+
 def _flap():
-    a0, a1 = math.radians(LAST_AT - 30.0), math.radians(LAST_AT + 30.0)
-    meshes = (_sweep_mesh(_shell(CROWN), RUBBER, a0, a1, shift=ANCHOR),
-              _sweep_mesh(_shell(INNER), GUMWALL, a0, a1, shift=ANCHOR),
-              _sweep_mesh(_shell(INNER[-2:] + [(0.1005, 0.0045)], 0.002), RUBBER, a0, a1, shift=ANCHOR))
+    meshes = _flap_meshes(LAST_AT - FLAP_CORE, LAST_AT + FLAP_CORE)
     colliders = []
     for d, (r, z) in FLAP_PRESS:
         x, y = _at(LAST_AT + d, r)
@@ -305,7 +342,7 @@ def _wheel():
     meshes.append(kit.box((0, 0, -ZR + 0.004), (0.12, 0.12, 0.008), STAND))
     colliders.append(kit.Collider((0, 0, -ZR + 0.004), size=(0.12, 0.12, 0.008)))
     colliders.append(kit.Collider((0, 0, 0), radius=0.016, height=0.06))
-    links = tuple(_sector(n, c) for n, c in SECTORS.items()) + (_flap(), _valve())
+    links = tuple(_sector(n, c) for n, c in SECTORS.items()) + (_flap(), _valve()) + _blend_slices()
     return kit.Mechanism("wheel", pos=(WX, WY, TOP + ZR), size=(0.31, 0.31, 2 * ZR), meshes=tuple(meshes),
                          colliders=tuple(colliders), links=links)
 
@@ -396,7 +433,7 @@ def _tire_rings(step=0.0005):
 
 
 TIRE_SHAPE = _tire_rings()
-TIRE_OUTLINE = gk.Ring(R_SEAT, 0.1515, -0.0285, 0.0285)  # one ring round all of them: a quick first test
+TIRE_OUTLINE = gk.Ring(R_SEAT, R_TREAD, -0.0285, 0.0285)  # one ring round all of them: a quick first test
 RIM_SHAPE = gk.Ring(R_BED, 0.1075, -Z_FLANGE, Z_FLANGE)
 VALVE_R = 0.0045  # the stem's collider is 9 mm square
 

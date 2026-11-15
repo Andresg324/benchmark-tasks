@@ -115,7 +115,10 @@ below and 11 cm outside the rim, so only a hand can put its tip there.
 - Wheel and tire, named so the rig is reproducible: a WheelMaster 12 1/2 x 2 1/4 front wheel (J&B SKU 64185: steel
   single-wall ISO 203 rim, 20 spokes, bolt-on axle) with a Kenda K124 12 1/2 x 2 1/4 (57-203) wire-bead tire (Kenda
   00210005, UPC 047853602654) and a 12 1/2 x 2 1/4 Schrader tube at 5 psi (0.34 bar, set with a gauge at every
-  reset). Any other 57-203 tire and 203 wheel may be used only if it passes the setup check below. The wheel sits on a
+  reset). The 203 bead seat, the 57 mm width, the 20 steel spokes and the 12.5 in (31.75 cm) tread diameter are the
+  makers' specifications; the rim's width, channel and flange are not published for this wheel, so the sim uses
+  typical values for the size and the rig's are measured and recorded when it is built.
+  Any other 57-203 tire and 203 wheel may be used only if it passes the setup check below. The wheel sits on a
   hub stand (a post 1.8 cm across through the hub in place of its axle, bolted to a weighted plate clamped to the
   table) with the rim 8.5 cm above the table. Mount the first bead, tuck the tube in, and work the second bead on to
   60 degrees each side of the valve. Kids' tires on 203 rims are tight: whether this tire needs three arcs in the
