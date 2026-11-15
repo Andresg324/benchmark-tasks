@@ -407,4 +407,135 @@ finally:
 ok = first == list(range(1, 11)) and second == list(range(11, 21)) and after == 20 and _calls == ["head"] * 20
 bad += not ok
 print("ok  " if ok else "FAIL", "the thread's drives act in every settling step after each reset, and only then")
+# --- the wrench (cap filter wrench on a ratchet): its model, and the scorer with it ------------------------------
+def tset(**j):
+    """Put the wrench's joints in the joint cache, as the simulator reports them."""
+    for n, v in j.items():
+        kit._JOINTS[f"{m.TOOL}/{n}"] = kit.JointState(pos=v, vel=0.0, latched=False)
+
+
+def tjoints(turn, lift=0.0, x=0.0, y=0.0):
+    return {"t_lift": lift, "t_turn": turn, "t_x": x, "tool": y}
+
+
+def tool_run(t, to_past, hands_on=True, step_deg=2.0, handle_r=0.55):
+    """Seat the wrench on the can and swing its handle clockwise in 40-degree strokes (ratcheting back between them),
+    pushing each stroke past the gasket's hold, until the filter is `to_past` degrees past contact; a hand on the
+    handle near its end if `hands_on`. Each step: the model, then the filter put where the wrench drove it."""
+    q = math.radians(m.STROKE_A0 - 180.0)
+    stroke_left = m.WRENCH_STROKE
+    while t.past < to_past - 1e-6:
+        J = tjoints(q)
+        tset(**J)
+        tm = m.tool_step(J)
+        if tm.drive_u is not None:
+            tk._track(KEY).u = tm.drive_u
+            tm.drive_u = None
+        hp = m.tool_point(J, (-handle_r, 0.0, m.HANDLE_Z))
+        R = (tuple(hp + np.array([0, 0, 0.013])), 0.05 if hands_on else 1.0, 0.0) if hands_on else (R_HOME, 1.0, 0.0)
+        t.step(past=-math.degrees(tk._track(KEY).u), R=R)
+        if stroke_left <= 0:  # ratchet back with the hand on the handle
+            for _ in range(int(m.WRENCH_STROKE / step_deg)):
+                q += math.radians(step_deg)
+                J = tjoints(q)
+                tset(**J)
+                m.tool_step(J)
+                hp = m.tool_point(J, (-handle_r, 0.0, m.HANDLE_Z))
+                t.step(R=(tuple(hp + np.array([0, 0, 0.013])), 0.05, 0.0) if hands_on else None)
+            stroke_left = m.WRENCH_STROKE
+        # swing on: the hand leads the pawl by what the gasket takes, plus a little
+        need = m.gasket_torque(t.past)
+        q -= math.radians(step_deg) + need / m.K_TOOL * 0.0
+        stroke_left -= step_deg
+    return t
+
+
+def tool_off(t):
+    """Lift the wrench off, slide it aside and lay it on the bench; hands away."""
+    q = kit._JOINTS[f"{m.TOOL}/t_turn"].pos
+    for J in (tjoints(q, lift=0.03), tjoints(q, lift=0.03, y=m.TOOL_SIDE), tjoints(q, lift=m.LIFT_TABLE, y=m.TOOL_SIDE)):
+        tset(**J)
+        m.tool_step(J)
+        t.step()
+    return t
+
+
+def tool_trial(by_hand=20.0):
+    t = Trial()
+    twist(t, by_hand)  # spun on by hand to contact and a little past it
+    t.home(5)
+    return t
+
+
+# The gasket's torque: 18 N*m at three quarters of a turn past contact (Kawasaki's figure), linear in the angle.
+tq_ok = (abs(m.gasket_torque(270.0) - 18.0) < 1e-9 and abs(m.gasket_torque(135.0) - 9.0) < 1e-9
+         and m.gasket_torque(-30.0) == m.RUN_ON and m.gasket_torque(40.0) > 2.5)
+bad += not tq_ok
+print("ok  " if tq_ok else "FAIL", "gasket torque: 18 N*m at 3/4 turn past contact, 9 at 3/8, over 2.5 (a hand's slip) by 40 degrees")
+
+# The model: seated on the can, a push under what the gasket holds turns nothing; past it, the filter follows; turned
+# back, the ratchet freewheels and the filter stays; lifted, it lets go.
+kit._EPISODE["count"] += 1
+tk._track(KEY).u = math.radians(-100.0)  # 100 degrees past contact: the gasket holds 6.7 N*m
+q0 = math.radians(m.STROKE_A0 - 180.0)
+m.tool_step(tjoints(q0))
+small = m.tool_step(tjoints(q0 - 0.010)).drive_u  # 0.01 rad x 400 = 4 N*m: under 6.7
+big = m.tool_step(tjoints(q0 - 0.050)).drive_u  # 20 N*m: the filter turns
+u_after = big
+tk._track(KEY).u = big
+back = m.tool_step(tjoints(q0 + 0.30)).drive_u  # turned back 0.35 rad: freewheels
+ref_after = m.tool_model().ref
+lifted = m.tool_step(tjoints(q0, lift=0.03))
+off_center = m.tool_step(tjoints(q0, x=0.005))
+model_ok = (small is None and big is not None and abs(math.degrees(-big) - (100.0 + math.degrees(0.050 - 6.7 / 400 * 0.0)
+            - math.degrees(m.gasket_torque(100.0) / m.K_TOOL))) < 0.5 and back is None
+            and abs(ref_after - ((q0 + 0.30) - u_after)) < 1e-9 and not lifted.coupled and not off_center.coupled)
+bad += not model_ok
+print("ok  " if model_ok else "FAIL", "the wrench: holds under the gasket's torque, turns it past, freewheels back, lets go lifted or off-center")
+
+# Lying on the bench its slides and turn are held; lifted, free; seated, slides held.
+lie = m.tool_step(tjoints(q0, lift=m.LIFT_TABLE, y=m.TOOL_SIDE))
+lock_ok = lie.lock_xy is not None and lie.lock_turn is not None
+up = m.tool_step(tjoints(q0, lift=0.03, y=0.05))
+lock_ok = lock_ok and up.lock_xy is None and up.lock_turn is None
+seat = m.tool_step(tjoints(q0))
+lock_ok = lock_ok and seat.lock_xy is not None and seat.lock_turn is None
+bad += not lock_ok
+print("ok  " if lock_ok else "FAIL", "slides held lying on the bench and seated, free when lifted")
+
+# Lift limits: centered, it can sit down on the can; off-center near it, it rests on the can's top; clear, on the bench.
+law, mem = m.ToolLiftLaw(), {}
+law.drive("tool/t_lift", 0.0, 0.0, tjoints(q0), mem)
+l_c = mem["limits"][0]
+law.drive("tool/t_lift", 0.03, 0.0, tjoints(q0, lift=0.03, y=0.05), mem)
+l_n = mem["limits"][0]
+law.drive("tool/t_lift", 0.03, 0.0, tjoints(q0, lift=0.03, y=m.TOOL_SIDE), mem)
+l_f = mem["limits"][0]
+lim_ok = l_c == 0.0 and l_n == m.LIFT_FREE and l_f == m.LIFT_TABLE and abs(m.TOOL_SIDE) >= m.CLEAR
+sl, smem = m.ToolSlideLaw(1, -0.3, 0.3), {}
+m.tool_step(tjoints(q0, lift=-0.04, y=m.TOOL_SIDE))
+sl.drive("tool/tool", m.TOOL_SIDE, 0.0, tjoints(q0, lift=-0.04, y=m.TOOL_SIDE), smem)
+lim_ok = lim_ok and smem["limits"] == (m.CLEAR, 0.3)
+m.tool_step(tjoints(q0, lift=0.03, y=m.TOOL_SIDE))
+sl.drive("tool/tool", m.TOOL_SIDE, 0.0, tjoints(q0, lift=0.03, y=m.TOOL_SIDE), smem)
+lim_ok = lim_ok and smem["limits"] is None
+bad += not lim_ok
+print("ok  " if lim_ok else "FAIL", "the wrench sits down on the can only centered; near it, on its top; clear of it, on the bench; carried low it cannot slide in over the head")
+
+# The scorer with the wrench.
+kit._EPISODE["count"] += 1
+case("wrench: spun on by hand, tightened to 300 with the wrench, laid on the bench, hands away",
+     done(tool_off(tool_run(tool_trial(), 300.0))), 1.0)
+case("wrench: tightened to 300 but left on the filter", done(tool_run(tool_trial(), 300.0)), 0.5)
+t = tool_run(tool_trial(), 300.0)
+tool_off(t)
+J = tool_joints = m.tool_joints()
+hp = m.tool_point(J, (-0.5, 0.0, m.HANDLE_Z))
+case("wrench: laid down but still held", t.hold(30, R=(tuple(hp + np.array([0, 0, 0.013])), 0.05, 0.0)), 0.5)
+case("wrench: only to 200 past contact", done(tool_off(tool_run(tool_trial(), 200.0))), 0.5)
+case("wrench: cranked to 470 (past 1.25 turns)", done(tool_off(tool_run(tool_trial(), 470.0))), 0.0)
+case("wrench: turned with no hand on it (not possible in the sim: a stand-in for a knock)",
+     done(tool_off(tool_run(tool_trial(), 300.0, hands_on=False))), 0.0)
+tset(t_lift=m.LIFT_TABLE, t_turn=m.TOOL_TURN0, t_x=m.TOOL_X0, tool=m.TOOL_Y0)
+
 print("all pass" if not bad else f"{bad} FAILED")

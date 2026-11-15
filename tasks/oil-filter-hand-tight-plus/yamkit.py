@@ -144,12 +144,20 @@ def band(path, width: float, thickness: float, look: Look, normal=(1, 0, 0)) -> 
 
 @dataclass(frozen=True)
 class Collider:
-    """An invisible box (`size`) or cylinder (`radius`, `height`, along z) collider in the prop's frame."""
+    """An invisible box (`size`) or cylinder (`radius`, `height`, along `axis`) collider in the prop's frame. (`axis`
+    "X", "Y" or "Z"; default "Z".)"""
 
     center: tuple
     size: tuple | None = None
     radius: float = 0.0
     height: float = 0.0
+    axis: str = "Z"
+
+    def extent(self, k: int) -> float:
+        """Half-size along axis k (0, 1, 2) of the prop's frame, from `center`."""
+        if self.size is not None:
+            return self.size[k] / 2
+        return self.height / 2 if "XYZ"[k] == self.axis.upper() else self.radius
 
 
 # -- props -----------------------------------------------------------------------------------
@@ -215,7 +223,7 @@ def _usda(prop: Prop) -> str:
                        f"        float3 xformOp:scale = {_fmt(c.size)}\n"
                        '        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]\n')
         else:
-            out.append(f'        uniform token axis = "Z"\n        double radius = {c.radius}\n'
+            out.append(f'        uniform token axis = "{c.axis.upper()}"\n        double radius = {c.radius}\n'
                        f"        double height = {c.height}\n"
                        f"        double3 xformOp:translate = {_fmt(c.center)}\n"
                        '        uniform token[] xformOpOrder = ["xformOp:translate"]\n')
@@ -264,6 +272,10 @@ class Link:
     `meshes` and `colliders` are in the link's own frame, which sits at the anchor and matches the base's frame at
     joint position 0. `lower`/`upper`/`start` are the joint's limits and starting position (rad or m).
 
+    `parent` names another link of the mechanism to joint this one to instead of the base, for chains
+    (a slide on a turntable, a free-spinning grip on a lever); `anchor` stays in the base's frame (where the joint is
+    with every joint at 0), and the axis turns with the parent.
+
     `spring` (N·m/rad or N/m) pulls the joint toward `rest` (default `start`); `damping` resists speed; `friction` is
     the joint's static friction. `floating=True` turns gravity off for the link, as a counterweight would (a fume-hood
     sash stays where it is left). `latch` adds a catch (see `Latch`). `stay` (N/m or N·m/rad) holds the part where it was at
@@ -291,6 +303,14 @@ for a slide, to stay stable."""
     stay: float = 0.0
     drag: float = 0.0
     law: object = None  # a mechkit law (OverCenter, Ratchet, Detents, Follow, Pump, Interlock): sets the drive each step
+    # (from regulator-backed-off-first) `follow`: a function of the mechanism's joint positions {link: q} giving this
+    # joint's target, for an indicator such as a gauge needle; the kit moves the joint there by at most `follow_rate`
+    # per control step (rad or m) and holds it softly with `follow_hold`. Light hinges ring or blow up under springs.
+    follow: object = None
+    follow_hold: float = 1.0
+    follow_rate: float = 0.25
+    stick: bool = False  # zero the joint's speed every control step: it moves only while pushed (a threaded stem)
+    parent: str | None = None  # the link this one is jointed to (None = the base)
 
 
 @dataclass(frozen=True)
@@ -344,6 +364,10 @@ def _body_usda(name: str, translate, mass, meshes, colliders, looks, floating=Fa
     i2 = indent + "    "
     out = [f'{indent}def Xform "{name}" (\n{i2}prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI", '
            f'"PhysxRigidBodyAPI"]\n{indent})\n{indent}{{\n',
+           # a body with no collider gets a small explicit inertia (1 cm radius of gyration), since
+           # PhysX can't compute one from shapes (an intermediate link of a chain, a needle with no collider). It goes
+           # before the mass so that a kit inserting its own inertia after the mass line (ringkit) still wins.
+           *([f"{i2}float3 physics:diagonalInertia = {_fmt([mass * 1e-4] * 3)}\n"] if not colliders else []),
            f"{i2}float physics:mass = {mass}\n",
            f"{i2}bool physxRigidBody:disableGravity = {1 if floating else 0}\n",
            f"{i2}double3 xformOp:translate = {_fmt(translate)}\n",
@@ -365,7 +389,7 @@ def _body_usda(name: str, translate, mass, meshes, colliders, looks, floating=Fa
                        f"{i2}    float3 xformOp:scale = {_fmt(c.size)}\n"
                        f'{i2}    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]\n')
         else:
-            out.append(f'{i2}    uniform token axis = "Z"\n{i2}    double radius = {c.radius}\n'
+            out.append(f'{i2}    uniform token axis = "{c.axis.upper()}"\n{i2}    double radius = {c.radius}\n'
                        f"{i2}    double height = {c.height}\n{i2}    double3 xformOp:translate = {_fmt(c.center)}\n"
                        f'{i2}    uniform token[] xformOpOrder = ["xformOp:translate"]\n')
         out.append(f"{i2}}}\n")
@@ -383,6 +407,9 @@ def _mech_usda(mech: Mechanism) -> str:
            "    bool physxArticulation:enabledSelfCollisions = 0\n",
            "    int physxArticulation:solverPositionIterationCount = 32\n",
            "    int physxArticulation:solverVelocityIterationCount = 4\n",
+           # never sleep: a sleeping articulation ignores effort targets, so laws and springs stop acting on it
+           "    float physxArticulation:sleepThreshold = 0\n",
+           "    float physxArticulation:stabilizationThreshold = 0\n",
            '    def Scope "Looks"\n    {\n']
     for i, lk in enumerate(looks):
         col = _fmt(_linear(c) for c in lk.color)
@@ -404,18 +431,34 @@ def _mech_usda(mech: Mechanism) -> str:
         kind = {"revolute": "PhysicsRevoluteJoint", "prismatic": "PhysicsPrismaticJoint"}[lk.kind]
         scale = math.degrees(1.0) if lk.kind == "revolute" else 1.0  # USD hinge limits are in degrees
         lin = "angular" if lk.kind == "revolute" else "linear"
-        out.append(f'    def {kind} "{lk.name}_joint" (\n        prepend apiSchemas = ["PhysxJointAPI", "PhysicsJointStateAPI:{lin}"]\n    )\n    {{\n'
+        # a link with a mechkit law gets a PhysX drive: without one PhysX ignores stiffness, damping and targets, and
+        # the laws' gains must be implicit (PhysX's own drive) to stay stable on light links at a 20 Hz control rate
+        drive_api = f', "PhysicsDriveAPI:{lin}"' if lk.law is not None else ""
+        drive = (f'        uniform token drive:{lin}:physics:type = "force"\n'
+                 f"        float drive:{lin}:physics:maxForce = 1000\n"
+                 f"        float drive:{lin}:physics:stiffness = 0\n"
+                 f"        float drive:{lin}:physics:damping = 0\n"
+                 f"        float drive:{lin}:physics:targetPosition = 0\n") if lk.law is not None else ""
+        out.append(f'    def {kind} "{lk.name}_joint" (\n        prepend apiSchemas = ["PhysxJointAPI", "PhysicsJointStateAPI:{lin}"{drive_api}]\n    )\n    {{\n' + drive +
                    f'        float state:{lin}:physics:position = {lk.start * scale:.7g}\n'
                    f'        float state:{lin}:physics:velocity = 0\n'
                    f'        uniform token physics:axis = "{lk.axis}"\n'
-                   f"        rel physics:body0 = </Root/base>\n        rel physics:body1 = </Root/{lk.name}>\n"
-                   f"        point3f physics:localPos0 = {_fmt(lk.anchor)}\n        quatf physics:localRot0 = (1, 0, 0, 0)\n"
+                   f"        rel physics:body0 = </Root/{lk.parent or 'base'}>\n        rel physics:body1 = </Root/{lk.name}>\n"
+                   f"        point3f physics:localPos0 = {_fmt(_local_anchor(mech, lk))}\n        quatf physics:localRot0 = (1, 0, 0, 0)\n"
                    f"        point3f physics:localPos1 = (0, 0, 0)\n        quatf physics:localRot1 = (1, 0, 0, 0)\n"
                    f"        float physics:lowerLimit = {(lk.lower - 1e-4) * scale:.7g}\n"
                    f"        float physics:upperLimit = {(lk.upper + 1e-4) * scale:.7g}\n"
                    f"        float physxJoint:jointFriction = {lk.friction}\n    }}\n")
     out.append("}\n")
     return "".join(out)
+
+
+def _local_anchor(mech: Mechanism, lk: Link) -> tuple:
+    """A link's joint origin in its parent's frame (the base's frame for a link on the base)."""
+    if lk.parent is None:
+        return lk.anchor
+    par = next(o for o in mech.links if o.name == lk.parent)
+    return tuple(a - b for a, b in zip(lk.anchor, par.anchor))
 
 
 def _write_text(name: str, text: str) -> str:
@@ -441,6 +484,14 @@ def _mech_object(scene, spec: Mechanism):
             cfg.actuators = {lk.name: ImplicitActuatorCfg(joint_names_expr=[f"{lk.name}_joint"], stiffness=0.0,
                                                           damping=lk.damping, friction=lk.friction)
                              for lk in spec.links}
+            try:  # never sleep (a sleeping articulation ignores effort targets and position writes)
+                from isaaclab_physx.sim.schemas import ArticulationRootPropertiesCfg
+
+                if hasattr(cfg.spawn, "articulation_props"):
+                    cfg.spawn.articulation_props = ArticulationRootPropertiesCfg(sleep_threshold=0.0,
+                                                                                 stabilization_threshold=0.0)
+            except ImportError:
+                pass
             cfg.init_state.joint_pos = {f"{lk.name}_joint": lk.start for lk in spec.links}
             cfg.init_state.joint_vel = {f"{lk.name}_joint": 0.0 for lk in spec.links}
             return cfg
@@ -452,7 +503,7 @@ def _mech_object(scene, spec: Mechanism):
                        spawn_cfg_addon={"physics_material": scene._grippy()})
 
 
-def _set_drive(art, j: int, target: float, stiffness: float, effort: float) -> None:
+def _set_drive(art, j: int, target: float, stiffness: float, effort: float, damping: float | None = None) -> None:
     import torch
 
     dev = getattr(art.data.joint_pos, "torch", art.data.joint_pos).device
@@ -460,6 +511,18 @@ def _set_drive(art, j: int, target: float, stiffness: float, effort: float) -> N
     art.set_joint_position_target_index(target=one(target), joint_ids=[j])
     art.set_joint_effort_target_index(target=one(effort), joint_ids=[j])
     art.write_joint_stiffness_to_sim_index(stiffness=one(stiffness), joint_ids=[j])
+    if damping is not None:
+        art.write_joint_damping_to_sim_index(damping=one(damping), joint_ids=[j])
+
+
+def _set_limits(art, j: int, lo: float, hi: float) -> None:
+    """Narrow or restore a joint's limits in the running sim (from the hood-prop-rod task's Latch lock):
+    a hard stop holds where a drive does not."""
+    import torch
+
+    dev = getattr(art.data.joint_pos, "torch", art.data.joint_pos).device
+    art.write_joint_position_limit_to_sim_index(limits=torch.tensor([[[lo, hi]]], dtype=torch.float32, device=dev),
+                                                joint_ids=[j], warn_limit_violation=False)
 
 
 def _put_joint(art, j: int, value: float) -> None:
@@ -492,6 +555,8 @@ def _watch_resets(base) -> None:
             for lk in spec.links:
                 j = names.index(f"{lk.name}_joint")
                 _set_drive(art, j, target=lk.start, stiffness=0.0, effort=0.0)
+                if lk.law is not None and getattr(lk.law, "sets_limits", False):  # a law's narrowed stop is released
+                    _set_limits(art, j, lk.lower - 1e-4, lk.upper + 1e-4)
                 _put_joint(art, j, lk.start)
         return out
 
@@ -528,16 +593,43 @@ def _mech_states(base, name: str, origin) -> dict:
         _JOINTS[key] = JointState(pos=float(q[j]), vel=float(qd[j]), latched=latched)
         if os.environ.get("YAMKIT_DEBUG_JOINTS"):
             print(f"yamkit joint {key} q={q[j]:.4f} qd={qd[j]:.4f} latched={latched}", flush=True)
-        ext = [max(abs(c.center[k]) + (c.size[k] / 2 if c.size is not None else c.radius) for c in lk.colliders)
+        ext = [max(abs(c.center[k]) + c.extent(k) for c in lk.colliders)
                for k in range(3)] if lk.colliders else [0.01] * 3
         out[key] = state(bodies.index(lk.name), [2 * e for e in ext])
         # The joint's drive for the next step: a caught latch holds it at the catch (a stiff drive to that position);
         # otherwise the spring pushes it toward its rest as a torque, -spring * (q - rest).
         rest = lk.start if lk.rest is None else lk.rest
-        if lk.law is not None and not latched:
+        if lk.stick:  # a threaded stem: no coasting once nothing pushes it
+            dev = getattr(art.data.joint_pos, "torch", art.data.joint_pos).device
+            art.write_joint_velocity_to_sim_index(velocity=torch.tensor([[0.0]], dtype=torch.float32, device=dev),
+                                                  joint_ids=[j])
+        if lk.follow is not None:  # an indicator set from the other joints each step
+            qs = {o.name: float(q[jnames.index(f"{o.name}_joint")]) for o in spec.links}
+            step = min(max(float(lk.follow(qs)) - float(q[j]), -lk.follow_rate), lk.follow_rate)
+            _put_joint(art, j, float(q[j]) + step)
+            _set_drive(art, j, target=float(q[j]) + step, stiffness=lk.follow_hold, effort=0.0)
+        elif lk.law is not None and not latched:
             jq = {o.name: float(q[jnames.index(f"{o.name}_joint")]) for o in spec.links}
-            target, stiff, effort = lk.law.drive(key, float(q[j]), float(qd[j]), jq, _law_mem(key, lk))
-            _set_drive(art, j, target=target, stiffness=stiff, effort=effort)
+            out_ = lk.law.drive(key, float(q[j]), float(qd[j]), jq, _law_mem(key, lk))
+            target, stiff, effort = out_[:3]
+            damp_ = out_[3] if len(out_) > 3 else None  # implicit damping (N*m*s/rad or N*s/m), applied by PhysX
+            if getattr(lk.law, "kinematic", False):
+                # an indicator set, not pushed: move the joint toward the law's target by at most `rate` per control
+                # step and hold it there softly (light parts such as gauge needles ring or blow up under an effort PD)
+                goal = _law_mem(key, lk).get("target", target)
+                nxt = float(q[j]) + min(max(goal - float(q[j]), -lk.law.rate), lk.law.rate)
+                nxt = min(max(nxt, lk.lower), lk.upper)
+                _put_joint(art, j, nxt)
+                _set_drive(art, j, target=nxt, stiffness=lk.law.hold, effort=0.0, damping=0.0)
+            else:
+                _set_drive(art, j, target=target, stiffness=stiff, effort=effort, damping=damp_)
+            # a law may narrow its joint's limits by putting (lo, hi) in its memory as "limits" (None
+            # = the link's own); the kit writes them to the sim only when they change
+            mem = _law_mem(key, lk)
+            want = mem.get("limits") or (lk.lower, lk.upper)
+            if mem.get("_limits_set") != want:
+                _set_limits(art, j, want[0] - 1e-4, want[1] + 1e-4)
+                mem["_limits_set"] = want
         elif latched:
             _set_drive(art, j, target=lk.latch.at, stiffness=lk.latch.hold, effort=0.0)
         else:

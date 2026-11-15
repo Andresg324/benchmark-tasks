@@ -1,10 +1,11 @@
-"""A new spin-on oil filter has been started on the threaded nipple of a remote oil filter mount (a filter head) bolted to
-the bench, filter pointing up, and spun down by hand until it is three quarters of a turn short of its gasket touching
-the head. Fitting it is what the filter maker prints on the can and anyone who changes their own oil learns: spin it
-on until the gasket contacts the head, then tighten it a further three quarters of a turn by hand, no tool. Left at
-contact or a little past it, the filter can work loose under engine vibration and leak; cranked much past it, the gasket
-can be crushed, roll out of its groove and blow out under oil pressure, and the filter may not come off by hand at the
-next change.
+"""A new spin-on oil filter (Kawasaki 49065-0710, the Teryx and Teryx4 filter) has been started on the threaded nipple
+of a remote oil filter mount (a filter head) bolted to the bench, filter pointing up, three quarters of a turn short of
+its gasket touching the head. Beside it on the bench lies the tool Kawasaki's torque figure assumes: a 65 mm, 14-flute
+cap-type filter wrench on a 24-inch, 1/2-inch-drive ratchet. Fitting it is the engine maker's service procedure: spin
+it on by hand until the gasket contacts the head, then tighten it with the wrench to the specified 18 N*m, about three
+quarters of a turn past contact, then take the wrench off. Left at contact or a little past it, the filter can work
+loose under engine vibration and leak; cranked much past it, the gasket can be crushed, roll out of its groove and blow
+out under oil pressure, and the filter may not come off at the next change.
 """
 
 import math
@@ -17,6 +18,7 @@ import numpy as np  # noqa: E402
 import twistkit as tk  # noqa: E402  (threaded parts on top of yamkit; nothing on disk changes)
 import yamkit as kit  # noqa: E402
 import guardkit as gk  # noqa: E402  (after yamkit)
+from yam_arena.demo import Waypoint  # noqa: E402
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
 
 SCENE = "station"
@@ -27,7 +29,7 @@ INSTRUCTION = "Fit the new oil filter."
 
 # The filter head (fixed, bolted to the bench): a die-cast aluminum remote oil filter mount, its top face the machined
 # gasket land the filter seals on. Heights are above the table.
-HEAD_C = (0.30, -0.12)  # the filter's axis
+HEAD_C = (0.30, 0.30)  # the filter's axis (left of center: the left hand spins it on, both hands work the wrench)
 HEAD_X, HEAD_Y, HEAD_H = 0.075, 0.090, 0.034  # the block
 LAND_R, LAND_H = 0.036, 0.006  # the round gasket land on top of the block
 SEAT = HEAD_H + LAND_H  # 4.0 cm: where the filter's gasket meets the head
@@ -37,16 +39,31 @@ CAN_R, CAN_H = 0.033, 0.070  # 6.6 cm across, 7.0 cm tall
 FILTER_MASS = 0.25
 # M20 x 1.5 thread: 1.5 mm per turn. The filter starts three quarters of a turn (270 degrees) short of gasket contact,
 # about four turns onto the nipple (five at contact), so it comes off only if it is unscrewed 4.25 more turns. Before
-# contact it spins freely (a small hold where it is left). Past contact the squeezed gasket adds a turning friction that grows with the
-# angle, 0.1 N*m per radian (0.47 N*m at three quarters of a turn, 0.63 at a full turn), capped at 1 N*m so the arm can
-# still finish: a stiff hold where it was left that slips at that torque, so it opposes turning either way and never
-# turns the filter by itself (stick-slip friction, not a spring). The hard stop at 540 degrees past
-# contact (a turn and a half) is the gasket squeezed flat. The can travels down at most 0.5 mm past contact (the gasket
-# compressing), so the gasket does not sink into the land. twistkit's slide spring (3,000 N/m) sags about 0.8 mm under
-# the filter, so its gasket starts about 0.3 mm above the land rather than the thread's 1.1 mm; the score reads the
-# angle, not the height.
+# contact it spins freely (a small hold where it is left). Past contact the squeezed gasket resists turning with a torque
+# that rises linearly with the angle, to TORQUE_SPEC at three quarters of a turn past contact (the makers' equivalence:
+# 3/4 turn past contact gives the specified torque), and on at the same slope (29 N*m at 1 1/4 turns): a stiff hold
+# where it was left that slips at that torque, so it opposes turning either way and never turns the filter by itself
+# (stick-slip friction, not a spring). A hand turning the can itself slips on it at about 2.5 N*m, about 40 degrees
+# past contact; the rest needs the wrench. The hard stop at 540 degrees past contact (a turn and a half) is the gasket
+# squeezed flat. The can travels down at most 0.5 mm past contact (the gasket compressing). twistkit's slide spring
+# (3,000 N/m) sags about 0.8 mm under the filter, so its gasket starts about 0.3 mm above the land rather than the
+# thread's 1.1 mm; the score reads the angle, not the height.
+# Kawasaki's service data for this filter (Teryx4 750 owner's manual, torque table, p. 101): "Oil Filter 18 N*m
+# (1.8 kgf*m, 13 ft*lb)", after a thin film of oil on the gasket.
+TORQUE_SPEC = 18.0  # N*m
+GASKET_RATE = TORQUE_SPEC / math.radians(270.0)  # 3.8 N*m per radian past contact
+RUN_ON = 0.3  # N*m: turning it on the thread before contact (the wrench meets this before the gasket touches)
 THREAD = tk.Thread(pitch=0.0015, turns=5.0, start=-270.0, max_tight=540.0, resist=0.03, tight_resist=0.05,
-                   gasket=0.1, gasket_max=1.0, seat_travel=0.0005)
+                   gasket=GASKET_RATE, gasket_max=GASKET_RATE * math.radians(540.0), seat_travel=0.0005,
+                   max_torque=40.0)
+
+
+def gasket_torque(past_deg: float) -> float:
+    """The torque (N*m) the filter takes to turn further, at `past_deg` degrees past gasket contact."""
+    if past_deg <= 0.0:
+        return RUN_ON
+    return max(GASKET_RATE * math.radians(past_deg), RUN_ON)
+
 
 # Scoring: degrees past gasket contact (the seat). Filter makers print "three quarters of a turn" or "three quarters to
 # one turn" after gasket contact, so full credit spans both readings.
@@ -127,8 +144,263 @@ def _head():
                        meshes=tuple(meshes), colliders=colliders, cap=_filter_cap(), thread=THREAD)
 
 
-OBJECTS = [_head()]
+# --- The wrench: a 65 mm, 14-flute cap-type filter wrench on a 24-inch, 1/2-inch-drive ratchet (GearWrench 81364XP,
+# 24.0 in overall). Modeled like the accepted compression-joint task's spanner: the cap is drawn only, and once it is
+# down on the can, centered within 3 mm, the model holds it on the flutes and couples it to the filter. The ratchet
+# drives the cap when turned clockwise (seen from above: tightening) and freewheels the other way (pawl drag 0.2 N*m),
+# so the handle swings back for the next stroke without letting go. Its handle is the only collider (the hands hold
+# it). An articulation on the bench: lift (z) -> turn about the filter's axis -> slide x -> slide y (the wrench), in
+# the frame of a point on the filter's axis at the can's top. The wrench lies on the bench, cap down, beside the head
+# at the start; lifted, it moves freely; lying on the bench its slides and turn are held.
+TOOL = "tool"
+CUP_R, CUP_DEPTH = 0.0355, 0.015  # the cap: 65 mm across the flutes inside, 3 mm walls; it fits over the can's top 15 mm
+HEAD_R, HEAD_TOP = 0.022, 0.040  # the ratchet's head (and the square drive in the cap) above the cap's inside floor
+HANDLE_Z, HANDLE_R = 0.026, 0.011  # the handle's axis above the cap's floor; it is 22 mm thick at the grip
+HANDLE_X = (-0.600, -0.035)  # along the tool's -x: the handle from the head (24.0 in overall from the cap's axis)
+TOOL_MASS = 1.0  # kg: the 81364XP (about 0.9 kg) plus the cap
+SEAT_TOL = 0.002  # m: the cap down on the can (the lift within 2 mm of resting on its top)
+CENTER_TOL = 0.003  # m: and centered on its axis within 3 mm (the flutes engage)
+LIFT_FREE = 0.017  # m: lifted this far the cap's rim clears the can's top
+CLEAR = 0.10  # m: the cap 10 cm or more off the filter's axis is clear of the head and can lie on the bench
+LIFT_TABLE = CUP_DEPTH - (SEAT + CAN_H)  # the lift with the wrench lying on the bench, cap down (-9.5 cm)
+LIFT_MAX = 0.10
+K_TOOL = 400.0  # N*m/rad: the wrench, cap and can flexing between the handle and the gasket (2.6 degrees at 18 N*m)
+D_TOOL = 0.5  # N*m*s/rad
+PAWL_DRAG = 0.2  # N*m: the ratchet freewheeling back
+# Where the wrench starts and works (see the demo): its handle swings clockwise (seen from above) through WRENCH_STROKE
+# degrees from STROKE_A0 (the handle's direction from the filter's axis, degrees from +x) on each stroke. At the start it
+# lies on the bench cap down, its handle along STROKE_A0, slid TOOL_SIDE sideways (along the tool's y) from the axis.
+STROKE_A0 = 280.0
+WRENCH_STROKE = 30.0
+TOOL_SIDE = 0.13
+TOOL_TURN0 = math.radians(STROKE_A0 - 180.0)  # the handle runs along the tool's -x
+TOOL_X0, TOOL_Y0 = 0.0, TOOL_SIDE
+TOOL_HOLD_D = 0.05  # m: a gripper holds the wrench with its tool point within 5 cm of the handle's axis
+HOLD_OPEN = 0.6  # and its fingers under 60 % open (an open hand resting near the wrench is not holding it)
+
+
+class ToolModel:
+    """What the wrench is doing this trial: seated on the can or not, the pawl's reference (the wrench's turn at which
+    the pawl bears, minus the filter's unscrew angle), and the filter angle the wrench drives it to (read by the
+    thread's drive)."""
+
+    def __init__(self):
+        self.episode = kit.episode()
+        self.coupled = False
+        self.ref = 0.0
+        self.drive_u = None  # the unscrew angle (rad) the wrench has turned the filter to this step
+        self.lock_xy = None
+        self.lock_turn = None
+        self.turned = 0.0  # rad of filter turning (tightening) done by the wrench this trial
+
+
+_TM = ToolModel()
+
+
+def tool_model() -> ToolModel:
+    global _TM
+    if _TM.episode != kit.episode():
+        _TM = ToolModel()
+    return _TM
+
+
+def _filter_u() -> float:
+    return tk._track(KEY).u
+
+
+def tool_step(J: dict) -> ToolModel:
+    """Advance the wrench's model by one control step. J: the wrench's joints by link name ("t_lift", "t_turn", "t_x",
+    "tool"). The filter's angle is read from the thread. Called by the lift's law in the sim (the first link), by the
+    tests offline."""
+    tm = tool_model()
+    tm.drive_u = None  # the head's thread (earlier in the step: OBJECTS order) has applied the last step's
+    lift, q, x, y = J["t_lift"], J["t_turn"], J["t_x"], J["tool"]
+    off = math.hypot(x, y)
+    seated = lift <= SEAT_TOL and off <= CENTER_TOL
+    u = _filter_u()
+    if seated and not tk._track(KEY).off:
+        if not tm.coupled:
+            tm.coupled, tm.ref = True, q - u
+        if q > u + tm.ref:  # turned back counterclockwise: the ratchet freewheels and the pawl clicks on
+            tm.ref = q - u
+        pawl = u + tm.ref
+        need = gasket_torque(-math.degrees(u))
+        if K_TOOL * (pawl - q) > need:  # pushed past what the gasket holds: the filter turns with the wrench
+            lo = math.radians(-THREAD.max_tight)
+            new_u = max(q - tm.ref + need / K_TOOL, lo)
+            if new_u < u:
+                tm.turned += u - new_u
+                tm.drive_u = new_u
+    else:
+        tm.coupled = False
+    down = lift <= LIFT_TABLE + 0.005 or seated
+    tm.lock_xy = (x, y) if down else None
+    tm.lock_turn = q if lift <= LIFT_TABLE + 0.005 else None
+    return tm
+
+
+class ToolLiftLaw:
+    """The wrench's height: its weight holds it down onto the can's top (off-center), down over the can (centered), or
+    onto the bench (clear of the head). Calls the model."""
+
+    sets_limits = True
+
+    def drive(self, key, q, qd, J, mem):
+        tool_step(J)
+        off = math.hypot(J["t_x"], J["tool"])
+        lo = 0.0 if off <= CENTER_TOL else (LIFT_FREE if off < CLEAR else LIFT_TABLE)
+        mem["limits"] = (lo, LIFT_MAX)
+        return q, 0.0, 0.0, 2.0
+
+
+class ToolTurnLaw:
+    """The wrench's turn about the filter's axis: on the can, the pawl's spring against the gasket (only clockwise:
+    the other way it freewheels with the pawl's drag); lying on the bench, held; lifted, free."""
+
+    sets_limits = True
+
+    def drive(self, key, q, qd, J, mem):
+        tm = tool_model()
+        mem["limits"] = None
+        if tm.coupled:
+            pawl = _filter_u() + tm.ref
+            if tm.drive_u is not None:
+                pawl = tm.drive_u + tm.ref
+            if q <= pawl:
+                return pawl, K_TOOL, 0.0, D_TOOL
+            return q, 0.0, (-PAWL_DRAG if qd > 0.0 else 0.0), D_TOOL
+        if tm.lock_turn is not None:
+            mem["limits"] = (tm.lock_turn - 0.004, tm.lock_turn + 0.004)
+        return q, 0.0, 0.0, 0.3
+
+
+class ToolSlideLaw:
+    """The wrench's slides (in its turned frame): held while it is down (on the can, or lying on the bench)."""
+
+    sets_limits = True
+
+    def __init__(self, k, lower, upper):
+        self.k, self.lower, self.upper = k, lower, upper
+
+    def drive(self, key, q, qd, J, mem):
+        tm = tool_model()
+        mem["limits"] = None
+        if tm.lock_xy is not None:
+            at = tm.lock_xy[self.k]
+            mem["limits"] = (max(self.lower, at - 0.0005), min(self.upper, at + 0.0005))
+        elif J["t_lift"] < LIFT_FREE - 0.002 and abs(q) >= CLEAR:
+            # carried low, clear of the head: it can't slide in over the head until lifted over the can's top
+            mem["limits"] = (CLEAR, self.upper) if q > 0 else (self.lower, -CLEAR)
+        return q, 0.0, 0.0, 3.0
+
+
+CHROME = kit.Look((0.80, 0.81, 0.83), 0.2, metallic=0.95)
+GRIP_LOOK = kit.Look((0.10, 0.10, 0.11), 0.7)  # the ratchet's black grip
+CAP_LOOK = kit.Look((0.30, 0.31, 0.33), 0.4, metallic=0.8)  # the cap: dark gray steel
+
+
+def _tool_parts():
+    """The wrench's meshes and colliders in its own frame (origin on the cap's axis at its inside floor; the handle
+    runs along -x)."""
+    meshes = [kit.lathe([(CUP_R - 0.003, -CUP_DEPTH), (CUP_R, -CUP_DEPTH), (CUP_R, 0.004), (0.0, 0.004), (0.0, 0.0),
+                         (CUP_R - 0.003, 0.0)], CAP_LOOK, n=28)]  # the cap's fluted cup (drawn plain)
+    meshes.append(kit.cylinder((0, 0, 0.010), 0.0095, 0.012, CHROME))  # the drive adapter
+    meshes.append(kit.cylinder((0, 0, (0.016 + HEAD_TOP) / 2), HEAD_R, HEAD_TOP - 0.016, CHROME))  # the ratchet head
+    meshes.append(kit.cylinder((0.004, 0.0, HEAD_TOP + 0.001), 0.006, 0.003, CHROME))  # the direction lever
+    hl = HANDLE_X[1] - HANDLE_X[0]
+    mid = (HANDLE_X[0] + HANDLE_X[1]) / 2
+    meshes.append(kit.box((mid, 0.0, HANDLE_Z), (hl, 0.016, 0.012), CHROME))
+    meshes.append(kit.cylinder((HANDLE_X[0] + 0.075, 0.0, HANDLE_Z), HANDLE_R, 0.15, GRIP_LOOK, axis="x"))
+    colliders = (kit.Collider((mid, 0.0, HANDLE_Z), size=(hl, 2 * HANDLE_R, 2 * HANDLE_R)),)
+    return tuple(meshes), colliders
+
+
+def _tool():
+    pin = (0.0, 0.0, 0.0)
+    reach = 0.30
+    meshes, colliders = _tool_parts()
+    lift = kit.Link("t_lift", "prismatic", "Z", pin, lower=LIFT_TABLE, upper=LIFT_MAX, start=LIFT_TABLE, mass=0.005,
+                    damping=0.0, law=ToolLiftLaw())
+    turn = kit.Link("t_turn", "revolute", "Z", pin, lower=-2 * math.pi, upper=2 * math.pi, start=TOOL_TURN0,
+                    mass=0.005, damping=0.0, parent="t_lift", law=ToolTurnLaw())
+    sx = kit.Link("t_x", "prismatic", "X", pin, lower=-reach, upper=reach, start=TOOL_X0, mass=0.005, damping=0.0,
+                  parent="t_turn", law=ToolSlideLaw(0, -reach, reach))
+    body = kit.Link("tool", "prismatic", "Y", pin, lower=-reach, upper=reach, start=TOOL_Y0, mass=TOOL_MASS,
+                    meshes=meshes, colliders=colliders, damping=0.0, parent="t_x", law=ToolSlideLaw(1, -reach, reach))
+    return kit.Mechanism(TOOL, pos=(HEAD_C[0], HEAD_C[1], TOP + SEAT + CAN_H), size=(1.3, 1.3, 0.25), mass=None,
+                         links=(lift, turn, sx, body))
+
+
+OBJECTS = [_head(), _tool()]
 KEY = "head/filter"
+TOOL_LINKS = ("t_lift", "t_turn", "t_x", "tool")
+
+
+def tool_joints(objects=None) -> dict:
+    """The wrench's joints now (its start pose if the simulator has not reported them)."""
+    start = {"t_lift": LIFT_TABLE, "t_turn": TOOL_TURN0, "t_x": TOOL_X0, "tool": TOOL_Y0}
+    out = {}
+    for n in TOOL_LINKS:
+        js = kit._JOINTS.get(f"{TOOL}/{n}")
+        out[n] = js.pos if js is not None else start[n]
+    return out
+
+
+def tool_point(J, local):
+    """A point given in the wrench's frame (x, y, z), in world coordinates, from its joints."""
+    t = J["t_turn"]
+    c, s_ = math.cos(t), math.sin(t)
+    lx, ly = local[0] + J["t_x"], local[1] + J["tool"]
+    return np.array([HEAD_C[0] + c * lx - s_ * ly, HEAD_C[1] + s_ * lx + c * ly,
+                     TOP + SEAT + CAN_H + J["t_lift"] + local[2]])
+
+
+def tool_seated(J) -> bool:
+    return J["t_lift"] <= SEAT_TOL and math.hypot(J["t_x"], J["tool"]) <= CENTER_TOL
+
+
+def tool_set_down(J) -> bool:
+    """The wrench lying on the bench (off the filter, clear of the head)."""
+    return J["t_lift"] <= LIFT_TABLE + 0.005
+
+
+def tool_holders(objects, J) -> set:
+    """Grippers holding the wrench: fingers under 60 % open with the tool point within 5 cm of the handle's axis."""
+    a, b = tool_point(J, (HANDLE_X[0], 0.0, HANDLE_Z)), tool_point(J, (HANDLE_X[1], 0.0, HANDLE_Z))
+    out = set()
+    for g in GRIPPERS:
+        if g not in objects or kit.opening(objects, g) >= HOLD_OPEN:
+            continue
+        p = np.asarray(objects[g].pos, float)
+        u = float(np.clip(np.dot(p - a, b - a) / np.dot(b - a, b - a), 0.0, 1.0))
+        if np.linalg.norm(p - (a + u * (b - a))) < TOOL_HOLD_D:
+            out.add(g)
+    return out
+
+
+_orig_drive_thread = tk._drive_thread
+
+
+def _drive_thread(base, spec):
+    """The thread's own drive, then the wrench's: where the wrench turned the filter this step, the filter is put there
+    (the cap on the flutes carries it round)."""
+    _orig_drive_thread(base, spec)
+    tm = tool_model()
+    if tm.drive_u is None or not isinstance(spec, tk.Threaded):
+        return
+    art = base.scene[spec.name]
+    jn = list(art.joint_names)
+    jc = jn.index(f"{spec.cap.name}_joint")
+    t = tk._track(tk._key(spec))
+    np_ = lambda v: getattr(v, "torch", v).detach().cpu().numpy().astype(np.float64)  # noqa: E731
+    qc = float(np_(art.data.joint_pos)[0][jc])
+    new = qc + spec.thread.hand * (tm.drive_u - t.u)
+    kit._put_joint(art, jc, new)
+    kit._set_drive(art, jc, target=new, stiffness=spec.thread.gasket_hold, effort=0.0)
+    tm.drive_u = None
+
+
+tk._drive_thread = _drive_thread
 
 
 def _hold_thread_while_settling():
@@ -193,6 +465,8 @@ class _History:
         self.budget = {g: 0.0 for g in GRIPPERS}  # each holding gripper's wrist roll (tightening way) not yet matched
         #                                          by filter turning
         self.unheld = 0.0  # new ground past contact gained without a holding gripper's wrist turning it (degrees)
+        self.tool_turned = 0.0  # the wrench's turning of the filter counted so far (degrees)
+        self.tool_pool = 0.0  # turning the wrench did while a hand held it, not yet matched to new ground (degrees)
 
 
 GRIPPERS = ("left_gripper", "right_gripper")
@@ -224,12 +498,20 @@ def _update(objects):
             _H.budget[g] = min(_H.budget[g] - _yaw_change(_H.last_quat[g], quats[g]), CARRY)
         elif g not in holders:
             _H.budget[g] = 0.0
+    # The wrench: turning it did on the filter this step counts as a hand's when a hand holds the wrench.
+    tm = tool_model()
+    tool_now = math.degrees(tm.turned)
+    if tool_now > _H.tool_turned and tool_holders(objects, tool_joints(objects)):
+        _H.tool_pool += tool_now - _H.tool_turned
+    _H.tool_turned = tool_now
     gain = max(past - _H.high, 0.0)
     if gain > 0:
-        credit = min(gain, max([_H.budget[g] for g in holders] + [0.0]))
+        by_tool = min(gain, _H.tool_pool)
+        _H.tool_pool -= by_tool
+        credit = min(gain - by_tool, max([_H.budget[g] for g in holders] + [0.0]))
         for g in holders:  # every hand on the can turned with it: the turning is used up from each budget
             _H.budget[g] = max(_H.budget[g] - credit, 0.0)
-        _H.unheld += gain - credit
+        _H.unheld += gain - by_tool - credit
         _H.high = past
     _H.prev_holders = now
     _H.last_quat = quats
@@ -268,12 +550,16 @@ def _score(objects):
         s = 1.0  # 240 to 360 degrees past contact, never beyond 360
     if _hand_on_filter(objects):
         return min(s, 0.5)  # not let go
+    J = tool_joints(objects)
+    if not tool_set_down(J) or tool_holders(objects, J):
+        return min(s, 0.5)  # the wrench still on the filter, or still in a hand: the job is not finished
     return s
 
 
 def success(objects):
     """Full score: the filter 240 to 360 degrees past gasket contact (never past 360), turned there by a hand holding
-    it, and let go (where the arms end is not scored). Called first each step, so it also records the history."""
+    it or by the wrench while a hand held the wrench, let go, and the wrench laid on the bench with no hand holding it
+    (where the arms end is not scored). Called first each step, so it also records the history."""
     _update(objects)
     return _score(objects) == 1.0
 
@@ -289,7 +575,9 @@ def score(objects):
     back and forth over the same angles counts only once. Otherwise 0.25 for 90 to 180 degrees; 0.5 for 180 to 240,
     for 360 to 450, or if it was ever past 360; 1.0 for 240 to 360 and never past 360. Any score is capped at 0.5 while
     a hand is still on the filter (closed on the can, or its palm or fingers touching it: the gripper's own shape at
-    its present opening within 2 mm of the can; a hand hovering near it is not on it). Where the arms end is
+    its present opening within 2 mm of the can; a hand hovering near it is not on it), and while the wrench is not
+    laid on the bench or a hand holds it (fingers under 60 % open, tool point within 5 cm of its handle). Turning the
+    wrench did on the filter counts as a holding hand's only at steps when a hand holds the wrench. Where the arms end is
     not scored, and a second hand near or on the can does not void the holder's turning. Possible scores: 0, 0.25,
     0.5, 1."""
     return _score(objects)
@@ -297,19 +585,152 @@ def score(objects):
 
 # --- Demo ----------------------------------------------------------------------------------------
 GRIP_Z = TOP + SEAT + CAN_H - 0.015  # the tool point 1.5 cm below the can's top (pad tips 2.8 cm down its side)
-TURN = 585.0  # 270 to gasket contact, then 300 past it (the middle of 240 to 360), plus 15 for the grip slipping
+TURN = 305.0  # by hand: 270 to gasket contact, then 20 past it (the gasket then holds 1.3 N*m), plus 15 for slip
 STROKE = 120.0
+R_GRIP = {"right": 0.55, "left": 0.22}  # where each hand holds the wrench's handle, from the cap's axis (m)
+SHARE = {"right": 0.67, "left": 0.33}  # each hand's share of the torque: alike fractions of what each arm can push
+#                                        there (about 13 N right at 0.55 m, 16 N left at 0.22 m, at rated torque)
+MARGIN = 1.0  # N*m pushed past what the gasket holds, so the filter keeps turning through the stroke
+TARGET_PAST = 300.0  # degrees past contact the demo aims for (the middle of 240 to 360)
+PAD_BELOW = 0.006  # the pad tips this far below the handle's axis: the fingers close round it
+CARRY_LIFT = 0.021  # the wrench carried with its cap 6 mm over the can's top (it clears it at 1.7 cm of lift)
+
+
+def _wrench_J(a_deg, lift=0.0, side=0.0):
+    """The wrench's joints with its handle along `a_deg` (from the filter's axis, degrees from +x), lifted `lift` and
+    slid `side` along its y."""
+    return {"t_lift": lift, "t_turn": math.radians(a_deg - 180.0), "t_x": 0.0, "tool": side}
+
+
+_GIVE = {}
+
+
+def _give(side, tcp, yaw):
+    """The arm's give at its pad tips (m/N, 3x3, world) with the tool point at `tcp` gripping straight down at `yaw`:
+    J K^-1 J^T with the YAM's servo stiffness (80 N*m/rad shoulder joints, 10 wrist)."""
+    key = (side, round(yaw, 3), *(round(float(v), 3) for v in tcp))
+    if key not in _GIVE:
+        import yam_arena.demo as yd
+        from yam_arena.constants import PAD_TIP_PAST_TCP, SHOULDER, WRIST
+        from yam_arena.station import BASES
+        base = np.asarray(BASES[side], float)
+        q, _, _ = yd.ik.solve(np.asarray(tcp, float), yd.ik.matrix_to_quat_xyzw(yd.grip_rotation(yaw)), q_init=None,
+                              base_pos=base)
+
+        def tip(q):
+            p, rm = yd.ik.tcp_pose(q, base)
+            return np.asarray(p) + PAD_TIP_PAST_TCP * np.asarray(rm)[:, 2]
+
+        jac = np.zeros((3, 6))
+        for i in range(6):
+            dq = np.zeros(6)
+            dq[i] = 1e-6
+            jac[:, i] = (tip(q + dq) - tip(q - dq)) / 2e-6
+        kinv = np.diag([1 / SHOULDER["stiffness"]] * 3 + [1 / WRIST["stiffness"]] * 3)
+        _GIVE[key] = jac @ kinv @ jac.T
+    return _GIVE[key]
+
+
+YAW_TURN = {"left": 180.0, "right": 0.0}  # each wrist's yaw on the handle: a - 180, plus this (0 or 180: the same grip turned round)
+
+
+def _yaw(a_deg, side="right"):
+    """The wrist's yaw for fingers closing across a handle along `a_deg`: a - 180 (+ YAW_TURN), in -180..180."""
+    return math.radians((a_deg - 180.0 + YAW_TURN[side] + 180.0) % 360.0 - 180.0)
+
+
+def _hand(side, a_deg, lift=0.0, slide=0.0, force=(0.0, 0.0, 0.0), up=0.0):
+    """A hand's tool point on the wrench's handle (wrench at a_deg, lift, slide), aimed past the pads by the arm's give
+    so that the pads push `force` (N, world) on the handle and hold `up` N of its weight."""
+    from yam_arena.constants import PAD_TIP_PAST_TCP
+    p = tool_point(_wrench_J(a_deg, lift, slide), (-R_GRIP[side], 0.0, HANDLE_Z))
+    tcp = p + np.array([0.0, 0.0, PAD_TIP_PAST_TCP - PAD_BELOW])
+    yaw = _yaw(a_deg, side)
+    f = np.asarray(force, float) + np.array([0.0, 0.0, up])
+    return tuple(float(v) for v in tcp + _give(side, tuple(tcp), yaw) @ f), yaw
+
+
+def _push(side, a_deg, torque):
+    """The pads' push (N, world) for this hand's share of `torque` (N*m, clockwise seen from above) on a handle along
+    a_deg."""
+    a = math.radians(a_deg)
+    f = SHARE[side] * torque / R_GRIP[side]
+    return (f * math.sin(a), -f * math.cos(a), 0.0)
+
+
+WEIGHT_SHARE = {"right": 0.30, "left": 0.70}  # the wrench's 9.8 N between the hands, by where they hold it
+
+
+def _pair(dur, label, a_deg, lift=0.0, slide=0.0, torque=0.0, finger=None, carry=False):
+    """One waypoint for each hand on the handle."""
+    from yam_arena.constants import FINGER_CLOSED
+    out = {}
+    for side in ("left", "right"):
+        up = WEIGHT_SHARE[side] * TOOL_MASS * 9.81 if carry else 0.0
+        pos, yaw = _hand(side, a_deg, lift, slide, _push(side, a_deg, torque), up)
+        out[side] = Waypoint(dur, pos, FINGER_CLOSED if finger is None else finger, label, yaw)
+    return out
+
+
+def wrench_plan():
+    """The wrench's work as (label, handle angle, lift, slide, torque, carry, fingers, seconds) steps, and the filter's
+    angle past contact it predicts at the end (the pawl takes up the wrench's flex at each stroke's start)."""
+    from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN
+    a0, side = STROKE_A0, TOOL_SIDE
+    plan = [("over the handle", a0, LIFT_TABLE, side, 0.0, False, FINGER_OPEN, 2.0),
+            ("onto the handle", a0, LIFT_TABLE, side, 0.0, False, FINGER_OPEN, 1.0),
+            ("grip the handle", a0, LIFT_TABLE, side, 0.0, False, FINGER_CLOSED, 0.8),
+            ("lift the wrench", a0, CARRY_LIFT, side, 0.0, True, FINGER_CLOSED, 1.6),
+            ("over the filter", a0, CARRY_LIFT, 0.0, 0.0, True, FINGER_CLOSED, 2.0),
+            ("cap onto the can", a0, 0.004, 0.0, 0.0, True, FINGER_CLOSED, 1.2),
+            ("seated", a0, 0.0, 0.0, 0.0, False, FINGER_CLOSED, 0.6)]
+    past = TURN - 270.0 - 15.0
+    n = 0
+    a_end = a0
+    while past < TARGET_PAST - 5.0 and n < 12:
+        n += 1
+        take_up = math.degrees(gasket_torque(past) / K_TOOL)
+        length = min(WRENCH_STROKE, TARGET_PAST - past + take_up)
+        steps = 5
+        for k in range(1, steps + 1):
+            a = a0 - length * k / steps
+            p = past + max(length * k / steps - take_up, 0.0)
+            plan.append((f"stroke {n}", a, 0.0, 0.0, gasket_torque(p) + MARGIN, False, FINGER_CLOSED, 0.8))
+        past += length - take_up
+        a_end = a0 - length
+        plan.append((f"stroke {n}: ease off", a_end, 0.0, 0.0, 0.0, False, FINGER_CLOSED, 0.6))
+        if past < TARGET_PAST - 5.0:
+            plan.append((f"stroke {n}: ratchet back", a0, 0.0, 0.0, 0.0, False, FINGER_CLOSED, 1.6))
+    plan += [("lift the wrench off", a_end, CARRY_LIFT, 0.0, 0.0, True, FINGER_CLOSED, 1.2),
+             ("aside", a_end, CARRY_LIFT, side, 0.0, True, FINGER_CLOSED, 2.0),
+             ("lay it on the bench", a_end, LIFT_TABLE + 0.003, side, 0.0, False, FINGER_CLOSED, 1.6),
+             ("let go", a_end, LIFT_TABLE + 0.003, side, 0.0, False, FINGER_OPEN, 0.8),
+             ("hands up", a_end, LIFT_TABLE + 0.06, side, 0.0, False, FINGER_OPEN, 1.0)]
+    return plan, past
 
 
 def demo():
-    """Right arm: open over the filter, descend around the top of the can, and spin it on clockwise (seen from above)
-    in strokes of 120 degrees: close, roll the wrist in 15-degree steps (sinking with the thread), open, roll back,
-    close again. Four strokes of 120 degrees and one of 105 roll the wrist 585 degrees: three quarters of a turn to gasket
-    contact, 300 degrees past it (the middle of the full-credit range), and 15 degrees for the pads slipping on the can.
-    It lets go, lifts clear and goes home. The left arm stays home."""
-    right = tk.twist_waypoints(HEAD_C, GRIP_Z, -TURN, side="right", stroke=STROKE, pitch=THREAD.pitch,
-                               label="spin the filter on")
+    """Left arm: open over the filter, descend around the top of the can, and spin it on clockwise (seen from above) in
+    strokes of 120 degrees, three quarters of a turn to gasket contact and 20 degrees past it, where the gasket starts
+    to hold; it lets go and lifts clear. The right arm waits at home. Then both hands take the wrench's handle (right
+    near its end, 0.55 m out; left 0.22 m out), lift it, carry the cap over the filter and lower it onto the can, and
+    swing the handle clockwise in 30-degree strokes, ratcheting back between them, pushing with what the gasket takes
+    plus 1 N*m (up to 19 N*m: about 23 N right and 29 N left), each hand aimed past the handle by its arm's give. When the plan reaches 300 degrees past contact they ease off, lift the wrench off, set it on the bench beside
+    the head, let go and go home."""
+    from yam_arena.constants import FINGER_OPEN
+    left = tk.twist_waypoints(HEAD_C, GRIP_Z, -TURN, side="left", stroke=STROKE, pitch=THREAD.pitch,
+                              label="spin the filter on")
+    t_spin = sum(w.duration for w in left)
+    right = [kit.Home(t_spin, label="wait at home")]
+    plan, _ = wrench_plan()
+    for label, a, lift, slide, torque, carry, finger, dur in plan:
+        pr = _pair(dur, label, a, lift, slide, torque, finger, carry)
+        if label == "over the handle":  # come down from above the handle
+            for side in ("left", "right"):
+                w = pr[side]
+                pr[side] = Waypoint(w.duration, (w.pos[0], w.pos[1], w.pos[2] + 0.06), FINGER_OPEN, w.label, w.yaw)
+        left.append(pr["left"])
+        right.append(pr["right"])
+    left += [kit.Home(2.5), kit.Home(2.0, label="hold at home")]
     right += [kit.Home(2.5), kit.Home(2.0, label="hold at home")]
-    total = sum(w.duration for w in right)
-    left = [kit.Home(total, label="stay home")]
     return {"left": left, "right": right}

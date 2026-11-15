@@ -222,8 +222,15 @@ def _chain_usda(spec: Threaded, text: str) -> str:
     m = text.index("float physics:mass", k)
     eol = text.index("\n", m) + 1
     pad = text[text.rindex("\n", 0, m) + 1:m]
-    text = text[:eol] + f"{pad}float3 physics:diagonalInertia = (1e-06, 1e-06, 1e-06)\n" \
-                        f"{pad}point3f physics:centerOfMass = (0, 0, 0)\n" + text[eol:]
+    block_end = text.index("}", k)
+    if "physics:diagonalInertia" in text[k:block_end]:  # a newer yamkit gives collider-less bodies an inertia itself
+        text = text[:eol] + f"{pad}point3f physics:centerOfMass = (0, 0, 0)\n" + text[eol:]
+        a = text.index("float3 physics:diagonalInertia", k)
+        b = text.index("\n", a)
+        text = text[:a] + "float3 physics:diagonalInertia = (1e-06, 1e-06, 1e-06)" + text[b:]
+    else:
+        text = text[:eol] + f"{pad}float3 physics:diagonalInertia = (1e-06, 1e-06, 1e-06)\n" \
+                            f"{pad}point3f physics:centerOfMass = (0, 0, 0)\n" + text[eol:]
     # Give both joints a PhysX drive (yamkit's joints have none, and PhysX then ignores stiffness and targets).
     for jname, kind, force in ((f"{lift.name}_joint", "linear", spec.thread.lift_force),
                                (f"{cap.name}_joint", "angular", spec.thread.max_torque)):
