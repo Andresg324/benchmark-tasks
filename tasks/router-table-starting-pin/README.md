@@ -62,6 +62,8 @@ grippers' palm and finger shapes used by the touching-the-board check):
 - The plate's clear overhead pin guard is modeled as in the real trial: a see-through polycarbonate shield over the
   bit, 38 mm above the table, on an aluminum arm and post at the plate's far side. Its colliders are solid, so a
   thrown board or a hand meets it; the board passes under it, and the top camera sees the bit and the cut through it.
+  The sim's renderer draws no see-through surface, so the clear shield is drawn as its 3 mm edge; its collider is
+  the whole disc.
 - The routed stretch is drawn as a pale band of fresh-cut cherry on the board's top along the curve, as wide as the
   rabbet (visual only; the real rabbet is on the board's underside).
 
