@@ -11,9 +11,9 @@ from yam_arena.task_file import ObjectState, load
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 m = load(os.path.join(HERE, "task.py")).module
-kit, pv = m.kit, m.pv
+kit = m.kit
 PARK = {"left_gripper": (0.20, 0.27, m.TOP + 0.20), "right_gripper": (0.20, -0.27, m.TOP + 0.20)}
-TH0 = m.START[2]
+TH0 = m.BRACE_TURN  # the turn the board is braced at
 PHI0 = math.atan2(*(m.BIT - m.PIN - m.C_L)[::-1])  # where the pivot puts the bearing on the curve
 
 
@@ -31,13 +31,10 @@ class Trial:
 
     def __init__(self):
         kit._EPISODE["count"] += 1
-        self.j = {"board_turn": TH0, "board_x": m.START[0], "board": m.START[1]}
+        self.j = {"board_turn": m.START[2], "board_x": m.START[0], "board": m.START[1]}
 
     def step(self, left=None, right=None, opening=0.0, **j):
         self.j.update(j)
-        for k, v in self.j.items():
-            kit._JOINTS[f"router_table/{k}"] = kit.JointState(v, 0.0, False)
-        pv.step(m.KEY, dict(self.j))
         g = dict(PARK)
         if left is not None:
             g["left_gripper"] = left
@@ -45,15 +42,15 @@ class Trial:
             g["right_gripper"] = right
         for k in g:
             kit._OPENING[k] = opening  # closed, as in the demo, unless given
-        objs = {"router_table": st((m.PIN[0], m.PIN[1], m.TOP)),
+        objs = {"router_table": st((m.PIN[0], m.PIN[1], m.TOP)), "board": board(self.j),
                 **{k: st(p, m.PAD_TIP_PAST_TCP, DOWN) for k, p in g.items()}}
         ok = m.success(objs)
         return m.score(objs), ok
 
     def press(self):
-        """The pads on the board's press point now."""
+        """The pads on the board now, at the middle of its back edge (clear of the 3 in zone however it lies)."""
         th, s = self.j["board_turn"], np.array([self.j["board_x"], self.j["board"]])
-        return m._press_at(th, s)
+        return m._point_at(th, s, (m.BACK + 0.005, float(m.C_L[1])))
 
     def move(self, n=10, press=True, **target):
         """Joints moved linearly to `target` over n steps, the pads on the board throughout."""
@@ -76,6 +73,13 @@ class Trial:
         return out
 
 
+def board(j, up=0.0):
+    """The board's body state for joints-style pose j (turn, slides), lying flat (or `up` m higher)."""
+    th = j["board_turn"]
+    c = m.to_world(j, m.CENTRE)
+    return st((c[0], c[1], m.TOP + m.GAP + m.T / 2 + up), q=(0.0, 0.0, math.sin(th / 2), math.cos(th / 2)))
+
+
 def check(got, want, what):
     if abs(got - want) > 1e-9:
         raise AssertionError(f"{what}: got {got}, want {want}")
@@ -83,9 +87,12 @@ def check(got, want, what):
 
 
 def brace(t):
-    """Slide the board from its start onto the pin (pure slide, start turn)."""
+    """Slide the board from its start to 5 mm off the pin, then straight onto it (pure slide, start turn)."""
+    out = -m.C_L / np.linalg.norm(m.C_L)  # from the curve's center to the pin, braced at slides (0, 0)
+    off = -0.005 * out
     t.rest(2)
-    t.move(12, board_x=0.0, board=0.0)
+    t.move(12, board_turn=TH0, board_x=float(off[0]), board=float(off[1]))
+    t.move(6, board_x=0.0, board=0.0)
 
 
 def pivot(t, to=0.0):
@@ -159,8 +166,9 @@ def test_geometry():
     check(float(m.bit_dist(j) > m.RC), 1.0, "braced pose at the start turn is clear of the cutter")
     j0 = {"board_turn": 0.0, "board_x": 0.0, "board": 0.0}
     check(float(m.on_bearing(j0) and not m.braced(j0)), 1.0, "turned to 0 the curve rides the bearing, off the pin")
-    js = {"board_turn": TH0, "board_x": m.START[0], "board": m.START[1]}
-    check(float(m.pin_gap(js) > 0.02 and m.bit_dist(js) > 0.04), 1.0, "start: 2.4 cm off the pin, 4.4 cm off the bit")
+    js = {"board_turn": m.START[2], "board_x": m.START[0], "board": m.START[1]}
+    check(float(m.START[2] == 0.0 and 0.02 < m.pin_gap(js) < 0.025 and m.bit_dist(js) > 0.033), 1.0,
+          "start: square to the table, 2.2 cm off the pin, 3.4 cm off the bit")
     check(float(abs(m.ARC - 0.2579) < 0.001), 1.0, "curve is 25.8 cm long")
 
 
@@ -178,9 +186,9 @@ def test_demo_plan_offline():
     s_pin = None
     for w in plan:
         lab = getattr(w, "label", "")
-        if lab in ("brace the board against the starting pin", "settle on the pin"):
+        if lab in ("brace it against the starting pin", "settle on the pin"):
             s_pin = m.BRACED_LEAD
-        if lab == "brace the board against the starting pin":
+        if lab == "brace it against the starting pin":
             t.move(6, board_turn=TH0, board_x=float(m.BRACED_LEAD[0]), board=float(m.BRACED_LEAD[1]))
         elif lab == "pivot about the pin into the bit":
             t.move(3, board_turn=max(m.LEAD, t.j["board_turn"] - (TH0 - m.LEAD) / 14))
@@ -267,13 +275,13 @@ def test_still_pressing():
     brace(t), pivot(t), feed(t)
     s = m._feed_slides(-m.ALPHA - math.radians(4.0), into=-0.004) + np.array([0.0, 0.03])
     t.move(10, board_x=float(s[0]), board=float(s[1]))
-    check(t.rest(25, left=t.press())[0], 0.0, "board routed and past but still pressed at the end")
+    check(t.rest(25, left=t.press())[0], 0.75, "board routed and past but still pressed at the end: 0.75")
     p = t.press()
     p = (p[0], p[1], p[2] + (m.TOP + m.GAP + m.T + m.TIP - 0.004) - m.PZ)  # the pad tips 4 mm below the board's top
     away = t.rest(25, left=(p[0], p[1], p[2] + 0.10))[0]  # what the board earns with the hand lifted away
     check(float(away > 0), 1.0, f"hand lifted 10 cm: {away}")
-    check(t.rest(25, left=(p[0], p[1], p[2] + 0.0045))[0], 0.0,
-          "pads resting on the board's top (0.5 mm over it, within the 2 mm contact tolerance): still on it")
+    check(t.rest(25, left=(p[0], p[1], p[2] + 0.0045))[0], 0.75,
+          "pads resting on the board's top (0.5 mm over it, within the 2 mm contact tolerance): still on it, 0.75")
     check(t.rest(25, left=(p[0], p[1], p[2] + 0.012))[0], away,
           "pads hovering 8 mm over the board, touching nothing: let go (the old 1.5 cm zone scored 0)")
     check(t.rest(25, left=(p[0], p[1], p[2] + 0.007), opening=1.0)[0], away,
@@ -290,7 +298,7 @@ def test_hand_against_the_side():
     z = m.TOP + m.GAP + m.T / 2 + m.PAD_TIP_PAST_TCP  # pad tips at the board's mid-thickness
     half_x = 0.0032 * 2  # a closed hand's tip boxes reach 6.4 mm out along x each way from the tool point
     away = t.rest(25)[0]
-    for gap, want, what in ((0.001, 0.0, "fingers 1 mm off the back edge: touching, still on it"),
+    for gap, want, what in ((0.001, 0.75, "fingers 1 mm off the back edge: touching, still on it (0.75)"),
                             (0.003, away, "fingers 3 mm off the back edge: not touching, let go")):
         w = m._board_world(th, sl, (m.BACK - half_x - gap, float(m.C_L[1])))
         check(t.rest(25, left=(float(w[0]), float(w[1]), z))[0], want, what)
@@ -415,6 +423,17 @@ def test_hands():
     t2.rest(2)
     t2.step(left=(m.BIT[0] - 0.06, m.BIT[1], m.TOP + 0.10))
     check(float(m._H.hands), 0.0, "high over the bit is fine")
+    # reviews of other tasks (a slicer, a drill press): a tool-point-only check lets a finger in while the tool point
+    # stays out. Here the gripper's own shape counts: the tool point 9 cm out, pads on the board, but the closed
+    # fingers' 6.8 cm-wide bodies reach 3.4 cm toward the bit (yaw 0: their width along x) and their pads 2 cm
+    tz = m.TOP + m.GAP + m.T + m.PAD_TIP_PAST_TCP
+    for dist, want in ((0.090, 1.0), (0.120, 0.0)):
+        t3 = Trial()
+        t3.rest(2)
+        t3.step(left=(m.BIT[0] - dist, m.BIT[1], tz))
+        check(float(m._H.hands), want, f"tool point {dist * 100:.0f} cm from the bit's axis, pads on the board: "
+              f"{'a finger in the 3 in zone' if want else 'clear'}")
+        check(float(dist > m.HANDS), 1.0, "the tool point itself is outside 3 in")
 
 
 def test_reset():
@@ -430,26 +449,60 @@ def test_reset():
     check(finish_at(t2, LEAD)[0], 1.0, "and can score 1.0")
 
 
-def test_kit_lock_agrees():
-    """pivotkit's own record: the pivot was made while engaged (turned about the pin), with no slide on it."""
+def test_carry_to_the_pin():
+    """The demo carries the board from where it lies (square) to the brace: clear of the pin and the cutter all the
+    way, braced only at the end, and never a grab."""
+    path = m.carry_path()
     t = Trial()
-    brace(t), pivot(t)
-    check(float(pv.turned_deg(None, m.KEY) < -12.0), 1.0, f"turned {pv.turned_deg(None, m.KEY):.1f} deg about the pin")
-    check(float(pv.slid(None, m.KEY)), 0.0, "no slide while braced")
+    t.rest(2)
+    for k, (th, sl) in enumerate(path):
+        t.step(board_turn=th, board_x=float(sl[0]), board=float(sl[1]))
+        j = dict(t.j)
+        if k <= m.CARRY_N:
+            check(float(m.pin_gap(j) > 0.004 and m.bit_dist(j) > m.RC + 0.010), 1.0,
+                  f"carry step {k}: {m.pin_gap(j) * 1000:.1f} mm off the pin, {m.bit_dist(j) * 1000:.1f} mm off the bit's axis")
+    check(float(m.braced(dict(t.j)) and not m._H.grab), 1.0, "ends braced on the pin, no grab")
+    check(float(abs(path[0][0]) < 1e-12 and abs(path[m.CARRY_N][0] - TH0) < 1e-12), 1.0, "from square to the brace turn")
 
 
 def test_model():
-    """The model choices the demo relies on: the bearing's collider is frictionless, the pin's is not; the turn's damping
-    is physical on the pin and 10 times that off it; the slides act at the board's center."""
+    """The model choices the demo relies on: the bearing's collider is frictionless (it rolls), the pin's is not; the
+    board is a free body (no joints, nothing holds it on the pin); the scorer reads its pose from the body."""
     usd = kit._usda(m.OBJECTS[1])
-    check(float(usd.count("material:binding:physics") == 1 and "Slick" in usd), 1.0, "only the bearing is slick")
+    check(float(usd.count("material:binding:physics") == 2 and usd.count("Looks/Slick>") == 1), 1.0,
+          "only the bearing is slick (the table surface has its own friction)")
     on = {"board_turn": TH0, "board_x": 0.0, "board": 0.0}
-    off = {"board_turn": TH0, "board_x": m.START[0], "board": m.START[1]}
+    off = {"board_turn": m.START[2], "board_x": m.START[0], "board": m.START[1]}
     check(float(m.braced(on) and not m.braced(off)), 1.0, "braced on the pin, not at the start")
-    d_on, d_off = m.drag(on)[1], m.drag(off)[1]
-    check(float(0.03 < d_on < 0.1 and d_off > 5 * d_on), 1.0, f"turn damping {d_on:.3f} on the pin, {d_off:.3f} off it")
-    links = {lk.name: lk for lk in m.OBJECTS[0].links}
-    check(float(abs(links["board"].anchor[0] - m.CENTRE[0]) < 1e-9), 1.0, "slides act at the board's center")
+    names = [o.name for o in m.OBJECTS]
+    check(float(names == ["router_table", "router_bit", "board"]
+                and not any(isinstance(o, kit.Mechanism) for o in m.OBJECTS)), 1.0,
+          "table, bit and board are plain props: no joints anywhere")
+    b = m.OBJECTS[2]
+    check(float(b.mass == m.BOARD_MASS and abs(b.yaw - m.START[2]) < 1e-12), 1.0, "the board is a free 250 g body")
+    j = {"board_turn": 0.3, "board_x": 0.012, "board": -0.034}
+    back = m._joints({"board": board(j)})
+    check(float(max(abs(back[k] - j[k]) for k in j) < 1e-9), 1.0, "the scorer's pose read back from the body")
+
+
+def test_table_friction():
+    """The table's friction: the board lies on the table top's surface (mu 0.25 sliding, 0.3 static, "min" combine so
+    the board's grippy material doesn't raise it); its 250 g and the hands' press bear on it through the contact."""
+    usd = kit._usda(m.OBJECTS[1])
+    check(float("physics:dynamicFriction = 0.25" in usd and "physics:staticFriction = 0.3" in usd
+                and usd.count('frictionCombineMode = "min"') == 2), 1.0, "table surface: mu 0.25 / 0.3, min combine")
+    surf = m.OBJECTS[1].colliders[-1]
+    top = m.OBJECTS[1].pos[2] + surf.center[2] + surf.size[2] / 2
+    b = m.OBJECTS[2]
+    bottom = b.pos[2] + min(c.center[2] - c.size[2] / 2 for c in b.colliders)
+    check(float(abs(top - bottom) < 1e-6), 1.0, f"the board's underside rests on the surface ({(top - bottom) * 1e3:.3f} mm)")
+    busd = kit._usda(b)
+    check(float("physics:mass = 0.25" in busd and "physics:centerOfMass" in busd and "diagonalInertia" in busd), 1.0,
+          "the board's mass, center of mass and inertia are its own (not from overlapping colliders)")
+    lo = np.array(m.OBJECTS[1].pos[:2]) + np.array(surf.center[:2]) - np.array(surf.size[:2]) / 2
+    hi = lo + np.array(surf.size[:2])
+    tab = m.OBJECTS[0]
+    check(float(np.allclose(hi - lo, tab.size[:2])), 1.0, "the friction surface is the whole table top")
 
 
 def test_cutting_force():
@@ -471,7 +524,7 @@ def test_cutting_force():
     check(float(np.linalg.norm(m.cut_force_now()) < 1e-6), 1.0, "at the start, clear of the cutter: 0 N")
     s = braced_slides(lead)
     for k in range(20):  # pivot about the pin onto the bearing, then feed
-        th = lead + m.START[2] * (1 - (k + 1) / 20)
+        th = lead + TH0 * (1 - (k + 1) / 20)
         m.cut_load({"board_turn": th, "board_x": float(s[0]), "board": float(s[1])})
     for phi in np.linspace(m.ALPHA, -m.ALPHA, 400):
         sl = slides_at(phi, lead)
@@ -485,10 +538,10 @@ def test_cutting_force():
           f"braced feed: {mid[0]:.2f} N along the cutting edge (against the feed), {mid[1]:.2f} N toward the bit, "
           f"{mid[2]:.2f} N along y; peak {peak:.2f} N")
     kit._EPISODE["count"] += 1  # a new trial: a board shoved straight in, off the pin
-    sx, sy = m.START[0], m.START[1]
+    sx, sy = (float(v) for v in m._rot(-TH0) @ np.array([-0.015, -0.025]))  # 2.4 cm off the pin, to its right
     right = 0.0
     for k in range(30):
-        m.cut_load({"board_turn": m.START[2], "board_x": sx + 0.0025 * k, "board": sy})
+        m.cut_load({"board_turn": TH0, "board_x": sx + 0.0025 * k, "board": sy})
         right = min(right, float(m.cut_force_now()[1]))
     check(float(right < -2.0), 1.0, f"shoved straight in: pushed up to {-right:.2f} N to the right (-y), the grab")
 

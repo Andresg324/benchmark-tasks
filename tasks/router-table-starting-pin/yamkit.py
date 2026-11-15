@@ -41,6 +41,8 @@ TIP_LINKS = ("tip_left", "tip_right")
 _OPENING: dict[str, float] = {}
 _EPISODE = {"count": 0, "last": None}  # trials seen, and the env's step count within the current one
 _PROPS: set[str] = set()
+STEP_HOOKS: list = []  # local addition (router task): hook(env.unwrapped, objects) after the states of every control
+#                        step are read (before success() and score() see them); a task appends its own
 
 
 # -- shapes ----------------------------------------------------------------------------------
@@ -154,6 +156,8 @@ class Collider:
     axis: str = "Z"
     yaw: float = 0.0  # local addition (router task): a box turned this far (rad) about the frame's z axis
     slick: bool = False  # local addition (router task): frictionless ("min" combine), e.g. a ball bearing's race
+    friction: tuple | None = None  # local addition (router task): (static, dynamic) friction of this surface, with the
+    #                                "min" combine, so a part touching it slides with this friction (props only)
 
     def extent(self, k: int) -> float:
         """Half-size along axis k (0, 1, 2) of the prop's frame, from `center`."""
@@ -181,6 +185,8 @@ class Prop(Box):
     meshes: tuple = field(default=())
     colliders: tuple = field(default=())
     tilt_xyzw: tuple = (0.0, 0.0, 0.0, 1.0)
+    com: tuple | None = None  # local addition (router task): the center of mass in the prop's frame (m), and its
+    inertia: tuple | None = None  # principal moments about it along the frame's axes (kg m^2); None: from the shapes
 
 
 def _linear(c: float) -> float:
@@ -202,6 +208,10 @@ def _usda(prop: Prop) -> str:
     out.append('def Xform "Root" (\n    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]\n)\n{\n')
     if prop.mass is not None:
         out.append(f"    float physics:mass = {prop.mass}\n")
+    if prop.com is not None:  # local addition (router task)
+        out.append(f"    point3f physics:centerOfMass = {_fmt(prop.com)}\n")
+    if prop.inertia is not None:
+        out.append(f"    float3 physics:diagonalInertia = {_fmt(prop.inertia)}\n")
     out.append('    def Scope "Looks"\n    {\n')
     for i, lk in enumerate(looks):
         col = _fmt(_linear(c) for c in lk.color)
@@ -219,6 +229,12 @@ def _usda(prop: Prop) -> str:
                    '        )\n        {\n            float physics:staticFriction = 0\n'
                    '            float physics:dynamicFriction = 0\n            float physics:restitution = 0\n'
                    '            uniform token physxMaterial:frictionCombineMode = "min"\n        }\n')
+    for i, c in enumerate(prop.colliders):  # local addition (router task): a surface with its own friction
+        if c.friction is not None:
+            out.append(f'        def Material "F{i}" (\n            prepend apiSchemas = ["PhysicsMaterialAPI", "PhysxMaterialAPI"]\n'
+                       f'        )\n        {{\n            float physics:staticFriction = {c.friction[0]}\n'
+                       f'            float physics:dynamicFriction = {c.friction[1]}\n            float physics:restitution = 0\n'
+                       '            uniform token physxMaterial:frictionCombineMode = "min"\n        }\n')
     out.append("    }\n")
     for i, m in enumerate(prop.meshes):
         out.append(f'    def Mesh "V{i}" (\n        prepend apiSchemas = ["MaterialBindingAPI"]\n    )\n    {{\n'
@@ -230,11 +246,13 @@ def _usda(prop: Prop) -> str:
                    f'        rel material:binding = </Root/Looks/M{looks.index(m.look)}>\n    }}\n')
     for i, c in enumerate(prop.colliders):
         kind = "Cube" if c.size is not None else "Cylinder"
-        api = '"PhysicsCollisionAPI", "MaterialBindingAPI"' if c.slick else '"PhysicsCollisionAPI"'
+        bound = c.slick or c.friction is not None
+        api = '"PhysicsCollisionAPI", "MaterialBindingAPI"' if bound else '"PhysicsCollisionAPI"'
         out.append(f'    def {kind} "C{i}" (\n        prepend apiSchemas = [{api}]\n    )\n    {{\n'
                    f'        uniform token purpose = "guide"\n')
-        if c.slick:
-            out.append('        rel material:binding:physics = </Root/Looks/Slick> (\n'
+        if bound:
+            mat = "Slick" if c.slick else f"F{i}"
+            out.append(f'        rel material:binding:physics = </Root/Looks/{mat}> (\n'
                        '            bindMaterialAs = "strongerThanDescendants"\n        )\n')
         if c.size is not None:
             out.append("        double size = 1\n"
@@ -726,7 +744,8 @@ def _patch(scene) -> None:
         yaw = (0.0, 0.0, math.sin(spec.yaw / 2), math.cos(spec.yaw / 2))
         # local addition (router task): a prop with a slick collider gets no prop-wide material, since Isaac Lab binds
         # that one "stronger than descendants" and it would override the collider's own
-        addon = {} if any(c.slick for c in spec.colliders) else {"physics_material": scene._grippy()}
+        addon = ({} if any(c.slick or c.friction is not None for c in spec.colliders)
+                 else {"physics_material": scene._grippy()})
         if spec.mass is None:
             addon.update(func=scene._spawn_fixture,
                          rigid_props=scene.PhysxRigidBodyPropertiesCfg(kinematic_enabled=True))
@@ -778,6 +797,8 @@ def _patch(scene) -> None:
             _OPENING[key] = float(abs(art.data.joint_pos.torch[0, j].item()) / abs(FINGER_OPEN))
             out[key] = ObjectState(pos=tcp, quat_xyzw=np.array([x, y, z, w]), lin_vel=np.zeros(3),
                                    ang_vel=np.zeros(3), low=np.minimum(tcp, tips), high=np.maximum(tcp, tips))
+        for hook in STEP_HOOKS:  # local addition (router task): per-control-step hooks, e.g. a modeled outside force
+            hook(base, out)
         return out
 
     scene.task_object, scene.object_states = task_object, object_states

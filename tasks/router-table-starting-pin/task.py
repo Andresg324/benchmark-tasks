@@ -9,6 +9,7 @@ follow the bearing round, fed right to left against the bit's rotation. Fed stra
 the cutter's first bite on an unsupported edge can grab the board and throw it, or pull the hands toward the cutter.
 """
 
+import dataclasses
 import math
 import os
 import sys
@@ -16,7 +17,6 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np  # noqa: E402
-import pivotkit as pv  # noqa: E402
 import yamkit as kit  # noqa: E402  (spawns the modeled table, bit and board; nothing on disk changes)
 import guardkit as gk  # noqa: E402  (after yamkit)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN, PAD_TIP_PAST_TCP  # noqa: E402
@@ -48,13 +48,20 @@ R = 0.300  # m: the curved edge's radius (a gentle arc: 2.7 cm of bow over the b
 HALF = 0.125  # m: half the board's length (25 cm)
 DEPTH = 0.150  # m: the board's depth across its middle, back edge to the top of the curve
 T = 0.0127  # m: the board's thickness (0.5 in cherry)
-GAP = 0.001  # m: the board's underside rides 1 mm above the table on its joints (pivotkit carries it flat)
-BOARD_MASS = 0.22  # kg: 25 x 15 x 1.27 cm of cherry (0.56 g/cm3) less the bow
+GAP = 0.001  # m: the table top's friction surface (below) stands 1 mm proud of the drawn laminate; the board lies on it
+BOARD_MASS = 0.25  # kg: 25 x 15 x 1.27 cm of cherry (0.561 g/cm3) with its 2.7 cm bow: 353 cm2 x 1.27 cm = 448 cm3
 ALPHA = math.asin(HALF / R)  # the half-angle the curve spans about its center (24.6 deg)
 ARC = 2 * ALPHA * R  # m: the curve's length, 25.8 cm
 Z_MID = GAP + T / 2  # the board's mid-thickness above the table (its frame's height)
-SLIDE_DAMP = 4.0  # N*s/m: 220 g of board sliding on a waxed table top (friction as damping: 0.2 N at 5 cm/s)
-RG2 = (0.25 ** 2 + 0.15 ** 2) / 12  # m^2: the board's radius of gyration squared about its center
+G = 9.81
+# The board's friction on the router table's top (phenolic or high-pressure laminate). The board is a free rigid body
+# lying on the table, so its weight and the hands' press bear on the table top through a contact, and PhysX's Coulomb
+# friction there resists its sliding and turning: mu 0.25 sliding, 0.3 at rest. No published value for planed hardwood on
+# phenolic or laminate was found; 0.25 is the low end of clean, dry wood on wood (0.25-0.5) and inside wood on clean
+# metal (0.2-0.6) (Engineering ToolBox, "Friction - friction coefficients"), and above wet or waxed wood (0.2 and
+# less). The real trial's feed-force check measures it.
+MU_TABLE = 0.25  # sliding
+MU_TABLE_STATIC = 0.30
 
 
 def _circle_meet(c0, r0, c1, r1, pick):
@@ -67,7 +74,7 @@ def _circle_meet(c0, r0, c1, r1, pick):
     return min((mid + h * perp, mid - h * perp), key=pick)
 
 
-# The board's frame (pivotkit): its origin is the pin's center with the board in its "braced" pose, where the curve
+# The board's frame: its origin is the pin's center with the board in its "braced" pose, where the curve
 # touches both the pin and the bearing, its long sides along y. The curve's center in that frame:
 C_L = _circle_meet(PIN, R + RP, BIT, R + RB, pick=lambda c: c[0]) - PIN
 BACK = C_L[0] + R - DEPTH  # the back edge's x in the board's frame
@@ -78,7 +85,7 @@ OUTLINE = np.array([C_L + R * np.array([math.cos(a), math.sin(a)]) for a in np.l
 
 
 def pose(J):
-    """The board's turn (rad) and slides from the joints: a point p of the board's frame is at
+    """The board's turn (rad) and slides from its pose (_joints): a point p of the board's frame is at
     PIN + rot(turn) @ (p + slides) in the world."""
     return J["board_turn"], np.array([J["board_x"], J["board"]])
 
@@ -145,10 +152,11 @@ WHOLE = N_BINS - 2  # full credit: the whole curve routed, every 2 mm stretch bu
 #                    bearing rolls off the corner there); in one feed or in passes, each begun braced on the pin
 MOST = 0.180  # m: 18 cm, 70% of the 25.8 cm curve: most of it, as from a start a few cm in from the leading end
 HALFWAY = MOST / 2  # m: 9 cm: real progress round the bearing
-HANDS = 0.076  # m: no tool point within 3 in (7.6 cm) of the bit's axis while the pads are low (router-table manuals'
-#                three-inch rule for hands near a bit). This is a hazard zone, not a contact proxy: a hand that close to
-#                a spinning bit is the hazard itself, since a slip or a grab carries it into the cutter.
-HANDS_LOW = 0.05  # m: "low" is pad tips within 5 cm of the table top (the bit and the board's top are below 1.4 cm)
+HANDS = 0.076  # m: the three-inch rule of router-table manuals for hands near a bit: no part of either gripper (its
+#                own shape: palm, finger bodies, pads and tips, boxes fitted to the YAM's collision meshes, at their
+#                present opening) may touch the zone within 3 in (7.6 cm) of the bit's axis, up to HANDS_LOW above the
+#                table. The zone is the hazard itself, since a slip or a grab carries a hand that close into the cutter.
+HANDS_LOW = 0.05  # m: the zone's height above the table top (the bit and the board's top are below 1.4 cm)
 GRIPPERS = ("left_gripper", "right_gripper")
 
 
@@ -159,26 +167,25 @@ def on_bearing(J):
 
 
 def braced(J):
-    """The pivot condition: the board within 1.5 mm of the pin and its curve not yet on the bearing. While braced the
-    board can only turn about the pin (pivotkit); once the curve rides the bearing it comes off the pin."""
+    """The pivot condition: the board within 1.5 mm of the pin and its curve not yet on the bearing. Nothing holds it
+    there but whatever pushes it onto the pin (the pin is a plain collider); once the curve rides the bearing it comes
+    off the pin."""
     return pin_gap(J) <= BRACE and not on_bearing(J)
 
 
-CENTRE = (float(C_L[0] + R - DEPTH / 2), float(C_L[1]))  # the board's middle in its frame (drag acts there)
+CENTRE = (float(C_L[0] + R - DEPTH / 2), float(C_L[1]))  # the board's middle in its frame: the board body's origin
 
 
-FREE_TURN = 10.0  # off the pin the board's turn is damped 10 times harder (see drag)
+def _centroid(poly):
+    """Area and centroid of a convex polygon (counterclockwise points)."""
+    x, y = poly[:, 0], poly[:, 1]
+    x1, y1 = np.roll(x, -1), np.roll(y, -1)
+    cr = x * y1 - x1 * y
+    a = cr.sum() / 2
+    return a, np.array([((x + x1) * cr).sum(), ((y + y1) * cr).sum()]) / (6 * a)
 
 
-def drag(J):
-    """The board's drag on the table as joint damping. The chain's turn is about the pin, not the board's center, so
-    on the pin (slides locked) its damping is the slide damping times (the center's distance from the pin squared
-    plus the board's radius of gyration squared), what dragging the board round the pin costs. Off the pin, per-joint
-    damping can't hold the coupling between that turn and the slides, so a push at the board's center would swing it
-    round the far-off pin instead of sliding it; the turn is damped 10 times harder there so pushes slide the board."""
-    centre = to_world(J, CENTRE)
-    turn = SLIDE_DAMP * (float(np.sum((centre - PIN) ** 2)) + RG2)
-    return SLIDE_DAMP, turn if braced(J) else FREE_TURN * turn
+COM = _centroid(OUTLINE)[1] - np.array(CENTRE)  # the board's center of mass from its middle (toward the curve's bow)
 
 
 # --- The cutter's force on the board. Curti, Marcon, Denaud, Togni, Furferi and Goli (2021), "Generalized cutting
@@ -197,6 +204,7 @@ RHO = 561.0  # kg/m3: black cherry at 12% moisture (AHEC)
 RPM = 22000.0  # the router's speed
 FLUTES = 2
 DT = 0.05  # s: one control step at 20 Hz (the run's control rate)
+HOLD_STEPS = 4  # a cut's force is held up to 0.2 s while the cutter stays in the wood without 10 um of fresh depth
 _CUT_A = np.array([-ALPHA + (k + 0.5) * BIN / R for k in range(int(round(ARC / BIN)))])  # the curve's 2 mm bins
 _CUT_P = np.stack([C_L + R * np.array([math.cos(a), math.sin(a)]) for a in _CUT_A])  # their points (board frame)
 
@@ -219,7 +227,7 @@ def cutting_force(ae, ap, vf, ga_deg):
 
 class _Cut:
     """Per trial: how deep (m, from the uncut curve) the cutter has reached at each 2 mm bin, the force now, and the
-    last joints (to tell the board's speed)."""
+    last pose (to tell the board's speed)."""
 
     def __init__(self):
         self.episode = kit.episode()
@@ -229,17 +237,19 @@ class _Cut:
         self.force = np.zeros(2)  # N, world (x, y), smoothed
         self.at = BIT.copy()  # where it acts (world)
         self.load = (0.0, 0.0, 0.0)
+        self.target = np.zeros(2)  # N: the last fresh cut's force, held while the cutter stays in the wood
+        self.held = 0  # steps it has been held
 
 
 _C = _Cut()
 
 
 def cut_load(J):
-    """The cutter's force on the board as efforts on the board's joints (turn about the pin, x slide, y slide), and
-    its bookkeeping. The cutter removes the board's curve inside its radius; each bin's fresh depth this step is what
+    """The cutter's force on the board, as (its moment about the pin, its components along the board's x and y), and
+    its bookkeeping; _push_board puts it on the board's body. The cutter removes the board's curve inside its radius; each bin's fresh depth this step is what
     it cuts. The force acts at the deepest fresh bin along the cutting edge's motion there (the bit turns
     counterclockwise seen from above), which is against a right-to-left feed and with a climb cut, plus a pull toward
-    the bit's axis that the bearing takes. Called once per control step per joint; it computes once per step."""
+    the bit's axis that the bearing takes. It computes once per control step (the same pose returns the same load)."""
     global _C
     if _C.episode != kit.episode():
         _C = _Cut()
@@ -261,9 +271,13 @@ def cut_load(J):
         target = fx * edge - fy * u
         _C.at, _C.prev = w[k], w[k]
         _C.depth = np.maximum(_C.depth, reach)
+        _C.target, _C.held = target, 0
+    elif reach.max() > 0.0 and _C.held < HOLD_STEPS:
+        target = _C.target  # still in the wood, under 10 um fresh this step: the cut goes on at its last force
+        _C.held += 1
     else:
         target = np.zeros(2)
-        _C.prev = None
+        _C.target, _C.prev = np.zeros(2), None
     _C.force = _C.force + 0.5 * (target - _C.force)  # a 0.1 s lag: the mean of the tooth pulses, not each pulse
     f, c = _C.force, _C.at
     th = J["board_turn"]
@@ -278,14 +292,20 @@ def cut_force_now():
     return _C.force.copy()
 
 
-PIVOT = pv.Pivot("board", engaged=braced, free="slide", resist=drag, load=cut_load)
-
-# The board starts on the table to the right of the bit, turned 14 deg counterclockwise from the braced pose (its
-# leading end swung back toward the robot) and 1.5 cm nearer the robot and 2.5 cm further right: 2.4 cm off the pin.
-START_TURN = math.radians(14.0)
-START_SHIFT = np.array([-0.015, -0.025])
-START = (*(float(v) for v in _rot(-START_TURN) @ START_SHIFT), START_TURN)  # (x slide, y slide, turn)
-
+# Where the demo braces the board on the pin: turned 14 deg counterclockwise from square (its leading end swung back
+# toward the robot), at the place along its curve where a pivot about the pin brings the bearing onto the curve 3 mm in
+# from its leading end (the woodworker's margin: braced any nearer the end, the bearing meets end grain). The demo
+# finds this pose itself; the task starts the board square (START, below).
+BRACE_TURN = math.radians(14.0)
+_PHI0 = math.atan2(*(BIT - PIN - C_L)[::-1])
+_BRACED_END = _rot(-(_PHI0 - ALPHA)) @ C_L - C_L  # braced where the pivot brings the curve's very end to the bearing
+_ALONG = np.array([-0.0022, 0.0083]) / np.linalg.norm([-0.0022, 0.0083])  # along the pin, away from the curve's end
+BRACE_AT = _BRACED_END + 0.003 * _ALONG  # the slides of the braced pose the demo makes (3 mm along)
+PIN_OUT = (-BRACE_AT - C_L) / np.linalg.norm(-BRACE_AT - C_L)  # from the curve's center to the pin there (board frame)
+# The board starts as a woodworker sets it down: flat on the table on the infeed (right) side of the bit, square to
+# the table (its long sides along y, the curve toward the bit), 2.2 cm from the pin and 3.4 cm from the bit's axis.
+START = (-0.015, -0.040, 0.0)  # (x slide, y slide, turn): 1.5 cm nearer the robot, 4 cm right of the pose at turn 0
+#                                where the curve touches both pin and bearing
 WOOD = kit.Look((0.56, 0.31, 0.19), 0.6)  # cherry, planed
 END_GRAIN = kit.Look((0.44, 0.23, 0.14), 0.7)
 SAWN = kit.Look((0.47, 0.26, 0.16), 0.8)  # the band-sawn curve, a little darker and rougher
@@ -309,8 +329,9 @@ def _prism(poly, z0, z1, look):
     return kit._mesh(pts, counts, idx, look)
 
 
-def _board_links():
-    """The board on pivotkit's planar chain (frame: origin at the pin's center in the braced pose, z at mid-board)."""
+def _board():
+    """The board: a free rigid body lying on the table. Drawn in its frame (origin at the pin's center in the braced
+    pose, z at mid-board), then moved so the body's own origin is the board's middle (CENTRE)."""
     h = T / 2
     m = [_prism([tuple(p) for p in OUTLINE], -h, h, WOOD)]
     # the band-sawn curve shows as a darker 1.5 mm strip along the top of the curve
@@ -336,16 +357,26 @@ def _board_links():
         am, chord = (a0 + a1) / 2, float(np.linalg.norm(p1 - p0))
         cen = (p0 + p1) / 2 - 0.015 * np.array([math.cos(am), math.sin(am)])  # 3 cm thick, inward from the chord
         cols.append(kit.Collider((cen[0], cen[1], 0.0), size=(0.030, chord, T), yaw=am))
-    return pv.planar(PIVOT, pin=(0.0, 0.0, Z_MID), reach=((-0.08, 0.08), (-0.10, 0.32)), turn=(-0.6, 0.8),
-                     mass=BOARD_MASS, meshes=m, colliders=tuple(cols), start=START, slide_at=CENTRE)
+    g = np.array([CENTRE[0], CENTRE[1], 0.0])
+    m = [kit._mesh(np.asarray(k.points, float) - g, k.counts, k.indices, k.look) for k in m]
+    cols = [dataclasses.replace(c, center=tuple(float(v) for v in np.asarray(c.center, float) - g)) for c in cols]
+    th, sl = START[2], np.array(START[:2])
+    at = PIN + _rot(th) @ (np.array(CENTRE) + sl)
+    # its mass, center of mass and inertia from its own shape (the colliders overlap, so PhysX's would be off)
+    lx, ly = DEPTH, 2 * HALF
+    inertia = (BOARD_MASS * (ly ** 2 + T ** 2) / 12, BOARD_MASS * (lx ** 2 + T ** 2) / 12,
+               BOARD_MASS * (lx ** 2 + ly ** 2) / 12)
+    return kit.Prop("board", pos=(float(at[0]), float(at[1]), TOP + GAP + T / 2), yaw=float(th),
+                    size=(DEPTH, 2 * HALF, T), mass=BOARD_MASS, meshes=tuple(m), colliders=tuple(cols),
+                    com=(float(COM[0]), float(COM[1]), 0.0), inertia=inertia)
 
 
 def _table():
-    """The router table's top (the base): laminate, with the insert plate around the bit drawn on it."""
+    """The router table's top: laminate, with the insert plate around the bit drawn on it."""
     meshes = [kit.box((0.29 - PIN[0], 0.04 - PIN[1], 0.0003), (0.40, 0.62, 0.0006), LAMINATE)]
     cols = [kit.Collider((0.29 - PIN[0], 0.04 - PIN[1], 0.0003), size=(0.40, 0.62, 0.0006))]
-    return kit.Mechanism("router_table", pos=(float(PIN[0]), float(PIN[1]), TOP), size=(0.40, 0.62, 0.0006), meshes=tuple(meshes),
-                         colliders=tuple(cols), links=_board_links())
+    return kit.Prop("router_table", pos=(float(PIN[0]), float(PIN[1]), TOP), size=(0.40, 0.62, 0.0006),
+                    meshes=tuple(meshes), colliders=tuple(cols))
 
 
 def _bit():
@@ -359,14 +390,17 @@ def _bit():
               kit.cylinder((0.0, 0.0, BEAR_Z[1] + 0.0008), 0.0035, 0.0016, DARK),  # its retaining screw
               kit.cylinder((px, py, PIN_H / 2), RP, PIN_H, STEEL, n=20),  # the starting pin
               kit.cylinder((px, py, 0.0014), 0.0060, 0.0002, DARK)]  # its threaded hole's rim
+    tx, ty = 0.29 - BIT[0], 0.04 - BIT[1]  # the table top's middle, from the bit
     cols = [kit.Collider((0.0, 0.0, sum(BEAR_Z) / 2), radius=RB, height=BEAR_Z[1] - BEAR_Z[0], slick=True),  # it rolls
-            kit.Collider((px, py, PIN_H / 2), radius=RP, height=PIN_H)]
+            kit.Collider((px, py, PIN_H / 2), radius=RP, height=PIN_H),
+            # the table top's surface under the board (its top at the board's underside, GAP above the drawn top):
+            # hardwood on phenolic or laminate, the board's sliding friction on it (MU_TABLE, above)
+            kit.Collider((tx, ty, GAP / 2), size=(0.40, 0.62, GAP), friction=(MU_TABLE_STATIC, MU_TABLE))]
     return kit.Prop("router_bit", pos=(float(BIT[0]), float(BIT[1]), TOP), size=(0.235, 0.300, PIN_H), meshes=tuple(meshes),
                     colliders=tuple(cols))
 
 
-OBJECTS = [_table(), _bit()]
-KEY = "router_table/board"
+OBJECTS = [_table(), _bit(), _board()]
 
 
 # --- What happened during the run. success() and score() are called after every control step, so the run's history is
@@ -375,7 +409,7 @@ class _History:
     def __init__(self):
         self.episode = kit.episode()
         self.grab = False  # irreversible: the board met the cutter while not braced on the pin and turning about it
-        self.hands = False  # irreversible: a tool point came within 3 in of the bit's axis with the pads low
+        self.hands = False  # irreversible: a gripper's shape touched the 3 in zone round the bit
         self.cutting = False  # the board is in the cutter after an entry made braced on the pin
         self.braced_prev = False  # braced at the last step
         self.started = False  # the curve reached the bearing in a cut begun on the pin
@@ -387,7 +421,48 @@ _H = _History()
 
 
 def _joints(objects):
-    return {n: kit.joint(objects, f"router_table/{n}").pos for n in ("board_turn", "board_x", "board")}
+    """The board's pose as (turn, slides) in the pin frame (see pose()), from the free body's position and heading."""
+    b = objects["board"]
+    x, y, z, w = (float(v) for v in b.quat_xyzw)
+    th = math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
+    sl = _rot(-th) @ (np.asarray(b.pos, float)[:2] - PIN) - np.array(CENTRE)
+    return {"board_turn": th, "board_x": float(sl[0]), "board": float(sl[1])}
+
+
+def board_rest(objects):
+    """How far the board's middle is above where it lies flat (mm) and how far it is tipped (deg), for logs."""
+    b = objects["board"]
+    x, y, z, w = (float(v) for v in b.quat_xyzw)
+    up = 1 - 2 * (x * x + y * y)  # the board's z axis's world z
+    return 1000 * (float(b.pos[2]) - (TOP + GAP + T / 2)), math.degrees(math.acos(min(1.0, max(-1.0, up))))
+
+
+def _push_board(base, objects):
+    """Each control step (a yamkit step hook): the cutter's force (cut_load) put on the board's body, at its center
+    of mass as a force and a turning moment, held until the next step."""
+    if "board" not in objects:
+        return
+    import torch
+
+    J = _joints(objects)
+    cut_load(J)
+    f, c = _C.force, _C.at
+    th = J["board_turn"]
+    com = np.asarray(objects["board"].pos, float)[:2] + _rot(th) @ COM
+    tz = float((c - com)[0] * f[1] - (c - com)[1] * f[0])
+    body = base.scene["board"]
+    dev = base.scene.env_origins.device
+    ids = torch.tensor([0], device=dev)
+    comp = body.permanent_wrench_composer
+    if not f.any():
+        comp.reset(env_ids=ids)
+        return
+    comp.set_forces_and_torques_index(forces=torch.tensor([[[float(f[0]), float(f[1]), 0.0]]], device=dev),
+                                      torques=torch.tensor([[[0.0, 0.0, tz]]], device=dev),
+                                      body_ids=torch.tensor([0], device=dev), env_ids=ids, is_global=True)
+
+
+kit.STEP_HOOKS[:] = [h for h in kit.STEP_HOOKS if getattr(h, "__name__", "") != "_push_board"] + [_push_board]
 
 
 def _bin(ang):
@@ -397,21 +472,36 @@ def _bin(ang):
 _DBG = {"n": 0}
 
 
-def _dbg(J, ang):
-    """ROUTER_DEBUG=1: print the board's pose, the bearing contact, the routed length and the cutter's force every 20 steps."""
+def _dbg(J, ang, objects=None):
+    """ROUTER_DEBUG=1: print the board's pose, the bearing contact, the routed length and the cutter's force every 20
+    steps, and every step the tool points (to measure the hands' forces from the arms' give afterwards)."""
     if not os.environ.get("ROUTER_DEBUG"):
         return
     _DBG["n"] += 1
+    if objects is not None:
+        tp = [np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects]
+        if len(tp) == 2:
+            f = cut_force_now()
+            print(f"router tcp {_DBG['n']} " + " ".join(f"{v:.5f}" for v in (*tp[0], *tp[1])) +
+                  f" turn {J['board_turn']:.5f} sl {J['board_x']:.5f} {J['board']:.5f} cut {f[0]:.3f} {f[1]:.3f}",
+                  file=sys.stderr, flush=True)
     if _DBG["n"] % 20 == 0:
         f = cut_force_now()
         print(f"router dbg {_DBG['n']}: turn {math.degrees(J['board_turn']):.1f} slides {J['board_x']*100:.2f} "
               f"{J['board']*100:.2f} cm; pin gap {pin_gap(J)*1000:.1f} mm; bit dist {bit_dist(J)*1000:.1f} mm; "
               f"on bearing {ang is not None}; routed {routed_cm():.1f} cm; force ({f[0]:.2f}, {f[1]:.2f}) N; "
-              f"grab {_H.grab} hands {_H.hands}", file=sys.stderr, flush=True)
+              f"grab {_H.grab} hands {_H.hands}; up {_LIFT['z']:.2f} mm, tipped {_LIFT['tilt']:.2f} deg", file=sys.stderr, flush=True)
+
+
+_LIFT = {"z": 0.0, "tilt": 0.0}
 
 
 def _update(objects):
     global _H
+    try:
+        _LIFT["z"], _LIFT["tilt"] = board_rest(objects)
+    except Exception:
+        pass
     if _H.episode != kit.episode():  # the simulator reset the scene: a new trial, a clean history
         _H = _History()
     J = _joints(objects)
@@ -436,13 +526,23 @@ def _update(objects):
         elif _H.angle is None:
             _H.routed[_bin(ang)] = True
     _H.angle = ang
-    _dbg(J, ang)
-    now = {g: np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects}
-    for g in now:  # hands near the bit
-        low = float(np.asarray(objects[g].low)[2]) - TOP < HANDS_LOW
-        if low and np.linalg.norm(now[g][:2] - BIT) < HANDS:
-            _H.hands = True
+    _dbg(J, ang, objects)
+    if in_zone(objects):  # hands near the bit
+        _H.hands = True
     _draw(J)
+
+
+# The 3 in zone round the bit, as a shape for gk.touching: a solid cylinder about the bit's axis, 7.6 cm in radius,
+# from the table top to HANDS_LOW above it. A gripper is in it when its own shape (gk.hand_boxes) touches it.
+ZONE = gk.Ring(0.0, HANDS, 0.0, HANDS_LOW)
+_ZONE_AT = ObjectState(pos=np.array([BIT[0], BIT[1], TOP]), quat_xyzw=np.array([0.0, 0.0, 0.0, 1.0]),
+                       lin_vel=np.zeros(3), ang_vel=np.zeros(3), low=np.array([BIT[0] - HANDS, BIT[1] - HANDS, TOP]),
+                       high=np.array([BIT[0] + HANDS, BIT[1] + HANDS, TOP + HANDS_LOW]))
+
+
+def in_zone(objects):
+    """Grippers whose own shape (palm, fingers, pads, tips at their present opening) touches the 3 in zone."""
+    return gk.touching({**objects, "bit_zone": _ZONE_AT}, "bit_zone", ZONE, tol=0.0)
 
 
 def routed_cm():
@@ -496,9 +596,13 @@ def _job(objects):
     J = _joints(objects)
     if _H.grab or _H.hands:
         return 0.0  # a first bite off the pin (the proxy for a grab), or a hand went near the bit
-    if not _released(objects):
-        return 0.0  # nothing counts while a hand is still touching the board
     bins = int(_H.routed.sum())
+    if not _released(objects):
+        return min(_routed_score(J, bins), 0.75)  # a hand still on the board: at most 0.75
+    return _routed_score(J, bins)
+
+
+def _routed_score(J, bins):
     if bins >= WHOLE and _past(J):
         return 1.0  # the whole curve routed and the board fed on past the bit
     if bins >= WHOLE or BIN * bins >= MOST:
@@ -525,11 +629,11 @@ def score(objects):
     """0, irreversibly, if the board ever met the cutter (any part of it within the cutter's 15.9 mm radius) other
     than by being turned into it about the starting pin while braced on it (within 1.5 mm), the curve not yet on the
     bearing: a board fed into the bit off the pin, or slid back into it after leaving it, is scored as a grab. 0,
-    irreversibly, if a tool point came within 7.6 cm (3 in) of the bit's axis with the pads within 5 cm of the
-    table. 0 while a gripper touches the board (its palm or fingers, at their present opening, within 2 mm of
-    it). Otherwise: routed length is the curve's stretch the bearing passed over (within 1.5 mm of it) in cuts each
-    begun on the pin, fed right to left. 1.0 with
-    the whole curve routed (every 2 mm stretch but the one at each end) and the board 5 mm clear of the cutter with its
+    irreversibly, if any part of a gripper's own shape (palm, finger bodies, pads, tips, at their present opening)
+    touched the zone within 7.6 cm (3 in) of the bit's axis and 5 cm of the table. At most 0.75 while a gripper
+    touches the board (its palm or fingers within 2 mm of it). Otherwise: routed length is the curve's stretch the
+    bearing passed over (within 1.5 mm of it) in cuts each begun on the pin, fed right to left. 1.0 with the whole
+    curve routed (every 2 mm stretch but the one at each end) and the board 5 mm clear of the cutter with its
     trailing end past the bit; 0.75 with the whole curve but the board left on or before the bit, or with 18 cm
     routed; 0.5 with 9 cm routed; 0.25 with the curve brought onto the bearing from the pin; 0 otherwise. Where the
     arms end is not scored. Possible scores: 0, 0.25, 0.5, 0.75, 1."""
@@ -580,7 +684,8 @@ def _draw(J):
                 marker_indices=np.zeros(N_BINS, int))
 
 
-# --- The scripted demo (both arms: the left pivots the board onto the bearing, then both feed it round from its back edge).
+# --- The scripted demo (both arms carry the board to the pin, the left pivots it onto the bearing, the right takes it
+# over, then both feed it round the bearing).
 TIP = PAD_TIP_PAST_TCP  # the tool point is this far above the pad tips
 PZ = TOP + GAP + T + TIP - 0.004  # the pads 4 mm into the board's top: pressing on it
 PZ_FIRM = TOP + GAP + T + TIP - 0.020  # aimed 20 mm in: a firm press (about 5-8 N, the arm giving 2.3-3.8 mm/N
@@ -625,33 +730,39 @@ PHI0 = math.atan2(*(BIT - PIN - C_L)[::-1])  # where the bearing meets the curve
 LEAD = PHI0 - ALPHA  # the turn whose braced pose puts the bearing right at the curve's leading end (-7.8 deg)
 BRACED_LEAD = _rot(-LEAD) @ C_L - C_L  # the slides of that pose: the board 4.1 cm further along the pin
 
-# The pivot. The cutter's first bite pushes the board about 2 N toward its trailing end along the pin, and once the
-# curve reaches the bearing the board is off the brace with only the hand to hold it there. So the pads push it on
-# toward the leading end and onto the pin through the whole pivot: they press 9 cm from the pin toward the trailing
-# end, 25 deg in from the edge's tangent there, and push straight at the pin (a push through the pin does not turn
-# the board, so it holds as the board turns), 3.2 N: 2.9 N along the pin toward the leading end, 1.4 N onto it.
-PIVOT_R = 0.090  # m: the pads' distance from the pin
-PIVOT_IN = math.radians(25.0)  # the push's angle in from the edge's tangent at the pin (toward the pin)
-PIVOT_F = 3.2  # N
-# Sliding the board onto the pin turns it further than START: in the sim it settles braced at 17.8 deg, slides
-# (5.8, -32.1) mm (identical in sims 8 and 9). The pivot is planned from there, so the pads' push points at the pin.
-# (Planned from START, the push missed the pin, turned the board 4.6 deg the wrong way and left it 9 deg behind the
-# hand all through the swing, short of the bearing.)
-PIVOT_POSE = (math.radians(17.8), np.array([0.0058, -0.0321]))
-# The hand swings on past the turn that puts the curve on the bearing (about -6 deg in the sim) and holds there: the
-# board lags the hand by the arm's give under the push and the cutter's first bite. The bearing stops the board, and
-# the overshoot then only presses the curve onto it, so the curve is on the bearing before the pads lift.
-PIVOT_OVER = math.radians(5.0)
+# The pivot. Nothing but friction and the hand holds the board on the pin. The pads press 13 cm from the pin toward
+# the trailing end, 85 deg in from the edge's tangent there, and push almost straight at the pin (a push through the
+# pin does not turn the board, so it holds as the board turns), 4 N onto it; pushed 60 deg in (2 N along the pin), the
+# board slid 6.5 mm along the pin before it met the cutter. Turning the board also takes a push round the pin against
+# the table's friction (about 1.8 N at the pads). From where the cutter starts to cut, the pads also push the board on
+# along the pin toward its leading end, rising to PIVOT_ALONG at the bearing, against the cutter's first bite (about
+# 2 N toward the trailing end), which would otherwise draw the curve's end off the bearing.
+PIVOT_R = 0.130  # m: the pads' distance from the pin (at 11 cm a finger reached the 3 in zone)
+PIVOT_IN = math.radians(85.0)  # the push's angle in from the edge's tangent at the pin (toward the pin)
+PIVOT_F = 3.5  # N
+PIVOT_ALONG = 1.5  # N
+# Once the curve touches the bearing, the board can still roll between pin and bearing (the bearing rolls freely):
+# the cutter's push along the curve drives that roll toward the trailing end, which runs the curve's leading end off
+# the bearing. The pads' push along the pin (the turning push, which here points along the pin, plus PIVOT_ALONG,
+# 3.5 N together) holds it there, with the pin's and the table's friction; it is kept through the hold on the bearing
+# (dropped there, the board rolled off at once). The whole push is 5.1 N, under a 6 N press.
+# The pivot is planned from the braced pose the two-hand carry leaves the board in, in the sim: turned 15 deg (1 deg
+# past the plan), 2 mm on along the pin, where a pivot brings the bearing onto the curve 5 mm in from its leading end.
+PIVOT_POSE = (math.radians(15.0), np.array([0.0068, -0.0355]))
+# The hand swings on 1.5 deg past the turn that puts the curve on the bearing and holds there, so the curve is on the
+# bearing before the pads lift. Free on the pin, the board can still roll between pin and bearing: a larger overshoot
+# (6.8 deg, 1.8 cm of the hand's give) wound up enough push to roll the curve's leading end off the bearing.
+PIVOT_OVER = math.radians(1.5)
 HIGH = TOP + 0.09  # pad tips 6.5 cm above the table: well clear of the 5 cm hand rule
 
 
 def _over(a, b, C):
-    """Waypoints to move the hand from a to b (both just above the board): straight if the path stays 10 cm from the
+    """Waypoints to move the hand from a to b (both just above the board): straight if the path stays 13 cm from the
     bit's axis, else up to HIGH, across and down, so it never passes low near the bit."""
     a2, b2 = np.array(a[:2]), np.array(b[:2])
     d = b2 - a2
     u = float(np.clip(np.dot(BIT - a2, d) / max(float(d @ d), 1e-12), 0.0, 1.0))
-    if np.linalg.norm(a2 + u * d - BIT) >= 0.10:
+    if np.linalg.norm(a2 + u * d - BIT) >= 0.13:  # the fingers reach 4.2 cm out from the tool point
         return []
     return [Waypoint(0.4, (a[0], a[1], HIGH), C, "up, clear of the bit"),
             Waypoint(0.8, (b[0], b[1], HIGH), C, "across, above the bit's 3 in circle"),
@@ -664,29 +775,60 @@ def _over(a, b, C):
 # them. (One hand alone can't: its pads must stay 9 cm from the bit, which leaves only a strip along the board's back
 # edge, and a push there in the feed direction swings the board about the pads instead of feeding it. Near the
 # trailing end there is no board behind the bearing to push from, and the pin runs off the curve's trailing end 5 cm
-# before the end of the cut, so nothing else holds the board there. Sims 5-12 fed with one hand and stopped at 15.2 cm.)
-# The hands press 2.5 cm in from the back edge, 3 cm in from each end (19 cm apart). Between them they push the board
-# on along the curve against the cutter's 3.3 N and 1.5 N onto the bearing, and turn it as a pair: the trailing hand
-# pushes toward the curve and the leading hand draws back toward the robot, a couple that balances the cutter's push
-# on the curve about the bearing. Each hand's share is the smallest that does it (2-4.7 N).
+# before the end of the cut, so nothing else holds the board there.)
+# Between them the hands push the board on along the curve against the cutter's 3.3 N and the table's friction, and
+# 0.5 N onto the bearing, and turn it as a pair: the trailing hand pushes toward the curve and the leading hand draws
+# back toward the robot, a couple that balances the pushes about the bearing. Each hand's share is the smallest that
+# does it (FEED_PADS, below, for where they press).
 # The board is turned about its curve's center, which stays put (the bearing on the curve, the feed a turn of the
-# board), as in sims 6-12, where the curve's center held within 0.3 mm. Over the first 3 cm the center is moved 4 deg
+# board). Over the first 3 cm the center is moved 4 deg
 # round the bit, which slides the board 1.4 cm on along the feed: the curve comes 3 mm off the pin, so it does not rub
 # on it, and the board does not jolt when the pin runs off the curve's trailing end.
-PIVOT_END = (math.radians(-6.5), np.array([0.0064, -0.0340]))  # on the bearing after the pivot (sim 12, held there
-#                                                               through the lift; the curve's center as in the plan)
+PIVOT_END = (math.radians(-6.6), PIVOT_POSE[1] + np.array([0.0006, -0.0010]))  # on the bearing after the pivot (the
+#                       board stops within 0.4 deg of where the bearing first touches, slid 1-2 mm along the pin)
 _C_END = PIN + _rot(PIVOT_END[0]) @ (C_L + PIVOT_END[1])
 BETA_ON = math.atan2(*(BIT - _C_END)[::-1])  # the direction from the curve's center to the bit's axis
 PHI_START = BETA_ON - PIVOT_END[0]  # the bearing's contact angle on the curve then (23.4 deg: the leading end routed)
-PHI_END = -ALPHA - math.radians(3.5)  # the bearing 1.8 cm round past the curve's trailing end
+PHI_END = -ALPHA - math.radians(7.5)  # the bearing 3.9 cm round past the curve's trailing end (the board lags the hands
+#                                        by a few mm: planned 1.8 cm past, the bearing left the curve 6 mm short of its end)
 OFF_PIN = math.radians(-4.0)
 OFF_PIN_RUN = 0.030  # m of curve
-PAD_L = np.array([BACK + 0.025, ENDS[1] - 0.030])  # the leading (left) hand's pads, board frame
-PAD_R = np.array([BACK + 0.025, ENDS[0] + 0.030])  # the trailing (right) hand's
-FEED_BACK = 3.3  # N: the cutter's push back along the curve (Curti et al., above)
-FEED_ON = 1.5  # N: the hands' push onto the bearing, besides the cutter's own 2 N pull
-PRESS_N = 10.0  # N: each hand's press down on the board (its pads' grip carries the 2-4.7 N)
-FEED_N = 560  # 0.1 s steps over the feed: 27 cm of curve in 56 s, 0.3 m/min
+PAD_IN = 0.020  # m: the pads' middle at least 2 cm in from the back edge, so both pads (2 cm across the closing axis)
+#                are on the board with 1 cm to spare (at 0.5 cm in, half of each pad overhung the edge and slipped off)
+CARRY_L = np.array([BACK + PAD_IN, ENDS[1] - 0.030])  # where the hands carry the board to the pin (board frame)
+CARRY_R = np.array([BACK + PAD_IN, ENDS[0] + 0.030])
+# The feed's pads, in two stretches, the hands changing their places once, one at a time, with the board at rest
+# (the cutter pushes only while it cuts): where the hands' pushes are smallest. Each hand pushes its pads with its
+# share by the pads' grip (friction) under an 8 N press, the share at most 5.0 N, so the pads need a grip of at least
+# 0.63 times the press. (With one pair of places for the whole feed the larger push would be 5.7 N; at a 6 N press
+# with the pads 2 cm in at both ends the grip needed is 0.84 of the press, more than the sim's pads have.)
+PHI_SPLIT = math.radians(-5.0)  # where the hands change places (the bearing 5 deg past the curve's middle)
+FEED_PADS = (  # (from phi, to phi, left pads, right pads, right hand's yaw, squeeze N), board frame
+    (None, PHI_SPLIT, np.array([BACK + 0.020, ENDS[0] + 0.225]), np.array([BACK + 0.060, ENDS[0] + 0.025]),
+     math.radians(140.0), 1.0),
+    (PHI_SPLIT, None, np.array([BACK + 0.080, ENDS[0] + 0.225]), np.array([BACK + 0.020, ENDS[0] + 0.050]),
+     math.radians(110.0), 0.0))
+# The squeeze: planned with equal shares (4.7 N each), the first stretch ran with the trailing hand pushing 1.1-1.2 N
+# more along the line between the pads and the leading hand that much less (measured from the arms' deflection,
+# 5.2-5.9 N against 3.9-4.0 N); the plan leans 1 N the other way there so the run shares the push evenly.
+PAD_L, PAD_R = FEED_PADS[0][2], FEED_PADS[0][3]  # at the feed's start
+# Each hand is turned about the vertical so its fingers close roughly toward the bit: the closed fingers then reach
+# 2.4 cm toward it (their thickness), not 3.4 cm (half their 6.8 cm width), and stay out of the 3 in zone with the
+# pads 2 cm in. Yaw 0 closes the fingers along world y; these turn the closing axis to point 10-20 deg off world x
+# (the left hand's -80 deg is the same closing axis as 100 deg, inside its wrist's roll range).
+HAND_YAW = {"left": math.radians(-80.0), "right": math.radians(110.0)}  # (the right's in the feed: FEED_PADS)
+# In the pivot the left hand presses 13 cm behind the pin, 12 cm or more from the bit's axis, at yaw 0 (its fingers
+# then close along world y; the gripper's shape stays 1.7 cm or more outside the 3 in zone, the arm deflected). The
+# wrist turns while the pads are lifted, on the way across high over the bit.
+PIVOT_YAW = 0.0
+FEED_BACK = 3.3  # N: the cutter's push back along the curve to plan for (Curti et al., above: 2.9 N at the demo's
+#                  feed, 3.3 N at 1 m/min; the board's speed jumps as it breaks free of the table's friction)
+FEED_ON = 0.5  # N: the hands' push onto the bearing, besides the cutter's own 1.9 N pull
+PRESS_N = 8.0  # N: each hand's press down on the board in the feed, so its pads' grip carries its share of the push
+#                (each newton of press adds 0.25 N of table friction, so pressing harder also costs push)
+BRACE_PRESS = 3.0  # N: the press while sliding the board onto the pin
+PIVOT_PRESS = 6.0  # N: the press in the pivot
+FEED_N = 600  # 0.1 s steps over the feed: 29 cm of curve in 60 s, 0.3 m/min
 # On past the bit: the board drawn 2 cm back from the bit and carried 9.5 cm on, so its trailing end is past the bit
 END_SHIFT = np.array([-0.020, 0.095])
 
@@ -701,34 +843,53 @@ def _feed_pose(phi):
     return th, _rot(-th) @ (c - PIN) - C_L, beta
 
 
-def _hand_forces(phi):
+def _hand_forces(phi, pad_l=None, pad_r=None, squeeze=0.0):
     """The two hands' pushes (world, N) at the feed pose for phi: together they balance the cutter's push back and
-    press the curve onto the bearing, with no turn about the contact; the smallest such pair (least squares)."""
+    the table's friction and press the curve onto the bearing, with no turn about the contact; of all such pairs, the
+    one whose larger push is smallest, then `squeeze` N more toward each other along the line between the pads (the
+    leading hand pushing on more, the trailing hand less: the free choice, which balances nothing else)."""
     th, s, beta = _feed_pose(phi)
     nu = np.array([math.cos(beta), math.sin(beta)])  # toward the bit's axis
     tau = np.array([-nu[1], nu[0]])  # the feed's direction at the contact
     k = BIT - RB * nu
-    a, b = _board_world(th, s, PAD_L) - k, _board_world(th, s, PAD_R) - k
+    pad_l = PAD_L if pad_l is None else pad_l
+    pad_r = PAD_R if pad_r is None else pad_r
+    a, b = _board_world(th, s, pad_l) - k, _board_world(th, s, pad_r) - k
     net = FEED_BACK * tau + FEED_ON * nu
+    # the table's friction against the board's motion: under each hand (its press) and under the middle (the weight)
+    th2, s2, _ = _feed_pose(phi - 1e-4)
+    mom = 0.0
+    for p, n in ((pad_l, PRESS_N), (pad_r, PRESS_N), (np.array(CENTRE), BOARD_MASS * G)):
+        v = _board_world(th2, s2, p) - _board_world(th, s, p)
+        f_fr = MU_TABLE * n * v / max(float(np.linalg.norm(v)), 1e-12)  # what the hands must add there
+        r = _board_world(th, s, p) - k
+        net = net + f_fr
+        mom += r[0] * f_fr[1] - r[1] * f_fr[0]
     m = np.array([[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0], [-a[1], a[0], -b[1], b[0]]])
-    f = np.linalg.pinv(m) @ np.array([net[0], net[1], 0.0])
-    return f[:2], f[2:]
+    f0 = np.linalg.pinv(m) @ np.array([net[0], net[1], mom])
+    ns = np.linalg.svd(m)[2][-1]  # the one free choice: how hard the hands squeeze the board between them
+    f = min((f0 + c * ns for c in np.linspace(-8.0, 8.0, 321)),
+            key=lambda x: max(float(np.linalg.norm(x[:2])), float(np.linalg.norm(x[2:]))))
+    d = (a - b) / float(np.linalg.norm(a - b))  # from the trailing pads to the leading ones
+    return f[:2] + squeeze * d, f[2:] - squeeze * d
 
 
 _GIVE = {}
 
 
-def _give(side, tcp):
-    """The arm's give at its pad tips (m/N, 3x3, world) with the tool point at `tcp`, gripping straight down:
+def _give(side, tcp, yaw=None):
+    """The arm's give at its pad tips (m/N, 3x3, world) with the tool point at `tcp`, gripping straight down at the
+    hand's yaw:
     J K^-1 J^T with the YAM's servo stiffness (80 N*m/rad shoulder joints, 10 wrist). The press couples into the
     sideways push: aimed 2 cm down, the pads also push 1-3 N sideways, as much as the feed itself."""
-    key = (side, *(round(float(v), 3) for v in tcp))
+    yaw = HAND_YAW[side] if yaw is None else yaw
+    key = (side, round(yaw, 3), *(round(float(v), 3) for v in tcp))
     if key not in _GIVE:
         import yam_arena.demo as yd
         from yam_arena.constants import SHOULDER, WRIST
         from yam_arena.station import BASES
         base = np.asarray(BASES[side], float)
-        q, _, _ = yd.ik.solve(np.asarray(tcp, float), yd.ik.matrix_to_quat_xyzw(yd.grip_rotation(0.0)), q_init=None,
+        q, _, _ = yd.ik.solve(np.asarray(tcp, float), yd.ik.matrix_to_quat_xyzw(yd.grip_rotation(yaw)), q_init=None,
                               base_pos=base)
 
         def tip(q):
@@ -745,99 +906,218 @@ def _give(side, tcp):
     return _GIVE[key]
 
 
-def _aim(side, w, force=(0.0, 0.0), press=PRESS_N):
+def _aim(side, w, force=(0.0, 0.0), press=PRESS_N, yaw=None):
     """The tool point's target for pads resting on the board's top at world (x, y) `w` to push it with `force` (N,
     world) and press down with `press` (N): aimed past the pads by the arm's give."""
     tcp = np.array([w[0], w[1], TOP + GAP + T + TIP])
-    d = _give(side, tcp) @ np.array([force[0], force[1], -press])
+    d = _give(side, tcp, yaw) @ np.array([force[0], force[1], -press])
     return tuple(float(v) for v in tcp + d)
 
 
+CARRY_N = 12  # the carry's steps from where the board lies to 5 mm short of the pin
+
+
+def carry_path():
+    """The board's poses (turn, slides) as the demo carries it from where it lies to the brace: its middle moved
+    straight and its turn eased from square to BRACE_TURN, ending 5 mm short of the pin; then straight on toward the
+    pin, 3 mm past its surface (the pin stops it)."""
+    near = BRACE_AT - 0.005 * PIN_OUT
+    c0 = _board_world(START[2], START[:2], CENTRE)
+    c1 = _board_world(BRACE_TURN, near, CENTRE)
+    path = []
+    for k in range(CARRY_N + 1):
+        u = k / CARRY_N
+        u = u * u * (3 - 2 * u)
+        th = START[2] + (BRACE_TURN - START[2]) * u
+        path.append((th, _rot(-th) @ (c0 + (c1 - c0) * u - PIN) - np.array(CENTRE)))
+    for k in range(1, 7):
+        path.append((BRACE_TURN, near + (0.008 * PIN_OUT) * k / 6))
+    return path
+
+
 def demo():
-    """Left arm: press the pads on the board and slide it onto the starting pin at the spot where pivoting it about
-    the pin brings the curve's leading end onto the bearing; move the pads behind the pin and, pushing the board on
-    along the pin and onto it, swing it about the pin until the curve rides the bearing. Then both hands: the left
-    presses near the board's leading end, the right near its trailing end, and together they turn the board round the
-    bearing over the whole curve, off the pin, and carry it on past the bit; lift off and go home."""
+    """Both hands press near the board's ends and carry it from where it lies, square, to the starting pin, turned 14
+    deg, at the spot where pivoting it about the pin brings the curve's leading end onto the bearing. The left hand
+    moves its pads behind the pin and, pushing the board onto the pin and along it, swings it about the pin until the
+    curve rides the bearing, and holds it there. The right hand takes the board near its trailing end before the left
+    lets go; the left presses near the leading end; and together they turn the board round the bearing over the whole
+    curve (changing places once, one hand at a time, with the board at rest), off the pin, and carry it on past the
+    bit; lift off and go home."""
     C, O = FINGER_CLOSED, FINGER_OPEN
-    s0 = np.array(START[:2])
-    th0 = START[2]
-    braced_s = BRACED_LEAD
-    into_pin = _rot(-th0) @ (np.array([0.0015, 0.0025]))  # 3 mm on toward the pin (its collider stops the board)
-    left = [Waypoint(2.2, _press_at(th0, s0, TOP + 0.10), C, "over the board"),
-            Waypoint(1.2, _press_at(th0, s0, PZ + 0.01), C, "down onto it"),
-            Waypoint(0.6, _press_at(th0, s0), C, "press")]
-    n = 8
-    for k in range(1, n + 1):  # slide it onto the pin
-        s = s0 + (braced_s + into_pin - s0) * k / n
-        left.append(Waypoint(0.5, _press_at(th0, s), C, "brace the board against the starting pin"))
-    left.append(Waypoint(0.5, _press_at(th0, braced_s + into_pin), C, "settle on the pin"))
+    th0 = BRACE_TURN
+    braced_s = BRACE_AT
+    into_pin = 0.003 * PIN_OUT  # 3 mm on toward the pin (its collider stops the board)
+    # Both hands press near the board's two ends (where they will feed it) and carry it from where it lies, square,
+    # to the brace: turned 14 deg counterclockwise and 5 mm short of the pin, then straight onto the pin. Carried by
+    # one hand, the table's friction (all over the board) would turn it about the pads. Each hand pushes its pads
+    # along their own path with half the table's friction under the board (its press plus half the weight).
+    path, n = carry_path(), CARRY_N
+    f_fric = MU_TABLE * (BRACE_PRESS + BOARD_MASS * G / 2)
+    arms = {"left": [], "right": []}
+    for side, p in (("left", CARRY_L), ("right", CARRY_R)):
+        w0 = _board_world(START[2], START[:2], p)
+        arm = arms[side]
+        arm += [Waypoint(2.2, (w0[0], w0[1], TOP + 0.10), C, "over the board"),
+                Waypoint(1.2, (w0[0], w0[1], TOP + GAP + T + TIP - 0.001), C, "down onto it"),
+                Waypoint(0.6, _aim(side, w0, press=BRACE_PRESS), C, "press")]
+        f = np.zeros(2)
+        for k in range(1, len(path)):
+            a, b = _board_world(*path[k - 1], p), _board_world(*path[k], p)
+            f = f_fric * (b - a) / max(float(np.linalg.norm(b - a)), 1e-9)
+            lab = "carry the board to the starting pin" if k <= n else "brace it against the starting pin"
+            arm.append(Waypoint(0.4, _aim(side, b, f * min(1.0, k / 2), BRACE_PRESS), C, lab))
+        w1 = _board_world(*path[-1], p)
+        arm += [Waypoint(0.5, _aim(side, w1, f, BRACE_PRESS), C, "settle on the pin"),
+                Waypoint(0.5, (w1[0], w1[1], TOP + GAP + T + TIP + 0.015), C, "lift the pads")]
+    left, right_brace = arms["left"], arms["right"]
     lift = PZ + 0.015
-    th1 = LEAD - math.radians(1.0) - PIVOT_OVER  # past the braced pose: into the bearing, which stops the board
+    th1 = PIVOT_END[0] - PIVOT_OVER  # just past the bearing, which stops the board
     th_b, s_b = PIVOT_POSE
     pin_b = -s_b  # the pin's center in the board's frame
     out = (pin_b - C_L) / np.linalg.norm(pin_b - C_L)  # the edge's outward normal where it bears on the pin
     along = np.array([-out[1], out[0]])  # the edge's tangent there, toward the leading end
     push = math.cos(PIVOT_IN) * along + math.sin(PIVOT_IN) * out
     pv_pad = pin_b - PIVOT_R * push  # the pads, so their push toward the pin is along `push`
-    left += [Waypoint(0.5, _press_at(th0, braced_s, lift), C, "lift the pads"),
+    # turning the board about the pin, the pads also push it round against the table's friction: under the pads
+    # (their press) and under the board's middle (its weight), as a torque about the pin, carried at the pads
+    r_mid = float(np.linalg.norm(np.array(CENTRE) - pin_b))
+    f_turn = MU_TABLE * (PIVOT_PRESS * PIVOT_R + BOARD_MASS * G * r_mid) / PIVOT_R
+    rad = (pv_pad - pin_b) / PIVOT_R
+    cw = np.array([rad[1], -rad[0]])  # clockwise round the pin, the way the pivot turns the board (board frame)
+
+    th_cut = next(a for a in np.arange(th_b, th1, -0.0005)  # where the cutter starts to cut
+                  if bit_dist({"board_turn": a, "board_x": s_b[0], "board": s_b[1]}) < RC)
+
+    def f_along(th):
+        return PIVOT_ALONG * min(max((th_cut - th) / (th_cut - PIVOT_END[0]), 0.0), 1.0) * along
+
+    def pv_aim(th, f_board, press=PIVOT_PRESS):
+        return _aim("left", _board_world(th, s_b, pv_pad), _rot(th) @ f_board, press, yaw=PIVOT_YAW)
+
+    pivot_from = len(left)  # the pivot's waypoints, at PIVOT_YAW
+    left += [Waypoint(2.0, left[-1].pos, C, "wait for the right arm to go home"),
              Waypoint(1.0, _point_at(th_b, s_b, pv_pad, lift), C, "behind the pin"),
-             Waypoint(0.6, _point_at(th_b, s_b, pv_pad, PZ_FIRM), C, "press")]
+             Waypoint(0.6, pv_aim(th_b, np.zeros(2)), C, "press")]
     for k in range(1, 9):  # load the push gradually, the board still against the pin
-        left.append(Waypoint(0.1, _point_at(th_b, s_b, pv_pad + _lead(th_b, push * PIVOT_F * k / 8), PZ_FIRM), C,
-                             "push along the pin and onto it"))
+        left.append(Waypoint(0.1, pv_aim(th_b, push * PIVOT_F * k / 8), C, "push along the pin and onto it"))
     # The pivot and the feed are paths of short 0.1 s steps: each waypoint eases in and out, so long ones would move
     # the board in jerks, and a jerk can draw it a millimeter off the pin or off the bearing.
     n = int(round(120 * (th_b - th1) / (th0 - LEAD + math.radians(1.0))))  # the same pace as a swing to 1 deg past
     for k in range(1, n + 1):  # pivot about the pin
         th = th_b + (th1 - th_b) * k / n
-        left.append(Waypoint(0.1, _point_at(th, s_b, pv_pad + _lead(th, push * PIVOT_F), PZ_FIRM), C,
+        g = min(1.0, k / 6)
+        left.append(Waypoint(0.1, pv_aim(th, push * PIVOT_F + g * f_turn * cw + f_along(th)), C,
                              "pivot about the pin into the bit"))
-    on_b = _point_at(th1, s_b, pv_pad + _lead(th1, push * PIVOT_F), PZ_FIRM)
-    left += [Waypoint(1.0, on_b, C, "on the bearing"),
-             Waypoint(0.5, (on_b[0], on_b[1], lift), C, "lift the pads")]  # straight up: no drag back
-    # Both hands onto the board where it rests on the bearing; the right arm sets off as the left lifts.
-    t_left = sum(w.duration for w in left)
+    on_b = pv_aim(th1, push * PIVOT_F + f_turn * cw + f_along(th1))
+    left.append(Waypoint(1.0, on_b, C, "on the bearing"))
+    # The board is passed from hand to hand, never let go: lifted, the left hand left the board free to roll between
+    # pin and bearing under the cutter's push, off the curve's leading end. The right presses near the trailing end,
+    # 9 cm in from its feed spot (at its feed spot its wrist came within 8.5 cm of the left's), and pushes its share of
+    # the feed's start (_hand_forces), which alone holds that roll; the left lifts, crosses high over the bit and
+    # presses near the leading end with its share, which also alone holds it; then the right steps back to its spot.
     th_s, s_s, _ = _feed_pose(PHI_START)
     wl, wr = _board_world(th_s, s_s, PAD_L), _board_world(th_s, s_s, PAD_R)
-    above = TOP + GAP + T + TIP + 0.015
-    up = (on_b[0], on_b[1], lift)
-    left += _over(up, (wl[0], wl[1], above), C)
-    left.append(Waypoint(1.0, (wl[0], wl[1], above), C, "to the board's leading end"))
-    right = [kit.Home(t_left, label="stay home"),
-             Waypoint(1.6, (wr[0], wr[1], TOP + 0.08), C, "over the board's trailing end"),
-             Waypoint(0.8, (wr[0], wr[1], above), C, "down to it")]
-    t_l, t_r = sum(w.duration for w in left), sum(w.duration for w in right)
-    if t_l < t_r:
-        left.append(Waypoint(t_r - t_l, (wl[0], wl[1], above), C, "wait for the other hand"))
-    elif t_r < t_l:
-        right.append(Waypoint(t_l - t_r, (wr[0], wr[1], above), C, "wait for the other hand"))
-    # The pads touch down straight onto their spots (the arm unloaded, so they land where they are aimed), then press
-    # and take up half their share of the push at once. Off the pin nothing but the hands holds the board along the
-    # feed, and the bearing sits only 6 mm in from the curve's leading end: a press that nudged the board back would
-    # run the curve's end off the bearing and onto the pin. Loaded toward the feed, a nudge only starts the feed.
+    wh = _board_world(th_s, s_s, CARRY_R + np.array([0.09, 0.0]))  # the right hand's hold during the hand-over
     f0 = _hand_forces(PHI_START)
-    for side, arm, w, f in (("left", left, wl, f0[0]), ("right", right, wr, f0[1])):
-        arm += [Waypoint(0.5, (w[0], w[1], TOP + GAP + T + TIP - 0.001), C, "pads on the board"),
-                Waypoint(0.6, _aim(side, w, 0.5 * f), C, "press"),
-                Waypoint(0.4, _aim(side, w, 0.5 * f), C, "press")]
+    above = TOP + GAP + T + TIP + 0.015
+    t_on = sum(w.duration for w in left)  # the left hand holds the board on the bearing from here
+    t_rb = sum(w.duration for w in right_brace)
+    right = right_brace + [kit.Home(2.0, label="home, out of the left arm's way"),
+                           kit.Home(t_on - t_rb - 2.0 - 2.4, label="home while the left hand pivots the board"),
+                           Waypoint(1.6, (wh[0], wh[1], TOP + 0.08), C, "over the board's trailing end"),
+                           Waypoint(0.8, (wh[0], wh[1], above), C, "down to it"),
+                           Waypoint(0.5, (wh[0], wh[1], TOP + GAP + T + TIP - 0.001), C, "pads on the board"),
+                           Waypoint(0.6, _aim("right", wh, f0[1]), C, "press"),
+                           Waypoint(1.0, _aim("right", wh, f0[1]), C, "hold the board on the bearing")]
+    left.append(Waypoint(sum(w.duration for w in right) - t_on, on_b, C, "hold it while the right hand takes it"))
+    left.append(Waypoint(0.5, (on_b[0], on_b[1], lift), C, "lift the pads"))  # straight up: no drag back
+    pivot_to = len(left)
+    up = (on_b[0], on_b[1], lift)
+    over = _over(up, (wl[0], wl[1], above), C)
+    left += over
+    if over:
+        pivot_to += 1  # straight up still at the pivot's yaw; the wrist turns on the way across, high over the bit
+    left.append(Waypoint(1.0, (wl[0], wl[1], above), C, "to the board's leading end"))
+    # The left pads touch down straight onto their spot (the arm unloaded, so they land where they are aimed), then
+    # press and take up their whole share of the push at once (half loaded, the cutter's push can turn the board back
+    # about the bearing and onto the pin).
+    left += [Waypoint(0.5, (wl[0], wl[1], TOP + GAP + T + TIP - 0.001), C, "pads on the board"),
+             Waypoint(0.6, _aim("left", wl, f0[0]), C, "press"),
+             Waypoint(0.5, _aim("left", wl, f0[0]), C, "hold the board on the bearing")]
+    t_l, t_r = sum(w.duration for w in left), sum(w.duration for w in right)
+    right.append(Waypoint(t_l - t_r, _aim("right", wh, f0[1]), C, "hold the board on the bearing"))
+    y1 = FEED_PADS[0][4]
+    fs = _hand_forces(PHI_START, squeeze=FEED_PADS[0][5])  # the feed's first pushes
+    yawed = {}  # waypoints with their own yaw (id -> yaw)
+
+    def wy(w, yaw):
+        yawed[id(w)] = yaw
+        return w
+
+    right += [Waypoint(0.5, (wh[0], wh[1], above), C, "lift the pads"),
+              wy(Waypoint(0.8, (wr[0], wr[1], above), C, "to the trailing end"), y1),
+              wy(Waypoint(0.5, (wr[0], wr[1], TOP + GAP + T + TIP - 0.001), C, "pads on the board"), y1),
+              wy(Waypoint(0.6, _aim("right", wr, fs[1], yaw=y1), C, "press"), y1),
+              wy(Waypoint(0.4, _aim("right", wr, fs[1], yaw=y1), C, "press"), y1)]
+    left.append(Waypoint(sum(w.duration for w in right) - sum(w.duration for w in left), _aim("left", wl, fs[0]), C,
+                         "hold the board on the bearing"))
     # The feed: both hands follow their pads round as the board turns about the curve's center, aimed past them by
-    # the arms' give for their share of the push (loaded fully over the first 0.6 s).
-    for j, phi in enumerate(np.linspace(PHI_START, PHI_END, FEED_N + 1)[1:]):
-        th, s, _ = _feed_pose(phi)
-        fl, fr = _hand_forces(phi)
-        g = min(1.0, 0.5 + 0.5 * (j + 1) / 6)
-        left.append(Waypoint(0.1, _aim("left", _board_world(th, s, PAD_L), g * fl), C, "feed round the bearing"))
-        right.append(Waypoint(0.1, _aim("right", _board_world(th, s, PAD_R), g * fr), C, "feed round the bearing"))
+    # the arms' give for their share of the push. Between the two stretches the board is stopped (the hands' pushes
+    # eased to nothing but the press) and the hands change places one at a time, each lifting only while the other
+    # presses the board.
+    phis = np.linspace(PHI_START, PHI_END, FEED_N + 1)
+    phi_at = PHI_START  # where the feed has got to
+    for n_ph, (a_ph, b_ph, pl, pr, yr, sq) in enumerate(FEED_PADS):
+        if n_ph:
+            th, s, _ = _feed_pose(phi_at)
+            ol, orr = _board_world(th, s, FEED_PADS[n_ph - 1][2]), _board_world(th, s, FEED_PADS[n_ph - 1][3])
+            nl, nr = _board_world(th, s, pl), _board_world(th, s, pr)
+            yr0 = FEED_PADS[n_ph - 1][4]
+            low = TOP + GAP + T + TIP - 0.001
+            left += [Waypoint(0.6, _aim("left", ol), C, "stop: ease the push"),
+                     Waypoint(0.4, (ol[0], ol[1], above), C, "lift the pads"),
+                     Waypoint(0.6, (nl[0], nl[1], above), C, "to its next place"),
+                     Waypoint(0.4, (nl[0], nl[1], low), C, "pads on the board"),
+                     Waypoint(0.5, _aim("left", nl), C, "press")]
+            right += [wy(Waypoint(0.6, _aim("right", orr, yaw=yr0), C, "stop: ease the push"), yr0),
+                      wy(Waypoint(1.9, _aim("right", orr, yaw=yr0), C, "hold the board"), yr0),
+                      wy(Waypoint(0.4, (orr[0], orr[1], above), C, "lift the pads"), yr0),
+                      wy(Waypoint(0.6, (nr[0], nr[1], above), C, "to its next place"), yr),
+                      wy(Waypoint(0.4, (nr[0], nr[1], low), C, "pads on the board"), yr),
+                      wy(Waypoint(0.5, _aim("right", nr, yaw=yr), C, "press"), yr)]
+            left.append(Waypoint(1.9, _aim("left", nl), C, "hold the board"))
+            fl, fr = _hand_forces(phi_at, pl, pr, sq)
+            left.append(Waypoint(0.6, _aim("left", nl, fl), C, "push again"))
+            right.append(wy(Waypoint(0.6, _aim("right", nr, fr, yaw=yr), C, "push again"), yr))
+        for phi in phis[1:]:
+            if (a_ph is not None and phi > a_ph) or (b_ph is not None and phi < b_ph):
+                continue
+            th, s, _ = _feed_pose(phi)
+            fl, fr = _hand_forces(phi, pl, pr, sq)
+            phi_at = float(phi)
+            left.append(Waypoint(0.1, _aim("left", _board_world(th, s, pl), fl), C, "feed round the bearing"))
+            right.append(wy(Waypoint(0.1, _aim("right", _board_world(th, s, pr), fr, yaw=yr), C,
+                                     "feed round the bearing"), yr))
     # On past the bit, the hands only carrying the board, then the press eased off and both hands lifted straight up.
     th_e, s_e, _ = _feed_pose(PHI_END)
-    for side, arm, p in (("left", left, PAD_L), ("right", right, PAD_R)):
+    yr = FEED_PADS[-1][4]
+    for side, arm, p in (("left", left, FEED_PADS[-1][2]), ("right", right, FEED_PADS[-1][3])):
+        yw = yr if side == "right" else None
         w = _board_world(th_e, s_e, p)
-        arm.append(Waypoint(0.5, _aim(side, w), C, "carry it"))
+        f_on = MU_TABLE * (PRESS_N + BOARD_MASS * G / 2) * END_SHIFT / np.linalg.norm(END_SHIFT)
+        steps = [Waypoint(0.5, _aim(side, w, yaw=yw), C, "carry it")]
         for k in range(1, 9):
-            arm.append(Waypoint(0.25, _aim(side, w + END_SHIFT * k / 8), C, "on past the bit"))
+            steps.append(Waypoint(0.25, _aim(side, w + END_SHIFT * k / 8, f_on, yaw=yw), C, "on past the bit"))
         w2 = w + END_SHIFT
-        arm += [Waypoint(0.5, _aim(side, w2, press=1.0), C, "ease off"),
-                Waypoint(0.8, (w2[0], w2[1], TOP + 0.10), C, "lift off"),
-                kit.Home(2.0), kit.Home(1.5, label="hold at home")]
+        steps += [Waypoint(0.5, _aim(side, w2, press=1.0, yaw=yw), C, "ease off"),
+                  Waypoint(0.8, (w2[0], w2[1], TOP + 0.10), C, "lift off")]
+        arm += [wy(x, yw) if yw is not None else x for x in steps]
+        arm += [kit.Home(2.0), kit.Home(1.5, label="hold at home")]
+    for side, arm in (("left", left), ("right", right)):  # each hand keeps its yaw throughout (see HAND_YAW)
+        for i, w in enumerate(arm):
+            if isinstance(w, Waypoint):
+                if id(w) in yawed:
+                    w.yaw = yawed[id(w)]
+                else:
+                    w.yaw = PIVOT_YAW if side == "left" and pivot_from <= i < pivot_to else HAND_YAW[side]
     return {"left": left, "right": right}
