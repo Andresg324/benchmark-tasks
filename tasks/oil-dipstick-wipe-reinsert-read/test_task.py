@@ -16,7 +16,16 @@ HOME = {"left_gripper": (0.10, 0.25, T + 0.20), "right_gripper": (0.10, -0.25, T
 RAG_HOME = m.RAG_START
 OUTQ = m.BLADE + 0.012
 PUCK_GRIP = m.PUCK_R / abs(m.FINGER_OPEN)  # opening of fingers closed on the 3 cm puck
-HANDLE_GRIP = m.HANDLE[0] / 2 / abs(m.FINGER_OPEN)  # opening of fingers closed across the handle's 1.8 cm thickness
+HANDLE_GRIP = m.HANDLE[1] / 2 / abs(m.FINGER_OPEN)  # opening of fingers closed across the handle's 1.8 cm thickness
+BLADE_GRIP = m.BLADE_T / 2 / abs(m.FINGER_OPEN)  # opening of fingers pinching the blade's 3 mm thickness
+TILT = np.array(m.TILT)
+# the handle's half extent up and down (world z), as it lies along the sloping tube
+HANDLE_HALF_Z = 0.5 * (m.HANDLE[0] * abs(m.R_TUBE[2, 0]) + m.HANDLE[2] * abs(m.R_TUBE[2, 2]))
+
+
+def tube_pt(a, dy=0.0):
+    """The world point a m along the tube's axis from the mouth's middle, dy along y."""
+    return tuple(m.MOUTH_W + a * m.U + np.array([0.0, dy, 0.0]))
 
 
 def st(pos, half=0.01):
@@ -54,8 +63,9 @@ def rag_st(pos):
                        low=p - h, high=p + h)
 
 
-def handle_at(q):
-    return (m.SX, m.SY, T + m.MOUTH + q + m.HANDLE_C)
+def handle_at(q, a=None):
+    """The right hand's tool point on the stick: at the handle's middle, or at link coordinate a (a blade pinch)."""
+    return tube_pt(q + (m.HANDLE_C if a is None else a))
 
 
 class Trial:
@@ -69,7 +79,8 @@ class Trial:
         self.q, self.qd = 0.0, 0.0
         self.right, self.ropen = HOME["right_gripper"], 1.0
         self.left, self.lopen = HOME["left_gripper"], 1.0
-        self.across_y = False
+        self.across_y = True  # the fingers close across world y (the handle's and blade's thickness)
+        self.grip_a = None  # where on the stick the right hand rides: None = the handle, else a link coordinate
         self.off = (0.0, 0.0, 0.0)  # the right hand's offset from the handle's middle while it rides along
         self.rag = RAG_HOME
         self.out = (0.0, False)
@@ -79,7 +90,11 @@ class Trial:
         for _ in range(n):
             kit._JOINTS["engine/stick"] = kit.JointState(self.q, self.qd, False)
             kit._OPENING["right_gripper"], kit._OPENING["left_gripper"] = self.ropen, self.lopen
-            objs = {"engine": st(m.BASE), "engine/stick": st((m.SX, m.SY, T + m.MOUTH + self.q)),
+            stick = st(tube_pt(self.q))
+            stick = stick._replace(quat_xyzw=TILT) if hasattr(stick, "_replace") else type(stick)(
+                pos=stick.pos, quat_xyzw=TILT, lin_vel=stick.lin_vel, ang_vel=stick.ang_vel, low=stick.low,
+                high=stick.high)
+            objs = {"engine": st(m.MOUTH_W), "engine/stick": stick,
                     "rag": rag_st(self.rag), "puck": puck_st(self.puck), "card": st((*m.CARD_C, T + 0.005)),
                     "right_gripper": grip_st(self.right, across_y=self.across_y), "left_gripper": grip_st(self.left)}
             ok = m.success(objs)
@@ -88,7 +103,14 @@ class Trial:
 
     # moves
     def grab(self):
+        self.grip_a = None
         self.right, self.ropen = handle_at(self.q), HANDLE_GRIP
+        return self.step(3)
+
+    def grab_blade(self, from_cap=0.10):
+        """Pinch the blade `from_cap` m below the cap (a hand-over-hand grip)."""
+        self.grip_a = -from_cap
+        self.right, self.ropen = handle_at(self.q, self.grip_a), BLADE_GRIP
         return self.step(3)
 
     def slide(self, q1, n=20):
@@ -97,7 +119,7 @@ class Trial:
             self.q = q0 + (q1 - q0) * k / n
             self.qd = (q1 - q0) / n * 20
             if self.ropen < 0.7:
-                self.right = tuple(np.add(handle_at(self.q), self.off))
+                self.right = tuple(np.add(handle_at(self.q, self.grip_a), self.off))
             self.step()
         self.qd = 0.0
         return self.step()
@@ -113,11 +135,13 @@ class Trial:
         return self.step(2)
 
     def wipe(self, z0, z1, n=30, dy=0.0225, off=1):
+        """The rag's middle drawn along the blade from z0 to z1, where z - (T + MOUTH) is the distance along the tube
+        from the mouth, `dy` beside the blade's axis."""
         for k in range(n + 1):
-            self.rag = (m.SX, m.SY + dy, z0 + (z1 - z0) * k / n)
+            self.rag = tube_pt(z0 + (z1 - z0) * k / n - T - m.MOUTH, dy)
             self.left = self.rag
             self.step()
-        self.rag = (m.SX, m.SY + 0.08, z1)  # rag lifted off the blade for `off` steps
+        self.rag = tube_pt(z1 - T - m.MOUTH, 0.08)  # rag lifted off the blade for `off` steps
         self.left = self.rag
         return self.step(off)
 
@@ -312,7 +336,7 @@ t.grab(); t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.rag_down()
 results.append(check("dropped back in instead of pushed (never seated by hand)", t.hold(25)[0], 0.0))
 
 t = Trial()  # after the wipe the dipstick is let fall back to its seat while an EMPTY closed fist (opening 0) hovers
-# at the handle's seated height: not pushed in by hand, so no reseat; then the rest done right still scores 0
+# at the handle's seated place: not pushed in by hand, so no reseat; then the rest done right still scores 0
 t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(WT, WB)
 t.ropen, t.right = 0.0, handle_at(0.0)  # fingers fully shut on nothing, beside where the handle will seat
 t.slide(0.0, n=3); t.hold(5)
@@ -324,11 +348,17 @@ t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(WT, WB); t.slide(0.0); t.hold(5)
 t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.rag_down(); t.report()
 results.append(check("pushed in with the handle gripped", t.hold(25)[0], 1.0))
 
-t = Trial()  # the same push with the fingers across the handle's 3.5 cm width (the other way round) is also a grip
-t.across_y = True
-t.grab(); t.ropen = m.HANDLE[1] / 2 / abs(m.FINGER_OPEN); t.slide(OUTQ); t.take_rag(); t.wipe(WT, WB); t.slide(0.0)
-t.hold(5); t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.rag_down(); t.report()
-results.append(check("pushed in gripped across the handle's width", t.hold(25)[0], 1.0))
+t = Trial()  # hand over hand (the demo's way): the handle drawn part way, the blade pinched near the mouth and drawn out,
+# held by the blade for the wipe and the reading, pushed back in by the blade, the handle pushed home
+t.grab(); t.slide(0.1475); t.ropen = 1.0; t.step(3); t.grab_blade(0.1125); t.slide(OUTQ); t.take_rag(); t.wipe(WT, WB)
+t.slide(0.1475); t.ropen = 1.0; t.step(3); t.grab(); t.slide(0.0); t.hold(5)
+t.slide(0.1475); t.ropen = 1.0; t.step(3); t.grab_blade(0.1125); t.slide(OUTQ); t.hold(30)
+t.slide(0.1475); t.ropen = 1.0; t.step(3); t.grab(); t.slide(0.0); t.let_go(); t.rag_down(); t.report()
+results.append(check("hand over hand: blade pinched for the pulls, the wipe and the reading", t.hold(25)[0], 1.0))
+t = Trial()  # an empty fist (opening 0) beside the blade during the reading is not a hold
+t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(WT, WB); t.slide(0.0); t.hold(5); t.slide(OUTQ)
+t.grab_blade(0.1125); t.ropen = 0.0
+results.append(check("reading 'held' by an empty fist at the blade: no reading", t.hold(30)[0], 0.25))
 
 # Holding is contact (Nov 12): both fingers on the handle, their opening stopped by it. A hand riding along beside the
 # handle without both fingers on it is not pushing it home; the reseat does not count and nothing true is read.
@@ -340,12 +370,12 @@ t.ropen = HANDLE_GRIP; t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.ra
 results.append(check("reseated with an open hand round the handle, not touching it", t.hold(25)[0], 0.0))
 t = Trial()  # closed to the handle's thickness but 5 mm to one side: one finger on it, the other 5 mm off
 t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(WT, WB)
-t.off = (0.005, 0.0, 0.0); t.slide(0.0, n=3); t.hold(5)
+t.off = (0.0, 0.005, 0.0); t.slide(0.0, n=3); t.hold(5)
 t.off = (0.0, 0.0, 0.0); t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.rag_down(); t.report()
 results.append(check("reseated with one finger on the handle", t.hold(25)[0], 0.0))
 t = Trial()  # the same hand closed to the handle's thickness with its pad tips 5 mm above the handle's top
 t.grab(); t.slide(OUTQ); t.take_rag(); t.wipe(WT, WB)
-t.off = (0.0, 0.0, m.HANDLE[2] / 2 + 0.0128 + 0.005); t.slide(0.0, n=3); t.hold(5)
+t.off = (0.0, 0.0, HANDLE_HALF_Z + 0.0128 + 0.005); t.slide(0.0, n=3); t.hold(5)
 t.off = (0.0, 0.0, 0.0); t.slide(OUTQ); t.hold(30); t.slide(0.0); t.let_go(); t.rag_down(); t.report()
 results.append(check("reseated by a closed hand hovering 5 mm over the handle", t.hold(25)[0], 0.0))
 
