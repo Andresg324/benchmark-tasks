@@ -26,7 +26,7 @@ Scripted demo (both arms): both hands press on the square-set board and carry it
 
 ### Forces in the demo
 
-Measured from the arms' deflection times the servo stiffness on the development run of this demo: the left hand pushed 3.9 N on average (at most 4.2 N) under a 9.4 N press; the right 5.0 N on average under 8.3 N, with 5.2-6.0 N in the first stretch. The pivot hand pushed 3.7-3.8 N under 6.3 N. The 6 N peak is above the YAM's roughly 5 N sustained push; the shipped demo moves 1 N of the right hand's share to the left in that stretch to even the split. A real trial may need a slower feed or a lighter press there; the feed-force check before the trials records what the board takes.
+Measured from the arms' deflection times the servo stiffness on the development run of this demo: the left hand pushed 3.9 N on average (at most 4.2 N) under a 9.4 N press; the right 5.0 N on average under 8.3 N, with 5.2-6.0 N in the first stretch. The pivot hand pushed 3.7-3.8 N under 6.3 N. These are well within the YAM. Its shoulder and elbow joints are Damiao DM-J4340 servos (9 N*m rated, 27 N*m peak) and its wrist joints DM-J4310 (3 N*m rated, 7 N*m peak), the same limits the sim's arm model uses. Worked through the arm's Jacobian from its URDF in each feed pose, with the torque that holds the arm up included, the planned load (up to 5.7 N of push plus the 8 N press per hand) takes at most 84% of the rated, continuous joint torque and 28% of the peak; the same pose would sustain about twice that load at rated torque. The 6 N peak is inside that margin. The shipped demo moves 1 N of the right hand's share to the left in the first stretch to even the split; the feed-force check before the trials records what the real board takes.
 Offline scorer tests: `python test_task.py` (prints "all pass"). Runtime per trial: 2,400 steps at most (2 minutes at
 20 Hz); seed 0, object jitter 0, one fixed layout.
 
@@ -137,9 +137,9 @@ control step, from a published wood-milling force model:
   140 W, a small share of the router's 1.7 kW (2.25 hp), as a light pass should be.
 - Why 1/8 in high. Woodworking guidance (Woodcraft, Fine Woodworking) is to take no more than about 1/8 in per pass,
   since heavy cuts invite kickback, so this rabbet is 1/8 in deep and 3/8 in wide, cut in one pass; a deeper rabbet
-  would take a second pass with the bit raised. A 1/4 in deep cut in one pass would be about 6-9 N against the feed,
-  12-17 N at the bit's full 12.7 mm height, more than the arm pushes (about 5 N), and it is what woodworkers are told
-  not to do.
+  would take a second pass with the bit raised. A 1/4 in deep cut in one pass would be about 6-9 N against the feed
+  (12-17 N at the bit's full 12.7 mm height); the depth is set by that woodworking practice, not by the arm, and a
+  1/4 in rabbet is this same pass done twice with the bit raised between them.
 - How it acts: the force is applied where the cutter takes fresh wood, along the cutting edge's motion there and
   toward the bit's axis (which the bearing takes). In a right-to-left feed it pushes back against the feed; a board
   pushed straight into the bit off the pin is pushed to the right, which is the grab, now with a real force behind it.
