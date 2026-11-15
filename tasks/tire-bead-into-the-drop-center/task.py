@@ -174,10 +174,56 @@ def _at(deg, r=PRESS_R):
     return (r * math.cos(a), r * math.sin(a))
 
 
+ARC_CORE = 20.0  # deg each side of an arc's middle drawn on its own (rigid) link; the 10 deg either side of each joint
+#                   between arcs is drawn as slices blending the two arcs' heights (_arc_blends)
+
+
+def _arc_meshes(lo_deg, hi_deg):
+    a0, a1 = math.radians(lo_deg), math.radians(hi_deg)
+    return (_sweep_mesh(_shell(INNER), GUMWALL, a0, a1),
+            _sweep_mesh(_shell(INNER[-2:] + [(0.1005, 0.0045)], 0.002), RUBBER, a0, a1))
+
+
+def _arc_blends(slices=4):
+    """The bead either side of each joint between two arcs (and between an arc and the last section), drawn as thin
+    slices whose drop blends linearly from one arc's to the next (to the seated height at the last section, where its
+    own taper ends), so the bead bends down into the channel instead of stepping. Drawn only: no colliders, no effect
+    on the physics or the score; with every arc on its shoulder or every arc in the channel they line up flush."""
+    links = []
+    half = 30.0 - ARC_CORE
+    by_edge = {}
+    for n, c in SECTORS.items():
+        by_edge[(c - 30.0) % 360.0] = by_edge.get((c - 30.0) % 360.0, {}) | {"right": n}
+        by_edge[(c + 30.0) % 360.0] = by_edge.get((c + 30.0) % 360.0, {}) | {"left": n}
+    for edge, pair in sorted(by_edge.items()):
+        left, right = pair.get("left"), pair.get("right")  # the arc below the joint's angle, the arc above it
+        # beside the last section only the arc's side is blended (down to seated at the joint); the section's own
+        # slices (_blend_slices) draw the other side
+        z0 = edge - half if left else edge
+        span = (2 * half if left and right else half)
+        step = span / slices
+        for k in range(slices):
+            lo = z0 + k * step
+            mid = lo + step / 2
+            if left and right:
+                wr = (mid - z0) / span
+                wl = 1.0 - wr
+            elif left:
+                wl, wr = (edge - mid) / half, 0.0
+            else:
+                wl, wr = 0.0, (mid - edge) / half
+
+            def follow(qs, left=left, right=right, wl=wl, wr=wr):
+                return (wl * qs[left] if left else 0.0) + (wr * qs[right] if right else 0.0)
+
+            links.append(kit.Link(f"arcblend{int(edge):03d}_{k}", "prismatic", "Z", (0.0, 0.0, 0.0), lower=-DROP,
+                                  upper=0.0, start=0.0, mass=0.002, meshes=_arc_meshes(lo, lo + step),
+                                  floating=True, follow=follow, follow_hold=1.0, follow_rate=0.003))
+    return tuple(links)
+
+
 def _sector(name, center):
-    a0, a1 = math.radians(center - 30.0), math.radians(center + 30.0)
-    meshes = (_sweep_mesh(_shell(INNER), GUMWALL, a0, a1), _sweep_mesh(_shell(INNER[-2:] + [(0.1005, 0.0045)], 0.002),
-                                                                       RUBBER, a0, a1))
+    meshes = _arc_meshes(center - ARC_CORE, center + ARC_CORE)
     # Press spots on the sidewall. The arcs next to the last section have theirs on their far half only (10 and 20
     # degrees from the far end), so no single hand, 9.4 cm across fully open, spans one of them and a press spot of the
     # last section (60 degrees apart, 9.7 cm edge to edge).
@@ -342,7 +388,7 @@ def _wheel():
     meshes.append(kit.box((0, 0, -ZR + 0.004), (0.12, 0.12, 0.008), STAND))
     colliders.append(kit.Collider((0, 0, -ZR + 0.004), size=(0.12, 0.12, 0.008)))
     colliders.append(kit.Collider((0, 0, 0), radius=0.016, height=0.06))
-    links = tuple(_sector(n, c) for n, c in SECTORS.items()) + (_flap(), _valve()) + _blend_slices()
+    links = tuple(_sector(n, c) for n, c in SECTORS.items()) + (_flap(), _valve()) + _blend_slices() + _arc_blends()
     return kit.Mechanism("wheel", pos=(WX, WY, TOP + ZR), size=(0.31, 0.31, 2 * ZR), meshes=tuple(meshes),
                          colliders=tuple(colliders), links=links)
 
