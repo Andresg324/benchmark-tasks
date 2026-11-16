@@ -251,15 +251,8 @@ The rig needs a real dipstick in a real fill tube over a real oil reservoir, wit
 and corner. Either of two builds gives that; the robot's task, the instruction and the scoring are the same on both.
 Prices are as listed on November 16, 2026.
 
-**Build A, a used engine.** A used Kohler 7000 Series engine (KT715 to KT745, the KT725's series, which share its
-dipstick part) from eBay's Multi-Purpose Engines category (Kohler, vertical shaft) or a local lawn tractor parts seller. Kohler
-7000 Series engines listed on eBay on November 16 ranged from about $220 to $1,600, with KT715 and KT725 listings at
-$747 to $1,080 (eBay listings collected on used.forsale/kohler-engines). The rig engine stays cold and unfueled, so a
-non-running engine serves as well as a running one: it needs its crankcase, oil pan, fill tube and dipstick, and it holds oil
-overnight on the drip tray with the tray staying dry. Drain the fuel, bolt it by its mounting surface to a steel plate, turned
-as in the sim (fill tube at x 36, y -12). If its dipstick or tube is missing, fit the genuine parts below.
-
-**Build B, a lower-cost equivalent from new parts (under $30 in parts, plus plywood offcuts).**
+**Build B, the affordable route, from new parts (under $30 in parts, plus plywood offcuts; the whole rig about $375 as
+listed, or about $125 with the budget build below).**
 
 | Part | What it is | Price, where | Note |
 |---|---|---|---|
@@ -278,6 +271,14 @@ after the wipe and reseat. Measure the genuine dipstick's length and mark positi
 record them. The sim's stick (29 cm overall, marks 0.8 and 2.0 cm from the tip) is derived from the drawing and modeled;
 if the genuine blade differs from 24.5 cm by more than 1 cm, record the difference with the results. The real tube
 bends just under the cap; the sim's is straight.
+
+**Build A, a used engine.** A used Kohler 7000 Series engine (KT715 to KT745, the KT725's series, which share its
+dipstick part) from eBay's Multi-Purpose Engines category (Kohler, vertical shaft) or a local lawn tractor parts seller. Kohler
+7000 Series engines listed on eBay on November 16 ranged from about $220 to $1,600, with KT715 and KT725 listings at
+$747 to $1,080 (eBay listings collected on used.forsale/kohler-engines). The rig engine stays cold and unfueled, so a
+non-running engine serves as well as a running one: it needs its crankcase, oil pan, fill tube and dipstick, and it holds oil
+overnight on the drip tray with the tray staying dry. Drain the fuel, bolt it by its mounting surface to a steel plate, turned
+as in the sim (fill tube at x 36, y -12). If its dipstick or tube is missing, fit the genuine parts above.
 
 **Dimensions, sim against real** (the real build is checked against these with a tape and a steel rule):
 
@@ -313,6 +314,19 @@ after it:
   1.8 cm grip is unchanged within that. The loads held are light (the 50 g dipstick, the 40 g rag, the 15 g puck), far
   under the 50 N grip cap. Before each session, with the covers on, the arm holds the dipstick out by its handle for
   10 s and lifts the rag and the puck without a slip; a cover that shifts on the finger is taped again.
+
+**Budget build.** The named items above stay as they are, and nothing changes for the sim or the scoring. These
+cheaper equivalents do the same jobs:
+
+- Oil reservoir: one empty 1 gallon unlined metal paint can from a hardware store (e.g. Leaktite), about $5, instead
+  of the $156 Uline carton of 34. Only one can is needed, and it is the same 1 gallon steel can under the tube.
+- Pads: a small pack of oil-only absorbent pads (about $15-20) or folded shop towels, instead of the $105 bag of 100
+  MAT403. About three pads are used a session, and any oil-only pad catches the drips from the blade.
+- Drip pan: an oil drain or drip tray big enough for the 47 x 50 cm plate (about $15-20) instead of the $33 Lisle
+  19722. It only has to catch drips under the plate.
+
+Primary rig (Build B) about $375; budget build about $125 (excluding the robot and a phone). Build A adds the used
+engine ($220-1,080) in place of the dipstick, tube, can and housing.
 
 **Free withdrawal and reinsertion.** The sim's dipstick slides on the tube's axis even when out; the real one is
 free, so the real trials score the guided part directly: in each trial the tester records whether the tip went back
