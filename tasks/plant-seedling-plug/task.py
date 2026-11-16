@@ -1,5 +1,5 @@
 """On the station table, in front of the arms: a wooden planter box (30 x 30 cm inside, 9 cm deep) of firmed potting
-mix, with a 10.4 cm planting hole dug 6.2 cm deep in its middle. The loose mix (440 mL,
+mix, with a 10.3 cm planting hole cored 6.2 cm deep in its middle. The loose mix (440 mL,
 200 g, crumbled into clods) lies heaped round it. A pepper seedling, popped from a 36-cell insert with its root plug
 (4.9 x 5.7 cm across the top, 5.7 cm deep, 70 g), stands on the bench to the left: a 9 cm stem 3.6 mm across with two
 seed leaves and four true leaves.
@@ -10,11 +10,11 @@ crushing a leaf.
 
 Every clod of loose mix is its own rigid body (soilkit). The plug and plant are one free articulated body: the root
 ball, and a springy stem (two segments, each on a two-axis spring joint) carrying the leaves, which the hands and the
-soil collide with. The score reads the end state: the plug centered in the hole (its top's center within 0.6 cm of
+soil collide with. The score reads the end state: the plug centered in the hole (its top's center within 0.5 cm of
 the hole's axis, turned any way), the soil's height at 16 points set out from the plug's own faces, so they follow the
-plug wherever it stands and however it is turned, read as a real trial reads them with a probe lowered through a
-template laid over the plug (the fill, and the level on each of the plug's four sides), the plug's tilt and depth, the
-hands off it, and a 0.5 N side push on the stem (pushkit) that a firmed plug resists. A damaged seedling (the stem
+plug wherever it stands and however it is turned, read as a real trial reads them with a 9.5 mm pin set at each
+point from the plug's faces (the fill, and the level on each of the plug's four sides), the plug's tilt and depth, the
+hands off it, and a side push of the weight of 50 g on the stem (pushkit) that a firmed plug resists. A damaged seedling (the stem
 bent past its kink angle, or the stem or a leaf squeezed between a hand's fingers) scores 0. Every threshold below appears once, with the same value in task.json and the README.
 """
 from __future__ import annotations
@@ -45,14 +45,14 @@ INSTRUCTION = "Plant the seedling in the planter box, level with the soil, and f
 
 # -- the planter box (world frame: x away from the arms, y to the robot's left, z up; m) ----------------------------------------
 # A wooden planter box, 30 x 30 cm inside, 9 cm deep, fixed on the bench, filled with moist potting mix
-# firmed level 1 cm under its top edge. The planting hole is dug with a 10.4 cm round former to a 6.2 cm depth stop (twice
+# firmed level 1 cm under its top edge. The planting hole is cored 10.3 cm across with a food can (401 x 411 size) to 6.2 cm deep (twice
 # the root ball's width, as planting guides say), so it is the same every trial.
 POT = (0.280, 0.000)  # the hole's center
 BED_X, BED_Y = 0.300, 0.300  # inside
 BED_WALL = 0.018
 RIM_Z = TOP + 0.090  # the box's top edge
 Z_S = TOP + 0.080  # the firmed mix's surface
-R_HOLE = 0.052  # the gap beside the plug's 5.7 cm faces is 2.35 cm: two 1.1 cm clods side by side (at 10 cm it
+R_HOLE = 0.0515  # the gap beside the plug's 5.7 cm faces is 2.3 cm: two 1.1 cm clods side by side (at 10 cm it
 # was 2.15 cm, one clod across, and that side's top layer stayed thin in the simulator)
 HOLE_D = 0.062
 HOLE_FLOOR = Z_S - HOLE_D
@@ -63,7 +63,7 @@ WOOD = kit.Look((0.62, 0.45, 0.30), 0.8)
 
 def _planter() -> kit.Prop:
     # colliders: the mix under the hole's floor (one block), a ring of 16 blocks round the hole (their inner faces make
-    # a 16-sided hole 10.4 cm across), four blocks for the rest of the box, and the box's four walls
+    # a 16-sided hole 10.3 cm across), four blocks for the rest of the box, and the box's four walls
     hz = (Z_S - HOLE_D / 2) - TOP
     cols = [kit.Collider((0.0, 0.0, (HOLE_FLOOR - TOP) / 2), size=(BED_X, BED_Y, HOLE_FLOOR - TOP))]
     n = 16
@@ -252,8 +252,8 @@ def _plug() -> kit.Mechanism:
 # -- the loose mix: the mix dug out of the hole, crumbled into clods: 1.1 cm cubes of 1.0 g, 200 of them (200 g; about
 # 440 mL loose). Clods, not balls: moist mix crumbles into lumps that do not roll, so a heap holds its slope at the
 # hole's edge (a heap of 1.2 cm spheres slumped into the hole in the simulator before the trial began). The gap round a
-# level plug (about 360 mL) is 2.35-2.75 cm wide at the top, two clods across, so the clods pack loosely in it; the
-# 440 mL of loose mix is about 1.2 times its volume. They lie heaped round the hole, from 6 to 10 cm out, two clods deep, turned a little each (a fixed seed):
+# level plug (about 350 mL) is 2.3-2.7 cm wide at the top, two clods across, so the clods pack loosely in it; the
+# 440 mL of loose mix is about 1.25 times its volume. They lie heaped round the hole, from 6 to 10 cm out, two clods deep, turned a little each (a fixed seed):
 # the same every trial.
 GRAIN_R = 0.0055  # half the clod's side
 GRAIN_MASS = 0.0010
@@ -298,17 +298,17 @@ OBJECTS = [_planter(), _plug()]
 
 # -- scoring ------------------------------------------------------------------------------------------------------------
 # The soil in the hole is read the way a real trial reads it: a probe lowered at 16 points until it rests on the mix (a
-# pin profile meter). The points are set out from the plug, not from the box: a template laid over the plug's top
-# outline (in the simulator, the plug's own frame at its top) puts four points beside each face, 1.0 cm out from the
+# pin profile meter). The points are set out from the plug, not from the box: measured from the plug's top edges with
+# a square and rule (in the simulator, the plug's own frame at its top), there are four points beside each face, 1.0 cm out from the
 # face, at 15 and 50 percent of the way from the face's middle toward either end. So wherever the plug stands and
 # however it is turned, every probe lands in the gap: its 9.5 mm end 5.25 mm clear of the face (tilted 10 degrees, the
 # plug's lower side comes at most 3.5 mm past its top's outline, 4.5 mm for the simulator's three stepped layers).
-# The probe is a 9.5 mm flat-ended dowel; in the simulator it is a 9.5 mm disc that comes down until any part of it
+# The probe is a 9.5 mm steel dowel pin, flat end down; in the simulator it is a 9.5 mm disc that comes down until any part of it
 # meets a clod (each clod's own turned cube) or the plug, else the hole's floor (the firmed surface beyond the wall).
 # - Placement range: the plug's top centered within PLACE_R of the hole's axis, any turn about its axis, upright within
 #   TILT_FULL. Inside it, every probe lands wholly inside the hole's wall (the farthest point is 4.04 cm from the plug's
-#   center: 4.04 + 0.475 + 0.6 = 5.12 cm, 0.8 mm inside the 5.2 cm wall, the margin for lining the template up by
-#   eye). Outside it the readings could fall on the hole's edge, so the trial is not scored as planted: 0.
+#   center: 4.04 + 0.475 + 0.5 = 5.015 cm, 1.35 mm inside the 5.15 cm wall; with 0.5 mm for setting a pin by the rule
+#   and 0.5 mm for reading the offset, 0.35 mm is left). Outside it the readings could fall on the hole's edge, so the trial is not scored as planted: 0.
 # - Fill at a point: how far the soil there has risen from the hole's floor, as a share of the hole's 6.2 cm depth,
 #   capped at 1: mix heaped above the surface counts as full, never more. The fill is the mean over the 16 points.
 # - The soil level on a side of the plug: the mean height of that side's four points (each capped at the surface).
@@ -321,19 +321,19 @@ TILT_FULL = 10.0  # deg
 FILL_FULL = 0.85  # mean fill at the 16 probe points, for 1.0
 FILL_HALF = 0.60
 FILL_QUARTER = 0.40
-PLACE_R = 0.006  # m: the plug's top center from the hole's axis, in plan
+PLACE_R = 0.005  # m: the plug's top center from the hole's axis, in plan
 PROBE_OUT = 0.010  # m: each probe point's distance out from its face of the plug's top
 PROBE_ALONG = (-0.5, -0.15, 0.15, 0.5)  # where along the face, as a share of its half-length from its middle
 PROBE_SIDE = tuple(k // 4 for k in range(16))  # the side (+x, +y, -x, -y, in the plug's frame) each point is on
-PROBE_D = 0.0095  # m: a 3/8 in hardwood dowel, flat-ended
+PROBE_D = 0.0095  # m: a 3/8 in steel dowel pin, set flat end down
 PROBE_SAMPLES = 13  # points across the probe's end: its center, 6 at half its radius, 6 on its rim
 SPILL_MAX = 0.10  # share of the clods out of the planter box (on the bench or the floor): more caps the score at 0.5
 HANDS_CLEAR = 0.010  # m: every gripper's own shape at least 1 cm from the plug
 STILL_STEP = 0.0005  # m per control step (1 cm/s)
 STILL_TURN = math.radians(0.5)
 HOLD_STEPS = round(SUCCESS_HOLD_S / DT)
-# The firmness test: once the planted state has held for 1 s, a 0.5 N side push at 5 cm above the plug's top (on the
-# stem) for 1 s, first toward +y, then toward -y. Firmed: the plug turns less than 5 degrees under it and is upright
+# The firmness test: once the planted state has held for 1 s, a side push of 0.5 N (the weight of 50 g) at 5 cm above
+# the plug's top (on the stem) for 1 s, first toward +y, then toward -y. Firmed: the plug turns less than 5 degrees under it and is upright
 # again after it. A plug standing loose in the hole, or held on one side only, tips over. The push stops as soon as the
 # plug has turned 5 degrees (the test has failed), so a failed test does not lay the plant over; it is not repeated
 # until a hand has worked on the plug again.
@@ -432,7 +432,7 @@ def soil_quats(objects, n: int) -> np.ndarray:
 
 
 def probe_offsets() -> np.ndarray:
-    """(16, 2): the template's points in the plug's frame, on its top (x, y from the stem's axis), side by side."""
+    """(16, 2): the probe points in the plug's frame, on its top (x, y from the stem's axis), side by side."""
     hx, hy = PLUG_TOP[0] / 2, PLUG_TOP[1] / 2
     out = []
     for sx, sy in ((1, 0), (0, 1), (-1, 0), (0, -1)):  # +x, +y, -x, -y faces
@@ -447,7 +447,7 @@ PROBE_END = np.array([(0.0, 0.0)] + [(rr * math.cos(math.radians(a)), rr * math.
 
 
 def probe_points(objects) -> np.ndarray:
-    """The 16 points (x, y), world frame: the template's points carried with the plug's top (its position and turn)."""
+    """The 16 points (x, y), world frame: the probe points carried with the plug's top (its position and turn)."""
     top = plug_top(objects)
     _, r = plug_frame(objects)
     p = top[None, :] + np.column_stack([PROBE_OFF, np.zeros(16)]) @ r.T
@@ -475,7 +475,7 @@ def _drop_onto_boxes(xy, centers, rots, halves) -> np.ndarray:
 
 
 def probe_heights(objects, s=None) -> np.ndarray:
-    """The 16 probe readings (m, world z): where a 9.5 mm flat-ended probe lowered at each template point comes to
+    """The 16 probe readings (m, world z): where a 9.5 mm flat-ended probe lowered at each probe point comes to
     rest, on the highest clod or plug face under any part of its end, else on the hole's floor (or the surface, for
     any part of its end beyond the hole's wall)."""
     s = soil(objects) if s is None else s
@@ -682,9 +682,9 @@ def _update(objects):
 
 
 def success(objects):
-    """Planted: in the hole, its top's center within 0.6 cm of the hole's axis (any turn), upright within 10 degrees,
+    """Planted: in the hole, its top's center within 0.5 cm of the hole's axis (any turn), upright within 10 degrees,
     its top within 1 cm of the surface, soil within 1 cm of its top on all four sides, the hole at least 85 % filled at
-    the 16 probe points, at most 10 % of the mix spilled, hands off, it held through the 0.5 N side push (turned under 5 degrees), and the seedling undamaged."""
+    the 16 probe points, at most 10 % of the mix spilled, hands off, it held through the side push of the weight of 50 g (turned under 5 degrees), and the seedling undamaged."""
     _update(objects)
     return bool(_L.firm and _L.state.get("full") and _L.damage is None)
 
@@ -692,7 +692,7 @@ def success(objects):
 def score(objects):
     """From the end state: 1.0 planted, filled on all four sides, hands off and firm under the side push; 0.75 the
     same but not yet pushed, or tipping under the push; 0.5 three sides filled and at least 60 % filled, hands off;
-    0.25 at least 40 % filled. Every tier needs the plug inside the placement range: its top's center within 0.6 cm of
+    0.25 at least 40 % filled. Every tier needs the plug inside the placement range: its top's center within 0.5 cm of
     the hole's axis (any turn about its own) and upright within 10 degrees; outside it, 0. More than 10 % of the mix
     spilled caps the score at 0.5. A damaged seedling (a stem joint bent past 45 degrees, or the stem or a leaf squeezed
     between one hand's fingers, either for 2 control steps running) scores 0 for the whole trial. Doing nothing

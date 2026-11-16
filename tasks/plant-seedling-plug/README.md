@@ -39,7 +39,7 @@ the run. Everything is read from the end state:
 
 | Measure | How | Full credit | Why this much |
 |---|---|---|---|
-| Plug placed in range (every tier) | its top's center from the hole's axis, in plan; any turn about its own axis | within 0.6 cm, else 0 | inside it every probe lands in the gap (see Measuring the soil) |
+| Plug placed in range (every tier) | its top's center from the hole's axis, in plan; any turn about its own axis | within 0.5 cm, else 0 | inside it every probe lands in the gap (see Measuring the soil) |
 | Upright (every tier) | tilt of the plug's axis | 10 degrees or less, else 0 | a lean you see at a glance; more would bring the plug's lower side under the probes |
 | Depth | plug top vs the firmed surface | within 1 cm | deeper rots the stem, proud dries the plug |
 | Soil level, each side | mean height of that side's 4 probe points (each capped at the surface) | within 1 cm of the plug's top on all 4 sides (3 for 0.5) | the root ball covered all round, no air pocket |
@@ -78,17 +78,20 @@ stands and however it is turned they land in the gap beside it:
 - A tilted plug: up to 10 degrees, its lower side comes at most 3.5 mm past its top's outline (4.5 mm for the
   simulator's three stepped layers), inside the 5.25 mm clearance.
 
-**The placement range.** Every tier needs the plug's top centered within 0.6 cm of the hole's axis (in plan, turned
+**The placement range.** Every tier needs the plug's top centered within 0.5 cm of the hole's axis (in plan, turned
 any way about its own axis) and upright within 10 degrees; outside it the trial scores 0, whatever the soil. Inside
-it, every probe lands wholly inside the hole's wall, never on its edge. The farthest point is 4.04 cm from the plug's
-center, so 4.04 + 0.475 (the probe's radius) + 0.6 = 5.12 cm, 0.8 mm inside the 5.2 cm wall. That 0.8 mm is the margin
-for setting the pin by the rule's 0.5 mm marks.
+it, every probe lands wholly inside the hole's wall, never on its edge. The hole is 10.3 cm across (5.15 cm radius),
+in the simulator and in a real trial (the can that cores it). The farthest point is 4.04 cm from the plug's center,
+so 4.04 + 0.475 (the probe's radius) + 0.5 = 5.015 cm: 1.35 mm inside the wall. Setting a pin by the rule's 0.5 mm
+marks takes 0.5 mm of that, and reading the offset 0.5 mm more (a plug read as 0.5 cm off may be 0.55 cm off), so in
+the worst case the pin's edge is still 0.35 mm inside the wall.
 
-Checked offline for 8,424 placements in the range: the top's center 0, 0.3 cm, or 0.6 cm off the axis in 24
+Checked offline for 8,424 placements in the range: the top's center 0, 0.25 cm, or 0.5 cm off the axis in 24
 directions; turned every 10 degrees; upright or tilted 10 degrees eight ways. In every one, an empty hole reads its
-floor at all 16 points: no probe touches the plug or the hole's edge. A hole filled round a plug 0.6 cm off-center and
-turned 0-137 degrees scores the same as a centered one (1.0 after the push); one bare side is still caught (0.5); a
-plug 0.65 cm or more off the axis, or tilted 11 degrees, scores 0.
+floor at all 16 points, and every probe's end stays 1.3 mm or more inside the hole's wall: no probe touches the plug
+or the hole's edge. A hole filled round a plug 0.5 cm off-center and turned 0-137 degrees scores the same as a
+centered one (1.0 after the push); one bare side is still caught (0.5); a plug 0.55 cm or more off the axis, or tilted
+11 degrees, scores 0.
 
 **The tools** (all off the shelf; one set serves every trial):
 
@@ -121,9 +124,10 @@ at the face: the pin spans 5.25-14.75 mm), and let go. The three root-ball point
 **Reading a point.** Lay the two straight edges flat across the box's top edge, parallel and 20 mm apart (checked on the
 rule at both walls), with the stem and the pin on the line midway between them (the stem passes up through the gap,
 the leaves stay above the 4.4 mm steel; hold a leaf aside by hand if it hangs in the way). Set the gauge's base across
-both, over the pin, and lower its rod until it just touches the pin's top; never push the pin. Read and go on: pivot
-the pair about the stem to the next pin. All 19 pins (a pack of 100 is sold) are set first and read after, so a point
-takes about 10 s to set and 10 s to read. A pin that a straight edge rests on, or that stops the gauge's base, stands
+both, over the pin, and lower its rod until it just touches the pin's top; never push the pin. Lift the pin off and go
+on: set it at the next point, and pivot the pair about the stem to it. One pin is used, one point at a time (adjacent
+points on the 4.9 cm faces are 7.4-8.6 mm apart, closer than the pin's 9.5 mm, so pins cannot stand at all of them at
+once). A point takes about 25 s: 10 s to set the pin, 10 s to lay the pair and read, 5 s to lift it. A pin that a straight edge rests on, or that stops the gauge's base, stands
 in mix heaped above the surface: that point is full.
 
 **A real reading, step by step** (the same tools, references, order and tolerances in every trial):
@@ -133,14 +137,14 @@ in mix heaped above the surface: that point is full.
    center along the box's x and y, and the hole's floor at 4 points 3.5 cm from its center, between them. Each floor
    reading must be S + 62 mm within 3 mm, else re-core; their mean is E. About 2 minutes.
 2. After the trial: photograph the seedling. The readings start within 2 minutes of the trial's end and are done
-   within 10 minutes of it (about 7 minutes of work), before the firmness push.
+   within 12 minutes of it (about 9 minutes of work), before the firmness push.
 3. Placement: lay the square flat on the firmed surface, its beam against a wall's inner face, and the rule along its
    blade; slide them along the wall to find the plug's top edge or corner nearest that wall and read the gap. Do it
    from all four walls: the plug's center is px = (g-x - g+x) / 2, py likewise (a rectangle's center is midway between
    its extremes, at any turn), and its offset is sqrt((px - hx)^2 + (py - hy)^2). About 1 minute.
-4. Set the 19 pins (16 soil points, 3 on the root ball), then read them, once each. About 6 minutes.
+4. The 19 points (16 soil points, 3 on the root ball), one at a time: set the pin, read once, lift it. About 8 minutes.
 5. The three root-ball readings: their mean P is the plug's top; the plane through them gives the tilt (1 mm on one of
-   them is about 2 degrees). An offset over 0.6 cm or a tilt over 10 degrees: the trial scores 0. Point fill =
+   them is about 2 degrees). An offset over 0.5 cm or a tilt over 10 degrees: the trial scores 0. Point fill =
    (E - reading) / (E - S), capped at 0 and 1 (a reading at or under S is full). The fill is the mean of the 16.
    Thresholds in backfill height: 40% = 2.5 cm, 60% = 3.7 cm, 85% = 5.3 cm (0.9 cm under the surface).
 6. Depth and sides: the plug's top is within 1 cm of the surface if P - S is within +-10 mm. A side's level is the mean
@@ -154,12 +158,12 @@ in mix heaped above the surface: that point is full.
 | Mix moisture | 350 g water per liter of bagged mix, rested 1 h | 1 g of water | the scale | protocol setting |
 | Loose mix | 200 g, heaped round the hole | 1 g | the scale | protocol setting |
 | Seedling | 'California Wonder', 8 weeks from sowing, 4 true leaves | 60-80 g (weigh five, use those in range) | the scale | seed packet (8-10 weeks to transplant); weight protocol setting |
-| Hole | 10.3 cm across (the can), 62 mm deep | depth 3 mm at each of 4 floor points | depth gauge, step 1 | can-size code; depth protocol setting |
+| Hole | 10.3 cm across (the can), 62 mm deep | each of two diameters at least 10.3 cm; depth 3 mm at each of 4 floor points | depth gauge, step 1 | can-size code; depth protocol setting |
 | Hole center | recorded, not set | 0.5 mm as read | square and rule, step 1 | protocol setting |
-| Pin placement | the points above | 0.5 mm (the 0.8 mm margin covers it) | square and rule | protocol setting; rule's marks (maker) |
-| Plug offset | at most 0.6 cm | 0.5 mm (two 0.5 mm gaps, halved) | square and rule, step 3 | the placement range (scorer) |
+| Pin placement | the points above | 0.5 mm (inside the 1.35 mm margin) | square and rule | protocol setting; rule's marks (maker) |
+| Plug offset | at most 0.5 cm | 0.5 mm (two 0.5 mm gaps, halved) | square and rule, step 3 | the placement range (scorer) |
 | Heights | as read | 0.1 mm recorded; straight-edge sag 0.13 mm at most | depth gauge | gauge +-0.02 mm (maker); sag computed |
-| Reading window | all 19 points and the offset | start within 2 min, done within 10 min of the trial's end | timer | protocol setting |
+| Reading window | all 19 points, one at a time, and the offset | start within 2 min, done within 12 min of the trial's end | timer | protocol setting |
 | Reset | core, measure, heap, set the plant | about 5 min | timer | protocol setting |
 
 These are small against the 1 cm side-level and depth tolerances and the 0.6 mm of backfill per 1% of fill.
@@ -251,12 +255,11 @@ itself afterwards (0-2 degrees after release in the demo runs).
   in a lidded tub and left 1 h before use; the same tub serves the series. Firmed level 1 cm under the box's top edge.
 - Planting hole: cored with an empty 401 x 411 food can (No. 2.5 size, 28-29 oz; the can-size code gives its outside
   diameter, 4 1/16 in = 10.3 cm), its lid cut off with a can opener: pressed open end down to 62 mm (within 3 mm, the
-  depth gauge), turned once and lifted out with its core. The hole is 10.3 cm across, 1 mm under the simulator's
-  10.4 cm; at the very edge of the placement range the outermost probe can then touch the hole's rim, and that point
-  reads full. Centered by eye; its actual center is measured and recorded (Measuring the soil, step 1), so centering
+  depth gauge), turned once and lifted out with its core. The hole is 10.3 cm across, as in the simulator: each of two
+  diameters at least 10.3 cm on the rule, else re-core. Centered by eye; its actual center is measured and recorded (Measuring the soil, step 1), so centering
   needs no tight tolerance.
 - Loose mix: the cored mix, 200 g (about 440 mL), weighed on the scale, crumbled and heaped round the hole. The gap
-  round a level plug is about 360 mL.
+  round a level plug is about 350 mL.
 - Scale: American Weigh Scales SC-2KG, 2000 g x 0.1 g (for the mix, the spill and the seedlings).
 - Seedling (held by the root ball, never the stem): a 'California Wonder' sweet pepper (Botanical Interests seed), sown 8 weeks before the trial (the packet: start 8 to 10 weeks before transplanting) and grown in a 3601 insert (cell 4.9 x
   5.7 cm at the top, 5.7 cm deep, 118 mL), the stem 3-4 mm across and 8-10 cm tall above the plug, with its seed

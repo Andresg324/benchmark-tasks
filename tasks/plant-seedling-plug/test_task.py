@@ -251,13 +251,13 @@ def probes_at(fills, plug_pos=PLANTED):
     return soil
 
 
-PLACEMENTS = [(0.0, 0.0), (0.003, 0.0)] + [(M.PLACE_R * math.cos(math.radians(a)), M.PLACE_R * math.sin(math.radians(a)))
+PLACEMENTS = [(0.0, 0.0), (M.PLACE_R / 2, 0.0)] + [(M.PLACE_R * math.cos(math.radians(a)), M.PLACE_R * math.sin(math.radians(a)))
                                            for a in range(0, 360, 15)]
 TILTS = [None] + [tilted(M.TILT_FULL, a) for a in range(0, 360, 45)]
 
 
 def test_probe_points():
-    """For every placement in the permitted range (the top's center up to 0.6 cm off the hole's axis in 24
+    """For every placement in the permitted range (the top's center up to 0.5 cm off the hole's axis in 24
     directions, turned every 10 degrees, upright or tilted 10 degrees eight ways), an empty hole reads its floor at
     all 16 points: each probe's whole end lands inside the hole's wall and clear of the plug."""
     o, _ = objs()
@@ -278,7 +278,7 @@ def test_probe_points():
                 n += 1
     check(worst < 1e-9, f"{n} placements in range: every probe reads the empty hole's floor (off by at most "
                         f"{worst * 1000:.2f} mm): in the gap, never on the plug or the hole's edge")
-    check(worst_wall >= 0.0008, f"the probes' ends stay {worst_wall * 1000:.1f} mm or more inside the hole's wall")
+    check(worst_wall >= 0.0013, f"the probes' ends stay {worst_wall * 1000:.1f} mm or more inside the hole's wall")
     upright = []
     for yaw in range(0, 360, 10):  # the clearance to the plug's faces
         _, r = placed((0.0, 0.0), yaw)
@@ -291,10 +291,10 @@ def test_probe_points():
 
 
 def test_off_center_turned():
-    """A hole filled round a plug that stands off-center (up to the 0.6 cm limit) and turned: full credit, as for a
+    """A hole filled round a plug that stands off-center (up to the 0.5 cm limit) and turned: full credit, as for a
     centered one; one side left bare is still caught; past the limit the trial scores 0."""
-    cases = ((M.PLACE_R, 0.0, 0.0), (0.0, -M.PLACE_R, 0.0), (0.0042, 0.0042, 30.0), (-M.PLACE_R, 0.0, 45.0),
-             (0.003, -0.005, 72.0), (0.0, 0.0, 90.0), (-0.004, 0.004, 137.0), (0.0, M.PLACE_R, -20.0))
+    cases = ((M.PLACE_R, 0.0, 0.0), (0.0, -M.PLACE_R, 0.0), (0.0035, 0.0035, 30.0), (-M.PLACE_R, 0.0, 45.0),
+             (0.003, -0.004, 72.0), (0.0, 0.0, 90.0), (-0.0035, 0.0035, 137.0), (0.0, M.PLACE_R, -20.0))
     for x, y, yaw in cases:
         fresh()
         pos, r = placed((x, y), yaw)
@@ -311,12 +311,12 @@ def test_off_center_turned():
         bare = filled_soil(sides=(True, True, True, False), off=(x, y), yaw=yaw)
         s = run(30, soil=bare, plug_pos=pos, plug_rot=r, quats=clod_quats(yaw))
         check(s == 0.5 and M._L.state["sides"] == 3, f"  the same with its -y side bare: 3 sides, 0.5 (got {s})")
-    for x, y, yaw in ((0.008, 0.0, 0.0), (0.0, -0.0065, 30.0), (-0.012, 0.012, 45.0)):
+    for x, y, yaw in ((0.0055, 0.0, 0.0), (0.0, -0.0065, 30.0), (-0.012, 0.012, 45.0)):
         fresh()
         pos, r = placed((x, y), yaw)
         s = run(30, soil=filled_soil(off=(x, y), yaw=yaw), plug_pos=pos, plug_rot=r, quats=clod_quats(yaw))
         check(s == 0.0 and not M._L.state["hole"],
-              f"top's center {math.hypot(x, y) * 100:.2f} cm off the axis (past 0.6 cm): outside the range, 0 (got {s})")
+              f"top's center {math.hypot(x, y) * 100:.2f} cm off the axis (past 0.5 cm): outside the range, 0 (got {s})")
 
 
 def test_heaped_capped():
@@ -538,7 +538,7 @@ def test_text():
     check(tj["instruction"] == M.INSTRUCTION, "task.json instruction matches task.py")
     check(len(tj["context"]) <= 1000, f"context {len(tj['context'])} chars")
     sc = tj["scoring"]
-    for txt in ("1 cm", "10 degrees", "0.6 cm", "1.0 cm", "85%", "60%", "40%", "10%", "the weight of 50 g", "5 cm", "5 degrees", "16 points",
+    for txt in ("1 cm", "10 degrees", "0.5 cm", "1.0 cm", "85%", "60%", "40%", "10%", "the weight of 50 g", "5 cm", "5 degrees", "16 points",
                 "9.5 mm", "Hirschi"):
         check(txt in sc, f"scoring text says {txt}")
     check(":" not in tj["title"], "no colon in the title")
