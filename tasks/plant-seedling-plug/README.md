@@ -6,7 +6,8 @@ scores it and holds the scripted demo; its docstrings explain every rule. The ta
 - `yamkit.py` spawns the modeled props as visible meshes over simple box and cylinder colliders: the planter box with
   its planting hole, and the seedling as one articulated body (the root ball, and the stem and leaves on spring joints).
 - `mechkit.py` holds the spring law that drives the stem's joints.
-- `soilkit.py` spawns the loose potting mix as 200 separate rigid clods and gives the scorer their positions.
+- `soilkit.py` spawns the loose potting mix as 200 separate rigid clods and gives the scorer their positions and
+  orientations.
 - `pushkit.py` applies the firmness test's side push to the plug when the scorer asks for it.
 - `guardkit.py` checks whether a gripper touches the plug.
 
@@ -37,15 +38,57 @@ the run. Everything is read from the end state:
 | Plug in the hole | plug center within the hole's 5 cm radius, below the surface | yes | |
 | Upright | tilt of the plug's axis | 10 degrees or less (20 for 0.5 and 0.25) | a lean you see at a glance |
 | Depth | plug top vs the firmed surface | within 1 cm | deeper rots the stem, proud dries the plug |
-| Soil level, each side | top of the 3rd highest clod in that side's quarter of the gap | within 1 cm of the plug's top on all 4 sides (3 for 0.5) | the root ball covered all round, no air pocket |
-| Fill | clods in the hole / what the filled hole holds (105: 94 measured by dropping clods round the plug in a 10 cm hole, scaled by gap area) | 85% (60% for 0.5, 40% for 0.25) | one tall column of clods is not a fill |
+| Soil level, each side | mean height of that side's 4 probe points (each capped at the surface) | within 1 cm of the plug's top on all 4 sides (3 for 0.5) | the root ball covered all round, no air pocket |
+| Fill | mean over the 16 probe points of the soil's rise from the hole's floor / the hole's 6.2 cm depth, each capped at 1 | 85% (60% for 0.5, 40% for 0.25) | the gap filled up, not one side heaped |
 | Spill | clods out of the planter box | 10% or less, else capped at 0.5 | |
 | Hands off | each gripper's own shape at least 1 cm from the plug | yes (for 1.0, 0.75, 0.5) | planted means let go |
-| Firm | 0.5 N side push 5 cm above the plug's top, 1 s each way, after 1 s standing still | turns under 5 degrees | a breeze or a watering-can stream |
+| Firm | 0.5 N side push 5 cm above the plug's top, 1 s each way, after 1 s standing still | turns under 5 degrees | our estimate of a gardener's check nudge (the weight of 50 g); a packed backfill held it in the simulator, a loose one did not |
 | Undamaged (whole trial) | stem bend at each of its two joints; the stem or a leaf touched by both fingers of one hand at once | never past 45 degrees, never squeezed (2 control steps running confirm either) | a creased stem or crushed leaf sets the plant back or kills it |
 
 Possible scores: 0, 0.25, 0.5, 0.75 (planted and filled, not firm), 1.0. Doing nothing scores 0. A damaged seedling
 scores 0 for the whole trial, however well it is planted.
+
+## Measuring the soil: 16 probe points
+
+The fill and the side levels are read the same way in the simulator and in a real trial: the height of the soil at 16
+fixed points, found by lowering a probe until it rests on the mix. This is a pin profile meter, the usual tool for
+soil-surface heights: "a series of equally spaced pins that are lowered onto the soil surface until contact is made"
+(Raper, Grift and Tekeste 2004, A portable tillage profiler for measuring subsoiling disruption, Transactions of the
+ASAE), with an accuracy "better than plus or minus 1 mm" for purpose-built meters (Hirschi, Barfield, Moore and
+Colliver 1987, Profile meters for detailed measurement of soil surface heights, Applied Engineering in Agriculture
+3(1):47-51). Pinboards in soil-roughness work use pins of about 3 mm on 18.5 mm spacing (Thomsen et al. 2015,
+SOIL 1:399-410); ours is a single 9.5 mm (3/8 in) flat-ended dowel moved from hole to hole, wider so it rests on the
+crumbs of loose mix instead of slipping between them, and read against a steel rule with 0.5 mm marks (a steel rule's
+resolution and accuracy are both 0.5 mm: NPL, UNCERT Manual 2000, Section 3, Kandil).
+
+- **Points.** A template on the box's top edge (a stiff card 33.6 cm square, the box's outside size, slotted from one
+  edge to the center so it slides in round the stem under the leaves) has 16 holes on a ring 4.4 cm from the hole's
+  center: four beside each face of the plug, 10 and 30 degrees either side of the face's middle. Each lands 1.0-1.9 cm
+  out from the plug's face and 0.8 cm in from the hole's wall, 1.5 cm from its nearest neighbor. Three more holes sit
+  over the root ball, 1.8 cm from the stem (at 15, 60 and 240 degrees from +x, clear of the seed leaves).
+- **Reference.** Every reading is a depth below the template, i.e. below the box's top edge, which does not move. The
+  firmed surface is 1.0 cm below the edge (set at reset) and the hole's floor 7.2 cm below it (the former's depth
+  stop). Before each trial the 16 holes are read in the empty hole; a reading off by more than 3 mm means re-dig.
+- **Reading.** Lower the dowel through the hole until it rests on the mix under its own weight; never push. Hold any
+  leaf aside by hand. Read the depth to 0.5 mm, lift, lower again, read again, and average.
+- **Fill.** Point fill = (empty reading - final reading) / (empty reading - 1.0 cm), capped at 0 and 1. The fill is the
+  mean of the 16. Thresholds in backfill height: 40% = 2.5 cm, 60% = 3.7 cm, 85% = 5.3 cm (0.9 cm under the surface).
+- **Sides.** A side's level is the mean of its four points (each no higher than the surface), compared with the plug's
+  top, the mean of the three root-ball readings (mix brushed off there). The plane through those three gives the
+  tilt: 1 mm on one of them is about 2 degrees.
+
+Why heights, not weights: the volume a weighed mass of moist mix fills depends on how hard it was firmed, which the
+robot sets. A height at a point needs no density: it is where the soil surface is. Mix heaped above the surface
+counts as full and no more, so a mound on one side cannot make up for a hollow on another. The readings land in the
+gap, not on the plug, for any plug within 4 mm of the hole's center.
+
+Resolution. With a 9.5 mm probe on 1.1 cm clods, a clod beside an empty pocket reaches 5.5 mm into it, so in the
+simulator a pocket shorter than about 3.5 cm along a face can be bridged; any pocket 3.6 cm long, anywhere along any
+face, drops a point and fails that side (offline check). Real mix crumbs are smaller. With the plug's top at the
+surface, three filled sides already give a fill over 60%, so the 60% threshold binds only for a plug set deeper.
+
+In the simulator the probe is a 9.5 mm disc at the same 16 points that comes down until any part of its end meets a
+clod (each clod's own turned cube) or the plug, else the hole's floor. The plug's tilt and top come from its pose.
 
 Watering in, the next step of planting, is out of scope; the push test stands in for "stands by itself". The push test starts by itself once the planted state has held for 1 s with both hands off; if a hand comes back to
 the plug during it, it stops and starts over later. The score is the end state's: no step of how the robot got there
@@ -106,6 +149,8 @@ itself afterwards (0-2 degrees after release in the demo runs).
 - Loose mix: 200 rigid 1.1 cm clods (1 g each, grippy, damped so they do not roll), so a heap holds its slope. The
   firmed mix and the hole are fixed colliders. The clods cannot compact, so firmness in the simulator comes from
   packing the gap; the real trial with real mix is the true test.
+- Root ball: rigid; it cannot break apart in the simulator (the real trial checks it on the photos).
+- Soil readings: the probe is a 9.5 mm disc dropped onto the clods' cubes at the 16 points (see Measuring the soil).
 - Squeeze: scored as both fingers touching the stem or a leaf at once (the gripper is a stiff position servo, so that
   is more than a light touch).
 - Kink limit: derived from the stretch at the stem's surface, not a measured kink angle.
@@ -121,12 +166,15 @@ itself afterwards (0-2 degrees after release in the demo runs).
   5.7 cm at the top, 5.7 cm deep, 118 mL), the stem 3-4 mm across and 8-10 cm tall above the plug, with its seed
   leaves and four true leaves; weigh five and use those within 60-80 g. Set it with its leaves toward the robot's
   right.
-- Scoring a real trial (the same end state): mark the four sides with plant labels and read the soil level against the plug's
-  top at each with a steel rule; read the tilt with a phone inclinometer on a 15 cm bamboo skewer pushed into the
-  plug's center before the trial; push with a 1 N spring gauge 5 cm above the plug's top, each way, and read the
-  turn on the inclinometer; collect and weigh the mix on the bench (spill); scoop up and weigh the loose mix left on
-  the surface outside the hole and subtract it and the spill from 200 g (fill); photograph the seedling before and
-  after: a creased, kinked or broken stem, or a crushed or torn leaf, scores 0.
+- Template and probe: a stiff card 33.6 cm square with the 19 holes (see Measuring the soil; print it at 1:1), a
+  9.5 mm (3/8 in) hardwood dowel 20 cm long with a square-cut end, and a 15 cm steel rule with 0.5 mm marks.
+- Scoring a real trial (the same end state): photograph the seedling; read the 16 points and the three root-ball
+  points through the template (fill, side levels, the plug's top and tilt); then push a 3 mm bamboo skewer 3 cm into
+  the root ball 1.5 cm from the stem, zero a phone inclinometer on it, and push with a 1 N spring gauge (0.01 N
+  divisions) 5 cm above the plug's top, 1 s each way, reading the turn; gather the mix off the bench and floor and
+  weigh it on a kitchen scale (1 g) against the 200 g loaded (spill: a direct mass, no conversion; mix left on the
+  surface outside the hole is neither spill nor fill); photograph again: a creased, kinked or broken stem, a crushed
+  or torn leaf, or a root ball broken apart, scores 0.
 - Safety: nothing hazardous; wear gloves if the mix contains fertilizer.
 
 ## Runtime and seeds
@@ -141,5 +189,6 @@ itself afterwards (0-2 degrees after release in the demo runs).
 
 - `task.py`: scene, scorer, scripted demo.
 - `yamkit.py`, `mechkit.py`, `soilkit.py`, `pushkit.py`, `guardkit.py`: the task's helper modules.
-- `test_task.py`: offline checks of the layout, the scorer and the demo plan.
+- `test_task.py`: offline checks of the layout, the probe points (empty hole, heaped mix, one side only, a pocket
+  between points, the 40/60/85% boundaries), the scorer and the demo plan.
 - `task.json`: the task's text.

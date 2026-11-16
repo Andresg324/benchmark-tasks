@@ -214,7 +214,7 @@ def test_probe_points():
     check(clear.min() - M.PROBE_D / 2 > 0.004, f"every probe lands {clear.min() * 100:.2f} cm out from the plug's face")
     check(r.max() + M.PROBE_D / 2 < M.R_HOLE, "every probe lands inside the hole's wall")
     d = np.linalg.norm(pts[:, None] - pts[None], axis=2) + np.eye(16)
-    check(d.min(axis=1).max() < 0.024, f"each point's nearest neighbour within {d.min(axis=1).max() * 100:.1f} cm")
+    check(d.min(axis=1).max() < 0.024, f"each point's nearest neighbor within {d.min(axis=1).max() * 100:.1f} cm")
     fresh()
     o, _ = objs()
     h = M.probe_heights(o, START_SOIL)

@@ -299,7 +299,7 @@ OBJECTS = [_planter(), _plug()]
 # The soil in the hole is read the way a real trial reads it: a probe lowered at fixed points until it rests on the mix
 # (a pin profile meter). A template on the box's top edge fixes 16 points on a ring 4.4 cm from the hole's center, four
 # on each side of the plug: 10 and 30 degrees either side of the middle of each face (the plug's faces lie along x and
-# y). Every point is 1.0-1.9 cm out from the plug's face and 0.8 cm in from the hole's wall, and neighbouring points
+# y). Every point is 1.0-1.9 cm out from the plug's face and 0.8 cm in from the hole's wall, and neighboring points
 # are 1.5-2.3 cm apart. The probe is a 9.5 mm flat-ended dowel; in the simulator it is a 9.5 mm disc that comes down
 # until any part of it meets a clod (each clod's own turned cube) or the plug, else the hole's floor.
 # - Fill at a point: how far the soil there has risen from the hole's floor, as a share of the hole's 6.2 cm depth,
