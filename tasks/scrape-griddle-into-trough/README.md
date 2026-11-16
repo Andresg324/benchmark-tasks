@@ -92,12 +92,18 @@ stencil carries the witness pieces: five 8 x 8 mm holes and one 17.5 x 17.5 mm h
     open("griddle_stencil.svg", "w").write("\n".join(svg + ["</svg>"]))
     EOF
 
+The approach follows how cleaning products are tested on baked-on soil: a soil made to a fixed recipe by weight,
+applied at a fixed amount, baked on a fixed schedule, and its removal measured by weighing (for example the US federal
+specification A-A-7 for oven and grill cleaners, and CSPA DCC-12 for oven cleaners, which bake a standard soil on
+coupons and score removal from the coupons' weights). Those soils are spread as a thin film; this task needs separate
+pieces that keep their outlines, so it uses a paste that holds the stencil's shape when cooked.
+
 **Qualification (once, before the first trial).** Make the paste and cook the witness stencil's pieces on the plate
-(below) for 6, 8, 10 and 12 minutes at 230 degrees C, one set per time, and push each piece off as in the batch check.
-Fix the cook time as the shortest one at which the pieces are black through (a crust broken in half shows no pale
-center) and record the flake and crust push-off forces and witness masses of the first three batches at that time:
-their medians are the reference for every later batch. The forces are recorded next to the simulator's bond (0.08 to
-0.13 N per flake, 0.41 to 0.50 N per crust) so the two can be compared.
+(below) for 6, 8, 10 and 12 minutes at 230 degrees C, one set per time. Fix the cook time as the shortest one at which
+the pieces are black through (a crust broken in half shows no pale center). For the first three batches at that time,
+record the witness pieces' masses and their black areas (measured on the top photo against the 1 cm grid): their
+medians are the reference for every later batch. Pieces that are black through and match the reference mass and area
+are the same debris from batch to batch; no force measurement is used.
 
 **Making the debris (every trial).**
 1. Plate clean, dry and cold (under 40 degrees C), the tray empty, dry and weighed (0.01 g) and seated.
@@ -114,11 +120,18 @@ their medians are the reference for every later batch. The forces are recorded n
    reads 230 degrees C within 10 at all five points marked on the plate (four corners and the middle of the stencil
    area), then hold it there for the fixed cook time. Turn the burners off and let the griddle cool on the range until
    all five points read under 40 degrees C. Unplug or turn off the range; nothing hot goes to the robot's bench.
-6. Batch check: push each witness piece off sideways through a spare scraper blade held at 40 degrees to the plate,
-   with a 0-10 N digital force gauge (0.01 N resolution) at about 1 cm/s, and note the peak; brush the freed witness
-   pieces into a weighing boat and weigh the five flakes and the crust (0.01 g). The batch is accepted when the flakes'
-   median force and both masses are within 25 % of the reference medians, and the crust's force within 25 %. If not,
-   the plate is cleaned (Reset) and a fresh batch cooked. Then wipe the witness area clean.
+6. Batch check: photograph the witness area from the overhead mount and measure each witness piece's black area
+   against the grid; break the crust in half to check it is black through; lift the witness pieces with the razor
+   scraper into a weighing boat and weigh the five flakes and the crust (0.01 g). The batch is accepted when the
+   flakes' median area and mass and the crust's area and mass are within 25 % of the reference medians and no
+   piece shows a pale center. If not, the plate is cleaned (Reset) and a fresh batch cooked. Then wipe the witness
+   area clean.
+
+   If a lab cannot make the paste pieces pass this check reliably, a fallback debris is allowed and recorded with the
+   trial: hardwood lump charcoal broken and sanded into flakes and crusts of the stencil's sizes (sorted by mass to
+   the same per-piece masses within 25 %), each set into its stencil hole on a level skim of the same paste, 0.5 mm
+   (a 0.5 mm shim stencil), and cooked as above so the skim bonds it to the plate. The pieces then look and break
+   like char and keep exact sizes, while the bond still comes from cooked-on paste. The batch check is the same.
 7. Set the griddle back against its stops and clamp it; lay the scraper in its outline; take the before photo (top
    camera, raking light on). Start the trial within 2 hours of the cook.
 
@@ -157,7 +170,7 @@ scraper is replaced if its edge has a nick 0.5 mm or deeper. Then make a fresh b
 | Paste used | the qualification's mass | 5 % |
 | Cook | 230 degrees C at five points, for the fixed time | 10 degrees C; 15 s |
 | Cool | under 40 degrees C at five points | trial within 2 h |
-| Batch check | flake force, flake and crust masses, crust force | within 25 % of the reference medians |
+| Batch check | flake and crust masses and black areas; black through | within 25 % of the reference medians |
 | Mass balance | M = T + L + O vs the batch's expected mass | 10 %, else repeat |
 | Weighing | 0.01 g scale | 0.01 g (1 % is about 0.12 g) |
 
@@ -186,9 +199,9 @@ scraper is replaced if its edge has a nick 0.5 mm or deeper. Then make a fresh b
   under the values above and crusts 10 to 23 % over. A broken bond is not restored by the scene's reset (one trial per
   run).
 - **Real-trial bond.** The real debris is charred flour paste (see Real-world evaluation); the forces above are how
-  the simulator represents it. The real bond is measured with every batch: the witness pieces cooked beside the
-  stencil are pushed off with a force gauge, recorded next to these values, and the batch is used only when they are
-  within 25 % of the qualification's reference.
+  the simulator represents it. The real bond is not measured as a force: it is held constant by the fixed recipe,
+  amount and cook, and every batch's witness pieces must match the qualification's masses and black areas within
+  25 % and be black through before the batch is used.
 - **Contact settings.** Pieces are at least 2 mm thick (the blade is 1.5 mm, moving 4 cm/s: 0.2 mm per 240 Hz
   physics step, so nothing passes through); contacts start 2 mm out and rest at zero gap; 16 position iterations; a
   piece pinched into a collider is pushed out no faster than 0.3 m/s.
@@ -239,7 +252,7 @@ bench is hot, so the trial is safe for the robot and the operator. The scraper i
 stainless blade and a polypropylene handle in line with it (150 g, handle about 3.0 x 2.4 cm, within the gripper's
 opening). The debris is flour-and-water paste charred onto the plate through a stencil and cooled (see
 Real-world evaluation). Also needed: the two 3 mm acrylic stencils (laser-cut from the script's drawing), a palette
-knife, a contact surface thermometer, a 0-10 N digital force gauge (0.01 N), a spare scraper blade, a razor-blade
+knife, a contact surface thermometer, a razor-blade
 scraper, a soft brush, weighing boats, paper towels, white plastic catch sheets, two wooden stop blocks, a bubble level,
 a phone on an overhead mount, a desk lamp, and a kitchen scale (0.01 g).
 
