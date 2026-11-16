@@ -113,7 +113,7 @@ are the same debris from batch to batch.
    the plate is seasoned and lightly greased, as on a working griddle, with too little free oil to weigh.
 3. Batter: Krusteaz Light & Fluffy Buttermilk Complete Pancake Mix (water only), mixed by the box's directions: 1 cup
    of mix spooned lightly into the cup and leveled (weighed; the weight is recorded at qualification and each batch
-   is within 5 % of it) whisked with 2/3 cup of cold water until just combined (slightly lumpy), rested 2 minutes, and
+   is within 5 % of it) whisked with two-thirds of a cup of cold water until just combined (slightly lumpy), rested 2 minutes, and
    used within 30 minutes. The box's lot number is recorded with each trial.
 4. Stencil and set: move the griddle to a two-burner range away from the robot's bench. Set the lightly oiled main
    stencil flush with the lip and against the right splash guard, and the witness stencil against the right guard at
