@@ -120,21 +120,22 @@ are at x 19.5, y -7.5 and 0.5 (near) and x 26.4, y -3.5 and 4.5 (behind), as in 
 
 **Melting (once per session, about 20 minutes).** 1 lb (454 g) of Gulf Wax and 12 drops of the dye in the aluminum
 pouring pitcher, standing in a saucepan of water on the single-burner hot plate (a double boiler: the wax cannot pass
-100 degrees C). Held at 75 to 85 degrees C (the surface thermometer's probe in the melt) for the whole session; topped
-up with wax and dye in the same ratio. One pound makes about seven trials.
+100 degrees C). Held at 75 to 85 degrees C (the infrared thermometer on the melt's surface) for the whole
+session; topped up with wax and dye in the same ratio. One pound makes about seven trials.
 
 **Qualification (once, before the first trial).** Make the debris three times as below and photograph each set. The
 median black area of each disc is the reference for its cavity. The same three sets fix the dark gray level used for
 the area (below).
 
 **Making the debris (every trial, about 5 minutes).**
-1. Plate clean, dry and at room temperature (under 30 degrees C at the four cavity marks), the tray empty, dry,
-   weighed (0.01 g) and seated. The plate is not oiled: an oil film would weaken the wax's hold and make it vary.
+1. Plate clean, dry and at room temperature (under 30 degrees C on the masking-tape marks beside the cavities: tape
+   reads true on an infrared thermometer, bare steel does not), the tray empty, dry, weighed (0.01 g) and seated.
+   The plate is not oiled: an oil film would weaken the wax's hold and make it vary.
 2. Set the mold at its marks (the tape strips; check one near edge with the steel rule).
 3. Pour: the pitcher of melt, on a cork trivet on the balance, tared; pour into one cavity until the balance reads
    -14.00 g (within 0.20 g; the reading is recorded); repeat for the other three cavities, near ones first. About 1
    minute. The four readings' sum is the trial's debris mass, D.
-4. Set: 3 minutes (within 15 s), until every disc's top reads under 30 degrees C on the surface thermometer and its
+4. Set: 3 minutes (within 15 s), until every disc's top reads under 30 degrees C on the infrared thermometer and its
    gloss has gone matte. Lift the mold straight up by its handles and set it aside (silicone releases from wax).
 5. Disc check. Photograph the plate from the overhead stand with the raking light on. Each disc passes when (a) it
    is stuck down all round: no lifted edge (no shadow line under the edge in the raking light) and it does not move
@@ -174,10 +175,10 @@ pour take about 15 minutes, with the wax kept melted all session.
 | Plate's top above the bench | 5.0 cm, level | 2 mm at each corner; 0.5 degree | simulator's layout; torpedo level |
 | Scraper | in its outline at x 25.0, y -25.5 | 5 mm, 3 degrees | simulator's start pose |
 | Mold | near cavities' edges 1.0 cm from the lip; near right edge 6.55 cm from the right guard | 2 mm | simulator's disc centers; 6 in. steel rule |
-| Plate before the pour | clean, dry, unoiled; under 30 degrees C | no particle 1 mm, no film on the photo | wax sticks to clean steel only; surface thermometer |
+| Plate before the pour | clean, dry, unoiled; under 30 degrees C | no particle 1 mm, no film on the photo | wax sticks to clean steel only; infrared thermometer on the tape marks |
 | Melt | Gulf Wax, 12 drops of dye per lb, 75 to 85 degrees C | double boiler (at most 100 degrees C) | Gulf Wax directions (melt over boiling water); CandleScience dye rate |
 | Wax per disc | 14.0 g (simulator 13.9 g) | 0.20 g | simulator's disc mass; 0.01 g balance (repeatability 0.02 g) |
-| Set | 3 minutes; disc tops under 30 degrees C, matte | 15 s | surface thermometer |
+| Set | 3 minutes; disc tops under 30 degrees C, matte | 15 s | infrared thermometer (wax reads true at emissivity 0.95) |
 | Disc check | stuck all round; black area vs the cavity's reference | no lifted edge, no move under a fingertip; 10 % | qualification's three sets |
 | Start | within 30 minutes of the pour | | wax is stable at room temperature |
 | Mass balance | M = T + L + O vs D, the poured mass | 5 %, else repeat | four weighed pours |
@@ -261,32 +262,39 @@ pour take about 15 minutes, with the wax kept melted all session.
 
 ## Real-world build
 
-Everything is off the shelf; the pages below give each item's published specifications.
+Everything is off the shelf and chosen to be cheap and widely sold; the pages below give each item's published
+specifications, and the prices are retail listings seen in November 2026 (rounded).
+
+**Rough rig cost: about $500** (griddle $105 to $150, balance $66, hot plate $75, the other items below about
+$150, and about $40 of tape, boats, sheets, clamps and blocks), not counting the robot and the phone. Consumables
+are about $1 a trial (56 g of wax and a little dye and spirits).
 - Griddle: Assure Parts 177AOGT1227 add-on 2-burner griddle top, 27 x 12-1/4 x 4 in., 22-3/8 x 12-1/4 in. cooking
   surface of 7-gauge type 430 stainless, 1-1/2 in. rear and side edges, adjustable plate height, 3 x 12-1/4 x 1-1/4 in.
-  grease tray across the open front
+  grease tray across the open front, about $105 to $150
   (https://www.webstaurantstore.com/12-14-x-27-x-4-addon-2-burner-griddle-top/177AOGT1227.html). It stands on the
   bench on its frame with the plate's top 5.0 cm above the bench, clamped with two C-clamps on its frame. It is never
   heated: the debris is poured onto it cold. Its grease tray (about 0.5 kg, estimated from its size in sheet steel;
   weighed at setup) with the debris is well under the balance's 2,000 g.
 - Scraper: Dexter-Russell Basics P94850 4 in. griddle scraper: 4 in. stiff stainless blade, 4-1/2 in. polypropylene
-  handle, 8-1/2 in. overall, 4.8 oz (136 g)
+  handle, 8-1/2 in. overall, 4.8 oz (136 g), about $11 to $25
   (https://www.wasserstrom.com/restaurant-supplies-equipment/dexter-russell-p94850-basics®-4-griddle-scraper-122621).
   The handle (3.0 x 2.4 cm in the simulator) is within the gripper's opening.
 - Mold: Norpro 957R silicone silver-dollar pancake mold, seven 2.75 in. (7 cm) cavities, 9.5 x 9 x 1.75 in., built-in
-  handles, heat safe to 450 F; lifted off once the wax has set (https://www.bakedeco.com/detail.asp?id=49842,
+  handles, heat safe to 450 F, about $11 to $15; lifted off once the wax has set
+  (https://www.bakedeco.com/detail.asp?id=49842,
   https://chefsupplies.ca/products/norpro-silver-dollar-size-pancake-ring-957r).
-- Wax: Gulf Wax household paraffin, 16 oz (Royal Oak Enterprises; food-grade, for canning and candles; melt over
-  boiling water, as in a double boiler, never directly on a burner;
+- Wax: Gulf Wax household paraffin, 16 oz, a few dollars at grocery stores (Royal Oak Enterprises; food-grade, for
+  canning and candles; melt over boiling water, as in a double boiler, never directly on a burner;
   https://hannaford.com/groceries/home-office/kitchen-dining/gulf-wax-household-paraffin-wax-for-canning-candlemaking-16-oz-pkg.html).
   About 56 g a trial.
-- Dye: CandleScience black liquid candle dye, 1 oz (3 drops per lb for a light shade, 6 for a dark one; works in
+- Dye: CandleScience black liquid candle dye, 1 oz, $5.43 (3 drops per lb for a light shade, 6 for a dark one; works in
   paraffin; https://candlescience.com/color/black-liquid-dye).
 - Melting: CandleScience small aluminum pouring pitcher, 1 lb (454 g), $10.75
   (https://candlescience.com/equipment/small-pouring-pitcher), standing in a 2 qt saucepan of water on a Cuisinart
-  CB-30 1,300 W single-burner hot plate (https://www.macys.com/shop/product/cuisinart-cb-30-countertop-single-burner?ID=8299114),
+  CB-30 1,300 W single-burner hot plate, about $75 (any thermostatic hot plate will do: the water bath sets the
+  temperature; https://www.macys.com/shop/product/cuisinart-cb-30-countertop-single-burner?ID=8299114),
   and a cork trivet for the pitcher on the balance.
-- Cleaning: Klean-Strip odorless mineral spirits (removes grease and oil; https://kleanstrip.com/?p=366) on paper
+- Cleaning: Klean-Strip odorless mineral spirits, about $10 a quart (removes grease and oil; https://kleanstrip.com/?p=366) on paper
   towels, for the wax film left on the plate.
 - Balance: U.S. Solid USS-DBS66-20 precision balance, 2,000 g by 0.01 g (repeatability 0.02 g, linearity 0.03 g),
   128 x 157 mm stainless pan, external calibration, $65.79
@@ -294,14 +302,14 @@ Everything is off the shelf; the pages below give each item's published specific
   tray and the fractions; it is calibrated with the weight its manual names at the start of each session, after a
   30-minute warm-up, away from drafts. It replaces the Ohaus Scout STX2202 (2,200 g by 0.01 g, about $1,070 to
   $2,600) at the same readability.
-- Surface thermometer: ThermoWorks Pro-Surface Thermapen (THS-231-279), type K surface probe, -50 to 300 degrees C
-  (https://www.thermoworks.com/products/ths-231-279). A contact probe suits bare stainless, which an infrared
-  thermometer reads low (ThermoWorks, https://blog.thermoworks.com/emissivity/).
-- Overhead camera: a phone on a NEEWER X6 overhead phone stand, 26.5 to 80 cm high, clamped to the bench
+- Infrared thermometer: Etekcity Lasergrip 774, -50 to 450 degrees C, adjustable emissivity (set to 0.95), $18.99
+  (https://etekcity.com/products/lasergrip-774-upgrade). It is meant for high-emissivity surfaces and reads shiny
+  metal low, so it is aimed at the wax, the melt and the masking-tape marks on the plate, never at bare steel.
+- Overhead camera: a phone on a NEEWER X6 overhead phone stand, 26.5 to 80 cm high, clamped to the bench, $25.99
   (https://neewer.com/collections/all-product/products/neewer-entry-level-version-x6-phone-stand-66608636).
-- Raking light: BenQ e-Reading LED desk lamp
-  (https://www.benq.eu/en-uk/lighting/e-reading-desk-lamp/e-reading/spec.html).
-- Razor scraper: Red Devil 3010, 1 in. blade
+- Raking light: IKEA TERTIAL clamp work lamp with an 800-lumen SOLHETTA LED bulb, about $20 with the bulb
+  (https://www.ikea.com/ca/en/catalog/products/20355434/).
+- Razor scraper: Red Devil 3010, 1 in. blade, a few dollars
   (https://www.dillonsupply.com/Catalog/Products/Hand-Tools/Scrapers-Spreaders-And-Trowels/Hand-Scrapers/red-devil-3010).
 - Rule and level: Empire 27302 6 in. steel rule (https://www.toolnut.com/products/empire-27302-6-steel-rule) and a
   Stanley 0-42-294 torpedo level (https://www.stanleytools.co.uk/product/0-42-294/stanley-torpedo-level-200mm).
