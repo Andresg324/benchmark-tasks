@@ -4,6 +4,8 @@
 a burr runs the whole edge, then laying the knife back down flat on the board with its edge facing away.
 """
 
+import importlib.abc
+import importlib.util
 import math
 import os
 import sys
@@ -54,7 +56,10 @@ def spine_x(y):
     return SPINE_X + (EDGE_KNOTS_X[-1] - SPINE_X) * (1.0 - np.sqrt(1.0 - t ** 1.6))
 
 
-GRIP_Y = -0.060  # where the demo holds the handle (6 cm behind the bolster)
+GRIP_Y = -0.045  # where the demo holds the handle: 4.5 cm behind the bolster, the fingertips 3.2 cm short of the blade,
+#                  as close to the blade as the hand reaches: its fingers are 7 cm long, and closer in the palm would
+#                  meet the end of the 9.5 cm handle (2 cm clear here). The closer the grip, the shorter the lever the
+#                  stone's drag on the blade has to turn the knife in the hand
 KNIFE_MASS = 0.14  # kg: a 165 mm santoku with a magnolia wa handle, 46 mm tall at the heel, is listed at 140 g
 #                   (Sakai Takayuki VG5 hammered santoku 165 mm, Seisuke Knife product page)
 EDGE_SAMPLES = np.linspace(0.005, 0.162, 16)  # points along the edge the scorer checks: about 1 cm apart, from 0.5 cm
@@ -67,8 +72,9 @@ PARK_HEADING = 15.0
 PARK_TCP = np.array([0.20, -0.05])  # the handle's grip point at the start
 BOARD = (0.12, 0.22, 0.08)  # an end-grain maple butcher block: across x along x height
 P_U, P_V = _dirs(PARK_HEADING)
-BOARD_POS = PARK_TCP + P_V[:2] * (-GRIP_Y - 0.03 + BOARD[1] / 2) + P_U[:2] * 0.0  # its edge under the handle, 3 cm
-#                                                                               behind the bolster
+BOARD_EDGE = -0.015  # m past the bolster: the board's near edge is under the handle 1.5 cm behind the bolster, so the
+#                     rest of the handle reaches past it and the lower finger closes round it 1.7 cm clear of the board
+BOARD_POS = PARK_TCP + P_V[:2] * (BOARD_EDGE - GRIP_Y + BOARD[1] / 2)
 KNIFE_START = np.r_[PARK_TCP - GRIP_Y * P_V[:2], TOP + BOARD[2] + BLADE_T / 2]
 
 # --- The stone, fixed in its holder; its long side along the stroke (u at STONE_HEADING).
@@ -79,7 +85,7 @@ HOLDER_H = 0.015  # the rubber holder under the stone
 STONE_TOP = RISER + HOLDER_H + STONE[2]  # 10 cm above the bench
 S_U, S_V = _dirs(STONE_HEADING)
 STROKE_TCP_Y = -0.20  # where the hand works: the stone sits under the blade's middle
-STONE_V = 0.15  # the stone's middle is under the blade 9 cm past the bolster
+STONE_V = 0.15  # m from the grip point (the stroke's reference) to the stone's middle along the knife
 STONE_POS = np.array([0.355, STROKE_TCP_Y]) + STONE_V * S_V[:2]
 
 # --- Scoring
@@ -101,12 +107,15 @@ COVER_TRAVEL = 0.10  # m: a point counts as worked once it has been on the stone
 LEVEL = 5.0  # deg: the blade's length (handle to tip) within this of level while stroking; a whetstone stroke keeps
 #               the whole edge on the stone, and a pitch above 5 deg lifts the far end of a 6 cm contact 5 mm off it
 STROKE = 0.05  # m: edge-leading travel across the edge in one pass, on the stone and in band, that makes a stroke
-#                (the demo's strokes run 8 cm along the stone)
+#                (the demo's strokes run 11 cm along the stone)
 REVERSE = 0.005  # m: moving back this far against a pass ends it (a back-and-forth stroke's turn); less is jitter
 STEEP_TRAVEL = 0.02  # m: a touch with 2 cm of travel steeper than STEEP is a too-steep stroke: none of it counts
-PER_SIDE = 10  # strokes on each face, a floor: the guides give no fixed count (a face is worked until a burr runs
-#               heel to tip; America's Test Kitchen checks for it every 10 passes, Chef Knives To Go then alternates
-#               faces 10, 8, 6, 4, 2, 1 strokes). The sim cannot feel a burr; the real trial's edge tester decides
+PER_SIDE = 20  # strokes on each face, from the one published count we found measured on the edge itself: Verhoeven
+#               (Iowa State, "Experiments on Knife Sharpening", 2004, section 4) hand-sharpened HRC 60 blades at very
+#               light pressure on 6000 and 8000 grit waterstones and examined the edges in an electron microscope:
+#               10 four-stroke cycles (20 strokes per face) removed every remnant of the old edge, 4 cycles (8 per
+#               face) did not reliably. The guides give no fixed count (a face is worked until a burr runs heel to
+#               tip). The sim cannot feel a burr; the real trial's edge tester decides
 OFF_END = 0.003  # m: an edge point this far below the stone's top just past an end, within 0.5 s of the edge leaving
 #                  the stone: the stroke rolled off the end instead of being lifted, and it is not counted
 OFF_END_STEPS = 10  # control steps (0.5 s at 20 Hz) after lift-off in which a roll-off cancels the stroke just ended
@@ -179,7 +188,8 @@ def _knife():
     )
     colliders = (kit.Collider((0.0, (h0 + h1) / 2, 0.0), size=(HANDLE_W, h1 - h0, HANDLE_T)),) + _blade_colliders()
     return kit.Prop("knife", pos=tuple(float(c) for c in KNIFE_START), size=(0.05, 0.26, HANDLE_T), mass=KNIFE_MASS,
-                    yaw=math.radians(PARK_HEADING), meshes=meshes, colliders=colliders, com=(0.012, 0.02, 0.0))
+                    yaw=math.radians(PARK_HEADING), meshes=meshes, colliders=colliders, com=(0.012, 0.02, 0.0),
+                    report=True)  # PhysX contact reports on the knife: the scorer reads the stone's push on it
 
 
 HANDLE_SHAPE = gk.Block((0.0, sum(HANDLE_Y) / 2, 0.0), (HANDLE_W, HANDLE_Y[1] - HANDLE_Y[0], HANDLE_T))
@@ -329,6 +339,151 @@ def _released(objects):
     return not gk.touching(objects, "knife", KNIFE_SHAPE)
 
 
+# --- Verified contact: the stone's push on the knife, read from the simulator's contact solver. PhysX reports the
+# contact force between the knife's body and the stone's (only that pair: the hand and the board are not in the
+# view) after every physics substep; the largest in each control step is kept. A stroke needs this force AND the
+# geometry above (the edge the low side, resting on the stone's top), so a knife held just above the stone, or
+# touching it with its spine or face, does not count.
+STONE_PUSH = 0.5  # N: the least push from the stone that counts as touching it. The knife alone weighs 1.4 N, and
+#                   the demo presses 2.4 to 3.3 N (median); a knife hovering a fraction of a mm off the stone reads 0
+# Kept on the yamkit module, so it is shared if the task file is loaded more than once in a process (the physics
+# hook stays the first load's; the step hook is the latest's; both use this one record).
+_CONTACT = kit.__dict__.setdefault("_KNIFE_CONTACT", {"view": None, "peak": 0.0, "force": None, "err": None,
+                                                     "first": None, "polls": 0})
+
+
+def stone_force():
+    """The largest push (N) from the stone on the knife in any physics substep of the last control step; None when
+    no simulator reports it (offline, until a test sets it)."""
+    return _CONTACT["force"]
+
+
+def _touching_stone():
+    f = stone_force()
+    return f is not None and f >= STONE_PUSH
+
+
+def _np(x):
+    x = getattr(x, "torch", x)
+    if hasattr(x, "detach"):
+        return x.detach().cpu().numpy().astype(np.float64)
+    return np.asarray(x.numpy() if hasattr(x, "numpy") else x, dtype=np.float64)
+
+
+def _contact_processing_on():
+    """Isaac Lab turns PhysX contact processing off unless a ContactSensor exists (this embodiment builds none);
+    switch it back on, as Isaac Lab's own ContactSensor does (and as move-live-wire-with-stick does)."""
+    try:
+        import carb
+
+        carb.settings.get_settings().set_bool("/physics/disableContactProcessing", False)
+    except Exception:  # pragma: no cover  (outside Isaac Sim)
+        pass
+
+
+def _make_view(mgr):
+    from isaaclab.sim.utils.stage import get_current_stage
+    from pxr import UsdPhysics
+
+    sv = mgr.get_physics_sim_view()
+    if sv is None:
+        return None
+    knife = stone = None
+    for prim in get_current_stage().Traverse():
+        p = prim.GetPath().pathString
+        if "/env_0/" in p and prim.HasAPI(UsdPhysics.RigidBodyAPI):
+            if p.endswith("/knife"):
+                knife = p
+            elif p.endswith("/stone"):
+                stone = p
+    if knife is None or stone is None:
+        raise RuntimeError(f"knife contact view: knife body {knife}, stone body {stone}")
+    _contact_processing_on()
+    view = sv.create_rigid_contact_view([knife], filter_patterns=[[stone]], max_contact_data_count=64)
+    print(f"[knife] contact view: {knife} <- {stone}", flush=True)
+    return view
+
+
+def _poll(mgr):
+    """After every physics substep: the stone's push on the knife this substep; the control step keeps the largest."""
+    try:
+        if _CONTACT["view"] is None:
+            _CONTACT["view"] = _make_view(mgr)
+            if _CONTACT["view"] is None:
+                return
+        fm = _np(_CONTACT["view"].get_contact_force_matrix(dt=mgr.get_physics_dt())).reshape(-1, 3)
+    except Exception as e:  # pragma: no cover  (reported once; with no reading no stroke counts, so it shows as 0)
+        if _CONTACT["err"] is None:
+            _CONTACT["err"] = repr(e)
+            print(f"[knife] contact view error: {e!r}", flush=True)
+        return
+    f = float(np.linalg.norm(fm.sum(0)))
+    _CONTACT["polls"] += 1
+    _CONTACT["peak"] = max(_CONTACT["peak"], f)
+    if f >= STONE_PUSH and _CONTACT["first"] is None:
+        _CONTACT["first"] = f
+        print(f"[knife] first contact with the stone: {f:.2f} N", flush=True)
+
+
+def _control_step(base, objects):
+    """Once per control step (yamkit hook, before success() and score()): the step's largest stone push."""
+    _CONTACT["force"] = _CONTACT["peak"] if _CONTACT["polls"] else None
+    _CONTACT["peak"], _CONTACT["polls"] = 0.0, 0
+    if os.environ.get("KNIFE_CONTACT_DEBUG"):
+        print(f"[knife] stone push {_CONTACT['force']}", flush=True)
+
+
+_PHYSX_MGR = "isaaclab_physx.physics.physx_manager"
+
+
+def _patch_manager(mod):
+    mgr = mod.PhysxManager
+    if getattr(mgr.step, "_knife_hooked", False):
+        return
+    base_cfg, base_step = mgr._configure_physics.__func__, mgr.step.__func__
+
+    def _configure_physics(cls):
+        base_cfg(cls)
+        _contact_processing_on()
+
+    def step(cls):
+        base_step(cls)
+        _poll(cls)
+
+    step._knife_hooked = True
+    mgr._configure_physics, mgr.step = classmethod(_configure_physics), classmethod(step)
+
+
+class _MgrFinder(importlib.abc.MetaPathFinder):
+    """Patches Isaac Lab's PhysxManager when it is first imported (it needs Kit, so not at task import)."""
+
+    def find_spec(self, fullname, path, target=None):
+        if fullname != _PHYSX_MGR:
+            return None
+        sys.meta_path.remove(self)
+        try:
+            spec = importlib.util.find_spec(fullname)
+        finally:
+            sys.meta_path.insert(0, self)
+        if spec is None or spec.loader is None:
+            return None
+        orig_exec = spec.loader.exec_module
+
+        def exec_module(module):
+            orig_exec(module)
+            _patch_manager(module)
+
+        spec.loader.exec_module = exec_module
+        return spec
+
+
+if _PHYSX_MGR in sys.modules:
+    _patch_manager(sys.modules[_PHYSX_MGR])
+elif not any(isinstance(f, _MgrFinder) for f in sys.meta_path):
+    sys.meta_path.insert(0, _MgrFinder())
+kit.STEP_HOOKS[:] = [h for h in kit.STEP_HOOKS if getattr(h, "__name__", "") != "_control_step"] + [_control_step]
+
+
 def on_board(objects):
     """The knife lying flat on the board: its middle over the board, its lowest edge point within 1 cm of the board's
     top, its faces within FLAT of level."""
@@ -420,7 +575,8 @@ def _update(objects):
     p, _ = _pose(objects)
     move = np.zeros(3) if _H.last_pos is None else p - _H.last_pos
     _H.last_pos = p
-    contact = on_stone(objects) and held(objects)  # a knife pushed or dragged without a hand on it is not a stroke
+    contact = (on_stone(objects) and _touching_stone()  # the edge down on the stone, and the stone pushing back
+               and held(objects))  # a knife pushed or dragged without a hand on it is not a stroke
     if contact:
         if _H.ended is not None:  # back on the stone before the roll-off window closed: the last touch stands
             _commit(_H.ended)
@@ -499,15 +655,16 @@ def success(objects):
 
 
 def score(objects):
-    """A stroke: the knife held, its edge touching the stone (its lowest point over the stone within 0.5 mm of its top,
-    edge lower than spine) with at least 3 cm of edge within 1 mm of it, and moved 5 cm edge-leading with its faces 13
+    """A stroke: the knife held, its edge touching the stone (verified contact: the simulator's contact solver reports the
+    stone pushing on the knife with 0.5 N or more, with the edge lower than the spine and its lowest point over the
+    stone within 0.5 mm of its top) with at least 3 cm of edge within 1 mm of it, and moved 5 cm edge-leading with its faces 13
     to 22 degrees to the stone and its length level, in one pass (lifting off or moving back 5 mm ends it; the
     edge-trailing return counts for nothing; travel is net). An edge point is worked on a
     face once it has been on the stone for 10 cm of such travel. A touch that does not count at all: one with 2 cm of
     travel steeper than 22 degrees (it works a steeper micro-bevel), or one whose edge drops 3 mm below the stone's top
-    just past an end within 0.5 s of leaving it (rolled off the end). 0 with under 10 strokes on both faces; 0.25 for
-    10+ strokes on one face only; 0.5 for 10+ on each face with under 12 of the 16 edge points (about 1 cm apart, 0.5 to
-    16.2 cm along the 16.5 cm edge) worked on a face; 0.75 for 10+ strokes and 12+ points worked on each face; 1.0
+    just past an end within 0.5 s of leaving it (rolled off the end). 0 with under 20 strokes on both faces; 0.25 for
+    20+ strokes on one face only; 0.5 for 20+ on each face with under 12 of the 16 edge points (about 1 cm apart, 0.5 to
+    16.2 cm along the 16.5 cm edge) worked on a face; 0.75 for 20+ strokes and 12+ points worked on each face; 1.0
     for that and the knife let go, lying flat on the board, edge facing away. Where the arms end is not scored.
     Possible scores: 0, 0.25, 0.5, 0.75, 1."""
     return _score(objects)
@@ -533,25 +690,33 @@ DEMO_ANGLE = 17.0  # deg: the angle the demo aims for on the stone
 DEMO_TRIM = {"A": 4.0, "B": -3.5}  # deg: under the press the knife sits low on face A and high on B: the arm's
 #                                     joints give about 1.5 deg per N on A and 0.6 on B (J K^-1 J^T), plus the grip
 GRIP_OPEN = 0.45 * FINGER_OPEN  # part open: room round the 18 mm handle without the lower finger hitting the bench
-DEMO_FORCE = 3.5  # N: the press the aim is planned for. The knife's weight rests on the stone; each newton more needs
-#                  the edge aimed deeper by the arm's vertical give at the edge (_give, scaled by GIVE_SIM). Measured
-#                  in the sim, the stone took a median 2.4 N on face A (pushed) and 3.3 N on face B (pulled): the
-#                  stone's drag holds the hand back. Planned for 4.5 N, the edge pressed 6 to 7 N, the drag turned
-#                  the knife 4 to 8 deg further in the grip, and the edge came off the stone
+DEMO_FORCE = {"A": 3.5, "B": 2.5}  # N: the press the aim is planned for, per face. The knife's weight rests on the
+#                  stone; each newton more needs the edge aimed deeper by the arm's vertical give at the edge (_give,
+#                  scaled by GIVE_SIM). Planned alike for 3.5 N, the stone took a median 2.4 N on face A (pushed) and
+#                  3.3 N on face B (pulled: the stone's drag holds the hand back), and at 3.3 N the drag turned the
+#                  knife in the hand about 2 deg a stroke on face B (0.1 on A), so face B is planned lighter to press
+#                  about as A does. Planned for 4.5 N, the edge pressed 6 to 7 N and came off the stone
 GIVE_SIM = 0.6  # the arm's give at the edge in the sim against _give's model (that 4.5 N plan pressed 6 to 7 N)
 DEMO_HEEL, DEMO_TIP = 0.025, 0.145  # m past the bolster: the part of the blade over the stone's middle line as each
 #                                     stroke starts (the heel: the 0.5 cm scorer point 1.5 cm onto the 6 cm stone)
 #                                     and as it ends (the tip: the last scorer point, 16.2 cm, 1.7 cm onto it)
 DEMO_SWEEP_V = 0.125  # m: where the sweep along the blade ends; the last DEMO_DWELL of the stroke brings the tip on
-DEMO_RUN = {"A": (0.0, 0.08), "B": (0.08, 0.0)}  # m along the stone from its middle (+ away from the robot): where
-#                    the edge starts and ends each stroke, 8 cm of the stone's 18 cm. Face A's edge faces away, so its
+DEMO_RUN = {"A": (-0.03, 0.08), "B": (0.08, -0.03)}  # m along the stone from its middle (+ away from the robot): where
+#                    the edge starts and ends each stroke, 11 cm of the stone's 18 cm. Face A's edge faces away, so its
 #                    edge-leading stroke pushes; face B's faces the robot, so it pulls. Both go heel to tip. A face-A
 #                    pull heel to tip is out of reach: drawing toward the robot and sliding toward the tip both turn
 #                    the wrist (joint 4) further, and it reached its 90 deg limit 6 cm into the stroke (IK check)
 DEMO_DWELL = 0.02  # m of each stroke with the heel (at the start) and with the tip (at the end) on the stone, before
 #                    and after the sweep, so the ends of the edge get their share of the stone
-DEMO_SETS = (("A", 9), ("B", 9), ("A", 2), ("B", 2))  # strokes per set: each face worked, then the faces alternated
-#                    with fewer strokes to finish (11 per face, against PER_SIDE 10)
+DEMO_SETS = (("A", 11), ("B", 11), ("A", 11), ("B", 11))  # strokes per set: the faces alternated in equal sets, 22
+#                    per face in all (against PER_SIDE 20). At each change of face the knife is laid on the board and
+#                    gripped again where it was first held, so a turn of the knife in the hand does not build up
+DEMO_REGRIP_YAW = {"A": 4.6, "B": 3.7}  # deg, by the face just worked: at a regrip the open hand turns this far about
+#                    the vertical before closing again, to square itself to the knife. The stone's drag turns the knife
+#                    in the hand (about the fingers' closing axis): in a telemetry run of this demo 0.9 deg over a set
+#                    of 11 on face A and 7.3 deg over 11 on face B. After face A the hand turns 0.9 deg plus 3.7, so
+#                    the knife starts face B turned 3.7 deg the other way and the drag brings it through square
+#                    halfway through the set; after face B it turns 3.7 deg, and face A starts square
 DEMO_TIP_YAW = -10.0  # deg: during the sweep the knife turns 10 deg on the stone (tip further from the robot). Held
 #                       square to the stone, the tip end puts the wrist at its limit (joint 5 at -90 deg, IK misses by
 #                       up to 17 mm); turned 10 deg, joint 4 stays 2.6 deg inside its limit. A sharpener lifts the
@@ -604,7 +769,7 @@ def _stroke_pose(face, v, u, turn=0.0, press=True):
     if press:
         edge = a + (v - GRIP_Y) * sv + su * (reach if face == "A" else -reach)
         edge[2] = TOP + STONE_TOP
-        a[2] -= (DEMO_FORCE - KNIFE_MASS * 9.81) * GIVE_SIM * _give(a, rot0, edge)
+        a[2] -= (DEMO_FORCE[face] - KNIFE_MASS * 9.81) * GIVE_SIM * _give(a, rot0, edge)
     return a, tuple(rot0.ravel())
 
 
@@ -612,8 +777,9 @@ def demo():
     """Right arm: slide the open hand sideways round the handle (fingers above and below it), lift, and sharpen in
     sweeping heel-to-tip strokes, edge leading: each sets the heel on the stone, draws the knife along the stone while
     sliding it along its own length so the stone runs from heel to tip (the knife turning 10 deg as the tip comes on),
-    then lifts and goes back. Face A (edge away from the robot) is pushed, 9 strokes; the knife is turned over and
-    face B (edge toward the robot) is pulled toward the robot, 9 strokes; then 2 more on each face in turn. Lay it back
+    then lifts and goes back. The faces alternate in sets of 11: face A (edge away from the robot) pushed, face B
+    (edge toward the robot, the knife turned over) pulled toward the robot, A, then B, 22 strokes per face. At each
+    change of face the knife is laid flat on the board, let go and gripped again where it was first held. Lay it back
     on the board edge-away, let go, back out and go home."""
     from yam_arena.constants import FINGER_CLOSED
     T = kit.Tilted
@@ -623,13 +789,14 @@ def demo():
     grip = np.r_[PARK_TCP, z_board]
     beside = grip + 0.06 * pu  # past the spine-to-edge line, clear of the blade (which starts 6 cm further along)
     flat = _hand(PARK_HEADING, -90.0)
-    right = [T(2.0, tuple(beside + [0, 0, 0.03]), GRIP_OPEN, "beside the handle", rot=flat),
+    right = [T(1.4, tuple(beside + [0, 0, 0.03]), GRIP_OPEN, "beside the handle", rot=flat),
              T(1.0, tuple(beside), GRIP_OPEN, "down beside it", rot=flat),
              T(1.2, tuple(grip), GRIP_OPEN, "slide round the handle", rot=flat),
              T(0.8, tuple(grip), C, "grip", rot=flat),
-             T(1.2, tuple(grip + [0, 0, 0.06]), C, "lift", rot=flat)]
+             T(1.0, tuple(grip + [0, 0, 0.06]), C, "lift", rot=flat)]
     centre = np.r_[STONE_POS, 0.0] - STONE_V * np.r_[S_V[:2], 0.0]  # the grip point with the blade's middle on the stone
     high = centre + [0, 0, TOP + STONE_TOP + 0.07]
+    upright = _hand(STONE_HEADING, 0.0)
     up = 0.015  # m the hand lifts between strokes
 
     def strokes(face, n):
@@ -641,34 +808,57 @@ def demo():
         end, _ = _stroke_pose(face, DEMO_TIP, u1, turn=1.0)
         start_on, _ = _stroke_pose(face, DEMO_HEEL, u0, press=False)  # the edge just on the stone, for lifts
         end_on, _ = _stroke_pose(face, DEMO_TIP, u1, turn=1.0, press=False)
-        out = [T(1.2, tuple(start_on + [0, 0, 0.03]), C, "over the stone, heel on it", rot=rot)]
+        out = [T(1.0, tuple(start_on + [0, 0, 0.03]), C, "over the stone, heel on it", rot=rot)]
         for _ in range(n):
             out += [T(0.4, tuple(start), C, "heel on the stone", rot=rot),
                     T(0.3, tuple(heel2), C, "stroke: heel", rot=rot),
                     T(1.2, tuple(swept), C, "stroke: sweep heel to tip", rot=rot_swept),
                     T(0.4, tuple(end), C, "stroke: tip", rot=rot_swept),
                     T(0.3, tuple(end_on + [0, 0, up]), C, "lift", rot=rot_swept),
-                    T(0.8, tuple(start_on + [0, 0, up]), C, "back", rot=rot)]
+                    T(0.6, tuple(start_on + [0, 0, up]), C, "back", rot=rot)]
         return out
 
-    def turn():
-        """Lift straight up from the stroke's end, then turn the knife over through upright above the stone."""
+    def off_stone(face):
+        """Lift straight up from the stroke's end; from face B turn the knife back upright above the stone."""
         last = right[-1]
-        return [T(0.8, tuple(np.array(last.pos) + [0, 0, 0.04]), C, "lift clear before turning", rot=last.rot),
-                T(1.5, tuple(high), C, "turn the knife over", rot=_hand(STONE_HEADING, 0.0))]
+        out = [T(0.6, tuple(np.array(last.pos) + [0, 0, 0.04]), C, "lift clear of the stone", rot=last.rot)]
+        if face == "B":
+            out.append(T(0.9, tuple(high), C, "turn the knife back upright", rot=upright))
+        return out
 
-    for k, (face, n) in enumerate(DEMO_SETS):
+    def regrip(face):
+        """Lay the knife flat on the board where it was picked up, open the hand, close it again round the handle
+        where it was first gripped, and lift; from there to face B the knife is turned over above the stone."""
+        out = off_stone(face) + [T(1.2, tuple(grip + [0, 0, 0.03]), C, "over the board", rot=flat),
+                                 T(0.6, tuple(grip + [0, 0, 0.004]), C, "lay it on the board", rot=flat),
+                                 T(0.3, tuple(grip + [0, 0, 0.004]), GRIP_OPEN, "let go to regrip", rot=flat)]
+        yaw = DEMO_REGRIP_YAW[face]
+        turn = _axrot((0, 0, 1), math.radians(yaw))
+        rot = tuple((turn @ np.array(flat).reshape(3, 3)).ravel())
+        back = grip + turn @ (beside - grip)  # the approach point beside the handle, turned with the hand
+        out += [T(0.4, tuple(beside + [0, 0, 0.004]), GRIP_OPEN, "slide out", rot=flat),
+                T(0.4, tuple(back), GRIP_OPEN, "square the open hand to the handle", rot=rot),
+                T(0.7, tuple(grip), GRIP_OPEN, "slide round the handle again", rot=rot),
+                T(0.5, tuple(grip), C, "grip again", rot=rot),
+                T(0.5, tuple(grip + [0, 0, 0.06]), C, "lift", rot=flat)]
+        if face == "A":  # next is face B: turn it over above the stone
+            out.append(T(1.2, tuple(high), C, "turn the knife over", rot=upright))
+        return out
+
+    sets = DEMO_SETS
+    for k, (face, n) in enumerate(sets):
         if k:
-            right += turn()
+            right += regrip(sets[k - 1][0])
+        elif face == "B":  # it is picked up face A down: a first set on face B needs the knife turned over
+            right += [T(1.2, tuple(high), C, "turn the knife over", rot=upright)]
         right += strokes(face, n)
-    right += [T(1.0, tuple(np.array(right[-1].pos) + [0, 0, 0.04]), C, "lift clear of the stone", rot=right[-1].rot),
-              T(1.2, tuple(high), C, "turn back upright", rot=_hand(STONE_HEADING, 0.0))]
-    right += [T(2.0, tuple(grip + [0, 0, 0.06]), C, "back over the board", rot=flat),
-              T(1.2, tuple(grip + [0, 0, 0.004]), C, "lay it down", rot=flat),
-              T(0.6, tuple(grip + [0, 0, 0.004]), GRIP_OPEN, "let go", rot=flat),
-              T(1.0, tuple(beside + [0, 0, 0.004]), GRIP_OPEN, "slide out", rot=flat),
-              T(0.8, tuple(beside + [0, 0, 0.06]), GRIP_OPEN, "up", rot=flat),
-              kit.Home(2.0), kit.Home(1.5, label="hold at home")]
+    right += off_stone(sets[-1][0])
+    right += [T(1.2, tuple(grip + [0, 0, 0.06]), C, "back over the board", rot=flat),
+              T(0.8, tuple(grip + [0, 0, 0.004]), C, "lay it down", rot=flat),
+              T(0.5, tuple(grip + [0, 0, 0.004]), GRIP_OPEN, "let go", rot=flat),
+              T(0.8, tuple(beside + [0, 0, 0.004]), GRIP_OPEN, "slide out", rot=flat),
+              T(0.6, tuple(beside + [0, 0, 0.06]), GRIP_OPEN, "up", rot=flat),
+              kit.Home(1.5)]
     total = sum(w.duration for w in right)
     left = [kit.Home(total - 1.5), kit.Home(1.5, label="hold at home")]
     return {"left": left, "right": right}

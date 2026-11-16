@@ -49,9 +49,15 @@ def grip_rot(r):
     return np.column_stack([r[:, 2], r[:, 0], r[:, 1]])
 
 
-def frame(pos, r, grip="right", opening=ON, grippers=None, at=(0.0, 0.0, 0.0)):
+PUSH = 2.5  # N: the stone's push on a knife resting edge-down on it, in these hand-made steps (the demo measured
+#            2.4 to 3.3 N median in the sim)
+
+
+def frame(pos, r, grip="right", opening=ON, grippers=None, at=(0.0, 0.0, 0.0), push="auto"):
     """One control step: knife at (pos, r); the right gripper on the handle (grip="right", shifted `at` in the
-    knife's frame), or `grippers` given (name -> position, or (position, rotation))."""
+    knife's frame), or `grippers` given (name -> position, or (position, rotation)). `push`: the stone's contact
+    force on the knife this step (N) as the simulator would report it; "auto" gives PUSH when the edge rests on the
+    stone's top (within 0.5 mm) and 0 otherwise."""
     g = {k: (v, np.eye(3)) for k, v in HOME.items()}
     if grippers is not None:
         g.update({k: (v if isinstance(v[0], (tuple, np.ndarray)) and len(v) == 2 else (v, np.eye(3)))
@@ -62,6 +68,9 @@ def frame(pos, r, grip="right", opening=ON, grippers=None, at=(0.0, 0.0, 0.0)):
     kit._OPENING["left_gripper"] = 1.0
     objs = {"knife": st(pos, quat(r)), "board": st((*m.BOARD_POS, m.TOP)), "stone": st((*m.STONE_POS, m.TOP)),
             **{k: st(p, quat(q)) for k, (p, q) in g.items()}}
+    if push == "auto":
+        push = PUSH if m.on_stone(objs) else 0.0
+    m._CONTACT["force"] = push
     ok = m.success(objs)
     return m.score(objs), ok
 
@@ -149,6 +158,9 @@ def new_trial():
     frame(p, r, grippers=HOME)  # first step: arms home, knife on the board
 
 
+N1 = m.PER_SIDE + 1  # strokes per face in the hand-made full jobs (one over the floor, as the demo)
+
+
 def check(name, got, want):
     assert abs(got - want) < 1e-9, f"{name}: score {got}, expected {want}"
     print(f"ok  {name}: {got}")
@@ -161,7 +173,7 @@ for _ in range(30):
     s, _ = frame(p, r, grippers=HOME)
 check("do nothing", s, 0.0)
 
-# 2. The full job: 11 heel-to-tip strokes per face (face A pushed, face B pulled, edge leading), 17 degrees, put
+# 2. The full job: PER_SIDE + 1 (21) heel-to-tip strokes per face (face A pushed, face B pulled, edge leading), 17 degrees, put
 # down flat edge away.
 new_trial()
 sharpen("A")
@@ -173,36 +185,37 @@ assert ok, "success() should be true at the end of the full job"
 # 2b. Review, Nov 12: repeated strokes on the same part of the edge (all with the blade's middle on the stone) cover
 # about 6 of the 16.5 cm: 0.5, not full credit.
 new_trial()
-strokes("A", 11)
-strokes("B", 11)
-check(f"11 strokes per face on the same 6 cm (worked {m.coverage('A')} and {m.coverage('B')})", put_down()[0], 0.5)
-# Under the floor of 10 strokes per face: 9 heel-to-tip strokes per face score nothing, however well spread; 10 do.
+strokes("A", N1)
+strokes("B", N1)
+check(f"{N1} strokes per face on the same 6 cm (worked {m.coverage('A')} and {m.coverage('B')})", put_down()[0], 0.5)
+# Under the floor of PER_SIDE (20) strokes per face: 19 heel-to-tip strokes per face score nothing, however well
+# spread; 20 do.
 new_trial()
 sharpen("A", n=m.PER_SIDE - 1)
 sharpen("B", n=m.PER_SIDE - 1)
-check("9 heel-to-tip strokes per face: under 10 per face", put_down()[0], 0.0)
+check(f"{m.PER_SIDE - 1} heel-to-tip strokes per face: under {m.PER_SIDE} per face", put_down()[0], 0.0)
 new_trial()
 sharpen("A", n=m.PER_SIDE)
 sharpen("B", n=m.PER_SIDE)
-check(f"10 heel-to-tip strokes per face (worked {m.coverage('A')} and {m.coverage('B')})", put_down()[0], 1.0)
-# One heel-to-tip stroke plus nine more over the middle: 10 strokes per face, but the heel's and the tip's points have
-# had one stroke's travel each, under the 10 cm that works a point: 0.5.
+check(f"{m.PER_SIDE} heel-to-tip strokes per face (worked {m.coverage('A')} and {m.coverage('B')})", put_down()[0], 1.0)
+# One heel-to-tip stroke plus the rest over the middle: PER_SIDE strokes per face, but the heel's and the tip's points
+# have had one stroke's travel each, under the 10 cm that works a point: 0.5.
 new_trial()
 sharpen("A", n=1)
-strokes("A", 9)
+strokes("A", m.PER_SIDE - 1)
 sharpen("B", n=1)
-strokes("B", 9)
-check(f"10 strokes per face, heel and tip stroked once (worked {m.coverage('A')} and {m.coverage('B')})",
+strokes("B", m.PER_SIDE - 1)
+check(f"{m.PER_SIDE} strokes per face, heel and tip stroked once (worked {m.coverage('A')} and {m.coverage('B')})",
       put_down()[0], 0.5)
 new_trial()
 sharpen("A")
-strokes("B", 11, v=0.13)
+strokes("B", N1, v=0.13)
 check("face A all along, face B only at the tip", put_down()[0], 0.5)
 
 
 # 2d. A back-and-forth stroke kept on the stone (Kramer: "move the blade straight back and forth"): each edge-leading
-# pass of 5 cm or more is a stroke, the edge-trailing returns count for nothing. 11 round trips with the middle on the
-# stone: 11 strokes per face, one place on the edge (0.5); the same with sweeps along the blade: 1.0.
+# pass of 5 cm or more is a stroke, the edge-trailing returns count for nothing. PER_SIDE + 1 round trips with the middle on the
+# stone: PER_SIDE + 1 strokes per face, one place on the edge (0.5); the same with sweeps along the blade: 1.0.
 def back_and_forth(face, n, travel=0.065, v=None, sweep_v=False):
     phi = 17.0 if face == "A" else 163.0
     r = knife_rot(m.STONE_HEADING, phi)
@@ -216,14 +229,14 @@ def back_and_forth(face, n, travel=0.065, v=None, sweep_v=False):
 
 
 new_trial()
-back_and_forth("A", 11)
-back_and_forth("B", 11)
+back_and_forth("A", N1)
+back_and_forth("B", N1)
 cnt = m._totals()[0]
 check(f"back and forth on the stone, middle only ({cnt['A']} and {cnt['B']} strokes)", put_down()[0], 0.5)
-assert cnt == {"A": 11, "B": 11}, cnt
+assert cnt == {"A": N1, "B": N1}, cnt
 new_trial()
-back_and_forth("A", 11, sweep_v=True)
-back_and_forth("B", 11, sweep_v=True)
+back_and_forth("A", N1, sweep_v=True)
+back_and_forth("B", N1, sweep_v=True)
 check("back and forth on the stone, sweeping heel to tip", put_down()[0], 1.0)
 # A knife held on the stone at the right angle and jiggled 3 mm to and fro (a hand trembling, or solver jitter) for
 # 30 s makes no strokes and works nothing: travel is counted net, per pass.
@@ -249,6 +262,32 @@ new_trial()
 sharpen("A", lift=0.0004)
 sharpen("B", lift=0.0004)
 check("resting 0.4 mm up (solver jitter) still touches", put_down()[0], 1.0)
+
+# 2e. Review, Nov 14: contact must be verified, not inferred from distance. The same full job with the edge geometrically
+# on the stone but the simulator reporting no push from the stone (a knife held a hair above it, which the 0.5 mm
+# geometric margin alone would pass) scores nothing; so does a push under STONE_PUSH, and no reading at all (contact
+# view missing). A push from the stone with the edge geometrically off it (lifted 2 mm: spine, face or a corner
+# touching) does not count either: both are needed.
+for push, why in ((0.0, "no push from the stone"), (m.STONE_PUSH * 0.8, f"{m.STONE_PUSH * 0.8:.1f} N push, under "
+                  f"{m.STONE_PUSH} N"), (None, "no contact reading")):
+    new_trial()
+    sharpen("A", push=push)
+    sharpen("B", push=push)
+    check(f"edge on the stone by geometry, {why}", put_down()[0], 0.0)
+new_trial()
+sharpen("A", push=m.STONE_PUSH)
+sharpen("B", push=m.STONE_PUSH)
+check(f"edge on the stone, {m.STONE_PUSH} N push (the least that counts)", put_down()[0], 1.0)
+new_trial()
+sharpen("A", lift=0.002, push=PUSH)
+sharpen("B", lift=0.002, push=PUSH)
+check("stone pushing but the edge 2 mm up (something else touching)", put_down()[0], 0.0)
+# Adversarial (review, Nov 14): a knife held 0.3 mm above the stone, inside the 0.5 mm geometric margin, and swept
+# heel to tip along it on both faces. The colliders rest at zero separation, so PhysX reports no push: it scores 0.
+new_trial()
+sharpen("A", lift=0.0003, push=0.0)
+sharpen("B", lift=0.0003, push=0.0)
+check("hovering 0.3 mm above the stone, swept along it, no push", put_down()[0], 0.0)
 
 # 3. Same, but the arm not back home: arm position is not scored.
 new_trial()
@@ -313,8 +352,8 @@ check("two strokes per side", put_down()[0], 0.0)
 
 # 9. Edge-trailing strokes only (lifted between, or the light return of a back-and-forth stroke): none count.
 new_trial()
-sweep("A", 11, lead=False)
-sweep("B", 11, lead=False)
+sweep("A", N1, lead=False)
+sweep("B", N1, lead=False)
 check("edge trailing", put_down()[0], 0.0)
 
 # 10. Hovering 1 cm above the stone: no contact, no strokes.
@@ -409,16 +448,17 @@ def rolled(face, n, v=None):
             frame(on_stone_pos(r, sign * 0.12, 0.03, v), r)
 
 
+GOOD = m.PER_SIDE // 2 + 1  # good face-B strokes before the rolled ones: under the floor on their own
 new_trial()
 sharpen("A")
-strokes("B", 6)
-rolled("B", 5)
-check("six good face-B strokes and five rolled off the end", put_down()[0], 0.25)
+strokes("B", GOOD)
+rolled("B", N1 - GOOD)
+check(f"{GOOD} good face-B strokes and {N1 - GOOD} rolled off the end", put_down()[0], 0.25)
 new_trial()
 sharpen("A")
-strokes("B", 6)
-strokes("B", 5)
-check("the same eleven face-B strokes lifted off instead", put_down()[0], 0.5)
+strokes("B", GOOD)
+strokes("B", N1 - GOOD)
+check(f"the same {N1} face-B strokes lifted off instead", put_down()[0], 0.5)
 new_trial()
 sharpen("A")
 sharpen("B")
@@ -444,7 +484,7 @@ def tip_pos(r, a, lift=0.0):
     return np.r_[m.STONE_POS + a * m.S_U[:2], m.TOP + m.STONE_TOP + lift] - low
 
 
-def pitched(face, roll, pitch, n=11, travel=0.07):
+def pitched(face, roll, pitch, n=N1, travel=0.07):
     """n edge-leading strokes on `face`, the knife rolled `roll` about its handle axis and pitched `pitch` tip-down
     (negative: heel-down)."""
     r = knife_rot(m.STONE_HEADING, roll if face == "A" else 180.0 - roll)
@@ -497,14 +537,14 @@ print(f"ok  edge colliders follow the edge (tip {1000 * (m.EDGE_X - m.edge_x(m.B
       f"edge; the last scorer point {1000 * (m.EDGE_X - m.edge_x(m.EDGE_SAMPLES[-1])):.1f} mm)")
 
 # 19. The last scorer point, 16.2 cm (3 mm short of the point, 4.9 mm up the tip's rise), is on the stone only with the
-# handle lifted for the tip, as a sharpener does: strokes in place (4 each with the heel, middle and tip over the
+# handle lifted for the tip, as a sharpener does: strokes in place (7 each with the heel, middle and tip over the
 # stone) with the blade level work 15 of the 16 points; with the handle lifted 2.5 deg for the tip (inside the 5 deg
 # level rule) all 16. The demo's heel-to-tip strokes do not lift the handle (see task.py, DEMO_TIP_YAW).
 for tip_pitch, want in ((0.0, 15), (2.5, 16)):
     new_trial()
     for face in ("A", "B"):
         for v in SECTIONS:
-            strokes(face, 4, v=v, pitch=tip_pitch if v == SECTIONS[-1] else 0.0)
+            strokes(face, 7, v=v, pitch=tip_pitch if v == SECTIONS[-1] else 0.0)
     s, _ = put_down()
     got = (m.coverage("A"), m.coverage("B"))
     assert got == (want, want) and s == 1.0, f"tip strokes pitched {tip_pitch} deg: worked {got}, score {s}"

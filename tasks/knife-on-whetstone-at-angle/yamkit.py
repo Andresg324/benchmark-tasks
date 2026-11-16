@@ -41,6 +41,8 @@ TIP_LINKS = ("tip_left", "tip_right")
 _OPENING: dict[str, float] = {}
 _EPISODE = {"count": 0, "last": None}  # trials seen, and the env's step count within the current one
 _PROPS: set[str] = set()
+STEP_HOOKS: list = []  # local addition (knife task): hook(env.unwrapped, objects) after the states of every control
+#                        step are read (before success() and score() see them); a task appends its own
 
 
 # -- shapes ----------------------------------------------------------------------------------
@@ -172,6 +174,7 @@ class Prop(Box):
     colliders: tuple = field(default=())
     tilt_xyzw: tuple = (0.0, 0.0, 0.0, 1.0)
     com: tuple | None = None  # centre of mass in the prop's frame (default: PhysX's, from the colliders)
+    report: bool = False  # local addition (knife task): PhysX contact reports on (a task reads its contact forces)
 
 
 def _linear(c: float) -> float:
@@ -185,7 +188,10 @@ def _fmt(v) -> str:
 def _usda(prop: Prop) -> str:
     looks = list(dict.fromkeys(m.look for m in prop.meshes))
     out = ['#usda 1.0\n(\n    defaultPrim = "Root"\n    metersPerUnit = 1\n    upAxis = "Z"\n)\n']
-    out.append('def Xform "Root" (\n    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]\n)\n{\n')
+    api = '"PhysicsRigidBodyAPI", "PhysicsMassAPI"' + (', "PhysxContactReportAPI"' if prop.report else "")
+    out.append(f'def Xform "Root" (\n    prepend apiSchemas = [{api}]\n)\n{{\n')
+    if prop.report:
+        out.append("    float physxContactReport:threshold = 0\n")
     if prop.mass is not None:
         out.append(f"    float physics:mass = {prop.mass}\n")
     if getattr(prop, "com", None) is not None:
@@ -725,6 +731,8 @@ def _patch(scene) -> None:
             _OPENING[key] = float(abs(art.data.joint_pos.torch[0, j].item()) / abs(FINGER_OPEN))
             out[key] = ObjectState(pos=tcp, quat_xyzw=np.array([x, y, z, w]), lin_vel=np.zeros(3),
                                    ang_vel=np.zeros(3), low=np.minimum(tcp, tips), high=np.maximum(tcp, tips))
+        for hook in STEP_HOOKS:  # local addition (knife task): per-control-step hooks, e.g. a contact-force reading
+            hook(base, out)
         return out
 
     scene.task_object, scene.object_states = task_object, object_states
