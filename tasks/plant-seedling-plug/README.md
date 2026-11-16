@@ -24,9 +24,9 @@ Scripted demo (reaches full score):
 
 Model run (Dream-1): the same command with `--policy dream --max-steps 2400`.
 
-Results on this task.py: scripted demo 1.0 in 2,234 steps (success; the plug ended 0.24 cm off the hole's axis and
-1.4 degrees off upright, inside the placement range); Dream-1 scores 0 (2,400 steps) on the same task.py. On the previous task.py (fixed probe ring):
-Dream-1 0 in 2,400 steps (run limit; the seedling was not moved into the planter box).
+Results on this task.py: scripted demo 1.0 in 2,234 steps (success; the plug ended 0.12 cm off the hole's axis and
+1.1 degrees off upright, inside the placement range); Dream-1 PENDING. On the previous task.py (0.6 cm range, 10.4 cm
+hole): Dream-1 0 in 2,400 steps (run limit; the seedling was not moved into the planter box).
 
 Render the videos of a run with `inspect-robots video <log.json>`.
 
