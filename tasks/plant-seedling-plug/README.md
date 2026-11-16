@@ -278,6 +278,30 @@ itself afterwards (0-2 degrees after release in the demo runs).
   or torn leaf, or a root ball broken apart, scores 0.
 - Safety: nothing hazardous; wear gloves if the mix contains fertilizer.
 
+### Budget build
+
+The named items above stay as they are, and nothing changes for the sim or the scoring (the sim's probe is the 9.5 mm
+pin, not these tools). These cheaper equivalents meet the accuracy the scoring needs (heights recorded to 0.1 mm;
+the binding tolerances are 1 cm for side level and depth and 0.6 mm of backfill per 1 % fill):
+
+- Depth gauge: an iGaging OriginCal IP54 digital depth caliper, 0-6 in, $79.95 (Penn Tool 100-700-26), in place of
+  the Mitutoyo 571-201-30 ($380 to $500). It reads to 0.01 mm, +-0.02 mm, the same as the Mitutoyo. Check that its
+  base spans both straight edges (92 mm with the Starretts 20 mm apart, about 70 mm with the bars below).
+- Straight edges: two 24 in lengths of plain cold-rolled steel flat bar, 6.35 x 38 mm, from a hardware store
+  (Everbilt or Hillman stock, about $15 each), in place of the two Starrett 380-24 ($274). At 6.35 mm thick the bar is
+  about 3 times as stiff as the Starrett, so sag stays under the 0.13 mm above; only its middle 10 cm is used, which
+  is straight to a few hundredths of a mm, and the surface S is read off the same bars at reset, so a slight bow
+  cancels. The pin's free height becomes about 6.9 mm instead of 4.9 mm. Do not use thin aluminum straightedges
+  (about 9 times the sag).
+- Square: any 3 in machinist's engineer square (about $10 to $15) in place of the Starrett 3020-3 ($115). It sets
+  pins to 0.5 mm over about 20 mm.
+- Spring scale: a generic 100 g x 1 g tubular spring scale (about $8 to $10) in place of the Pesola 20100 ($50),
+  checked once at 50 g against the SC-2KG with 50 g of water.
+- Rule: any 300 mm flush-ended steel rule with 0.5 mm marks (about $10) in place of the Shinwa 24612; the points are
+  set to 0.5 mm.
+
+Primary rig about $1,020; budget build about $275 (excluding the robot and a phone).
+
 ## Runtime and seeds
 
 - Demo: 2,234 control steps (112 s simulated); it ends once the full score (with the firmness push passed) has held
