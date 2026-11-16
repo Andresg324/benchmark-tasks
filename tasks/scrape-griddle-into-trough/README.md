@@ -103,7 +103,7 @@ pieces that keep their outlines, so it uses a paste that holds the stencil's sha
 the pieces are black through (a crust broken in half shows no pale center). For the first three batches at that time,
 record the witness pieces' masses and their black areas (measured on the top photo against the 1 cm grid): their
 medians are the reference for every later batch. Pieces that are black through and match the reference mass and area
-are the same debris from batch to batch; no force measurement is used.
+are the same debris from batch to batch.
 
 **Making the debris (every trial).**
 1. Plate clean, dry and cold (under 40 degrees C), the tray empty, dry and weighed (0.01 g) and seated.
@@ -199,8 +199,7 @@ scraper is replaced if its edge has a nick 0.5 mm or deeper. Then make a fresh b
   under the values above and crusts 10 to 23 % over. A broken bond is not restored by the scene's reset (one trial per
   run).
 - **Real-trial bond.** The real debris is charred flour paste (see Real-world evaluation); the forces above are how
-  the simulator represents it. The real bond is not measured as a force: it is held constant by the fixed recipe,
-  amount and cook, and every batch's witness pieces must match the qualification's masses and black areas within
+  the simulator represents it. The real bond comes from the fixed recipe, amount and cook, and every batch's witness pieces must match the qualification's masses and black areas within
   25 % and be black through before the batch is used.
 - **Contact settings.** Pieces are at least 2 mm thick (the blade is 1.5 mm, moving 4 cm/s: 0.2 mm per 240 Hz
   physics step, so nothing passes through); contacts start 2 mm out and rest at zero gap; 16 position iterations; a
