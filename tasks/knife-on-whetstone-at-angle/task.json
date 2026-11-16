@@ -18,6 +18,6 @@
   "run_limit": "3,600 steps (3 minutes at 20 Hz)",
   "reset_notes": "Put the knife back flat on the block, face A down, edge away, bolster at (18.8, -0.7); the stone, holder, stand and block are fixed. For a real trial, soak the stone 10 minutes, dull the edge again with the jointing pass in the setup, and check that all four marked points read 500 g or more on the edge tester before starting.",
   "fidelity": "Nothing is ground: the sim scores strokes from the knife's pose on the stone (angle, travel per edge point) and solver contact force as a stand-in for steel removed, and a real trial measures the edge with a BESS edge tester. No burr is felt, and the demo presses a measured median 2.4 to 3.3 N where knifemaker Kramer asks 9 to 27 N; aimed harder, the drag turns the knife in the grip. The stone is dry and rigid; the knife has box colliders. The stone's top is 11 cm up so the wrist clears.",
-  "scores": "Dream-1 run: PENDING (3,600 steps); demo: 1.0 (3,481 steps)",
-  "media": "M-XD4QS8"
+  "scores": "Dream-1 run: 0 (3,600 steps, the run limit) on this task.py (fd84ee115c90); demo: 1.0 (3,481 steps)",
+  "media": "M-2NC4R8"
 }

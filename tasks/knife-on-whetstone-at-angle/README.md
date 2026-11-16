@@ -140,7 +140,7 @@ sets of 11, against 20 needed, with a regrip on the block at each change of face
 per face, no contact check) scored 1.0 in 1,992 steps; in its telemetry run the stone pushed the knife with a median
 2.4 N on face A and 3.3 N on face B, well over the 0.5 N contact check. One fixed layout, `object_jitter=0`.
 
-Model run: Dream-1 not yet run on this version of task.py (previous version: 0 in 2,400 steps).
+Model run: Dream-1 scores 0 in 3,600 steps (the run limit) on this task.py (previous version: 0 in 2,400 steps).
 
 ## Fidelity
 
