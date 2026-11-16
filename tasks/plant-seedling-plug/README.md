@@ -24,9 +24,9 @@ Scripted demo (reaches full score):
 
 Model run (Dream-1): the same command with `--policy dream --max-steps 2400`.
 
-Results on this task.py: PENDING (the scorer changed: the demo and Dream-1 are re-run on it). On the previous task.py
-(fixed probe ring): scripted demo 1.0 in 2,234 steps (success); Dream-1 0 in 2,400 steps (run limit; the
-seedling was not moved into the planter box).
+Results on this task.py: scripted demo 1.0 in 2,234 steps (success; the plug ended 0.24 cm off the hole's axis and
+1.4 degrees off upright, inside the placement range); Dream-1 PENDING. On the previous task.py (fixed probe ring):
+Dream-1 0 in 2,400 steps (run limit; the seedling was not moved into the planter box).
 
 Render the videos of a run with `inspect-robots video <log.json>`.
 
@@ -46,7 +46,7 @@ the run. Everything is read from the end state:
 | Fill | mean over the 16 probe points of the soil's rise from the hole's floor / the hole's 6.2 cm depth, each capped at 1 | 85% (60% for 0.5, 40% for 0.25) | the gap filled up, not one side heaped |
 | Spill | clods out of the planter box | 10% or less, else capped at 0.5 | |
 | Hands off | each gripper's own shape at least 1 cm from the plug | yes (for 1.0, 0.75, 0.5) | planted means let go |
-| Firm | 0.5 N side push 5 cm above the plug's top, 1 s each way, after 1 s standing still | turns under 5 degrees | our estimate of a gardener's check nudge (the weight of 50 g); a packed backfill held it in the simulator, a loose one did not |
+| Firm | a side push of the weight of 50 g, 5 cm above the plug's top, 1 s each way, after 1 s standing still | turns under 5 degrees | a gardener's light check nudge (protocol setting); a packed backfill held it in the simulator, a loose one did not |
 | Undamaged (whole trial) | stem bend at each of its two joints; the stem or a leaf touched by both fingers of one hand at once | never past 45 degrees, never squeezed (2 control steps running confirm either) | a creased stem or crushed leaf sets the plant back or kills it |
 
 Possible scores: 0, 0.25, 0.5, 0.75 (planted and filled, not firm), 1.0. Doing nothing scores 0. A damaged seedling
@@ -61,9 +61,10 @@ made" (Raper, Grift and Tekeste 2004, A portable tillage profiler for measuring 
 the ASAE), with an accuracy "better than plus or minus 1 mm" for purpose-built meters (Hirschi, Barfield, Moore and
 Colliver 1987, Profile meters for detailed measurement of soil surface heights, Applied Engineering in Agriculture
 3(1):47-51). Pinboards in soil-roughness work use pins of about 3 mm on 18.5 mm spacing (Thomsen et al. 2015,
-SOIL 1:399-410); ours is a single 9.5 mm (3/8 in) flat-ended dowel moved from hole to hole, wider so it rests on the
-crumbs of loose mix instead of slipping between them, and read against a steel rule with 0.5 mm marks (a steel rule's
-resolution and accuracy are both 0.5 mm: NPL, UNCERT Manual 2000, Section 3, Kandil).
+SOIL 1:399-410); ours is a single 9.5 mm (3/8 in) steel dowel pin set on the mix at each point in turn, wider so it
+rests on the crumbs of loose mix instead of slipping between them, and its top read with a digital depth gauge from a
+steel straight edge laid across the box's top edge (tools below). Every tool is a catalog item: nothing is made,
+printed or drilled.
 
 **The points follow the plug.** They are set out from the plug's own faces, not from the box, so wherever the plug
 stands and however it is turned they land in the gap beside it:
@@ -81,7 +82,7 @@ stands and however it is turned they land in the gap beside it:
 any way about its own axis) and upright within 10 degrees; outside it the trial scores 0, whatever the soil. Inside
 it, every probe lands wholly inside the hole's wall, never on its edge. The farthest point is 4.04 cm from the plug's
 center, so 4.04 + 0.475 (the probe's radius) + 0.6 = 5.12 cm, 0.8 mm inside the 5.2 cm wall. That 0.8 mm is the margin
-for lining the template up by eye.
+for setting the pin by the rule's 0.5 mm marks.
 
 Checked offline for 8,424 placements in the range: the top's center 0, 0.3 cm, or 0.6 cm off the axis in 24
 directions; turned every 10 degrees; upright or tilted 10 degrees eight ways. In every one, an empty hole reads its
@@ -89,42 +90,79 @@ floor at all 16 points: no probe touches the plug or the hole's edge. A hole fil
 turned 0-137 degrees scores the same as a centered one (1.0 after the push); one bare side is still caught (0.5); a
 plug 0.65 cm or more off the axis, or tilted 11 degrees, scores 0.
 
-**The template.** It is a clear acrylic disc 40 cm across and 3 mm thick, laid on the box's top edge (it rests on all
-four walls at any turn). Engraved on it:
+**The tools** (all off the shelf; one set serves every trial):
 
-- the plug's top outline, a 4.9 x 5.7 cm rectangle, at its center;
-- a circle 15.0 cm in radius about that center: the box's inside half-width;
-- the 16 probe holes and the 3 root-ball holes, each 10 mm across, at the points above;
-- a slot 1 cm wide from the center out to the edge toward one corner of the outline (the corner between the -x and +y
-  faces), passing 1.6 cm or more from every hole, so it slides in round the stem under the leaves.
+| Tool | Product (checked on a maker's or dealer's page) | Use | Resolution / accuracy |
+|---|---|---|---|
+| Height reference, x2 | Starrett 380-24 steel straight edge: 24 in (600 mm) x 1-13/32 in (36 mm) x 11/64 in (4.4 mm), straight within 0.0002 in per foot (starrett.com) | laid flat and parallel across the box's top edge, 20 mm apart | sag 0.13 mm at most, own weight plus the gauge (computed: steel, E 200 GPa, 36 x 4.4 mm, span up to 42 cm on a diagonal) |
+| Depth gauge | Mitutoyo 571-201-30 ABSOLUTE Digimatic depth gage, 0-150 mm, base 100 x 6 mm (Penn Tool Co. listing) | base across both straight edges, rod lowered onto the pin's top | 0.01 mm display, +-0.02 mm; recorded to 0.1 mm |
+| Probe foot | 0.375 x 0.375 in (9.5 x 9.5 mm) alloy steel dowel pin to ASME B18.8.2 (AFT Fasteners PINDOW030003P; the B18.8.2 chamfered end has a flat face 0.350-0.365 in across, Aspen Fasteners 0.375 in listing) | set chamfered (flat) end down on the mix at each point; about 5 g, so it rests without sinking in | its 9.5 mm face is the simulator's 9.5 mm probe |
+| Rule | Shinwa 24612 flush-ended 300 mm stainless rule, 0.5 mm marks, length within +-0.15 mm (Workshop Heaven listing) | sets each point from the plug's faces; measures the plug's offset from the walls and the straight edges' gap | 0.5 mm |
+| Square | Starrett 3020-3 toolmaker's square, 3 in blade, hardened stainless (MSI-Viking listing) | laid flat on the plug's top, beam on a face's top edge, blade square to the face | squareness 0.0002 in per 6 in |
+| Brush | any soft 2.5 cm paintbrush | brushes mix off the plug's top edges onto its top | |
+| Hole corer | an empty 401 x 411 (No. 2.5) food can, lid cut off | cores the planting hole | 10.3 cm across, by the can-size code |
+| Scale | American Weigh Scales SC-2KG (maker's SC-series manual) | weighs the water, the loose mix, the spill and the seedlings | 0.1 g |
+| Push | Pesola 20100 Micro-Line spring scale, 100 g x 1 g, and a cotton thread | the firmness check: drawn level to 50 g | 1 g, +-0.3% (maker) |
 
-Laser-cut it from the coordinates above. The same disc serves every trial.
+The reference for every height is the straight edges' top, resting on the box's top edge, which does not move as the
+mix is firmed. With the pin on the firmed surface the gauge reads about 4.9 mm (4.4 + 10 - 9.5) and on the hole's floor
+about 66.9 mm. The pin's top stands at most 4.9 mm above the firmed surface before it meets the gauge's base; a point
+where the mix is higher than that is full (fill 1, level at the surface), which is what the cap gives it anyway.
 
-**A real reading, step by step** (reproducible: the same tools, references, order and tolerances in every trial):
+**Setting a point.** Lay the square flat on the plug's top, its beam along the face's top edge (brush loose mix off
+that edge first, onto the plug's top, never into the gap), its blade out over the gap. Slide it until the blade's edge
+is 4.75 mm (half the pin) beyond the point along the face: 8.5 and 17.0 mm each side of the face's middle on the
+4.9 cm faces, 9.0 and 19.0 mm on the 5.7 cm faces (the middle from the face's length on the rule). Set the pin against
+the blade on the middle's side, its near side 5.25 mm out from the face (the rule laid along the blade, its flush end
+at the face: the pin spans 5.25-14.75 mm), and let go. The three root-ball points are set the same way from two faces:
+7.1 mm in from one 5.7 cm face (call it +x) and 4.7 mm from its middle toward +y; 12.9 mm in from the +y face and
+9.0 mm from its middle toward +x; 12.9 mm in from the -y face and 9.0 mm from its middle toward -x.
 
-1. Before the trial (after reset): lay the disc centered on the box. The circle sits on the inner wall's edge at the
-   middle of all four walls (each gap 0, within 0.5 mm on the steel rule), with the outline's 4.9 cm sides along the
-   box's x. Read the 16 holes in the empty hole. Each must be 7.5 cm within 3 mm (the 7.2 cm floor plus the disc's
-   3 mm), else re-dig. Their mean is the floor
-   reading E for this trial.
-2. After the trial: photograph the seedling. Slide the disc in round the stem, under the leaves. Turn and slide it on
-   the box's edge until the engraved outline lies over the plug's top edges, seen from straight above, within 1 mm on
-   every edge. If mix hides an edge, brush it onto the plug's top with a soft 2.5 cm paintbrush, never into the gap.
-3. Placement: at the middle of each wall, measure from the wall's inner edge to the engraved circle on the steel rule,
-   + where the circle lies over the wall. The offset is x = (g+x - g-x) / 2 and y = (g+y - g-y) / 2, and the plug's
-   offset is sqrt(x^2 + y^2). Read the three root-ball holes (mix brushed off there). Their mean is the plug's top; the
-   plane through them gives the tilt (1 mm on one of them is about 2 degrees). An offset over 0.6 cm or a tilt over 10
-   degrees: the trial scores 0. Stop.
-4. Soil: at each of the 16 holes, lower the dowel until it rests on the mix under its own weight; never push. Hold any
-   leaf aside by hand. Read its depth below the disc's top to 0.5 mm, lift, lower again, read again, and average.
-   Every depth in these steps is read below the disc's top.
-5. Point fill = (E - reading) / (E - 1.3 cm), capped at 0 and 1. The firmed surface reads 1.3 cm: 1.0 cm under the
-   box's edge, plus the disc's 3 mm. The fill is the mean of the 16. Thresholds in backfill height: 40% = 2.5 cm,
-   60% = 3.7 cm, 85% = 5.3 cm (0.9 cm under the surface).
-6. Sides: a side's level is the mean of its four points, each no higher than the surface (no reading under 1.3 cm). It is compared with the
-   plug's top (step 3).
+**Reading a point.** Lay the two straight edges flat across the box's top edge, parallel and 20 mm apart (checked on the
+rule at both walls), with the stem and the pin on the line midway between them (the stem passes up through the gap,
+the leaves stay above the 4.4 mm steel; hold a leaf aside by hand if it hangs in the way). Set the gauge's base across
+both, over the pin, and lower its rod until it just touches the pin's top; never push the pin. Read and go on: pivot
+the pair about the stem to the next pin. All 19 pins (a pack of 100 is sold) are set first and read after, so a point
+takes about 10 s to set and 10 s to read. A pin that a straight edge rests on, or that stops the gauge's base, stands
+in mix heaped above the surface: that point is full.
 
-The reference for every height is the box's top edge, which does not move as the mix is firmed.
+**A real reading, step by step** (the same tools, references, order and tolerances in every trial):
+
+1. At reset: measure the hole's center, the gap from each wall's inner face to the hole's edge (square and rule):
+   hx = (h-x - h+x) / 2, likewise hy, recorded. Read S, the firmed surface, at 4 points 7.5 cm out from the hole's
+   center along the box's x and y, and the hole's floor at 4 points 3.5 cm from its center, between them. Each floor
+   reading must be S + 62 mm within 3 mm, else re-core; their mean is E. About 2 minutes.
+2. After the trial: photograph the seedling. The readings start within 2 minutes of the trial's end and are done
+   within 10 minutes of it (about 7 minutes of work), before the firmness push.
+3. Placement: lay the square flat on the firmed surface, its beam against a wall's inner face, and the rule along its
+   blade; slide them along the wall to find the plug's top edge or corner nearest that wall and read the gap. Do it
+   from all four walls: the plug's center is px = (g-x - g+x) / 2, py likewise (a rectangle's center is midway between
+   its extremes, at any turn), and its offset is sqrt((px - hx)^2 + (py - hy)^2). About 1 minute.
+4. Set the 19 pins (16 soil points, 3 on the root ball), then read them, once each. About 6 minutes.
+5. The three root-ball readings: their mean P is the plug's top; the plane through them gives the tilt (1 mm on one of
+   them is about 2 degrees). An offset over 0.6 cm or a tilt over 10 degrees: the trial scores 0. Point fill =
+   (E - reading) / (E - S), capped at 0 and 1 (a reading at or under S is full). The fill is the mean of the 16.
+   Thresholds in backfill height: 40% = 2.5 cm, 60% = 3.7 cm, 85% = 5.3 cm (0.9 cm under the surface).
+6. Depth and sides: the plug's top is within 1 cm of the surface if P - S is within +-10 mm. A side's level is the mean
+   of its four readings, each taken as S if under it; the side is level if it is within 10 mm of P.
+
+**Tolerances.**
+
+| What | Target | Tolerance | How checked | Source |
+|---|---|---|---|---|
+| Room | room temperature | 20 to 24 degrees C (68 to 75 degrees F) | room thermometer at the bench | protocol setting |
+| Mix moisture | 350 g water per liter of bagged mix, rested 1 h | 1 g of water | the scale | protocol setting |
+| Loose mix | 200 g, heaped round the hole | 1 g | the scale | protocol setting |
+| Seedling | 'California Wonder', 8 weeks from sowing, 4 true leaves | 60-80 g (weigh five, use those in range) | the scale | seed packet (8-10 weeks to transplant); weight protocol setting |
+| Hole | 10.3 cm across (the can), 62 mm deep | depth 3 mm at each of 4 floor points | depth gauge, step 1 | can-size code; depth protocol setting |
+| Hole center | recorded, not set | 0.5 mm as read | square and rule, step 1 | protocol setting |
+| Pin placement | the points above | 0.5 mm (the 0.8 mm margin covers it) | square and rule | protocol setting; rule's marks (maker) |
+| Plug offset | at most 0.6 cm | 0.5 mm (two 0.5 mm gaps, halved) | square and rule, step 3 | the placement range (scorer) |
+| Heights | as read | 0.1 mm recorded; straight-edge sag 0.13 mm at most | depth gauge | gauge +-0.02 mm (maker); sag computed |
+| Reading window | all 19 points and the offset | start within 2 min, done within 10 min of the trial's end | timer | protocol setting |
+| Reset | core, measure, heap, set the plant | about 5 min | timer | protocol setting |
+
+These are small against the 1 cm side-level and depth tolerances and the 0.6 mm of backfill per 1% of fill.
 
 Why heights, not weights: the volume a weighed mass of moist mix fills depends on how hard it was firmed, which the
 robot sets. A height at a point needs no density: it is where the soil surface is. Mix heaped above the surface
@@ -178,10 +216,9 @@ itself afterwards (0-2 degrees after release in the demo runs).
   two-axis leaf joint on the upper stem (seven bodies deep, it blew up at spawn), so the three larger leaves sit on the
   lower segment. Above it the stem ends in a 6 mm growing tip.
 - The stem and leaves weigh about 5.5 g.
-- Kink (an estimate derived from the stretch at the stem's surface, not a measured kink angle): 45 degrees at a
-  joint, i.e. within 4.5 cm of stem: a bend radius of 5.7 cm, which stretches the stem's surface
-  about 3%, sharper than a seedling bends in a breeze or under brushing, which it springs back from. The 0.5 N push
-  bends it about 13 degrees at each joint.
+- Kink limit: 45 degrees at a joint, i.e. within 4.5 cm of stem: a bend radius of 5.7 cm, which stretches the stem's
+  surface about 3% (computed from the stem's 3.6 mm width), sharper than a seedling bends in a breeze or under
+  brushing, which it springs back from. The firmness push (the weight of 50 g) bends it about 13 degrees at each joint.
 - Squeeze: the YAM gripper is a stiff position servo (5000 N/m per finger), so the stem or a leaf touching both fingers
   at once is pressed between them with far more than a light touch.
 - The side push acts on the root ball, with the force and the moment that a push on the stem 5 cm above the plug's top
@@ -202,36 +239,45 @@ itself afterwards (0-2 degrees after release in the demo runs).
 - Soil readings: the probe is a 9.5 mm disc dropped onto the clods' cubes at the 16 points (see Measuring the soil).
 - Squeeze: scored as both fingers touching the stem or a leaf at once (the gripper is a stiff position servo, so that
   is more than a light touch).
-- Kink limit: derived from the stretch at the stem's surface, not a measured kink angle.
+- Kink limit: set from the stretch at the stem's surface: 45 degrees within 4.5 cm stretches it about 3%.
 - Side push: applied to the root ball with the force and moment a push on the stem hands on.
 
 ## Real-world build
 
-- Planter box: a wooden planter box, 30 x 30 cm inside and 9 cm deep, filled with moist peat-perlite potting mix firmed level
-  1 cm under its top edge. Dig the hole (as a gardener would with a trowel; the former makes it repeatable) with a 10.4 cm round former (a printed cylinder with a depth stop at 6.2 cm), centered: the hole's edge 9.8 cm from
-  each inner wall at the wall's middle, within 1 mm on the steel rule.
-- Loose mix: the dug mix, 200 g (about 440 mL), weighed, crumbled and heaped round the hole. The gap round a level
-  plug is about 360 mL.
-- Seedling (held by the root ball, never the stem): a sweet pepper transplant grown in a 3601 insert (cell 4.9 x
+- Room: 20 to 24 degrees C (68 to 75 degrees F).
+- Planter box: a wooden planter box, 30 x 30 cm inside and 9 cm deep.
+- Potting mix: PRO-MIX HP Mycorrhizae (PT Horticulture: 65-75% Canadian sphagnum peat by volume, perlite, limestone,
+  a wetting agent). Moisture, the protocol's setting: 350 g of water per liter of mix as it comes from the bag, stirred
+  in a lidded tub and left 1 h before use; the same tub serves the series. Firmed level 1 cm under the box's top edge.
+- Planting hole: cored with an empty 401 x 411 food can (No. 2.5 size, 28-29 oz; the can-size code gives its outside
+  diameter, 4 1/16 in = 10.3 cm), its lid cut off with a can opener: pressed open end down to 62 mm (within 3 mm, the
+  depth gauge), turned once and lifted out with its core. The hole is 10.3 cm across, 1 mm under the simulator's
+  10.4 cm; at the very edge of the placement range the outermost probe can then touch the hole's rim, and that point
+  reads full. Centered by eye; its actual center is measured and recorded (Measuring the soil, step 1), so centering
+  needs no tight tolerance.
+- Loose mix: the cored mix, 200 g (about 440 mL), weighed on the scale, crumbled and heaped round the hole. The gap
+  round a level plug is about 360 mL.
+- Scale: American Weigh Scales SC-2KG, 2000 g x 0.1 g (for the mix, the spill and the seedlings).
+- Seedling (held by the root ball, never the stem): a 'California Wonder' sweet pepper (Botanical Interests seed), sown 8 weeks before the trial (the packet: start 8 to 10 weeks before transplanting) and grown in a 3601 insert (cell 4.9 x
   5.7 cm at the top, 5.7 cm deep, 118 mL), the stem 3-4 mm across and 8-10 cm tall above the plug, with its seed
   leaves and four true leaves; weigh five and use those within 60-80 g. Set it with its leaves toward the robot's
   right.
-- Template and probe: the clear acrylic disc, 40 cm across and 3 mm thick, with the outline, the 15 cm circle, the 19
-  holes and the stem slot (see Measuring the soil; laser-cut from the listed coordinates). Also a 9.5 mm (3/8 in)
-  hardwood dowel 20 cm long with a square-cut end, a 15 cm steel rule with 0.5 mm marks, and a soft 2.5 cm
-  paintbrush.
-- Scoring a real trial (the same end state): photograph the seedling; lay the disc over the plug and read the placement, then
-  the 16 points and the three root-ball points (Measuring the soil, steps 2-6); then push a 3 mm bamboo skewer 3 cm into
-  the root ball 1.5 cm from the stem, zero a phone inclinometer on it, and push with a 1 N spring gauge (0.01 N
-  divisions) 5 cm above the plug's top, 1 s each way, reading the turn; gather the mix off the bench and floor and
-  weigh it on a kitchen scale (1 g) against the 200 g loaded (spill: a direct mass, no conversion; mix left on the
+- Measuring tools: two Starrett 380-24 steel straight edges, a Mitutoyo 571-201-30 digital depth gauge, a 9.5 x 9.5 mm
+  steel dowel pin (0.375 x 0.375 in), a Shinwa 24612 300 mm rule, a Starrett 3020-3 square and a soft 2.5 cm paintbrush (see Measuring
+  the soil: The tools).
+- Scoring a real trial (the same end state): photograph the seedling; read the placement, the three root-ball points and the
+  16 points within the fixed window (Measuring the soil, steps 2-6); then push a 3 mm bamboo skewer 3 cm into
+  the root ball 1.5 cm from the stem, zero a phone inclinometer on it, loop a cotton thread round the stem 5 cm above the
+  plug's top and draw it level with a Pesola 20100 Micro-Line spring scale (100 g x 1 g) to a reading of 50 g, 1 s each
+  way, reading the turn; gather the mix off the bench and floor and
+  weigh it on the scale against the 200 g loaded (spill: a direct mass, no conversion; mix left on the
   surface outside the hole is neither spill nor fill); photograph again: a creased, kinked or broken stem, a crushed
   or torn leaf, or a root ball broken apart, scores 0.
 - Safety: nothing hazardous; wear gloves if the mix contains fertilizer.
 
 ## Runtime and seeds
 
-- Demo (previous task.py; re-run PENDING on this one): 2,234 control steps (112 s simulated); it ends once the full score (with the firmness push passed) has held
+- Demo: 2,234 control steps (112 s simulated); it ends once the full score (with the firmness push passed) has held
   for 1 s. The plan is 113 s (2,266 steps).
 - Model run limit: 2,400 steps (2 minutes at 20 Hz).
 - One fixed layout (`object_jitter=0`); the clods' layout comes from a fixed seed. The clods are spawned outside

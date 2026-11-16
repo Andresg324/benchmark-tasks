@@ -538,7 +538,7 @@ def test_text():
     check(tj["instruction"] == M.INSTRUCTION, "task.json instruction matches task.py")
     check(len(tj["context"]) <= 1000, f"context {len(tj['context'])} chars")
     sc = tj["scoring"]
-    for txt in ("1 cm", "10 degrees", "0.6 cm", "1.0 cm", "85%", "60%", "40%", "10%", "0.5 N", "5 cm", "5 degrees", "16 points",
+    for txt in ("1 cm", "10 degrees", "0.6 cm", "1.0 cm", "85%", "60%", "40%", "10%", "the weight of 50 g", "5 cm", "5 degrees", "16 points",
                 "9.5 mm", "Hirschi"):
         check(txt in sc, f"scoring text says {txt}")
     check(":" not in tj["title"], "no colon in the title")
