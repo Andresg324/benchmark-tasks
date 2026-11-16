@@ -1,7 +1,8 @@
 """On the station table, in front of the arms: a range-top griddle (a 7-gauge stainless plate, 56.8 x 31.1 cm cooking
 surface, with a 7.6 cm grease tray across its near end, toward the robot). Near the lip, four silver-dollar pancakes
 cooked in 7 cm rings were left on the heat and burnt onto the plate. A 4 in. (10.2 cm) griddle scraper lies on the
-bench to the right.
+bench to the right. In real trials the burnt pancakes are a standard substitute that is made in minutes: black-dyed
+paraffin wax poured into the same 7 cm rings on the cold plate, where it sets and sticks (README).
 
 The job is to scrape the griddle clean: break the burnt pancakes free and push them along the plate with the scraper,
 over the lip into the grease tray, without flinging them off the griddle or gouging the plate, then set the scraper
@@ -9,7 +10,7 @@ down off the griddle.
 
 Each pancake is a mosaic of rigid fragments (debriskit), each bonded to the plate by a breakable joint that the physics
 solver breaks when the blade pushes it harder than its bond, so a pancake breaks up along its cracks under the blade;
-a freed fragment is a free body on the greased plate with real friction. The scraper's blade has to meet the
+a freed fragment is a free body on the seasoned plate with real friction. The scraper's blade has to meet the
 fragments, break them free and push them; they fall into the tray under gravity when pushed over the lip. The score
 reads where they really are, by mass: in the tray, still on the griddle, or off it. Every threshold below appears once,
 with the same value in task.json and the README.
@@ -77,9 +78,11 @@ GUARD_B = Box("guard_back", pos=(LIP_X + PLATE_LX + GUARD_T / 2, PLATE_YC, (TOP 
 # onto the steel. A burnt pancake cracks as it chars and breaks along the cracks
 # under a scraper, so each disc is a mosaic of fragments about FRAG across, CRACK apart, each bonded to the plate on its
 # own: five rows across the disc, each row split where it cracked (a fixed seed, so the same every trial).
+# In real trials each burnt pancake is a disc of black-dyed paraffin wax (Gulf Wax household paraffin), 14.0 g poured into
+# the same cavity on the cold plate, where it sets in minutes and sticks to the steel: the same place, outline and mass.
 RING_D = 0.070  # m: a cavity's diameter (2.75 in.), the pancake's diameter
 CAKE_T = 0.005  # m: a burnt silver-dollar pancake's thickness
-CHAR_DENSITY = 500.0  # kg/m^3: charred pancake crumb (porous)
+WAX_DENSITY = 900.0  # kg/m^3: paraffin wax (0.88 to 0.92 g per cubic cm): each disc 13.9 g, as the real 14.0 g pour
 # Centers (x, y) and turn of the mosaic: the mold's middle cavity and the three next to it toward the lip and to the left
 # (two cavities side by side 1.0 cm from the lip, two 6.9 cm behind them, offset half a pitch).
 CAKES = ((0.195, -0.075, 0.35), (0.195, 0.005, -0.20), (0.264, -0.035, 0.10), (0.264, 0.045, -0.45))
@@ -152,7 +155,7 @@ def _layout():
                 x, y = cx + cs * u - sn * v, cy + sn * u + cs * v
                 col = CHAR_COLORS[int(rng.integers(len(CHAR_COLORS)))]
                 c = dk.Chip(f"cake{k}_{i}{j}", (float(x), float(y), float(PLATE_Z + CAKE_T / 2 + CHIP_LIFT)),
-                            (float(su), float(sv), CAKE_T), float(turn), float(CHAR_DENSITY * su * sv * CAKE_T), col)
+                            (float(su), float(sv), CAKE_T), float(turn), float(WAX_DENSITY * su * sv * CAKE_T), col)
                 f = BOND_EDGE * across(c)
                 chips.append(dk.Chip(c.name, c.pos, c.size, c.yaw, c.mass, col, (f, f * BOND_PEEL_ARM)))
     return tuple(chips)
@@ -206,8 +209,9 @@ RESIDUE_MAX = 0.02  # 0.75 also needs at most 2 % of the debris left on the grid
 FULL_TROUGH = 0.98  # 1.0 needs at least 98 % in the tray ...
 FULL_RESIDUE = 0.0  # ... and nothing left on the griddle (no fragment: the plate clean), plus the scraper set down
 
-# The plate's surface: seasoned steel with a film of grease on it, slippery to a steel blade and to carbon (greased steel
-# on steel, about 0.15). The simulator's default contact friction (1.2) would let the edge stick and chatter.
+# The plate's surface: seasoned steel (dry: wax does not stick to an oiled plate), smeared with wax where the debris was,
+# slippery to a steel blade and to wax (waxy or greased films on steel, about 0.15). The simulator's default contact
+# friction (1.2) would let the edge stick and chatter.
 PLATE_FRICTION = (0.20, 0.15)  # static, dynamic
 _PLATE_SIZE = (PLATE_LX, PLATE_W, PLATE_Z - TOP)
 PLATE = kit.Prop("plate", pos=(LIP_X + PLATE_LX / 2, PLATE_YC, (TOP + PLATE_Z) / 2), size=_PLATE_SIZE,
@@ -215,7 +219,8 @@ PLATE = kit.Prop("plate", pos=(LIP_X + PLATE_LX / 2, PLATE_YC, (TOP + PLATE_Z) /
                  colliders=(kit.Collider((0.0, 0.0, 0.0), _PLATE_SIZE),),
                  friction=PLATE_FRICTION)  # plate on its frame, one fixed block
 
-# Carbon on steel: 0.5 static, 0.4 sliding; on the greased plate the plate's lower friction applies (combine "min").
+# A dry piece on steel: 0.5 static, 0.4 sliding (estimated); on the plate the plate's lower friction applies (combine
+# "min").
 # Every piece is bonded to the plate (the anchor) until the blade breaks it free.
 dk.setup(CHIPS, dk.Physics(static_friction=0.5, dynamic_friction=0.4, break_scale=BREAK_CAL),
          anchor=(PLATE.name, PLATE.pos))

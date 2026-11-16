@@ -186,7 +186,7 @@ def main():
               for p in M._corners2(c.pos[0], c.pos[1], c.size[0], c.size[1], c.yaw)),
           "every fragment on the plate behind the lip, 5 cm or more inside the side guards")
     T = M.TOTAL_MASS
-    check(abs(T * 1000 - 30.8) < 0.05, f"debris {T * 1000:.2f} g")
+    check(abs(T * 1000 - 55.5) < 0.05, f"debris {T * 1000:.2f} g")
     sh = M.CHIP_MASS / T
     check(0.007 <= sh.min() and sh.max() <= 0.018, f"each fragment {sh.min():.1%} to {sh.max():.1%} of the mass")
     # the bonds: every fragment stuck to the plate, break force from its width across the stroke, far above its weight
@@ -195,7 +195,7 @@ def main():
     check(all(abs(c.bond[1] - c.bond[0] * M.BOND_PEEL_ARM) < 1e-12 for c in C), "break torque = break force x 2 mm")
     fb = [c.bond[0] for c in C]
     check(0.10 <= min(fb) and max(fb) <= 0.22, f"fragments break free at {min(fb):.2f}-{max(fb):.2f} N")
-    check(min(c.bond[0] / (c.mass * 9.81) for c in C) >= 25, "every bond holds at least 25 times its fragment's weight")
+    check(min(c.bond[0] / (c.mass * 9.81) for c in C) >= 20, "every bond holds at least 20 times its fragment's weight")
     check(M.dk._SPEC["anchor"] == (M.PLATE.name, M.PLATE.pos) and M.PLATE.mass is None,
           "the bonds anchor on the plate, a fixed body")
     p0, q0, p1 = M.dk.bond_frames(C[0])
@@ -311,11 +311,11 @@ def main():
     check(d["instruction"] == M.INSTRUCTION, "task.json instruction == task.INSTRUCTION")
     text = " ".join(str(d[k]) for k in ("setup", "scoring", "fidelity", "context")) + readme
     for frag in ("25 %", "60 %", "90 %", "98 %", "2 %", "70 degrees", "10 degrees", "1 cm", "1 s",
-                 "30.8 g", "88", "22 fragments", "four", "136 g", "10.2 cm", "5.0 cm", "0.6 mm", "0.15 to 0.2",
-                 "0.4 to 0.5", "0.5 g per cubic cm", "capped at 0.5", "caps the score at 0.25", "7.0 cm", "5 mm",
+                 "55.5 g", "88", "22 fragments", "four", "136 g", "10.2 cm", "5.0 cm", "0.6 mm", "0.15 to 0.2",
+                 "0.4 to 0.5", "0.9 g per cubic cm", "capped at 0.5", "caps the score at 0.25", "7.0 cm", "5 mm",
                  "12 N per m", "0.11 to 0.21 N", "0.8 to 1.7", "x 19.5, y -7.5 and 0.5", "x 26.4, y -3.5 and 4.5",
-                 "1.0 cm from the lip", "6.55 cm", "Norpro 957R", "Krusteaz", "177AOGT1227", "P94850", "15.0 g",
-                 "232 degrees C", "20 minutes"):
+                 "1.0 cm from the lip", "6.55 cm", "Norpro 957R", "Gulf Wax", "177AOGT1227", "P94850", "14.0 g",
+                 "USS-DBS66-20", "3 minutes"):
         check(frag in text or frag.replace(" %", "%") in text, f"text states {frag!r}")
     limits = dict(title=120, instruction=1000, context=1000, setup=4000, scoring=4000, fidelity=500, scores=300)
     for k, n in limits.items():
