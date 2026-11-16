@@ -16,6 +16,6 @@
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "Empty, wash, dry and weigh the tray. Scrape, wipe and dry the plate until its grid photo shows no particle 1 mm or larger (re-season every 10 trials). Re-grease (1.00 g of oil buffed to at most 0.10 g), set the mold at its marks, cook and burn a fresh batch, cool it to under 40 degrees C, and accept it on its batch check (README). Clamp the griddle against its stops and lay the scraper in its outline. In simulation every trial starts with every fragment bonded in place and the tray empty.",
   "fidelity": "Real size. Each pancake is 22 rigid fragments, each held by a breakable joint freed when the blade pushes past 12 N per m of its width (baked food soils on steel: 0.3 to 80 J/m2), standing in for the real burnt pancakes, checked by mass and black area each batch. Sim pancake 7.7 g, real about 7 g (estimated); both scored by share. Friction: greased plate 0.15 to 0.2, char on steel 0.4 to 0.5. No heat. Rigid scraper. Gouge: a blade-angle rule.",
-  "scores": "Dream-1 run: PENDING; demo: 1.0 (2,139 steps)",
-  "media": "M-XUV3D2"
+  "scores": "Dream-1 run: 0 (2,400 steps, the run limit) on this task.py (9dc99085127e); demo: 1.0 (2,139 steps)",
+  "media": "M-KBKJBM"
 }

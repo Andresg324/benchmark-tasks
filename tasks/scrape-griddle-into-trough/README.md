@@ -225,7 +225,7 @@ throughout; the scraper is replaced if its edge has a nick 0.5 mm or deeper. The
 - Demo: a 110 s plan (2,190 control steps), run with `--max-steps 2400`. The recorded run scored 1.0 at step 2,139
   (the trial ends once the set-down has held for 1 s, before the plan's final wait): at least 98 % in the tray and no
   fragment left on the griddle; the last frame shows the plate clean and the pancakes' fragments in the tray.
-- Model run limit: 2,400 steps (2 minutes at 20 Hz).
+- Model run limit: 2,400 steps (2 minutes at 20 Hz). Dream-1 scores 0 (2,400 steps) on the same task.py.
 - The demo: the right hand takes the scraper by the handle from above, fingers closing across the handle (yaw 0: along
   world y), lifts it level and carries it over the right splash guard (tilted, its edge would hang below the guard's
   top), then tilts it over the plate so the blade meets the plate at 40 degrees with the edge toward the robot. The
