@@ -19,7 +19,8 @@ Run (from the repo root, Isaac Lab-Arena installed):
 Use `--policy dream --max-steps 2400` for a Dream-1 trial (the run limit). The scene is deterministic (no seeds, object_jitter=0).
 Runtime per trial: the demo runs 1,007 steps (50.4 s at 20 Hz); a Dream-1 trial runs up to 2,400 steps (2 minutes).
 
-Results on this task.py (sha256 ba1a470ab7f0...): the scripted demo scores **1.0 in 1,007 steps**. Dream-1 scores **0** (2,400 steps, the run limit) on the same task.py.
+Results on this task.py (sha256 ba1a470ab7f0...): the scripted demo scores **1.0 in 1,007 steps**. Dream-1 scores
+**0** (2,400 steps, the run limit) on the same task.py.
 
 ## The pastry: what people buy, and what it is rolled to
 
@@ -100,14 +101,17 @@ Nothing about the scoring points is drawn.
 
 ## Scoring
 
-The pastry's thickness is read in six bands along x, centered 3, 7 and 11 cm either side of the board's center line
-(y -11, -7, -3, 3, 7, 11). In each band it is read at two kinds of point: row points every 4 cm along x from 1 cm
-behind the board's front edge (x 11, 15, 19, ... 39 cm) wherever the pastry covers them, and two end points, 1 cm
-inside the band's rolled ends, found from where the sheet's ends lie after rolling. A row point within 2 cm of an end
-point is left to the end point. The demo's sheet gives 30 points (5 a band: 3 row points and 2 end points). The end
-points make an unrolled end count: a sheet with its ends left at the start's thickness has its end points off spec.
-The sim reads exactly these points (the row points are centers of the model's 2 cm cells; the end points are read on
-each band's own slices); a real trial reads them with a depth gauge. The evenness check compares the bands' averages.
+The pastry's thickness is read in six bands along x, centered 3, 7 and 11 cm either side of the board's center line (y
+-11, -7, -3, 3, 7, 11). In each band it is read at two kinds of point: row points every 4 cm along x from 1 cm behind
+the board's front edge (x 11, 15, 19, ... 39 cm) wherever the pastry covers them, and two end points, 1 cm inside the
+band's rolled ends, found from where the sheet's ends lie after rolling. A row point within 2 cm of an end point is left
+to the end point. The demo's sheet gives 30 points (5 a band: 3 row points and 2 end points). The end points make an
+unrolled end count: a sheet with its ends left at the start's thickness has its end points off spec. The sim reads
+exactly these points (the row points are centers of the model's 2 cm cells; the end points are read on each band's own
+slices); a real trial reads them with a low-force digital indicator. Both readings are local: the sim takes the
+thickness of the one slice under the point (a 2 cm band, a slice 2.5 to 3.7 mm long), and the real indicator's 10 mm
+flat contact sits inside the same 2 cm band, over 5 mm either side of the point along x, with nothing resting on the
+pastry around it. The evenness check compares the bands' averages.
 
 | Outcome | Score |
 |---|---|
@@ -145,7 +149,7 @@ single stroke out and back, or a wedge from a lifted end) there is no usable pro
 Why the numbers: 3.2 mm is 1/8 inch, the thickness the maker's recipes roll this pastry to and the ring sold for it. 0.3
 mm (about 10 % of 3.2 mm) either side, a protocol setting rather than a measured baking tolerance: enough that a level
 sheet three crossings in (3.4 mm) is on spec while the start (4.8 mm) and one crossing (4.0 mm) are not; it is ten times
-the gauge's 0.01 mm reading. 90 %: most of the points are in the outer bands or at the ends, near the cut and rolled
+the indicator's 0.01 mm reading. 90 %: most of the points are in the outer bands or at the ends, near the cut and rolled
 edges where a sheet is pinched or ragged, and 10 % lets about three of the 30 be off. 3.7 mm is within 0.5 mm, about one
 pass to go; 4.2 mm is 0.6 mm off the start, what one level pass reaches at its ends (4.0 mm). 0.3 mm across the width is
 the same tolerance a point is held to; each band is averaged over its points, so the check reads a wedge, not a single
@@ -187,14 +191,15 @@ fingertips 5 mm over the barrel, 1.0; fingers hovering 9 mm over both handles th
 Strokes stopping 3 cm short of the near end (x 19.5 cm) leave that end at 4.8 mm while every row point is on spec; the
 end points read it, so the sheet scores below 1.0.
 
-In a real trial the score is the measured sheet and the final pin state, with the hands free. A clear metric quilting
-ruler laid on tape ticks on the board's edges locates the row points and a steel tape the end points, the same rule
-every trial and the same as the sim's, and a zeroed digital depth gauge (Mitutoyo 571-201-30) reads the thickness at
-each. A point under 2.9 mm, or a spot where pastry stuck to the pin and pulled away, counts as off spec (a ringed pin
-stops at 3.2 mm, so anything thinner is damage). A hole or tear seen on the after photo caps the score at 0.5. These
-arise only in a real trial; the sim's sheet stays whole. The pin's level and rest are read with a phone level app and a
-steel tape, and the last second of the video shows whether a finger still touches it. The full procedure, from the
-pastry's lot to the reset, is in "Real-world evaluation" below.
+In a real trial the score is the measured sheet and the final pin state, with the hands free. The points are the sim's
+(row points located from the board's front edge with a steel tape, end points 1 cm inside each band's rolled edge), and
+at each one a low-force digital indicator with a 10 mm flat contact, carried on a steel bridge that rests only on the
+bare board beside the sheet, reads the pastry's top; the board's own height at that point, mapped once with the same
+rig, is subtracted to give the thickness. A point under 2.9 mm, or a spot where pastry stuck to the pin and pulled away,
+counts as off spec (a ringed pin stops at 3.2 mm, so anything thinner is damage). A hole or tear seen on the after photo
+caps the score at 0.5. These arise only in a real trial; the sim's sheet stays whole. The pin's level and rest are read
+with a phone level app and a steel tape, and the last second of the video shows whether a finger still touches it. The
+full procedure, from the pastry's lot to the reset, is in "Real-world evaluation" below.
 
 ## Real-world build
 
@@ -212,9 +217,17 @@ and gauge are used for every trial.
   fine-mesh sieve; a pizza wheel.
 - Ruler: the Prym Omnigrid Universal Ruler, cm scale, 15 x 60 cm (article 611308), a clear quilting ruler with a
   metric grid. It locates the measuring points and guides the cut.
-- Depth gauge: the Mitutoyo 571-201-30 ABSOLUTE Digimatic depth gage (0 to 150 mm, 0.01 mm display, +-0.02 mm, a
-  hardened 100 x 6 mm base and a point rod). Its base touches the pastry's top and its rod goes down through the
-  pastry to the board, so it reads the thickness directly.
+- Indicator: the Mitutoyo ABSOLUTE Digimatic Indicator ID-C1012CMX, 543-405B (12.7 mm range, 0.01 mm display,
+  accuracy 0.02 mm, low measuring force selectable 0.2 to 0.5 N, set to 0.2 N; 8 mm stem), with the Mitutoyo 101117
+  flat contact point (10 mm across, flat within 5 um) and the 21EZA198 spindle lifting lever, so the contact is let down
+  onto the pastry by hand rather than dropped. At 0.2 N on the 10 mm flat the contact presses about 2.5 kPa.
+- Bridge (the indicator never rests on pastry): two Fowler 52-439-031-0 matched pairs of hardened steel 1-2-3 blocks
+  (matched within 0.0002 inch), standing on their 1 x 3 inch faces on the bare board's side margins (|y| 17.4 to 20,
+  outside the sheet, which is at most 27.5 cm wide); two Starrett 380-24 steel straight edges (600 x 36 x
+  4.4 mm) laid flat across them as rails along y, one near the front of the board and one near the back; a third 380-24
+  laid along x across the two rails as the carriage, slid along them from band to band; and a Mitutoyo 7010S-10
+  magnetic stand (59 x 50 mm base, 1.38 kg, 8 mm stem bushing) clamped magnetically to the carriage, holding the
+  indicator upright beside it. Only the blocks touch the board, and only on its bare margins.
 - Calipers: Mitutoyo 500-196-30 digital caliper (0 to 150 mm, 0.01 mm). Check blades: the Starrett 66MA metric
   thickness gage (20 leaves, 0.05 to 1.00 mm), leaves stacked to 3.00 mm (1.00 + 0.95 + 0.90 + 0.15).
 - Scale: American Weigh Scales Fast Weigh MS-500-BLK pocket scale (500 g x 0.1 g), for the flour.
@@ -226,12 +239,13 @@ and gauge are used for every trial.
 ## Real-world evaluation (reproducible protocol)
 
 Every real trial starts from the same measured state and is scored on the same points as the simulator (30 on the demo's
-sheet), read with a depth gauge. The protocol fixes the pastry (one product, one lot, the box's thaw, a measured cut),
-the room (20 to 24 degrees C), the positions (tape marks on the table and board), the flour (weighed), the measurement
-(a ruler on the board's marks and a zeroed gauge, all points read within 5 minutes, plus the pin check and photos) and
-the reset. Where a step comes from the maker's directions it is quoted; every other tolerance is the protocol's own
-setting, chosen to be well inside the scoring bands. They are collected in the table at the end. Positions are in cm
-from the midpoint between the arm bases (x forward, y to the robot's left), measured with the steel tape.
+sheet), read with a low-force indicator on a bridge over the sheet. The protocol fixes the pastry (one product, one lot,
+the box's thaw, a measured cut), the room (20 to 24 degrees C), the positions (tape marks on the table and board), the
+flour (weighed), the measurement (the points located from the board's marks, the indicator on its bridge read against a
+map of the board, all points read within 5 minutes, plus the pin check and photos) and the reset. Where a step comes
+from the maker's directions it is quoted; every other tolerance is the protocol's own setting, chosen to be well inside
+the scoring bands. They are collected in the table at the end. Positions are in cm from the midpoint between the arm
+bases (x forward, y to the robot's left), measured with the steel tape.
 
 **The room (every trial).** Everything is done at room temperature: 20 to 24 degrees C (68 to 75 degrees F), read on
 the room thermometer at the bench at the start of each trial and recorded. Trials run only within that range.
@@ -246,6 +260,17 @@ the room thermometer at the bench at the start of each trial and recorded. Trial
   bands); on both side faces at x 18.25
   and 29.75 (the pastry's near and far edges), at x 35 (the pin's axis), and at x 11, 15, 19, 23, 27, 31, 35 and 39
   (the rows of measuring points, every 4 cm from 1 cm behind the front edge).
+- Bridge: masking-tape L marks on the board's top at its four side margins (|y| 17.4 to 20, clear of the rings' path)
+  for the four 1-2-3 blocks, at x 11 to 18.6 (front) and x 31 to 38.6 (back), and ticks on the front rail's top at the
+  six bands, set once so the indicator's contact centers on each band's line (sighted between the band's front- and
+  back-face ticks, within 2 mm).
+- Board map (once per series, and again whenever the reference check below fails): with the board floured as for a
+  trial (5.0 g) and the bridge on its marks, read the indicator on the bare board along each band every 1 cm from x 13
+  to 35 (23 readings a band), lowering the contact with the lever and reading it 2 s after it touches. These heights
+  include the board's own flatness and the bridge's sag (computed: up to about 0.3 mm with the carriage and stand at a
+  rail's middle), and both repeat at the same place each time, so subtracting the map cancels them. Before mapping,
+  the indicator reads a 3.00 mm stack of 66MA leaves set on the board at (x 13, y 11) as the map value plus 3.00 mm
+  within 0.02 mm, five times.
 - Camera: the phone on its overhead stand about 60 cm above the board, the whole board in frame, the same zoom and
   position every trial.
 
@@ -287,55 +312,52 @@ and the maker's recipes at pepperidgefarm.com, e.g. Neapolitan Napoleons).
    the trimmings away. The piece is 11.5 x 24.0 cm, each edge within 3 mm of its ticks (checked with the steel tape),
    with both fold seams inside it running along x. The maker gives the sheet as about 9.75 x 10.5 inches (24.8 x 26.7
    cm), so the 24.0 cm cut fits; a sheet under 24.0 cm across (along y) is set aside and replaced from the same lot.
-6. Zero the depth gauge (see "Measuring", step 3) now, so the measuring after the trial can start at once.
+6. Lay the bridge's blocks, rails and carriage (the stand and indicator on it) beside the bench, ready to set down
+   on their marks after the trial.
 7. Take the before photo (a card in frame with the trial number, lot code, thaw time, average thickness and room
    temperature) and start the trial within 5 minutes of the end of the thaw. The run itself is limited to 2,400 steps
    (2 minutes).
 
 **Measuring (every trial).** All points are read within 5 minutes of the pin's set-down (the protocol's fixed window,
-a setting rather than a measured rest time), so every sheet is read at the same age. Reading takes about 8 s a point,
-ruler moves included, so the demo's 30 points take about 4 minutes. Start the timer when the pin comes to rest.
-1. Video: the last 1 s of the trial video shows no gripper finger touching the pin (let go).
+a setting rather than a measured rest time), so every sheet is read at the same age. The budget: about 30 s for the
+pin check and photo, about 1 minute to set the bridge on its marks, 15 s for the reference check, then about 6 s a
+point (magnet off, slide, magnet on, lower, read, lift), so the demo's 30 points take about 3 minutes. Start the timer
+when the pin comes to rest.
+1. Video: the last 1 s of the trial video shows the grippers clear of the pin (let go).
 2. Pin: lay the phone along the top of the barrel, steadied by a fingertip on the phone (not on the pin), and read the
    level app (zeroed on the bare board before the trial): within 3 degrees. Hold the steel tape upright beside each
    ring: its lowest point is within 5 mm of the surface under it (the board, or the table if the pin was put down
    beside the board). Take the after photo with the pin in place, and lift the pin straight up off the board. The photo
    records any pastry beyond the board's edges (pastry off the board scores 0) and any hole or tear (caps the score at
    0.5).
-3. The gauge (zeroed before the trial): stand its base on the bare board, lower the rod to the board and zero. Stand
-   the base on the 66MA leaves stacked to 3.00 mm (checked with the calipers), rod down to the board: it reads within
-   0.05 mm, five times; otherwise it is re-zeroed and checked again.
-4. Row points, read row by row from the back of the sheet to the front. Lay the ruler across the board along y with
-   its near long edge on that row's two side-face ticks and an equal overhang at both sides (its 30 cm mark is then on
-   the center line), so the ruler lies on the board and on pastry already read, behind the row. At the four inner-band
-   points (y -7, -3, 3, 7) hold the gauge upright with its base along the ruler's edge and its rod at the point's cm
-   mark (30 - 7, 30 - 3, 30 + 3, 30 + 7 cm; the rod is then 3 mm in front of the ruler's edge). Then slide the ruler 6
-   cm back, keeping its overhang, and read the two outer-band points (y -11 and 11, at the 30 - 11 and 30 + 11 cm marks
-   sighted from the row's ticks) with the base turned along x, so it lies over the sheet. At each point lower the base
-   until it just touches the pastry's top, its weight kept on the hand (resting, its 207 g on the 100 x 6 mm base would
-   press about 3.4 kPa on the dough), lower the rod until it stops on the board, and read it to 0.01 mm: the pastry's
-   thickness. Row points within 2 cm of an end point are left to the end points.
-5. End points: lift the ruler away. In each band, sight the band's line between its front- and back-face ticks, hold
-   the steel tape's end at the pastry's near edge on that line and set the rod 1 cm inside it; read it the same way,
-   the base along y (across the band) for the inner bands and along x for the outer bands so it lies over the sheet;
-   then the far edge. A helper writes every reading into the readings table by band (or the phone records the reader's
-   voice), and a spot where pastry stuck to the pin and pulled away, at a point, is recorded as off spec. The time of
-   the last reading is recorded: a trial is scored when it is within 5 minutes of the set-down.
-6. Repeatability (a check after the scored readings): re-read three points (the middle two of the middle row and
-   one end point) beside their first holes. Each repeat must be within 0.1 mm of its first reading; if not, the gauge is
-   re-zeroed and checked on the blades, and the trial is flagged.
-7. Photo the sheet with its gauge holes (the record of the points read).
-8. Score with the simulator's rules: at least 90 % of the read points at 2.9 to 3.5 mm, each band's points averaged
+3. Bridge and reference check: set the four blocks on their marks (within 1 mm), the two rails across them and the
+   carriage on the rails. Read the bare board at (x 13, y -11) and (x 13, y 11): each within 0.03 mm of its map value;
+   otherwise re-seat the bridge and read again (and re-map before the next trial if it still differs).
+4. Read each band in turn: slide the carriage to the band's tick on the front rail, so the contact is on the band's
+   line. For each of its points, slide the stand along the carriage until the contact's center is over the point:
+   row points at x 11, 15, 19, ... read off the steel tape hooked on the board's front edge, and end points 1 cm inside
+   the pastry's near and far edges on that line, read off the steel tape held at the edge. Let the contact down with
+   the lever until it rests on the pastry, read it 2 s later to 0.01 mm, and lift it. The thickness is the reading less
+   the board's map height at that point (between two map readings 1 cm apart, the straight-line value). A helper writes
+   every reading into the readings table by band (or the phone records the reader's voice); a spot where pastry stuck
+   to the pin and pulled away, at a point, is recorded as off spec. Row points within 2 cm of an end point are left to
+   the end points. The time of the last reading is recorded: a trial is scored when it is within 5 minutes of the
+   set-down.
+5. Repeatability (a check after the scored readings): re-read three points (the middle two of the middle row and one
+   end point). Each repeat is within 0.05 mm of its first reading; otherwise the bridge is re-seated, the reference
+   check repeated, and the trial flagged.
+6. Photo the sheet (the record of the sheet that was read), then lift the bridge away.
+7. Score with the simulator's rules: at least 90 % of the read points at 2.9 to 3.5 mm, each band's points averaged
    within 0.3 mm of every other band's average, all pastry on the board, and the pin down and let go for 1.0; the 0.5
    and 0.25 tiers as above; a hole or tear on the after photo caps the score at 0.5. The score uses the sheet and the
    pin only: the hands and the sheet's length are free.
 
-**Reset (every trial).** Throw the rolled sheet away: each trial rolls a fresh sheet once. Scrape the board
-with a bench scraper, wipe it with a dry cloth and let it dry; it is re-floured with weighed flour at the next set-up.
-Brush flour and pastry off the pin's barrel and rings and off the ruler with a dry pastry brush. Check each ring with
-the calipers at three places around it: half the difference between the ring's diameter and the barrel's beside it is
-3.2 mm within 0.1 mm (1/8 inch is 3.18 mm); a ring outside that, torn or stretched loose is replaced as a pair. Check
-the board is still inside its marks and the camera stand unmoved.
+**Reset (every trial).** Throw the rolled sheet away: each trial rolls a fresh sheet once. Scrape the board with a bench
+scraper, wipe it with a dry cloth and let it dry; it is re-floured with weighed flour at the next set-up. Brush flour
+and pastry off the pin's barrel and rings, the ruler and the indicator's contact with a dry pastry brush. Check each
+ring with the calipers at three places around it: half the difference between the ring's diameter and the barrel's
+beside it is 3.2 mm within 0.1 mm (1/8 inch is 3.18 mm); a ring outside that, torn or stretched loose is replaced as a
+pair. Check the board is still inside its marks and the camera stand unmoved.
 
 **Tolerances.**
 
@@ -353,12 +375,15 @@ the board is still inside its marks and the camera stand unmoved.
 | Board | front edge x 10.0, center y 0 | 2 mm; square and level within 0.5 degree | tape marks, steel tape, level app | protocol |
 | Pin start | axis at x 35, centered | 5 mm; rings flush on the barrel's ends within 1 mm | ticks, steel tape | protocol |
 | Ring height | 3.2 mm (1/8 inch = 3.18 mm) | 0.1 mm | calipers, 3 places per ring, every trial | protocol |
-| Gauge zero | 0.00 on the bare board | 3.00 mm of 66MA leaves read within 0.05 mm, five times | Starrett 66MA, Mitutoyo 500-196-30 | protocol |
-| Reading window | all points, about 8 s each (30 on the demo's sheet) | within 5 min of the pin's set-down | timer | protocol setting |
-| Repeat readings | three points re-read | within 0.1 mm | gauge | protocol |
+| Indicator check | 3.00 mm of 66MA leaves on a mapped point | map value + 3.00 mm within 0.02 mm, five times | Starrett 66MA, Mitutoyo 500-196-30 | protocol |
+| Contact | Mitutoyo 101117 flat, 10 mm across | 0.2 N (about 2.5 kPa), let down with the lever, read after 2 s | indicator force setting | maker's force range; setting protocol |
+| Bridge | blocks on their marks; rests only on bare board | 1 mm; reference points within 0.03 mm of the map | tape marks, indicator | protocol |
+| Board map | bare floured board, every 1 cm along each band, x 13 to 35 | once per series; redone when the reference check fails | indicator on the bridge | protocol |
+| Reading window | all points, about 6 s each (30 on the demo's sheet) | within 5 min of the pin's set-down | timer | protocol setting |
+| Repeat readings | three points re-read | within 0.05 mm | indicator | protocol |
 | Pin down (scored) | level, on its rings | within 3 degrees; rings within 5 mm of the surface | level app, steel tape | scoring |
 | Let go (scored) | no finger on the pin | last 1 s of the video | video | scoring |
-| Thickness points (scored) | 3.2 mm | 2.9 to 3.5 mm at 90 % of points; bands within 0.3 mm | gauge, 0.01 mm | scoring (band a protocol setting) |
+| Thickness points (scored) | 3.2 mm | 2.9 to 3.5 mm at 90 % of points; bands within 0.3 mm | indicator reading less map, 0.01 mm | scoring (band a protocol setting) |
 | Holes and tears (scored) | none | a hole or tear on the after photo caps the score at 0.5 | after photo | scoring |
 | End points | 1 cm inside each band's rolled ends | 3 mm | steel tape, band ticks | protocol |
 
@@ -390,8 +415,18 @@ grows.
   (vermontkitchensupply.com/products/silicone-rolling-pin-rings-8pc-set; also target.com/p/-/A-1006725924).
 - Ruler: Prym Omnigrid Universal ruler, cm scale, 15 x 60 cm, article 611308
   (prym.com/en/universal-ruler-15x60cm-16113080).
-- Depth gauge: Mitutoyo 571-201-30 ABSOLUTE Digimatic depth gage, 0-150 mm, 0.01 mm, +-0.02 mm, base 100 x 6 mm, 207 g
-  (penntoolco.com/mitutoyo-absolute-digimatic-depth-gage-0-150mm-571-201-30).
+- Indicator: Mitutoyo ABSOLUTE Digimatic Indicator ID-C1012CMX, 543-405B, 12.7 mm, 0.01 mm, accuracy 0.02 mm, low
+  measuring force 0.2 to 0.5 N, 8 mm stem, M2.5 x 0.45 contact thread (sumipol.com, ABS Digimatic Indicator ID-C;
+  cal-laboratory.com, Mitutoyo Series 543 data sheet). Spindle lifting lever 21EZA198, for the 12.7 mm ISO/JIS
+  models including 543-405/405B (sumipol.com, same page).
+- Contact point: Mitutoyo 101117 flat contact point, 10 mm across, M2.5 x 0.45, flatness 5 um
+  (hroberts-di.com/products/mitutoyo-101117-flat-contact-point).
+- Stand: Mitutoyo 7010S-10 magnetic stand, base 59 x 50 x 55 mm, about 600 N holding force, 150 mm working radius,
+  1.38 kg (itm.com/product/mitutoyo-7010s-10-magnetic-stand-for-dial-test-indicators).
+- Blocks: Fowler steel 1-2-3 blocks, 52-439-031-0, 1 x 2 x 3 inch, hardened, matched pairs within 0.0002 inch
+  (fowlerprecision.com/Steel-1-2-3-Blocks-52-439-031).
+- Straight edges: Starrett 380-24 steel straight edge, 600 x 36 x 4.4 mm, precision ground
+  (checkout.starrett.com/380-24-steel-straight-edge).
 - Calipers: Mitutoyo 500-196-30 ABSOLUTE AOS digital caliper, 0-150 mm, 0.01 mm (travers.com, item 57-016-342).
 - Check leaves: Starrett 66MA metric thickness gage, 20 leaves, 0.05 to 1.0 mm (starrett.com, 66MA).
 - Scale: American Weigh Scales Fast Weigh MS-500-BLK, 500 g x 0.1 g (homebrewfinds.com review listing).
