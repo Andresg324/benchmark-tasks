@@ -1,8 +1,8 @@
 """Offline checks of the planting scorer and demo, no simulator. Crumbs are given as the simulator gives them (each
 crumb's center in objects["soil"]); the plug's pose and the grippers are built from the task's own geometry. Covers the
 starting layout (crumbs apart, inside the planter box, enough mix to fill the hole), the 16 probe points (set out from
-the plug: in the gap and inside the hole's wall for every plug placement in the permitted range, off-centre, turned
-and tilted; a filled hole round an off-centre, turned plug scores full; outside the range scores 0; an empty hole reads 0, heaped mix counts as full and never more, a hole filled on one side only, a pocket between
+the plug: in the gap and inside the hole's wall for every plug placement in the permitted range, off-center, turned
+and tilted; a filled hole round an off-center, turned plug scores full; outside the range scores 0; an empty hole reads 0, heaped mix counts as full and never more, a hole filled on one side only, a pocket between
 points, the 40/60/85 % boundaries), every tier, the spill cap, a hand left on the plug, a tilted or proud plug, the
 firmness push (requested on the plug, passed and failed), a new trial, the thresholds in the text, and the demo plan
 (finger signs, timing, run limit).
@@ -290,8 +290,8 @@ def test_probe_points():
     check(s == 0.0, "the plug in an empty hole scores 0")
 
 
-def test_off_centre_turned():
-    """A hole filled round a plug that stands off-centre (up to the 0.6 cm limit) and turned: full credit, as for a
+def test_off_center_turned():
+    """A hole filled round a plug that stands off-center (up to the 0.6 cm limit) and turned: full credit, as for a
     centered one; one side left bare is still caught; past the limit the trial scores 0."""
     cases = ((M.PLACE_R, 0.0, 0.0), (0.0, -M.PLACE_R, 0.0), (0.0042, 0.0042, 30.0), (-M.PLACE_R, 0.0, 45.0),
              (0.003, -0.005, 72.0), (0.0, 0.0, 90.0), (-0.004, 0.004, 137.0), (0.0, M.PLACE_R, -20.0))
@@ -303,7 +303,7 @@ def test_off_centre_turned():
         s = run(M.HOLD_STEPS - 1, **kw)
         st0 = M._L.state
         check(s == 0.75 and st0["sides"] == 4 and st0["fill"] >= M.FILL_FULL,
-              f"off-centre ({x * 100:.2f}, {y * 100:.2f}) cm, turned {yaw:.0f} deg, filled: fill {st0['fill']:.2f}, "
+              f"off-center ({x * 100:.2f}, {y * 100:.2f}) cm, turned {yaw:.0f} deg, filled: fill {st0['fill']:.2f}, "
               f"4 sides, 0.75 before the push (got {s})")
         s = run(3 + 2 * M.PUSH_STEPS + M.SETTLE_STEPS, **kw)
         check(s == 1.0, f"  and 1.0 after the push (got {s})")
@@ -339,14 +339,15 @@ def test_heaped_capped():
 
 
 def test_pocket_between_points():
-    """An empty pocket 3.6 cm long along a face, through the whole gap, anywhere along it: a probe falls in and that
-    side no longer counts as filled. (Points on a side are 1.5 cm apart; a clod beside a pocket reaches 5.5 mm into it
-    and the probe's end is 9.5 mm across, so with 1.1 cm clods a pocket under about 3.5 cm can be bridged.)"""
+    """An empty pocket 2.4 cm long along a face, through the whole gap, anywhere along it: a probe falls in and that
+    side no longer counts as filled. (Points on a side are 0.7-1.0 cm apart, 1.2-1.4 cm from the corners; a clod beside
+    a pocket reaches 5.5 mm into it and the probe's end is 9.5 mm across, so with 1.1 cm clods a pocket of 2 cm can be
+    bridged.)"""
     base = filled_soil()
     for side, (ax, half_face) in enumerate(((0, M.PLUG_TOP[1] / 2), (1, M.PLUG_TOP[0] / 2), (0, M.PLUG_TOP[1] / 2),
                                             (1, M.PLUG_TOP[0] / 2))):
         sign = 1.0 if side < 2 else -1.0
-        length = 0.036
+        length = 0.024
         worst = -1.0
         for c in np.arange(-half_face + length / 2, half_face - length / 2 + 1e-9, 0.002):
             soil = base.copy()
@@ -359,7 +360,7 @@ def test_pocket_between_points():
             o, _ = objs(soil=soil)
             lv = M.side_levels(M.probe_heights(o, soil))
             worst = max(worst, lv[side] - (M.Z_S - M.SET_DEPTH))
-        check(worst < -M.LEVEL_TOL, f"side {side}: a 3.6 cm pocket anywhere along it fails the side "
+        check(worst < -M.LEVEL_TOL, f"side {side}: a 2.4 cm pocket anywhere along it fails the side "
                                     f"(highest level {worst * 100:.1f} cm)")
 
 

@@ -24,7 +24,8 @@ Scripted demo (reaches full score):
 
 Model run (Dream-1): the same command with `--policy dream --max-steps 2400`.
 
-Results on this task.py: scripted demo 1.0 in 2,234 steps (success); Dream-1 0 in 2,400 steps (run limit; the
+Results on this task.py: PENDING (the scorer changed: the demo and Dream-1 are re-run on it). On the previous task.py
+(fixed probe ring): scripted demo 1.0 in 2,234 steps (success); Dream-1 0 in 2,400 steps (run limit; the
 seedling was not moved into the planter box).
 
 Render the videos of a run with `inspect-robots video <log.json>`.
@@ -38,8 +39,8 @@ the run. Everything is read from the end state:
 
 | Measure | How | Full credit | Why this much |
 |---|---|---|---|
-| Plug in the hole | plug center within the hole's 5 cm radius, below the surface | yes | |
-| Upright | tilt of the plug's axis | 10 degrees or less (20 for 0.5 and 0.25) | a lean you see at a glance |
+| Plug placed in range (every tier) | its top's center from the hole's axis, in plan; any turn about its own axis | within 0.6 cm, else 0 | inside it every probe lands in the gap (see Measuring the soil) |
+| Upright (every tier) | tilt of the plug's axis | 10 degrees or less, else 0 | a lean you see at a glance; more would bring the plug's lower side under the probes |
 | Depth | plug top vs the firmed surface | within 1 cm | deeper rots the stem, proud dries the plug |
 | Soil level, each side | mean height of that side's 4 probe points (each capped at the surface) | within 1 cm of the plug's top on all 4 sides (3 for 0.5) | the root ball covered all round, no air pocket |
 | Fill | mean over the 16 probe points of the soil's rise from the hole's floor / the hole's 6.2 cm depth, each capped at 1 | 85% (60% for 0.5, 40% for 0.25) | the gap filled up, not one side heaped |
@@ -51,47 +52,92 @@ the run. Everything is read from the end state:
 Possible scores: 0, 0.25, 0.5, 0.75 (planted and filled, not firm), 1.0. Doing nothing scores 0. A damaged seedling
 scores 0 for the whole trial, however well it is planted.
 
-## Measuring the soil: 16 probe points
+## Measuring the soil: 16 probe points set out from the plug
 
 The fill and the side levels are read the same way in the simulator and in a real trial: the height of the soil at 16
-fixed points, found by lowering a probe until it rests on the mix. This is a pin profile meter, the usual tool for
-soil-surface heights: "a series of equally spaced pins that are lowered onto the soil surface until contact is made"
-(Raper, Grift and Tekeste 2004, A portable tillage profiler for measuring subsoiling disruption, Transactions of the
-ASAE), with an accuracy "better than plus or minus 1 mm" for purpose-built meters (Hirschi, Barfield, Moore and
+points round the plug, found by lowering a probe until it rests on the mix. This is a pin profile meter, the usual tool
+for soil-surface heights: "a series of equally spaced pins that are lowered onto the soil surface until contact is
+made" (Raper, Grift and Tekeste 2004, A portable tillage profiler for measuring subsoiling disruption, Transactions of
+the ASAE), with an accuracy "better than plus or minus 1 mm" for purpose-built meters (Hirschi, Barfield, Moore and
 Colliver 1987, Profile meters for detailed measurement of soil surface heights, Applied Engineering in Agriculture
 3(1):47-51). Pinboards in soil-roughness work use pins of about 3 mm on 18.5 mm spacing (Thomsen et al. 2015,
 SOIL 1:399-410); ours is a single 9.5 mm (3/8 in) flat-ended dowel moved from hole to hole, wider so it rests on the
 crumbs of loose mix instead of slipping between them, and read against a steel rule with 0.5 mm marks (a steel rule's
 resolution and accuracy are both 0.5 mm: NPL, UNCERT Manual 2000, Section 3, Kandil).
 
-- **Points.** A template on the box's top edge (a stiff card 33.6 cm square, the box's outside size, slotted from one
-  edge to the center so it slides in round the stem under the leaves) has 16 holes on a ring 4.4 cm from the hole's
-  center: four beside each face of the plug, 10 and 30 degrees either side of the face's middle. Each lands 1.0-1.9 cm
-  out from the plug's face and 0.8 cm in from the hole's wall, 1.5 cm from its nearest neighbor. Three more holes sit
-  over the root ball, 1.8 cm from the stem (at 15, 60 and 240 degrees from +x, clear of the seed leaves).
-- **Reference.** Every reading is a depth below the template, i.e. below the box's top edge, which does not move. The
-  firmed surface is 1.0 cm below the edge (set at reset) and the hole's floor 7.2 cm below it (the former's depth
-  stop). Before each trial the 16 holes are read in the empty hole; a reading off by more than 3 mm means re-dig.
-- **Reading.** Lower the dowel through the hole until it rests on the mix under its own weight; never push. Hold any
-  leaf aside by hand. Read the depth to 0.5 mm, lift, lower again, read again, and average.
-- **Fill.** Point fill = (empty reading - final reading) / (empty reading - 1.0 cm), capped at 0 and 1. The fill is the
-  mean of the 16. Thresholds in backfill height: 40% = 2.5 cm, 60% = 3.7 cm, 85% = 5.3 cm (0.9 cm under the surface).
-- **Sides.** A side's level is the mean of its four points (each no higher than the surface), compared with the plug's
-  top, the mean of the three root-ball readings (mix brushed off there). The plane through those three gives the
-  tilt: 1 mm on one of them is about 2 degrees.
+**The points follow the plug.** They are set out from the plug's own faces, not from the box, so wherever the plug
+stands and however it is turned they land in the gap beside it:
+
+- Four points beside each face, 1.0 cm out from the face (the probe's 9.5 mm end 5.25 mm clear of it), at 15% and 50%
+  of the way from the face's middle toward either end. Points on a face are 0.7-1.0 cm apart.
+- In the plug's frame (cm from the stem's axis, x across the 4.9 cm width): (+-3.45, +-0.43), (+-3.45, +-1.43),
+  (+-0.37, +-3.85), (+-1.23, +-3.85).
+- Three more points over the root ball, 1.8 cm from the stem at 15, 60 and 240 degrees from the plug's +x: always on
+  the root ball (their 9.5 mm ends at most 2.3 cm from the stem; the root ball's top reaches 2.45 cm).
+- A tilted plug: up to 10 degrees, its lower side comes at most 3.5 mm past its top's outline (4.5 mm for the
+  simulator's three stepped layers), inside the 5.25 mm clearance.
+
+**The placement range.** Every tier needs the plug's top centered within 0.6 cm of the hole's axis (in plan, turned
+any way about its own axis) and upright within 10 degrees; outside it the trial scores 0, whatever the soil. Inside
+it, every probe lands wholly inside the hole's wall, never on its edge. The farthest point is 4.04 cm from the plug's
+center, so 4.04 + 0.475 (the probe's radius) + 0.6 = 5.12 cm, 0.8 mm inside the 5.2 cm wall. That 0.8 mm is the margin
+for lining the template up by eye.
+
+Checked offline for 8,424 placements in the range: the top's center 0, 0.3 cm, or 0.6 cm off the axis in 24
+directions; turned every 10 degrees; upright or tilted 10 degrees eight ways. In every one, an empty hole reads its
+floor at all 16 points: no probe touches the plug or the hole's edge. A hole filled round a plug 0.6 cm off-center and
+turned 0-137 degrees scores the same as a centered one (1.0 after the push); one bare side is still caught (0.5); a
+plug 0.65 cm or more off the axis, or tilted 11 degrees, scores 0.
+
+**The template.** It is a clear acrylic disc 40 cm across and 3 mm thick, laid on the box's top edge (it rests on all
+four walls at any turn). Engraved on it:
+
+- the plug's top outline, a 4.9 x 5.7 cm rectangle, at its center;
+- a circle 15.0 cm in radius about that center: the box's inside half-width;
+- the 16 probe holes and the 3 root-ball holes, each 10 mm across, at the points above;
+- a slot 1 cm wide from the center out to the edge toward one corner of the outline (the corner between the -x and +y
+  faces), passing 1.6 cm or more from every hole, so it slides in round the stem under the leaves.
+
+Laser-cut it from the coordinates above. The same disc serves every trial.
+
+**A real reading, step by step** (reproducible: the same tools, references, order and tolerances in every trial):
+
+1. Before the trial (after reset): lay the disc centered on the box. The circle sits on the inner wall's edge at the
+   middle of all four walls (each gap 0, within 0.5 mm on the steel rule), with the outline's 4.9 cm sides along the
+   box's x. Read the 16 holes in the empty hole. Each must be 7.5 cm within 3 mm (the 7.2 cm floor plus the disc's
+   3 mm), else re-dig. Their mean is the floor
+   reading E for this trial.
+2. After the trial: photograph the seedling. Slide the disc in round the stem, under the leaves. Turn and slide it on
+   the box's edge until the engraved outline lies over the plug's top edges, seen from straight above, within 1 mm on
+   every edge. If mix hides an edge, brush it onto the plug's top with a soft 2.5 cm paintbrush, never into the gap.
+3. Placement: at the middle of each wall, measure from the wall's inner edge to the engraved circle on the steel rule,
+   + where the circle lies over the wall. The offset is x = (g+x - g-x) / 2 and y = (g+y - g-y) / 2, and the plug's
+   offset is sqrt(x^2 + y^2). Read the three root-ball holes (mix brushed off there). Their mean is the plug's top; the
+   plane through them gives the tilt (1 mm on one of them is about 2 degrees). An offset over 0.6 cm or a tilt over 10
+   degrees: the trial scores 0. Stop.
+4. Soil: at each of the 16 holes, lower the dowel until it rests on the mix under its own weight; never push. Hold any
+   leaf aside by hand. Read its depth below the disc's top to 0.5 mm, lift, lower again, read again, and average.
+   Every depth in these steps is read below the disc's top.
+5. Point fill = (E - reading) / (E - 1.3 cm), capped at 0 and 1. The firmed surface reads 1.3 cm: 1.0 cm under the
+   box's edge, plus the disc's 3 mm. The fill is the mean of the 16. Thresholds in backfill height: 40% = 2.5 cm,
+   60% = 3.7 cm, 85% = 5.3 cm (0.9 cm under the surface).
+6. Sides: a side's level is the mean of its four points, each no higher than the surface (no reading under 1.3 cm). It is compared with the
+   plug's top (step 3).
+
+The reference for every height is the box's top edge, which does not move as the mix is firmed.
 
 Why heights, not weights: the volume a weighed mass of moist mix fills depends on how hard it was firmed, which the
 robot sets. A height at a point needs no density: it is where the soil surface is. Mix heaped above the surface
-counts as full and no more, so a mound on one side cannot make up for a hollow on another. The readings land in the
-gap, not on the plug, for any plug within 4 mm of the hole's center.
+counts as full and no more, so a mound on one side cannot make up for a hollow on another.
 
-Resolution. With a 9.5 mm probe on 1.1 cm clods, a clod beside an empty pocket reaches 5.5 mm into it, so in the
-simulator a pocket shorter than about 3.5 cm along a face can be bridged; any pocket 3.6 cm long, anywhere along any
-face, drops a point and fails that side (offline check). Real mix crumbs are smaller. With the plug's top at the
-surface, three filled sides already give a fill over 60%, so the 60% threshold binds only for a plug set deeper.
+Resolution. With a 9.5 mm probe on 1.1 cm clods, a clod beside an empty pocket reaches 5.5 mm into it. So in the
+simulator a 2 cm pocket along a face can be bridged, but any pocket 2.4 cm long, anywhere along any face, drops a point
+and fails that side (offline check). Real mix crumbs are smaller. With the plug's top at the surface, three filled
+sides already give a fill over 60%, so the 60% threshold binds only for a plug set deeper.
 
-In the simulator the probe is a 9.5 mm disc at the same 16 points that comes down until any part of its end meets a
-clod (each clod's own turned cube) or the plug, else the hole's floor. The plug's tilt and top come from its pose.
+In the simulator the probe is a 9.5 mm disc at the same 16 points, carried with the plug's top (its position and turn).
+It comes down until any part of its end meets a clod (each clod's own turned cube) or the plug, else the hole's floor.
+The plug's tilt, top and offset come from its pose.
 
 Watering in, the next step of planting, is out of scope; the push test stands in for "stands by itself". The push test starts by itself once the planted state has held for 1 s with both hands off; if a hand comes back to
 the plug during it, it stops and starts over later. The score is the end state's: no step of how the robot got there
@@ -162,17 +208,20 @@ itself afterwards (0-2 degrees after release in the demo runs).
 ## Real-world build
 
 - Planter box: a wooden planter box, 30 x 30 cm inside and 9 cm deep, filled with moist peat-perlite potting mix firmed level
-  1 cm under its top edge. Dig the hole (as a gardener would with a trowel; the former makes it repeatable) with a 10.4 cm round former (a printed cylinder with a depth stop at 6.2 cm).
+  1 cm under its top edge. Dig the hole (as a gardener would with a trowel; the former makes it repeatable) with a 10.4 cm round former (a printed cylinder with a depth stop at 6.2 cm), centered: the hole's edge 9.8 cm from
+  each inner wall at the wall's middle, within 1 mm on the steel rule.
 - Loose mix: the dug mix, 200 g (about 440 mL), weighed, crumbled and heaped round the hole. The gap round a level
   plug is about 360 mL.
 - Seedling (held by the root ball, never the stem): a sweet pepper transplant grown in a 3601 insert (cell 4.9 x
   5.7 cm at the top, 5.7 cm deep, 118 mL), the stem 3-4 mm across and 8-10 cm tall above the plug, with its seed
   leaves and four true leaves; weigh five and use those within 60-80 g. Set it with its leaves toward the robot's
   right.
-- Template and probe: a stiff card 33.6 cm square with the 19 holes (see Measuring the soil; print it at 1:1), a
-  9.5 mm (3/8 in) hardwood dowel 20 cm long with a square-cut end, and a 15 cm steel rule with 0.5 mm marks.
-- Scoring a real trial (the same end state): photograph the seedling; read the 16 points and the three root-ball
-  points through the template (fill, side levels, the plug's top and tilt); then push a 3 mm bamboo skewer 3 cm into
+- Template and probe: the clear acrylic disc, 40 cm across and 3 mm thick, with the outline, the 15 cm circle, the 19
+  holes and the stem slot (see Measuring the soil; laser-cut from the listed coordinates). Also a 9.5 mm (3/8 in)
+  hardwood dowel 20 cm long with a square-cut end, a 15 cm steel rule with 0.5 mm marks, and a soft 2.5 cm
+  paintbrush.
+- Scoring a real trial (the same end state): photograph the seedling; lay the disc over the plug and read the placement, then
+  the 16 points and the three root-ball points (Measuring the soil, steps 2-6); then push a 3 mm bamboo skewer 3 cm into
   the root ball 1.5 cm from the stem, zero a phone inclinometer on it, and push with a 1 N spring gauge (0.01 N
   divisions) 5 cm above the plug's top, 1 s each way, reading the turn; gather the mix off the bench and floor and
   weigh it on a kitchen scale (1 g) against the 200 g loaded (spill: a direct mass, no conversion; mix left on the
@@ -182,7 +231,7 @@ itself afterwards (0-2 degrees after release in the demo runs).
 
 ## Runtime and seeds
 
-- Demo: 2,234 control steps (112 s simulated); it ends once the full score (with the firmness push passed) has held
+- Demo (previous task.py; re-run PENDING on this one): 2,234 control steps (112 s simulated); it ends once the full score (with the firmness push passed) has held
   for 1 s. The plan is 113 s (2,266 steps).
 - Model run limit: 2,400 steps (2 minutes at 20 Hz).
 - One fixed layout (`object_jitter=0`); the clods' layout comes from a fixed seed. The clods are spawned outside
@@ -192,6 +241,8 @@ itself afterwards (0-2 degrees after release in the demo runs).
 
 - `task.py`: scene, scorer, scripted demo.
 - `yamkit.py`, `mechkit.py`, `soilkit.py`, `pushkit.py`, `guardkit.py`: the task's helper modules.
-- `test_task.py`: offline checks of the layout, the probe points (empty hole, heaped mix, one side only, a pocket
-  between points, the 40/60/85% boundaries), the scorer and the demo plan.
+- `test_task.py`: offline checks of the layout and the probe points. The points are checked in the gap for 8,424
+  placements across the range, off-center, turned and tilted. A filled hole round an off-center, turned plug scores
+  full; out of range scores 0. Also checked: an empty hole, heaped mix, one side only, a pocket between points, and the
+  40/60/85% boundaries. Then the scorer and the demo plan.
 - `task.json`: the task's text.

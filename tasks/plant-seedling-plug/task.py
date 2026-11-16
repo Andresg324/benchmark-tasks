@@ -14,8 +14,8 @@ soil collide with. The score reads the end state: the plug centered in the hole 
 the hole's axis, turned any way), the soil's height at 16 points set out from the plug's own faces, so they follow the
 plug wherever it stands and however it is turned, read as a real trial reads them with a probe lowered through a
 template laid over the plug (the fill, and the level on each of the plug's four sides), the plug's tilt and depth, the
-hands off it, and a 0.5 N side push on the stem (pushkit) that a firmed plug resists. A damaged seedling (the stem bent past its kink angle, or the stem or a leaf squeezed between a hand's fingers) scores
-0. Every threshold below appears once, with the same value in task.json and the README.
+hands off it, and a 0.5 N side push on the stem (pushkit) that a firmed plug resists. A damaged seedling (the stem
+bent past its kink angle, or the stem or a leaf squeezed between a hand's fingers) scores 0. Every threshold below appears once, with the same value in task.json and the README.
 """
 from __future__ import annotations
 
@@ -302,14 +302,13 @@ OBJECTS = [_planter(), _plug()]
 # outline (in the simulator, the plug's own frame at its top) puts four points beside each face, 1.0 cm out from the
 # face, at 15 and 50 percent of the way from the face's middle toward either end. So wherever the plug stands and
 # however it is turned, every probe lands in the gap: its 9.5 mm end 5.25 mm clear of the face (tilted 10 degrees, the
-# plug's lower side comes at most 3.5 mm past its top's outline, 4.5 mm for the simulator's three stepped layers). The probe is a
-# 9.5 mm flat-ended dowel; in the simulator it is a 9.5 mm disc that comes down until any part of it meets a clod
-# (each clod's own turned cube) or the plug, else the hole's floor (the firmed surface beyond the hole's wall).
+# plug's lower side comes at most 3.5 mm past its top's outline, 4.5 mm for the simulator's three stepped layers).
+# The probe is a 9.5 mm flat-ended dowel; in the simulator it is a 9.5 mm disc that comes down until any part of it
+# meets a clod (each clod's own turned cube) or the plug, else the hole's floor (the firmed surface beyond the wall).
 # - Placement range: the plug's top centered within PLACE_R of the hole's axis, any turn about its axis, upright within
 #   TILT_FULL. Inside it, every probe lands wholly inside the hole's wall (the farthest point is 4.04 cm from the plug's
 #   center: 4.04 + 0.475 + 0.6 = 5.12 cm, 0.8 mm inside the 5.2 cm wall, the margin for lining the template up by
-#   eye).
-#   Outside it the readings could fall on the hole's edge, so the trial is not scored as planted: 0.
+#   eye). Outside it the readings could fall on the hole's edge, so the trial is not scored as planted: 0.
 # - Fill at a point: how far the soil there has risen from the hole's floor, as a share of the hole's 6.2 cm depth,
 #   capped at 1: mix heaped above the surface counts as full, never more. The fill is the mean over the 16 points.
 # - The soil level on a side of the plug: the mean height of that side's four points (each capped at the surface).
@@ -411,7 +410,7 @@ def offset(objects) -> float:
     return math.hypot(float(top[0]) - POT[0], float(top[1]) - POT[1])
 
 
-def centred(objects) -> bool:
+def centered(objects) -> bool:
     """In the hole, inside the placement range: its top's center within PLACE_R of the hole's axis, its center below
     the surface."""
     c, _ = plug_frame(objects)
@@ -588,7 +587,8 @@ class Ledger:
         h = probe_heights(objects, s)
         lv = side_levels(h)
         st = dict(tilt=tilt_deg(r), depth=float(top[2] - Z_S), levels=[v - float(top[2]) for v in lv],
-                  fill=fill_share(h), spill=spill_share(s), hole=centred(objects), offset=offset(objects), off=hands_off(objects))
+                  fill=fill_share(h), spill=spill_share(s), hole=centered(objects), offset=offset(objects),
+                  off=hands_off(objects))
         st["sides"] = sum(v >= -LEVEL_TOL for v in st["levels"])
         st["full"] = (st["hole"] and st["sides"] == 4 and st["fill"] >= FILL_FULL and st["tilt"] <= TILT_FULL
                       and abs(st["depth"]) <= DEPTH_TOL and st["spill"] <= SPILL_MAX and st["off"])
@@ -637,7 +637,8 @@ def _update(objects):
     st = _L.planted(objects, s)
     _L.state = st
     if os.environ.get("SEEDLING_TRACE") and n is not None and n % 40 == 0:  # a debugging trace of the scored state
-        print(f"seedling {n}: offset {st['offset'] * 100:.2f} cm tilt {st['tilt']:.1f} depth {st['depth'] * 100:.2f} cm levels "
+        print(f"seedling {n}: offset {st['offset'] * 100:.2f} cm tilt {st['tilt']:.1f} "
+              f"depth {st['depth'] * 100:.2f} cm levels "
               f"{[round(v * 100, 2) for v in st['levels']]} fill {st['fill']:.2f} spill {st['spill']:.2f} "
               f"off {st['off']} bends {[round(b) for b in bends]} damage {_L.damage} firm {_L.firm}", flush=True)
     c, r = plug_frame(objects)
@@ -683,8 +684,7 @@ def _update(objects):
 def success(objects):
     """Planted: in the hole, its top's center within 0.6 cm of the hole's axis (any turn), upright within 10 degrees,
     its top within 1 cm of the surface, soil within 1 cm of its top on all four sides, the hole at least 85 % filled at
-    the 16 probe points, at most 10 % of the mix spilled, hands off, it
-    held through the 0.5 N side push (turned under 5 degrees), and the seedling undamaged."""
+    the 16 probe points, at most 10 % of the mix spilled, hands off, it held through the 0.5 N side push (turned under 5 degrees), and the seedling undamaged."""
     _update(objects)
     return bool(_L.firm and _L.state.get("full") and _L.damage is None)
 
@@ -693,8 +693,8 @@ def score(objects):
     """From the end state: 1.0 planted, filled on all four sides, hands off and firm under the side push; 0.75 the
     same but not yet pushed, or tipping under the push; 0.5 three sides filled and at least 60 % filled, hands off;
     0.25 at least 40 % filled. Every tier needs the plug inside the placement range: its top's center within 0.6 cm of
-    the hole's axis (any turn about its own) and upright within 10 degrees; outside it, 0. More than 10 % of the mix spilled
-    caps the score at 0.5. A damaged seedling (a stem joint bent past 45 degrees, or the stem or a leaf squeezed
+    the hole's axis (any turn about its own) and upright within 10 degrees; outside it, 0. More than 10 % of the mix
+    spilled caps the score at 0.5. A damaged seedling (a stem joint bent past 45 degrees, or the stem or a leaf squeezed
     between one hand's fingers, either for 2 control steps running) scores 0 for the whole trial. Doing nothing
     scores 0."""
     _update(objects)
