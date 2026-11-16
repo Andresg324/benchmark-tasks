@@ -165,33 +165,42 @@ def main():
     import itertools
 
     C = M.CHIPS
-    check(70 <= len(C) <= 150, f"{len(C)} debris pieces (rigid bodies)")
-    check(not any(M.overlap2(a, b) for a, b in itertools.combinations(C, 2)), "no two pieces overlap at the start")
-    check(min(c.size[2] for c in C) >= 0.002, "every piece at least 2 mm thick (no tunnelling through the blade)")
-    check(all(abs(c.pos[2] - c.size[2] / 2 - M.PLATE_Z - M.CHIP_LIFT) < 1e-9 for c in C), "every piece on the plate")
-    x0, y0, lx, ly = M.SOIL_AREA
-    check(all(x0 - 0.002 <= c.pos[0] <= x0 + lx + 0.002 and y0 - 0.002 <= c.pos[1] <= y0 + ly + 0.002 for c in C),
-          "every piece inside the 12 x 16 cm area")
+    check(len(C) == 88, f"{len(C)} debris fragments (rigid bodies)")
+    check(not any(M.overlap2(a, b, 0.0005) for a, b in itertools.combinations(C, 2)),
+          "no two fragments overlap or touch at the start (cracks at least 0.5 mm)")
+    check(min(c.size[2] for c in C) >= 0.002, "every fragment at least 2 mm thick (no tunnelling through the blade)")
+    check(all(abs(c.pos[2] - c.size[2] / 2 - M.PLATE_Z - M.CHIP_LIFT) < 1e-9 for c in C), "every fragment on the plate")
+    r = M.RING_D / 2
+    for k, (cx, cy, _) in enumerate(M.CAKES):
+        mine = [c for c in C if c.name.startswith(f"cake{k}_")]
+        far = max(math.hypot(p[0] - cx, p[1] - cy) for c in mine
+                  for p in M._corners2(c.pos[0], c.pos[1], c.size[0], c.size[1], c.yaw))
+        area = sum(c.size[0] * c.size[1] for c in mine)
+        check(len(mine) == 22 and far <= r + 0.004, f"pancake {k + 1}: 22 fragments, corners within 4 mm of its 7 cm ring "
+                                                   f"(farthest corner {far * 1000:.1f} mm from the center)")
+        check(0.75 <= area / (math.pi * r * r) <= 1.0, f"pancake {k + 1}: fragments cover {area / (math.pi * r * r):.0%}"
+                                                       f" of the disc (the rest is cracks)")
+    for a, b in itertools.combinations(M.CAKES, 2):
+        check(math.hypot(a[0] - b[0], a[1] - b[1]) - M.RING_D >= 0.008, "rings at least 8 mm apart")
+    check(all(M.LIP_X + 0.0005 <= p[0] and M.PLATE_Y0 + 0.05 <= p[1] <= M.PLATE_Y0 + M.PLATE_W - 0.05 for c in C
+              for p in M._corners2(c.pos[0], c.pos[1], c.size[0], c.size[1], c.yaw)),
+          "every fragment on the plate behind the lip, 5 cm or more inside the side guards")
     T = M.TOTAL_MASS
-    check(abs(T * 1000 - 22.6) < 0.05, f"debris {T * 1000:.2f} g")
-    n_fl = sum(c.name.startswith("flake") for c in C)
-    check(n_fl == 80 and len(C) - n_fl == 8, "80 flakes and 8 crusts")
-    check(max(M.CHIP_MASS[[c.name.startswith("flake") for c in C]]) / T < 0.015, "each flake under 1.5 % of the mass")
-    # the bonds: every piece stuck to the plate, break force from its footprint, far above its weight
-    check(all(c.bond is not None for c in C), "every piece is bonded to the plate")
-    check(all(abs(c.bond[0] - M.BOND_SHEAR * c.size[0] * c.size[1]) < 1e-9 for c in C),
-          "break force = 0.15 N per cm^2 of footprint")
+    check(abs(T * 1000 - 30.8) < 0.05, f"debris {T * 1000:.2f} g")
+    sh = M.CHIP_MASS / T
+    check(0.007 <= sh.min() and sh.max() <= 0.018, f"each fragment {sh.min():.1%} to {sh.max():.1%} of the mass")
+    # the bonds: every fragment stuck to the plate, break force from its width across the stroke, far above its weight
+    check(all(c.bond is not None for c in C), "every fragment is bonded to the plate")
+    check(all(abs(c.bond[0] - M.BOND_EDGE * M.across(c)) < 1e-9 for c in C), "break force = 12 N per m of width")
     check(all(abs(c.bond[1] - c.bond[0] * M.BOND_PEEL_ARM) < 1e-12 for c in C), "break torque = break force x 2 mm")
-    fl = [c.bond[0] for c in C if c.name.startswith("flake")]
-    cr = [c.bond[0] for c in C if c.name.startswith("crust")]
-    check(0.07 <= min(fl) and max(fl) <= 0.15, f"flakes break free at {min(fl):.2f}-{max(fl):.2f} N")
-    check(0.4 <= min(cr) and max(cr) <= 0.55, f"crusts break free at {min(cr):.2f}-{max(cr):.2f} N")
-    check(min(c.bond[0] / (c.mass * 9.81) for c in C) >= 30, "every bond holds at least 30 times its piece's weight")
+    fb = [c.bond[0] for c in C]
+    check(0.10 <= min(fb) and max(fb) <= 0.22, f"fragments break free at {min(fb):.2f}-{max(fb):.2f} N")
+    check(min(c.bond[0] / (c.mass * 9.81) for c in C) >= 25, "every bond holds at least 25 times its fragment's weight")
     check(M.dk._SPEC["anchor"] == (M.PLATE.name, M.PLATE.pos) and M.PLATE.mass is None,
           "the bonds anchor on the plate, a fixed body")
     p0, q0, p1 = M.dk.bond_frames(C[0])
     check(abs(M.PLATE.pos[2] + p0[2] - (C[0].pos[2] - C[0].size[2] / 2)) < 1e-9 and p1 == (0.0, 0.0, -C[0].size[2] / 2),
-          "each bond sits at the middle of its piece's underside")
+          "each bond sits at the middle of its fragment's underside")
     check(abs(M.blade_angle(M.pitch_for(40.0)) - 40.0) < 1e-6, "demo pitch gives a 40 degree blade")
     check(M.shares(M.START_DEBRIS) == (0.0, 1.0, 0.0), "at the start everything is on the griddle")
 
@@ -229,17 +238,17 @@ def main():
     s = feed(with_debris(full, set_down(40)))
     check(s == 1.0, "everything in the tray, scraper set down 2 s: 1.0")
     one = moved(1.0)
-    i_small = int(np.argmin(M.CHIP_MASS))
-    one[i_small] = M.START_DEBRIS[i_small]
+    i_big = int(np.argmax(M.CHIP_MASS))
+    one[i_big] = M.START_DEBRIS[i_big]
     fresh()
     s = feed(with_debris(one, set_down(40)))
-    check(s == 1.0, f"one small flake ({M.CHIP_MASS[i_small] / T:.1%}) left on the plate: 1.0")
+    check(s == 1.0, f"the largest fragment ({M.CHIP_MASS[i_big] / T:.1%}) left on the plate: 1.0")
     two = moved(1.0)
-    i_crust = int(np.argmax(M.CHIP_MASS))
-    two[i_crust] = M.START_DEBRIS[i_crust]
+    big = np.argsort(M.CHIP_MASS)[-2:]
+    two[big] = M.START_DEBRIS[big]
     fresh()
     s = feed(with_debris(two, set_down(40)))
-    check(s == 0.75, f"one crust ({M.CHIP_MASS[i_crust] / T:.1%}) left on the plate: 0.75")
+    check(s == 0.75, f"the two largest fragments ({M.CHIP_MASS[big].sum() / T:.1%}) left on the plate: 0.75")
     fresh()
     s = feed(with_debris(full, set_down(10)))
     check(s == 0.75, "set down only 0.5 s: 0.75 (hold not met)")
@@ -291,11 +300,12 @@ def main():
     readme = (HERE / "README.md").read_text()
     check(d["instruction"] == M.INSTRUCTION, "task.json instruction == task.INSTRUCTION")
     text = " ".join(str(d[k]) for k in ("setup", "scoring", "fidelity", "context")) + readme
-    for frag in ("25 %", "60 %", "90 %", "5 %", "98 %", "1 %", "2 %", "70 degrees", "10 degrees", "1 cm", "1 s",
-                 "22.6 g", "88", "80 flakes", "Eight crusts", "150 g", "10.2 cm", "5.0 cm", "0.6 mm", "0.15 to 0.2",
-                 "0.4 to 0.5", "1.1 g per cubic cm", "capped at 0.5", "caps the score at 0.25", "7 to 9.5 mm",
-                 "16 to 19 mm", "1.2 cm grid", "25 degrees", "0.15 N per square cm", "0.08 to 0.13 N",
-                 "0.41 to 0.50 N"):
+    for frag in ("25 %", "60 %", "90 %", "5 %", "98 %", "2 %", "70 degrees", "10 degrees", "1 cm", "1 s",
+                 "30.8 g", "88", "22 fragments", "four", "136 g", "10.2 cm", "5.0 cm", "0.6 mm", "0.15 to 0.2",
+                 "0.4 to 0.5", "0.5 g per cubic cm", "capped at 0.5", "caps the score at 0.25", "7.0 cm", "5 mm",
+                 "12 N per m", "0.11 to 0.21 N", "0.8 to 1.7", "x 19.5, y -7.5 and 0.5", "x 26.4, y -3.5 and 4.5",
+                 "1.0 cm from the lip", "6.55 cm", "Norpro 957R", "Krusteaz", "177AOGT1227", "P94850", "15.0 g",
+                 "232 degrees C", "20 minutes"):
         check(frag in text or frag.replace(" %", "%") in text, f"text states {frag!r}")
     limits = dict(title=120, instruction=1000, context=1000, setup=4000, scoring=4000, fidelity=500, scores=300)
     for k, n in limits.items():
@@ -305,9 +315,9 @@ def main():
     # -- the demo plan: limits and a kinematic playback ----------------------------------------------------------------
     plan = M.demo()["right"]
     steps = round(sum(w.duration for w in plan) / M.DT)
-    check(steps <= 2050, f"demo plan {steps} steps (fits the README's 2,050-step demo run)")
+    check(steps <= 2200, f"demo plan {steps} steps (fits the README's 2,200-step demo run)")
     xs, ys, zs = ([w.pos[i] for w in plan] for i in range(3))
-    check(min(xs) >= 0.15 and max(xs) <= 0.44, f"tool points within x 0.15-0.44 m ({min(xs):.3f}-{max(xs):.3f})")
+    check(min(xs) >= 0.15 and max(xs) <= 0.48, f"tool points within x 0.15-0.48 m ({min(xs):.3f}-{max(xs):.3f})")
     check(max(zs) - M.TOP <= 0.19, f"highest tool point {max(zs) - M.TOP:.3f} m above the table (wpcheck passes to 0.19)")
     check(all(abs(y) < 0.30 for y in ys), "tool points within |y| < 0.30 m")
     check(all(w.yaw == 0.0 or (getattr(w, "pitch", 0.0) != 0.0 and w.yaw == M.YAW_TRIM) for w in plan),
@@ -360,7 +370,7 @@ def main():
                                   f"({(g_left - ymax) * 1000:.1f} mm)")
     lanes = sorted([*M.LANES_Y, M.FINAL_LANE_Y])
     check(lanes[-1] + M.BLADE_W / 2 >= 0.12, f"the last stroke reaches y {(lanes[-1] + M.BLADE_W / 2) * 100:.1f} cm "
-                                             f"along the lip's left end")
+                                             f"along the plate's left side")
     touched = 0
     for o, opening in states:
         kit._OPENING.update(opening)
