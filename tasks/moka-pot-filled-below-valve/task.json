@@ -22,5 +22,5 @@
   "reset_notes": "Empty and dry the base and stand it free on the counter at (27, 5) with the valve toward the robot; unscrew the upper chamber and stand it upright at (24, 19) with its handle 45 degrees off the x axis; refill the funnel basket level with 15 g of ground coffee and stand it in the espresso cup at (36, -7); refill the carafe to 175 mL with a measuring jug and stand it at (23, -12); replace the towel under the pot.",
   "fidelity": "Real size. Water: a deterministic flow model; coffee: not particles, lost if the basket tips past 45 degrees. The thread is collider boxes along a helix (pitch and turns estimated, not measured); the gasket is a compliant contact ring, its stiffness estimated and set in the sim. The base is free, steadied only by the demo's other hand. Basket and base mouth: metal friction 0.6/0.47 (steel on aluminum); thread 1.1/1.0 (aluminum). No heat or steam.",
   "scores": "Dream-1 run: 0 (4,000 steps, hit the step limit); demo: 1.0 (2,583 steps)",
-  "media": "M-ZZACGR"
+  "media": "M-4AE3BA"
 }
