@@ -313,7 +313,7 @@ take about 4 minutes. Start the timer when the pin comes to rest.
    0.5); the needle's holes come after it.
 3. Read each band in turn, along the steel tape laid on its line (see "The measuring patches"). For each patch, set the
    gauge's base on it with the base's 40 mm side along x, its ends on the patch's ends and its 16 mm width centered on
-   the band's line (sighted between the band's front- and back-face ticks). Hold the base down just enough to keep it
+   the band's line (sighted between the band's front- and back-face ticks). Hold the gauge by its body, so its own weight stays in the hand, and press the base down only enough to keep it
    seated against the needle's spring, so it rests on the highest pastry under it; let the needle go through the pastry
    to the board, and read the dial to 0.01 mm. That reading is the patch's thickness. A helper writes every reading
    into the readings table by band (or the phone records the reader's voice); a spot where pastry stuck to the pin and
