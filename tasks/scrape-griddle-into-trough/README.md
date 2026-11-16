@@ -73,7 +73,8 @@ The tolerances are collected in the table at the end.
   nothing that leaves the griddle is lost.
 
 **The stencil (once).** The 88 pieces' outlines (positions, sizes and turns) are those in `task.py`, the same every
-trial. Print them 1:1 with the script below (a 250 x 150 mm sheet: its bottom edge is the lip, its right edge the
+trial: a fixed spread, so every trial's pieces can be made the same, with each flake turned up to 25 degrees and
+the crusts on the two spots where patties cooked. Print them 1:1 with the script below (a 250 x 150 mm sheet: its bottom edge is the lip, its right edge the
 right splash guard) and have them laser-cut through a 3 mm stainless steel sheet of that size (it goes on the hot
 plate, like a metal pancake ring). A second, 60 x 60 mm, 3 mm steel stencil carries the witness pieces: five 8 x 8 mm holes and one 17.5 x 17.5 mm hole.
 
@@ -101,7 +102,8 @@ from one named, widely sold mix and set in the steel stencil the way pancake rin
 
 **Qualification (once, before the first trial).** Make the batter and cook the witness stencil's pieces on the plate
 (below) for 6, 8, 10 and 12 minutes at 230 degrees C after they set, one set per time. Fix the cook time as the shortest one at which
-the pieces are black through (a crust broken in half shows no pale center). For the first three batches at that time,
+the pieces are black through (a crust broken in half shows no pale center). If none is, extend in 2-minute steps
+to 20 minutes; if still none is, use the fallback debris below. For the first three batches at that time,
 record the witness pieces' masses and their black areas (measured on the top photo against the 1 cm grid): their
 medians are the reference for every later batch. Pieces that are black through and match the reference mass and area
 are the same debris from batch to batch.
@@ -113,18 +115,22 @@ are the same debris from batch to batch.
    the plate is seasoned and lightly greased, as on a working griddle, with too little free oil to weigh.
 3. Batter: Krusteaz Light & Fluffy Buttermilk Complete Pancake Mix (water only), mixed by the box's directions: 1 cup
    of mix spooned lightly into the cup and leveled (weighed; the weight is recorded at qualification and each batch
-   is within 5 % of it) whisked with two-thirds of a cup of cold water until just combined (slightly lumpy), rested 2 minutes, and
+   is within 5 % of it) whisked with two-thirds of a cup (158 g) of cold water at 10 to 15 degrees C until just combined (slightly lumpy), rested 2 minutes, and
    used within 30 minutes. The box's lot number is recorded with each trial.
 4. Stencil and set: move the griddle to a two-burner range away from the robot's bench. Set the lightly oiled main
    stencil flush with the lip and against the right splash guard, and the witness stencil against the right guard at
    x 62 to 68. Heat until a contact surface thermometer reads 190 degrees C (375 degrees F, the box's griddle
-   temperature) within 10 at all five points marked on the plate (four corners and the middle of the stencil area).
+   temperature) within 10 at all six points marked on the plate (four corners, the middle of the stencil area and the witness stencil).
    Weigh the bowl of batter, fill every hole level with a palette knife (each piece's batter is its hole's volume:
-   23 mL in all) and weigh the bowl again: the batter used is within 5 % of the qualification's. Wait 60 s for the
-   batter to set, then lift the stencils straight up with tongs (oven gloves on).
-5. Cook: raise the heat until all five points read 230 degrees C within 10, then hold it there for the fixed cook
+   23 mL in all) and weigh the bowl again: the batter used is within 5 % of the qualification's. Wait until the
+   batter's edges look dry and its top has stopped bubbling (about 2 minutes; the time is fixed at qualification and
+   kept within 15 s), run the palette knife across the stencil to cut off any batter that rose above it, then lift the
+   stencils straight up with tongs (oven gloves on).
+5. Cook: raise the heat until all six points read 230 degrees C within 10, then hold it there for the fixed cook
    time. Turn the burners off and let the griddle cool on the range until
-   all five points read under 40 degrees C. Unplug or turn off the range; nothing hot goes to the robot's bench.
+   all six points read under 40 degrees C. Turn off the range; nothing hot goes to the robot's bench. Cook under a vented range hood with a kitchen fire
+   extinguisher at hand. One batch, with cooling, takes about 2 hours; a lab running many trials uses two identical
+   griddles in rotation. Handle the razor scraper with cut-resistant gloves.
 6. Batch check: photograph the witness area from the overhead mount and measure each witness piece's black area
    against the grid; break the crust in half to check it is black through; lift the witness pieces with the razor
    scraper into a weighing boat and weigh the five flakes and the crust (0.01 g). The batch is accepted when the
@@ -173,12 +179,12 @@ scraper is replaced if its edge has a nick 0.5 mm or deeper. Then make a fresh b
 | Stencil | flush with the lip and the right guard | 1 mm |
 | Oil film after buffing | at most 0.10 g | towels weighed (0.01 g) |
 | Mix and batter used | the qualification's masses | 5 % |
-| Set | 190 degrees C at five points, 60 s | 10 degrees C; 5 s |
-| Cook | 230 degrees C at five points, for the fixed time | 10 degrees C; 15 s |
-| Cool | under 40 degrees C at five points | trial within 2 h |
+| Set | 190 degrees C at six points, until the edges are dry (about 2 min, fixed at qualification) | 10 degrees C; 15 s |
+| Cook | 230 degrees C at six points, for the fixed time | 10 degrees C; 15 s |
+| Cool | under 40 degrees C at six points | trial within 2 h |
 | Batch check | flake and crust masses and black areas; black through | within 25 % of the reference medians |
 | Mass balance | M = T + L + O vs the batch's expected mass | 10 %, else repeat |
-| Weighing | 0.01 g scale | 0.01 g (1 % is about 0.12 g) |
+| Weighing | 0.01 g scale | 0.01 g (1 % is about 0.1 g) |
 
 ## The debris (`debriskit.py`)
 
@@ -249,10 +255,10 @@ scraper is replaced if its edge has a nick 0.5 mm or deeper. Then make a fresh b
 
 ## Real-world build
 
-Everything is off the shelf. The griddle is a range-top add-on griddle top of the size above (69 x 31 cm overall,
+Everything is off the shelf. The griddle is a range-top add-on griddle top of the size above (about 69 cm long overall,
 7-gauge stainless, end grease tray), standing on its own frame with the plate's top 5.0 cm above the bench (shim the
 frame's feet if needed), clamped to the bench with two C-clamps on its frame. It is heated only to make the debris, on a
-two-burner range away from the bench, and is under 40 degrees C and unplugged when it is clamped down: nothing at the
+two-burner range away from the bench, and is under 40 degrees C and off the range when it is clamped down: nothing at the
 bench is hot, so the trial is safe for the robot and the operator. The scraper is a 4 in. stiff griddle scraper with a
 stainless blade and a polypropylene handle in line with it (150 g, handle about 3.0 x 2.4 cm, within the gripper's
 opening). The debris is pancake batter (one named mix) set in a steel stencil, charred onto the plate and cooled (see
