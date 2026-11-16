@@ -308,8 +308,8 @@ def test_demo_plan():
     t_done = until("right", "lift off the dab")
     t_held = until("left", "hold it bristles-up")
     t_free = until("left", "hold still while it is dosed")
-    check(until("left", "flick the lid 80 deg") <= until("right", "hold it up for the lid") + 3.0
-          and until("left", "fingertip behind the thumb tab") >= until("right", "hold it up for the lid"),
+    check(until("left", "flick the lid 80 deg") <= until("right", "wait for the brush")
+          and until("left", "rear finger behind the thumb tab") >= until("right", "hold it up for the lid, nozzle to the left"),
           "the lid is flicked while the tube is held up")
     check(t_held <= t_at and t_done <= t_free, "the brush is held still for the whole dose")
 

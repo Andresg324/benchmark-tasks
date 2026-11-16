@@ -51,7 +51,10 @@ BRUSH_PARTS_BOX = (((0.0, 0.0, -BRISTLE[2] / 2), BRISTLE),
                    ((-HEAD[0] / 2 - NECK[0] - HANDLE[0] / 2, 0.0, _FLOOR + HANDLE[2] / 2), HANDLE))
 BRUSH_G = 14.0  # g
 BRUSH_START = (0.320, 0.080, TOP - _FLOOR)  # the bristle top's middle: 14 mm above the counter, head away from the robot
-BRUSH_GRIP_LOCAL = np.array([-0.075, 0.0, _FLOOR + HANDLE[2] / 2])  # where the demo holds the handle (near the neck)
+# Where the demo holds the handle (its middle), the tool point 14 mm over the brush's underside: the fingertips stand
+# 13 mm below the tool point and stop 1 mm over the counter (aimed at the handle's mid-height, the brush hung 8 mm low
+# in the hand in the third probe).
+BRUSH_GRIP_LOCAL = np.array([-0.100, 0.0, _FLOOR + 0.014])
 BRUSH = kit.Prop(
     "brush", pos=BRUSH_START, mass=BRUSH_G / 1000, size=(0.151, HANDLE[1], -_FLOOR),
     meshes=(kit.box(*BRUSH_PARTS_BOX[0], kit.Look((0.95, 0.95, 0.97), 0.8)),
@@ -62,7 +65,10 @@ BRUSH = kit.Prop(
 #    z up while it lies on the counter) ----------------------------------------------------------------------------------
 BODY_R = 0.0175  # m: the round part of the body, 35 mm across (the standard 35 mm laminate size; caliper the trial tube)
 BODY_X = (-0.050, 0.050)  # 10 cm of round body
-CRIMP = ((0.062, 0.0, 0.0), (0.024, 0.046, 0.003))  # the flat crimped end, 46 mm wide, tapering in 2.4 cm
+# The used end, rolled flat up to the paste (as the reset rolls it): a flat roll 55 mm wide (the 35 mm tube laid flat),
+# 10 mm thick and 2.4 cm long, lying on the counter. It is the tube's wide, rigid foot: lying on its sprung bottom
+# panel alone, the tube rocked over 40 degrees in the second probe.
+CRIMP = ((0.062, 0.0, -BODY_R + 0.005), (0.024, 0.055, 0.010))
 SHOULDER_R, SHOULDER_X = 0.010, (-0.058, -0.050)
 CAP_R, CAP_X = 0.015, (-0.071, -0.058)  # the flip cap's base, 30 mm across and 13 mm long (screwed on the shoulder)
 LID_T = 0.005  # the flip lid: a 5 mm disc over the cap's face, hinged at one edge, with a thumb tab at the other
@@ -94,10 +100,26 @@ def p_yield_kpa(tau_pa: float = TAU_Y_PA) -> float:
 
 
 P_YIELD_KPA = p_yield_kpa()  # 1.44 kPa
-FLOW = 0.10  # mL/s per kPa past the yield: a firm squeeze (5 kPa) runs a 5 mm ribbon about 2 cm/s
+FLOW = 0.10  # mL/s per kPa past the yield: a firm squeeze (5 kPa) runs a 7.5 mm ribbon about 1 cm/s (calibrate)
 TUBE_START = (0.260, -0.150, TOP + BODY_R)  # lying on its side, nozzle toward the robot, lid hinge underneath
 LAMINATE = kit.Look((0.95, 0.85, 0.20), 0.5)
 PASTE_RGB = (0.35, 0.75, 0.95)  # blue kids' gel
+
+
+class _Wall(sq.Wall):
+    """squeezekit's wall spring, with the panel's travel opened only once the spring acts (the first control step).
+    The arena settles the scene before its first step with no spring yet: an open panel under the lying tube sags to
+    its stop (10 mm, seen in the first probe) and throws the tube on the first step. (As in instill-one-eye-drop.)"""
+
+    sets_limits = True
+
+    def __init__(self, bottle, sign, k, area_m2, lo, hi):
+        super().__init__(bottle, sign, k=k, area_m2=area_m2)
+        object.__setattr__(self, "lim", (lo, hi))
+
+    def drive(self, key, q, qd, J, mem):
+        mem["limits"] = self.lim
+        return super().drive(key, q, qd, J, mem)
 
 
 def _panel(link: str, axis: str, side: float):
@@ -105,9 +127,9 @@ def _panel(link: str, axis: str, side: float):
     anchor = (PANEL_X, off, 0.0) if axis == "Y" else (PANEL_X, 0.0, off)
     size = PANEL if axis == "Y" else (PANEL[0], PANEL[2], PANEL[1])
     lo, hi = (-PANEL_TRAVEL, 0.0) if side > 0 else (0.0, PANEL_TRAVEL)
-    return kit.Link(link, "prismatic", axis, anchor=anchor, lower=lo, upper=hi, start=0.0, mass=PANEL_KG,
+    return kit.Link(link, "prismatic", axis, anchor=anchor, lower=-1e-4, upper=1e-4, start=0.0, mass=PANEL_KG,
                     meshes=(kit.box((0, 0, 0), size, LAMINATE),), colliders=(kit.Collider((0, 0, 0), size=size),),
-                    damping=0.0, law=sq.Wall("tube", -side, k=K_WALL, area_m2=PANEL_AREA_M2))
+                    damping=0.0, law=_Wall("tube", -side, k=K_WALL, area_m2=PANEL_AREA_M2, lo=lo, hi=hi))
 
 
 # The flip lid: a hinge along the tube's y at the cap face's lower edge (lying on the counter the hinge is underneath).
@@ -117,13 +139,17 @@ def _panel(link: str, axis: str, side: float):
 LID_SHUT_RAD, LID_SNAP_RAD, LID_REST_RAD, LID_MAX_RAD = 0.5, 1.1, 2.5, 2.7
 LID_OPEN_RAD = 1.0
 K_LID = 0.06  # N m/rad
-TAB = ((-LID_T / 2, 0.0, 2 * CAP_R + 0.003), (0.003, 0.010, 0.006))  # the thumb tab, 6 mm proud of the cap's rim
+TAB = ((-LID_T / 2, 0.0, 2 * CAP_R + 0.004), (0.003, 0.010, 0.008))  # the thumb tab, 8 mm proud of the cap's rim (a
+# real tab stands 3-4 mm [M]; modeled taller so a fingertip clears the rim: see the README's fidelity note)
 
 
 class Snap:
     """The flip lid's snap hinge (a mechkit-style law; joint position q <= 0, opening = -q)."""
 
+    sets_limits = True  # shut until the law acts (its COM leans out past the hinge: it would fall open in the settle)
+
     def drive(self, key, q, qd, J, mem):
+        mem["limits"] = (-LID_MAX_RAD, 0.0)
         a = -q
         mem["open"] = a >= LID_OPEN_RAD
         if a <= LID_SHUT_RAD:
@@ -133,7 +159,7 @@ class Snap:
         return q, 0.0, 0.0, 2e-4
 
 
-LID = kit.Link("lid", "revolute", "Y", anchor=(CAP_X[0], 0.0, -CAP_R), lower=-LID_MAX_RAD, upper=0.0, start=0.0,
+LID = kit.Link("lid", "revolute", "Y", anchor=(CAP_X[0], 0.0, -CAP_R), lower=-1e-4, upper=1e-4, start=0.0,
                mass=0.004,
                meshes=(kit.cylinder((-LID_T / 2, 0.0, CAP_R), CAP_R, LID_T, kit.Look((0.20, 0.45, 0.85), 0.5), axis="x"),
                        kit.box(*TAB, kit.Look((0.20, 0.45, 0.85), 0.5))),
@@ -169,7 +195,7 @@ PASTE = sq.Bottle("tube", tip=TIP, axis=AXIS_TO_TIP, panels=tuple(PANEL_SIGN.ite
                   flow=FLOW, air_in=2.0, down_deg=90.0, settle=0.0)
 import dataclasses  # noqa: E402
 
-_SEALED = dataclasses.replace(PASTE, p_yield=1e9, air_in=0.0)
+_SEALED = dataclasses.replace(PASTE, p_yield=1e9, air_in=0.0, down_deg=180.0)  # shut: no flow, no venting
 BEAD_CM = 0.45  # cm: a cell of bristle field holds a 4.5 mm tall bead before it slumps (a pea dab stands 4-5 mm)
 BRISTLES = sq.Face("bristles", center=(0.0, 0.0, 0.0), size=BRISTLE[:2], cell=0.001, rest=BEAD_CM)
 LAND_DEG = 60.0  # paste lands on the bristles only while they face within 60 degrees of straight up
@@ -286,10 +312,14 @@ class Ledger:
             except KeyError:
                 lid = float("nan")
             with open(_PROBE, "a") as f:
-                f.write("%d %.3f %s %.3f %.4f %.4f %.1f %s %s %s\n" % (
+                f.write("%d %.3f %s %.3f %.4f %.4f %.1f %s %s %s" % (
                     self.n, lid, " ".join("%.5f" % v for v in pushes(objects)), self.paste.p, self.paste.on_g(),
                     self.paste.off_g(), bristles_up_deg(bq), " ".join("%.4f" % v for v in t.pos),
-                    " ".join("%.4f" % v for v in bp), int(tube_held(objects))))
+                    " ".join("%.4f" % v for v in bp), int(tube_held(objects)))
+                        + " Q " + " ".join("%.3f" % v for v in t.quat_xyzw)
+                        + " L " + " ".join("%.4f" % v for v in objects["left_gripper"].pos)
+                        + " R " + " ".join("%.4f" % v for v in objects["right_gripper"].pos)
+                        + " P " + " ".join("%.5f" % kit.joint(objects, f"tube/{k}").pos for k in PANEL_SIGN) + "\n")
         up = bristles_up_deg(bq)
         if up > FLIP_DEG and self.paste.on_g() > 0.0:
             self.flipped = True
@@ -344,22 +374,17 @@ def score(objects):
 
 
 # -- the paste the cameras see ---------------------------------------------------------------------------------------------
-class _View:
-    """The bristle grid placed in the world (for squeezekit.Tiles, which draws a world-fixed face)."""
-
-    def __init__(self, ledger):
-        self.grids = {"bristles": ledger.paste.grids["bristles"]}
-        self.offset = ledger.paste.brush[0]  # drawn level at the brush's bristle top (the demo holds it level)
-
-
-class _Tiles:
-    """squeezekit.Tiles over the bristles, placed in the env's frame (the brush's prim gives the env origin once)."""
+class _Tiles(sq.Tiles):
+    """The dab drawn on the bristles as tiles in the brush's own frame (turned and carried with it every step), with
+    Isaac Lab's VisualizationMarkers; the env origin is read once from the brush's prim. Only a picture: on any error
+    it turns itself off and scoring carries on."""
 
     def __init__(self):
-        self.tiles, self.origin = sq.Tiles(color=PASTE_RGB, min_ml=2e-5), None
+        super().__init__(color=PASTE_RGB, min_ml=2e-5)
+        self.origin = None
 
-    def draw(self, objects, ledger):
-        if self.tiles.off:
+    def draw(self, objects, ledger):  # noqa: D102  (overrides squeezekit's world-fixed draw)
+        if self.off:
             return
         if self.origin is None:
             try:
@@ -374,10 +399,44 @@ class _Tiles:
                         self.origin = w - np.asarray(objects["brush"].pos, float)
                         break
             except Exception:  # noqa: BLE001 (no simulator: unit tests)
-                self.tiles.off = True
+                self.off = True
                 return
-        view = _View(ledger)
-        self.tiles.draw(view, self.origin + view.offset)
+        g = ledger.paste.grids["bristles"]
+        bp, r = ledger.paste.brush
+        xs, ys = g.centers()
+        ii, jj = np.nonzero(g.v > self.min_ml)
+        tr, sc = [], []
+        for i, j in zip(ii, jj):
+            h = float(g.v[i, j]) / (g.f.cell * 100.0) ** 2 / 100.0  # m
+            tr.append(bp + r @ np.array([xs[i], ys[j], h / 2]))
+            sc.append((g.f.cell, g.f.cell, max(h, 2e-4)))
+        sig = (len(tr), round(float(np.sum(sc)) if sc else 0.0, 7), tuple(np.round(bp, 4)),
+               tuple(np.round(r[:, 2], 3)))
+        if sig == self.shown:
+            return
+        try:
+            if self.markers is None:
+                if not tr:
+                    return
+                import isaaclab.sim as sim_utils
+                from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+
+                proto = sim_utils.CuboidCfg(size=(1.0, 1.0, 1.0), visual_material=sim_utils.PreviewSurfaceCfg(
+                    diffuse_color=tuple(sq._linear(x) for x in self.color), roughness=0.5))
+                self.markers = VisualizationMarkers(VisualizationMarkersCfg(prim_path=self.path,
+                                                                            markers={"paste": proto}))
+            self.shown = sig
+            if not tr:
+                self.markers.set_visibility(False)
+                return
+            q = np.asarray(sq.quat(r), np.float32)
+            self.markers.set_visibility(True)
+            self.markers.visualize(translations=np.array(tr, np.float32) + np.asarray(self.origin, np.float32),
+                                   orientations=np.tile(q, (len(tr), 1)), scales=np.array(sc, np.float32),
+                                   marker_indices=np.zeros(len(tr), int))
+        except Exception as e:  # noqa: BLE001 (cosmetic only)
+            self.off = True
+            print(f"toothpaste: tiles off ({e!r}); scoring is unaffected", file=sys.stderr, flush=True)
 
 
 _TILES = _Tiles()
@@ -389,9 +448,10 @@ _TILES = _Tiles()
 # over the middle of the bristles, squeezes 1.5 mm a side for 1.2 s, eases back to the holding grip, waits 1.5 s for
 # the flow to die, lifts 3 cm and lays the tube back where it was. The left hand lays the brush back down.
 HOLD_BRUSH_AT = (0.300, 0.020, TOP + 0.100)  # the bristle top's middle while the brush is held up
+HOLD_YAW = -math.pi / 2  # the held brush turned so its handle points left (+y), the left hand clear of the right
 NOZZLE_GAP = 0.004  # m: the nozzle's mouth over the bristle top while squeezing
 PITCH = -math.radians(80.0)
-HOLD_PUSH = 0.0002  # m a side: holds the tube, 0.05 mL displaced, under the yield pressure
+HOLD_PUSH = 0.0004  # m a side: holds the tube (1.4 N a side, 1.0 kPa inside, under the 1.44 kPa yield)
 DOSE_PUSH = 0.00175  # m a side: the dosing squeeze (about 0.25 g in the offline model at 300 Pa)
 DOSE_S = 1.2  # s held
 # Variants for checking the scorer in the simulator (TOOTH_VARIANT=much | smear): a firmer, longer squeeze (too much, a
@@ -402,6 +462,7 @@ FINGER_HALF_OPEN = 0.047  # m: each finger's inner face from the tool point when
 WIDE = 0.030
 GRIP_YAW = 0.0  # fingers closing across world y (yaw 0 on the real arm, GLOBAL-FIXES A1)
 CARRY_DZ = 0.080
+SIDE_Y = -0.060  # m: the tube is turned nozzle-down here, 6 cm right of the held brush's head
 PAD_TIP = 0.013  # m: the closed fingertips stand this far below the tool point (yam_arena PAD_TIP_PAST_TCP)
 
 
@@ -410,9 +471,20 @@ def finger_for(half: float) -> float:
     return FINGER_CLOSED + (FINGER_OPEN - FINGER_CLOSED) * max(0.0, half) / FINGER_HALF_OPEN
 
 
+K_FINGER = 5000.0  # N/m: the YAM finger's position servo (yam_arena GRIPPER stiffness), in series with the wall
+
+
+def push_force(push: float) -> float:
+    """N on one wall panel pushed in `push` m, both side panels pushed alike: its spring plus the air's pressure."""
+    ml = 2 * AREA_ML_PER_CM * push * 100.0
+    p = sq.P_ATM * (AIR_ML / max(1e-3, AIR_ML - ml) - 1.0)
+    return K_WALL * push + p * 1000.0 * PANEL_AREA_M2
+
+
 def tube_grip(push: float) -> float:
-    """Gripper command whose finger faces stand `push` m inside the tube's 34 mm body on each side."""
-    return finger_for(BODY_R - push)
+    """Gripper command that pushes each side panel `push` m in: the finger's servo is a spring in series with the
+    panel, so it is commanded past the panel by the force it must make over its stiffness."""
+    return finger_for(BODY_R - push - push_force(push) / K_FINGER)
 
 
 def nozzle_dir(pitch: float) -> np.ndarray:
@@ -427,70 +499,86 @@ def dose_tcp(gap: float = NOZZLE_GAP) -> tuple:
     return tuple(float(v) for v in mouth - (GRASP_X - TIP[0]) * nozzle_dir(PITCH))
 
 
-def _tw(duration, pos, finger, label, pitch=0.0):
-    return kit.Tilted(float(duration), tuple(float(v) for v in pos), float(finger), label, yaw=GRIP_YAW,
+def _tw(duration, pos, finger, label, pitch=0.0, yaw=None):
+    return kit.Tilted(float(duration), tuple(float(v) for v in pos), float(finger), label,
+                      yaw=GRIP_YAW if yaw is None else float(yaw),
                       roll=0.0, pitch=float(pitch))
 
 
 GRASP_X = 0.015  # m: the right hand holds the body 1.5 cm behind its middle (toward the crimp), on the wall panels
-FLICK_AT = (0.290, -0.090, TOP + 0.120)  # the tube's middle while the left hand flicks the lid open
-FLICK_R = 0.033  # m: the fingertip pushes the thumb tab this far from the hinge (the tab spans 30-36 mm)
+FLICK_TCP = (0.330, -0.100, TOP + 0.080)  # the right hand's tool point while the left hand flicks the lid open
+FLICK_YAW = -math.pi / 2  # the right hand turned so the nozzle points left (+y), toward the left hand
+FLICK_O = 0.025  # m: the left fingers open 25 mm each side; the rear one (toward the tube) pushes the tab
+FLICK_R = 0.034  # m: the push lands this far from the hinge (the tab spans 30-38 mm)
 FLICK_DEG = (0.0, 25.0, 50.0, 80.0)  # the lid swung past LID_SNAP_RAD (63 deg) snaps open by itself
 
 
-def flick_tips() -> list:
-    """Fingertip points (world) that push the thumb tab round the hinge, from just behind it to 80 degrees open."""
-    h = np.asarray(FLICK_AT) + np.array([CAP_X[0], 0.0, -CAP_R])
+def _rz(a):
+    c, s_ = math.cos(a), math.sin(a)
+    return np.array([[c, -s_, 0], [s_, c, 0], [0, 0, 1]])
+
+
+def flick_tcps() -> list:
+    """Left tool points (world) that push the thumb tab round the hinge with the rear finger's inner face, from the
+    tab's back at 0 deg to 80 deg open: the tube as the right hand holds it at FLICK_TCP, turned FLICK_YAW."""
+    rt = _rz(FLICK_YAW)
+    hinge = np.asarray(FLICK_TCP) - rt @ np.array([GRASP_X, 0.0, 0.0]) + rt @ np.array([CAP_X[0], 0.0, -CAP_R])
     out = []
     for d in FLICK_DEG:
         f = math.radians(d)
-        up, ax = np.array([-math.sin(f), 0.0, math.cos(f)]), np.array([math.cos(f), 0.0, math.sin(f)])
-        out.append(h + FLICK_R * up + 0.006 * ax)
+        c = hinge + rt @ np.array([-FLICK_R * math.sin(f), 0.0, FLICK_R * math.cos(f)])  # contact, tube frame turned
+        push = rt @ np.array([-1.0, 0.0, 0.0])  # the tab is pushed toward the nozzle's side: world +y
+        out.append(c + FLICK_O * push + np.array([0.0, 0.0, PAD_TIP - 0.002]))  # finger bottom 2 mm under the contact
     return out
 
 
 def demo():
     """Right hand lifts the tube; left fingertip flicks its lid open; left hand holds the brush up; right hand doses
     it; both put things back."""
-    tip_up = np.array([0.0, 0.0, PAD_TIP])  # the tool point stands this far above the closed fingertips
-    tips = flick_tips()
-    fx, fy, fz = (float(v) for v in tips[0] + tip_up)
-    closed = finger_for(0.0)
+    tcps = flick_tcps()
+    fx, fy, fz = (float(v) for v in tcps[0])
+    straddle = finger_for(FLICK_O)
     tx, ty, tz = TUBE_START
     gx = tx + GRASP_X
     push, dose_s = VARIANTS.get(os.environ.get("TOOTH_VARIANT", ""), (DOSE_PUSH, DOSE_S))
     hold, dose = tube_grip(HOLD_PUSH), tube_grip(push)
     over, at = dose_tcp(0.040), dose_tcp()
-    fl = np.asarray(FLICK_AT) + np.array([GRASP_X, 0.0, 0.0])
+    fl = tuple(float(v) for v in FLICK_TCP)
     right = [_tw(1.5, (gx, ty, tz + 0.08), finger_for(WIDE), "above the tube"),
              _tw(1.5, (gx, ty, tz), finger_for(WIDE), "around the tube"),
              _tw(0.8, (gx, ty, tz), hold, "hold it"),
              _tw(1.5, (gx, ty, tz + CARRY_DZ), hold, "lift"),
-             _tw(1.5, fl, hold, "hold it up for the lid")]
+             _tw(1.5, fl, hold, "hold it up for the lid, nozzle to the left", yaw=FLICK_YAW)]
     t_ready = sum(w.duration for w in right)
-    left = [Waypoint(t_ready, (fx, fy, fz + 0.04), closed, "fingertip above the cap", 0.0),
-            Waypoint(1.0, (fx, fy, fz), closed, "fingertip behind the thumb tab", 0.0)]
-    for k, p in enumerate(tips[1:], 1):
-        left.append(Waypoint(0.5, tuple(float(v) for v in p + tip_up), closed, f"flick the lid {FLICK_DEG[k]:.0f} deg", 0.0))
-    left.append(Waypoint(1.0, tuple(float(v) for v in tips[-1] + tip_up + np.array([-0.02, 0.0, 0.05])), closed,
-                         "fingertip away", 0.0))
+    left = [Waypoint(t_ready, (fx, fy, fz + 0.030), straddle, "fingers astride the thumb tab, above", 0.0),
+            Waypoint(1.0, (fx, fy, fz), straddle, "rear finger behind the thumb tab", 0.0)]
+    for k, p in enumerate(tcps[1:], 1):
+        left.append(Waypoint(0.5, tuple(float(v) for v in p), straddle, f"flick the lid {FLICK_DEG[k]:.0f} deg", 0.0))
+    left.append(Waypoint(1.0, tuple(float(v) for v in tcps[-1] + np.array([0.0, 0.03, 0.05])), straddle,
+                         "fingers away", 0.0))
     bx, by, bz = (float(v) for v in np.asarray(BRUSH_START) + BRUSH_GRIP_LOCAL)
-    hx, hy, hz = (float(v) for v in np.asarray(HOLD_BRUSH_AT) + BRUSH_GRIP_LOCAL)
+    c, sn = math.cos(HOLD_YAW), math.sin(HOLD_YAW)
+    hx, hy, hz = (float(v) for v in np.asarray(HOLD_BRUSH_AT) + np.array([[c, -sn, 0], [sn, c, 0], [0, 0, 1]]) @ BRUSH_GRIP_LOCAL)
     b_open, b_hold = finger_for(WIDE), finger_for(HANDLE[1] / 2 - 0.001)
     left += [Waypoint(2.0, (bx, by, bz + 0.08), b_open, "above the brush handle", GRIP_YAW),
              Waypoint(1.5, (bx, by, bz), b_open, "around the handle", GRIP_YAW),
              Waypoint(0.8, (bx, by, bz), b_hold, "grip", GRIP_YAW),
              Waypoint(1.5, (bx, by, bz + 0.08), b_hold, "lift", GRIP_YAW),
-             Waypoint(1.5, (hx, hy, hz), b_hold, "hold it bristles-up", GRIP_YAW)]
+             Waypoint(1.5, (hx, hy, hz), b_hold, "hold it bristles-up", HOLD_YAW)]
     t_brush = sum(w.duration for w in left)
-    right.append(_tw(max(0.5, t_brush - t_ready), fl, hold, "wait for the brush"))
-    right += [_tw(2.5, over, hold, "nozzle down over the bristles", PITCH),
+    right.append(_tw(max(0.5, t_brush - t_ready), fl, hold, "wait for the brush", yaw=FLICK_YAW))
+    side = (over[0], SIDE_Y, TOP + 0.180)  # beside the held brush, clear of it, where the arm can still hold it level
+    right += [_tw(2.0, side, hold, "carry it level beside the brush"),
+              _tw(1.5, side, hold, "turn it nozzle-down beside the brush", PITCH),
+              _tw(1.5, over, hold, "nozzle 4 cm over the bristles", PITCH),
               _tw(1.2, at, hold, "nozzle 4 mm over the bristles", PITCH),
               _tw(0.3, at, dose, "squeeze", PITCH),
               _tw(dose_s, at, dose, "hold the squeeze", PITCH),
               _tw(0.3, at, hold, "ease off", PITCH),
               _tw(TAIL_S, at, hold, "let the flow die", PITCH),
               _tw(1.0, over, hold, "lift off the dab", PITCH),
+              _tw(1.5, side, hold, "beside the brush again", PITCH),
+              _tw(1.5, side, hold, "turn it level"),
               _tw(2.0, (gx, ty, tz + CARRY_DZ), hold, "back over its place"),
               _tw(1.5, (gx, ty, tz + 0.002), hold, "lay it down"),
               _tw(0.8, (gx, ty, tz + 0.002), finger_for(WIDE), "let go"),
@@ -498,7 +586,7 @@ def demo():
               _tw(6.0, (gx, ty, tz + 0.08), finger_for(WIDE), "wait")]
     t_dosed = sum(w.duration for w in right[:[w.label for w in right].index("lift off the dab") + 1])
     left += [Waypoint(max(0.5, t_dosed - sum(w.duration for w in left)), (hx, hy, hz), b_hold,
-                      "hold still while it is dosed", GRIP_YAW),
+                      "hold still while it is dosed", HOLD_YAW),
              Waypoint(1.5, (bx, by, bz + 0.08), b_hold, "back over its place", GRIP_YAW),
              Waypoint(1.5, (bx, by, bz + 0.001), b_hold, "lay it down", GRIP_YAW),
              Waypoint(0.8, (bx, by, bz + 0.001), b_open, "let go", GRIP_YAW),
