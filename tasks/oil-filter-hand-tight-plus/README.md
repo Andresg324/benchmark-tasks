@@ -51,19 +51,28 @@ Scorer tests: `python tasks/oil-filter-hand-tight-plus/test_task.py` (prints `al
 
 ## The demo
 
-The left arm opens over the filter, descends with its fingers around the top of the can and spins the filter on
-clockwise (seen from above) in wrist strokes of 120 degrees: close, roll in 15-degree steps (sinking with the thread),
-open, roll back, close again, 305 degrees of wrist roll in all: three quarters of a turn to gasket contact, 20 degrees
-past it (where the gasket holds 1.3 N·m) and 15 for the pads slipping. It lets go and lifts clear; the right arm waits
-at home. Then both hands take the wrench's handle where it lies (the right near its end, 0.55 m from the cap's axis; the
-left 0.22 m out), lift it, carry the cap over the filter and lower it onto the can. They swing the handle clockwise in
-30-degree strokes (handle from 280 to 250 degrees), ratcheting back between them without letting go, pushing with what
-the gasket takes plus 1 N·m (up to 19 N·m: about 23 N at the right hand, 29 N at the left), each hand taking a share in proportion to what its arm can push there, and each aimed past the handle by its
-arm's give (J K^-1 J^T from the servos' stiffness; while carrying the wrench, a further 7-8 mm that the sim showed
-the heavier load needs), and bearing down on the handle (3 N each plus 0.6 N per N·m of the stroke's torque) so the cap
-stays on the flutes. The plan stops at 300 degrees past contact (the middle of the
-full-credit range). They ease off, lift the wrench off the can, set it on the bench beside the head, let go and go
-home. Result on this version: 1.0 in 1,861 steps (93 s).
+The demo is closed loop: it senses the filter as a mechanic feels it. After every control step it reads the filter's
+angle past gasket contact from the simulator (the thread's hinge, the same reading the scorer uses), and each stroke is
+worked out from that reading when the stroke starts.
+
+By hand. The left arm opens over the filter, comes down with its fingers around the top of the can and spins it on
+clockwise (seen from above) in short regrip strokes: close, roll 90 degrees in 15-degree steps (sinking with the
+thread), open, roll back, close again. After each stroke it checks how far that stroke turned the filter. There is no
+set number of strokes. While the filter runs on freely, each stroke turns it nearly the full 90 degrees. Past gasket
+contact the gasket's resistance rises until the pads slip on the can, at about 2.5 N·m (about 40 degrees past contact
+in this model). The first stroke that turns the filter less than 10 degrees means the filter is hand-tight: the hand
+lets go and lifts clear (at most 8 strokes). The right arm waits at home until then.
+
+With the wrench. Both hands take the wrench's handle where it lies (HANDS_TEXT), lift it, carry the cap over the
+filter and lower it onto the can. They swing the handle clockwise in strokes of up to 30 degrees from 280 degrees,
+ratcheting back between them without letting go. Each stroke is sized from the filter's angle when it starts: it aims
+at 280 degrees past contact, plus the few degrees the wrench flexes before the filter moves. The hands push with what
+the gasket takes at each point plus 1 N·m, each hand taking a share in proportion to what its arm can push there. Each
+hand is aimed past the handle by its arm's give (J K^-1 J^T from the servos' stiffness; while carrying the wrench, a
+further 7-8 mm that the sim showed the load needs). Each also bears down on the handle with 3 N plus 0.6 N per N·m of
+the stroke's torque, so the cap stays on the flutes. After each stroke the demo reads the angle again. Once the filter
+is 270 degrees past contact, where the gasket takes Kawasaki's 18 N·m, the strokes stop. The hands ease off, lift the
+wrench off the can, set it on the bench beside the head, let go and go home. Result on this version: RESULT_TEXT.
 
 ## Scoring
 

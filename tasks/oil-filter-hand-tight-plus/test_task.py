@@ -555,4 +555,55 @@ case("wrench: turned with no hand on it (not possible in the sim: a stand-in for
      done(tool_off(tool_run(tool_trial(), 300.0, hands_on=False))), 0.0)
 tset(t_lift=m.LIFT_TABLE, t_turn=m.TOOL_TURN0, t_x=m.TOOL_X0, tool=m.TOOL_Y0)
 
+
+# --- The demo senses the filter: played against a toy filter (a holding wrist's roll turns it until the pads slip at
+# `slip` degrees past contact; the wrench turns it by the handle's swing past the pawl's take-up), the hand strokes stop
+# after the first stroke that turns it under 10 degrees, and the wrench strokes stop once it is 270 past contact.
+def play(slip):
+    from yam_arena import demo as yd
+    from yam_arena.station import BASES
+    kit._patch_demo(yd)
+    plan = m.demo()
+    arms = {a: yd.ArmPlan(list(w), BASES[a]) for a, w in plan.items()}
+    past, t, dt, py, pa, swing = m.THREAD.start, 0.0, 0.05, None, None, 0.0
+    labels, gains = [], []
+    m._SEEN["past"] = past
+    while t < 140.0:
+        out = {a: p.target(t) for a, p in arms.items()}
+        _, rot, _, lab = out["left"]
+        yaw = math.atan2(rot[1, 0], rot[0, 0])
+        if lab.endswith(": roll") and py is not None:
+            d = math.degrees((py - yaw + math.pi) % (2 * math.pi) - math.pi)
+            past = min(past + max(d, 0.0), max(slip, past))
+        py = yaw
+        rp = out["right"][0]
+        a = math.degrees(math.atan2(rp[1] - m.HEAD_C[1], rp[0] - m.HEAD_C[0]))
+        if lab.startswith("stroke") and ":" not in lab and pa is not None:
+            da = max((pa - a + 180.0) % 360.0 - 180.0, 0.0)
+            swing += da
+            if swing > math.degrees(m.gasket_torque(past) / m.K_TOOL):
+                past += da
+        else:
+            swing = 0.0
+        pa = a
+        m._SEEN["past"] = past
+        if not labels or labels[-1] != lab:
+            labels.append(lab)
+        if lab == "done" and out["right"][3] == "done":
+            break
+        t += dt
+    return past, t, labels
+
+
+for slip in (37.0, 25.0):
+    past, t, labels = play(slip)
+    tight = labels.index("spin the filter on: hand-tight, lift clear")
+    strokes = sum(1 for x in labels[:tight] if x == "spin the filter on: grip")
+    ok = (m.DONE_PAST <= past <= m.GOOD_HI and t / 0.05 < 2400 and "lay it on the bench" in labels
+          and labels.count("spin the filter on: hand-tight, lift clear") == 1 and labels[-1] == "done"
+          and not any(x.startswith("stroke") for x in labels[labels.index("lift the wrench off"):]))
+    bad += not ok
+    print("ok  " if ok else "FAIL", f"sensing demo (pads slip {slip:.0f} past contact): {strokes} hand strokes, wrench to "
+          f"{past:.0f}, {t / 0.05:.0f} steps")
+
 print("all pass" if not bad else f"{bad} FAILED")
