@@ -316,6 +316,27 @@ are about $1 a trial (56 g of wax and a little dye and spirits).
 - Also: a steel tape, a soft brush, weighing boats, paper towels, oven mitts (for the pitcher), nitrile gloves, white
   plastic catch sheets, masking tape, two wooden stop blocks and two C-clamps.
 
+### Budget build
+
+The named items above stay as they are, and nothing changes for the sim or the scoring. These cheaper equivalents do
+the same jobs:
+
+- Griddle: buy the same Assure Parts 177AOGT1227 from WebstaurantStore, $104.49 (other sellers list it at up to
+  $406.99). It is the sim's griddle, so only the source changes.
+- Heat: the lab's own stove ($0) or a single electric burner such as the Elite Gourmet ESB-301BF (about $20) in place of
+  the Cuisinart CB-30 hot plate ($75). The water bath caps the melt at 100 degrees C and the IR thermometer holds it at
+  75 to 85 degrees C, so the burner only has to boil water.
+- Scale: an American Weigh Scales AWS-100-CAL pocket scale, 100 g by 0.01 g, with its 100 g calibration weight
+  ($17 to $20), in place of the $66 balance. It has the same 0.01 g readability. Each fraction is under 56 g and is
+  weighed in a pre-weighed boat, so it stays under 100 g: T is the debris brushed out of the tray into a boat (the
+  ~0.5 kg tray is over the scale's capacity), and each 14 g pour is weighed into a small pre-weighed paper cup, poured
+  into the cavity and the emptied cup re-weighed. The 5 % check of M against D still catches anything lost in the
+  brushing.
+- Camera and light: a clamp-on overhead phone arm (about $12 to $15) in place of the NEEWER X6, and any clamp lamp the
+  lab has in place of the TERTIAL; the camera only has to look straight down and the lamp only has to rake the plate.
+
+Primary rig about $500; budget build about $320 (excluding the robot and a phone).
+
 ## Files
 
 - `task.py`: the scene, the debris layout, `score()`, `success()` and the scripted `demo()`.
