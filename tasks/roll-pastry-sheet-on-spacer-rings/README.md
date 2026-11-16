@@ -17,8 +17,9 @@ Run (from the repo root, Isaac Lab-Arena installed):
     python tasks/roll-pastry-sheet-on-spacer-rings/test_task.py      # offline model and scorer checks, prints "all pass"
 
 Use `--policy dream --max-steps 3000` for a Dream-1 trial (the run limit). The scene is deterministic (no seeds, object_jitter=0).
-Runtime per trial: the demo's waypoints add up to about 50 s (about 1,000 steps at 20 Hz); a Dream-1 trial runs up to
-3,000 steps (2.5 minutes).
+Runtime per trial: the demo runs 1,007 steps (50.4 s at 20 Hz); a Dream-1 trial runs up to 3,000 steps (2.5 minutes).
+
+Results on this task.py (sha256 013db3744714...): the scripted demo scores **1.0 in 1,007 steps**. Dream-1: PENDING.
 
 ## The pastry: what people buy, and what it is rolled to
 
@@ -32,16 +33,18 @@ Runtime per trial: the demo's waypoints add up to about 50 s (about 1,000 steps 
   from the same ATK test). Block formats (Jus-Rol 500 g in the UK, Tenderflake in Canada) are not what a US shopper
   finds, so the task no longer starts from a block.
 - **The start.** One sheet as the box directs: thawed until it unfolds easily, still cold, unfolded on a lightly floured
-  surface (the package directions, quoted on the retailers' pages). Cut in half with a knife, it gives two pieces 11.5 x
-  24 cm, 4.8 mm thick; one is the start of a trial (about 122 g, 132.5 mL). The whole sheet is not used: rolled to
-  3.2 mm it becomes about 38 x 25 cm, longer than the arms can roll from one side of the board (see "Reach" below).
+  surface (the package directions, quoted on the retailers' pages). Cut to half its size with a ruler and a pizza
+  wheel, it gives a piece 11.5 x 24 cm, 4.8 mm thick, the start of a trial (about 122 g, 132.5 mL). The whole sheet
+  is not used: rolled to 3.2 mm it becomes about 38 x 25 cm, longer than the arms can roll from one side of the
+  board (see "Reach" below).
 - **The target.** 1/8 inch (3.2 mm). Pepperidge Farm's own recipes roll one sheet "into a 15 x 10-inch rectangle"
   (Puff Pastry Pepperoni Pizza, pepperidgefarm.com): from about 9.75 x 10.5 inches at 3/16 inch, that is about 1/8 inch
   (4.8 mm x 102 / 150 = 3.3 mm). 1/8 inch is also the spacer ring sold for it (below). So there is real rolling to do: a
   third of the thickness comes off.
 - **Cold.** The package says the thawed sheet "should still be cold", to thaw it no more than 40 minutes, and if the
   sheets get warm or sticky to put them in the freezer for 5 minutes or the refrigerator for 10 to 15. A real trial
-  rolls the piece as soon as it is cut, and chills it as the package says if it turns sticky before the trial starts.
+  thaws the sheet 40 minutes at room temperature (20 to 24 degrees C) as the box directs and starts within 5 minutes
+  of the end of the thaw (see "Real-world evaluation" below).
 
 Volume (rolling keeps it): 11.5 x 24 x 0.48 = 132.5 mL. At 3.2 mm over the same 24 cm width that is 17.3 cm long
 (132.5 / (24 x 0.32)); at the on-spec band's ends, 15.8 cm at 3.5 mm and 19.0 cm at 2.9 mm. Centered at x 24 cm, even
@@ -57,9 +60,9 @@ Positions in cm from the midpoint between the two arm bases: x forward, y to the
 
 | Object | What it is | Where |
 |---|---|---|
-| Pastry board | oiled maple (mid brown), 30 (x) x 40 (y) x 1.5 cm (a 12 x 16 inch board), floured; fixed | x 10 to 40, y -20 to 20, top z 1.5 |
+| Pastry board | maple (mid brown): the J.K. Adams Williston board, 16 x 12 x 3/4 inch (40.6 x 30.5 x 1.9 cm), modeled 30 (x) x 40 (y) x 1.9 cm; floured; fixed | x 10 to 40, y -20 to 20, top z 1.9 |
 | Puff pastry | half of a thawed Pepperidge Farm sheet: 11.5 (x) x 24 (y) cm, 4.8 mm (3/16 inch) thick, 132.5 mL, about 122 g; modeled, no collider | centered x 24, y 0 |
-| Rolling pin | maple, a handled pin with a 12 inch barrel (Frieling Classic Rolling Pin with Handles: 2.4 inch barrel, 12 inch barrel, 21 inch overall, 1.6 lb): barrel 6.1 cm across and 30.5 cm long; on each end of the barrel a blue silicone 1/8 inch spacer ring 6.74 cm across (3.2 mm proud of the barrel) and 1.5 cm wide (\|y\| 13.75 to 15.25); handles 2.5 cm across and 11.4 cm long (\|y\| 15.25 to 26.65); 0.73 kg | lying on its rings on the board behind the pastry, axis along y at x 35, z 4.87 |
+| Rolling pin | maple, a handled pin with a 12 inch barrel (Frieling Classic Rolling Pin with Handles: 2.4 inch barrel, 12 inch barrel, 21 inch overall, 1.6 lb): barrel 6.1 cm across and 30.5 cm long; on each end of the barrel a blue silicone 1/8 inch spacer ring 6.74 cm across (3.2 mm proud of the barrel) and 1.5 cm wide (\|y\| 13.75 to 15.25); handles 2.5 cm across and 11.4 cm long (\|y\| 15.25 to 26.65); 0.73 kg | lying on its rings on the board behind the pastry, axis along y at x 35, z 5.27 |
 
 The pin lies on the board where a cook leaves it, not in a rest. Its barrel's front is 2.2 cm behind the pastry's far
 edge, and its handles reach past the board's sides (they are thinner than the rings, so they touch nothing).
@@ -98,14 +101,15 @@ hold the barrel 3.2 mm up, so the model cannot press thinner.
 
 ## Scoring
 
-The pastry's thickness is read at fixed points: the centers of the 2 cm squares of a grid lined up with the board's
-front edge and center line, wherever the pastry covers the point (96 points for the demo's sheet: 12 bands of 8). The
-sim reads exactly these points (its strips are the 2 cm bands, its cells the 2 cm squares); a real trial reads them
-with a depth gauge.
+The pastry's thickness is read at fixed points on a 4 cm grid: rows every 4 cm along x from 1 cm behind the board's
+front edge (x 11, 15, 19, ... 39 cm), and in each row the points 3, 7 and 11 cm either side of the center line,
+wherever the pastry covers the point (24 points for the demo's sheet: 6 bands of 4). The sim reads exactly these
+points (each is the center of one of the model's 2 cm cells); a real trial reads
+them with a depth gauge. A band is the points at one y; the evenness check compares the bands' averages.
 
 | Outcome | Score |
 |---|---|
-| At least 90 % of the points 3.2 mm within 0.3 mm (2.9 to 3.5 mm), the 2 cm bands' average thicknesses within 0.3 mm of each other (even across the width), all the pastry on the board, pin set down level on its rings, no hand touching it | 1.0 |
+| At least 90 % of the points (22 of 24) 3.2 mm within 0.3 mm (2.9 to 3.5 mm), the bands' average thicknesses within 0.3 mm of each other (even across the width), all the pastry on the board, pin set down level on its rings, no hand touching it | 1.0 |
 | At least 90 % of the points at most 3.7 mm, but the sheet not finished (fewer than 90 % on spec, or uneven across the width; about one pass to go) | 0.5 |
 | The sheet done, but a hand still touching the pin (within 2 mm) or the pin not set down level | 0.5 |
 | At least 90 % of the points at most 4.2 mm and the bands within 0.3 mm of each other (one level pass, about two to go) | 0.25 |
@@ -136,26 +140,25 @@ the job. 0.25 is one level pass: at least 0.6 mm off the 4.8 mm start nearly eve
 the pastry is safely started and rolled the right way, but still two passes from done. Below that (nothing done, a
 single stroke out and back, or a wedge from a lifted end) there is no usable progress, so 0.
 
-Why the numbers: 3.2 mm is 1/8 inch, the thickness the maker's recipes roll this pastry to and the ring sold for it.
-0.3 mm (about 10 % of 3.2 mm) either side: enough that a level sheet
-three crossings in (3.4 mm) is on spec while the start (4.8 mm) and one crossing (4.0 mm) are not; it is ten times the
-gauge's 0.01 mm reading. 90 %: the outer row of points, near the cut and rolled edges where a sheet is pinched or
-ragged, is about a fifth of the points, and 10 % lets about half of that row be off. 3.7 mm is within 0.5 mm, about one
-pass to go; 4.2 mm is 0.6 mm off the start, what one level pass reaches at its ends (4.0 mm). 0.3 mm across the width is
-the same tolerance a point is held to; each band is averaged over its length, so the check reads a wedge, not a single
-thick point. A level pin presses every band alike (0 mm offline for the demo's strokes); one end 0.5 mm up through
-eight passes leaves 0.36 mm (0.5), and 1 mm up leaves 0.72 mm (0). The 5 mm and 3-degree pin checks are resting
-tolerances for a 6.74 cm ring on a flat surface (3 degrees over the 29 cm between the rings is a 15 mm rise, so a pin
-past it is propped on something); a real trial reads them with a ruler and a level app. Whether a hand still touches
-the pin is read from the video.
+Why the numbers: 3.2 mm is 1/8 inch, the thickness the maker's recipes roll this pastry to and the ring sold for it. 0.3
+mm (about 10 % of 3.2 mm) either side: enough that a level sheet three crossings in (3.4 mm) is on spec while the start
+(4.8 mm) and one crossing (4.0 mm) are not; it is ten times the gauge's 0.01 mm reading. 90 % (22 of 24): two-thirds of
+the points are in the outer bands or the end rows, near the cut and rolled edges where a sheet is pinched or ragged, and
+10 % lets two of the 24 be off. 3.7 mm is within 0.5 mm, about one pass to go; 4.2 mm is 0.6 mm off the start, what one
+level pass reaches at its ends (4.0 mm). 0.3 mm across the width is the same tolerance a point is held to; each band is
+averaged over its points, so the check reads a wedge, not a single thick point. A level pin presses every band alike (0
+mm offline for the demo's strokes); one end 0.5 mm up through eight passes leaves 0.36 mm (0.5), and 1 mm up leaves 0.72
+mm (0). The 5 mm and 3-degree pin checks are resting tolerances for a 6.74 cm ring on a flat surface (3 degrees over the
+29 cm between the rings is a 15 mm rise, so a pin past it is propped on something); a real trial reads them with a ruler
+and a level app. Whether a hand still touches the pin is read from the video.
 
 The demo: both arms grip the pin's handles from above (fingers closing along x) where it lies, lift it over the middle
 of the pastry and set it down on its rings, then four passes, each from the middle out to the far end and back, then
 out to the near end and back, aimed about 6 mm past the end as it then lies (worked out with doughkit; the pin trails
 the hands by about 1 cm at each turn, and rolling past an end presses the end like any other slice). Then the pin is
 lifted off the pastry, set back down on its rings where it lay, and both hands open. Offline the strokes give 1.0 with
-the pin stopping anywhere from at to 2 cm short of each commanded end; the first sim run must confirm it (see the
-run script).
+the pin stopping anywhere from at to 2 cm short of each commanded end; in the simulator the demo scores 1.0 in 1,007
+steps.
 
 Reach: the strokes run x 15 to 33 cm with the hands on the handles at |y| 19.5 cm, 11 cm in from the arm bases at |y|
 30.5 cm, so the hands stay 0.19 to 0.35 m from their arm's base. The pin is picked up and put down at x 35 (0.37 m),
@@ -181,36 +184,162 @@ barrel (or 1 mm over it) at the end, or the pin propped 5 degrees off level, 0.5
 touching nothing, or closed fingertips 5 mm over the barrel, 1.0; fingers hovering 9 mm over both handles through every
 stroke, nothing counts.
 
-In a real trial (no hand rule; the score is the measured sheet and the final pin state): lay a 2 cm grid transparency
-over the sheet, lined up with the board's front edge and its center line, so the points are the same every trial and
-the same as the sim's. At the center of each 2 cm square the pastry covers (about 96 points), read the thickness with a
-digital tire tread depth gauge (zeroed on the bare board, its foot resting on the pastry without pressing, its pin
-pushed through to the board). A point is on spec at 2.9 to 3.5 mm, and at least 90 % must be. For evenness, average the
-readings in each 2 cm band running the sheet's length: the thickest band may be at most 0.3 mm above the thinnest. A
-point under 2.9 mm, a hole where the board shows through, a tear, or a spot where pastry stuck to the pin and pulled
-away counts as off spec (a ringed pin cannot press below 3.2 mm, so anything thinner is damage). Pastry pushed off the
-board scores 0. The sim cannot produce these, so they matter only in a real trial. For the pin, read its level with a
-level app and its rest on the board with a ruler, and check the last frames of the video that no finger touches it.
+In a real trial there is no hand rule: the score is the measured sheet and the final pin state. A clear metric
+quilting ruler laid on tape ticks on the board's edges locates the 24 points, the same every trial and the same as the
+sim's, and a zeroed tire tread depth gauge reads the thickness at each point the pastry covers. A point under 2.9 mm, a
+hole where the board shows through, a tear, or a spot where pastry stuck to the pin and pulled away counts as off spec
+(a ringed pin cannot press below 3.2 mm, so anything thinner is damage). The sim cannot produce these, so they matter
+only in a real trial. The pin's level and rest are read with a phone level app and a steel tape, and the last second
+of the video shows whether a finger still touches it. The full procedure, from the pastry's lot to the reset, is in
+"Real-world evaluation" below.
 
 ## Real-world build
 
-- A maple board about 12 x 16 inches (30 x 40 cm, 1.5 cm thick), lightly floured with all-purpose flour.
-- A handled maple rolling pin with a 12 inch barrel, for example the Frieling Classic Rolling Pin with Handles (2.4
-  inch barrel, 21 inch overall, 1.6 lb; the barrel turns on nylon bushings), and a pair of silicone spacer rings, for
-  example the 1/8 inch pair from Mrs. Anderson's Baking silicone rolling pin rings (an 8-piece set, two rings each in
-  four thicknesses from 0.0625 to 0.375 inch, sold for pins up to about 2.5 inches across). 1/8 inch is 3.18 mm; the sim
-  uses 3.2 mm. Check the rings' height over the barrel with calipers.
-- Pepperidge Farm Puff Pastry Sheets (17.3 oz box, two sheets). For each trial, thaw one sheet as the box directs, still
-  cold, unfold it on the floured board, measure its thickness with calipers (record it; the maker gives 3/16 inch), cut
-  it in half into two 11.5 x 24 cm pieces, set one centered at x 24, y 0, and start the trial at once. The other half
-  is the next trial's, kept in the refrigerator.
-- Measuring tools, all from a hardware or auto parts store: a digital tire tread depth gauge (the common 0 to 25 mm
-  kind reading 0.01 mm, a thin pin sliding out of a flat foot), digital calipers, a 30 cm ruler, a 2 cm grid
-  transparency (printed on an overhead sheet), a kitchen scale (about 122 g per half sheet), and a phone with a camera
-  and a level app. No lab equipment is needed.
-- Reset between trials: throw the rolled sheet away, scrape the board clean and re-flour it, set a fresh half sheet
-  centered on the board, lay the pin on its rings at x 35 (axis along y), and check that both rings sit on the
-  barrel's ends.
+Everything is bought off the shelf; nothing is made or printed for the task. The same board, pin, rings, ruler and
+gauge are used for every trial.
+
+- Board: the J.K. Adams Williston Large maple cutting board with juice groove, 16 x 12 x 3/4 inch (WLS-1612; 40.6 x
+  30.5 x 1.9 cm), laid juice-groove side down so the plain face is up. The sim's board is 40 x 30 x 1.9 cm (its plan
+  rounded by 3 to 6 mm). It is held to the table with double-sided carpet tape.
+- Pin: the Frieling Classic Rolling Pin with Handles (12 inch barrel, 2.4 inch across, 21 inch overall, 1.6 lb; the
+  barrel turns on nylon bushings). Spacer rings: the 1/8 inch pair from Mrs. Anderson's Baking silicone rolling pin
+  rings (an 8-piece set, two rings each in four thicknesses from 0.0625 to 0.375 inch, sold for pins up to about 2.5
+  inches across). 1/8 inch is 3.18 mm; the sim uses 3.2 mm.
+- Pastry and flour: Pepperidge Farm Puff Pastry Sheets (17.3 oz box, two sheets); all-purpose flour and a small
+  fine-mesh sieve; a pizza wheel.
+- Ruler: the Prym Omnigrid Universal Ruler, cm scale, 15 x 60 cm (article 611308), a clear quilting ruler with a
+  metric grid. It locates the measuring points and guides the cut.
+- Measuring: a digital tire tread depth gauge (the common 0 to 25 mm kind reading 0.01 mm, a thin pin sliding out of a
+  flat foot); digital calipers (0.01 mm); a standard feeler gauge set (blades stacked to 3.00 mm as a check of the
+  depth gauge); a kitchen scale reading 0.1 g (for the flour); a room thermometer; a freezer thermometer; a steel
+  tape; masking tape; a timer; a phone with a level app and a camera on an overhead phone stand.
+
+## Real-world evaluation (reproducible protocol)
+
+Every real trial starts from the same measured state and is scored on the same 24 points as the simulator, read with a
+depth gauge. The protocol fixes the pastry (one product, one lot, the box's thaw, a measured cut), the room (20 to 24
+degrees C), the positions (tape marks on the table and board), the flour (weighed), the measurement (a ruler on the
+board's marks and a zeroed gauge, all 24 points read within 5 minutes, plus the pin check and photos) and the reset.
+Where a step comes from the maker's directions it is quoted; every other tolerance is the protocol's own setting,
+chosen to be well inside the scoring bands. They are collected in the table at the end. Positions are in cm from the
+midpoint between the arm bases (x forward, y to the robot's left), measured with the steel tape.
+
+**The room (every trial).** Everything is done at room temperature: 20 to 24 degrees C (68 to 75 degrees F), read on
+the room thermometer at the bench at the start of each trial and recorded. Outside that range no trial is run.
+
+**Marks (once).**
+- Board: masking-tape L marks on the table at the board's four corners put its front edge at x 10.0 and its center
+  line at y 0 within 2 mm, square to the robot within 0.5 degree. The board is taped down inside them with
+  double-sided carpet tape. The table and board are level within 0.5 degree (the phone's level app on the bare board,
+  both directions).
+- Ticks: short masking-tape ticks on the board's vertical edge faces (never on its top, where the rings run): on the
+  front and back faces at y 0 (the center line) and y -12 and 12 (the pastry's sides); on both side faces at x 18.25
+  and 29.75 (the pastry's near and far edges), at x 35 (the pin's axis), and at x 11, 15, 19, 23, 27, 31, 35 and 39
+  (the rows of measuring points, every 4 cm from 1 cm behind the front edge).
+- Camera: the phone on its overhead stand about 60 cm above the board, the whole board in frame, the same zoom and
+  position every trial.
+
+**The measuring points.** A 4 cm grid, the same points the sim reads: rows at x 11, 15, 19, ... 39 (the side-face
+ticks) and, along each row, the points 3, 7 and 11 cm either side of the center line (y -11, -7, -3, 3, 7, 11). A
+point counts when the pastry covers it. The demo's sheet covers 24 (rows x 19 to 31); a sheet rolled longer covers
+more rows, a shorter one fewer.
+
+**The pastry: product and lot (every series).** One product, Pepperidge Farm Puff Pastry Sheets, 17.3 oz, two sheets
+per box. A series of trials uses boxes of one lot (the code and best-by date printed on the box, recorded for each
+trial), bought together, inside their best-by date, and kept frozen ("Keep frozen until ready to thaw", the package)
+at -18 degrees C or colder (the freezer thermometer). A sheet is thawed once and never refrozen. If a series needs
+more boxes than one lot provides, the lot change is recorded and the next trial is flagged as the first of a new lot.
+Each trial uses one sheet, cut to half its size on the board.
+
+**Setting up a trial.** The package's directions are followed and quoted (the product listing at giantfoodstores.com
+and the maker's recipes at pepperidgefarm.com, e.g. Neapolitan Napoleons).
+1. Thaw: take one sheet from the box and return the other to the freezer at once. Remove its wrapping and thaw it at
+   room temperature, as the box directs: "Thaw pastry sheet at room temperature 40 minutes or until easy to handle";
+   "Thaw pastry sheet(s) until the pastry unfolds easily no more than 40 minutes"; "Pastry should unfold easily but
+   still be cold after thawing." Start the timer when it comes out of the freezer: it thaws 40 minutes (less only if
+   it unfolds easily sooner; the time is recorded).
+2. Board: clean and dry, inside its marks. Weigh 5.0 g of all-purpose flour (within 0.5 g) and sift it evenly over the
+   board: the box's "lightly floured surface", by weight. Lay the pin on its rings with its axis over the x 35 ticks
+   on both side faces (within 5 mm) and the rings' outer faces 5 cm in from the board's sides (within 5 mm each), so
+   the pin is centered and square. Check the rings first: both pushed fully onto the barrel's ends (outer face flush
+   with the barrel's end within 1 mm).
+3. Unfold: "Unfold pastry sheet on lightly floured surface", here on the board, centered on it, with its fold seams
+   running along x. Press the two fold seams together along their length with the fingertips, and "If pastry cracks
+   when unfolding, sprinkle the crack with water and press the edges together to seal" (the box). A sheet with a
+   corner missing is set aside and replaced from the same lot.
+4. Measure: read the sheet's thickness with the calipers at the middle of each of its four edges (the jaws closed just
+   to touch). The average is recorded; the maker gives 3/16 inch (4.8 mm), and a sheet averaging outside 4.3 to 5.3
+   mm is set aside.
+5. Cut: lay the ruler across the sheet, its long edge on the x 18.25 ticks, and run the pizza wheel along it; then on
+   the x 29.75 ticks; then lay it along x on the y -12 and y 12 ticks (the front and back faces) for the sides. Lift
+   the trimmings away. The piece is 11.5 x 24.0 cm, each edge within 3 mm of its ticks (checked with the steel tape),
+   with both fold seams inside it running along x.
+6. Zero the depth gauge (see "Measuring", step 3) now, so the measuring after the trial can start at once.
+7. Take the before photo (a card in frame with the trial number, lot code, thaw time, average thickness and room
+   temperature) and start the trial within 5 minutes of the end of the thaw. The run itself is limited to 3,000 steps
+   (2.5 minutes).
+
+**Measuring (every trial).** All 24 points are read within 5 minutes after the robot sets the pin down. Rolled dough
+is commonly described as pulling back as it rests, but no timing for this product was found, so the 5 minutes is the
+protocol's fixed window: every trial is read at the same short age. Start the timer when the pin comes to rest.
+1. Video: the last 1 s of the trial video shows no gripper finger touching the pin (let go).
+2. Pin: lay the phone along the top of the barrel, steadied by a fingertip on the phone (not on the pin), and read the
+   level app (zeroed on the bare board before the trial): within 3 degrees. Hold the steel tape upright beside each
+   ring: its lowest point is within 5 mm of the surface under it (the board, or the table if the pin was put down
+   beside the board). Take the after photo with the pin in place, and lift the pin straight up off the board. Pastry
+   beyond the board's edges (on the table or the floor) is noted from the photo; any pastry off the board scores 0.
+3. The gauge (zeroed before the trial): stand its foot on the bare board, push the pin down to the board and zero.
+   Stand it on a stack of feeler gauge blades making 3.00 mm (checked with the calipers): it reads within 0.05 mm, five
+   times, or it is re-zeroed and checked again.
+4. Read the rows from the back of the sheet to the front. For each row, lay the ruler across the board along y with
+   its near long edge on that row's two side-face ticks and an equal overhang at both sides (its 30 cm mark is then on
+   the center line), so the ruler lies on the board and on pastry already read, behind the row. At each of the row's
+   six points the pastry covers, stand the gauge on the pastry with its pin against the ruler's edge at the point's cm
+   mark (30 - 11, 30 - 7, ... 30 + 11 cm), let the foot settle by the gauge's own weight (no hand pressure), push the
+   pin down until it stops on the board, and read it to 0.01 mm: the pastry's thickness. A helper writes the readings
+   into the 4 cm grid table (or the phone records the reader's voice). A hole, a tear, or a spot where pastry stuck
+   to the pin and pulled away, at a point, is recorded as off spec. The time of the last reading is recorded: it must
+   be within 5 minutes of the set-down, or the trial is not scored.
+5. Repeatability (after the scored readings, not scored): re-read three points (the middle two of the middle row and
+   one end point) beside their first holes. Each repeat must be within 0.1 mm of its first reading; if not, the gauge is
+   re-zeroed and checked on the blades, and the trial is flagged.
+6. Photo the sheet with the ruler on its last row (the grid record).
+7. Score with the simulator's rules: at least 90 % of the read points at 2.9 to 3.5 mm (22 of 24), each band's
+   points (those at one y) averaged, within 0.3 mm of every other band's average, all pastry on the board, and the
+   pin down and let go for 1.0; the 0.5 and 0.25 tiers as above. There is no hand rule and no length rule.
+
+**Reset (every trial).** Throw the rolled sheet away (a new sheet every trial; nothing is re-rolled). Scrape the board
+with a bench scraper, wipe it with a dry cloth and let it dry; it is re-floured with weighed flour at the next set-up.
+Brush flour and pastry off the pin's barrel and rings and off the ruler with a dry pastry brush. Check each ring with
+the calipers at three places around it: half the difference between the ring's diameter and the barrel's beside it is
+3.2 mm within 0.1 mm (1/8 inch is 3.18 mm); a ring outside that, torn or stretched loose is replaced as a pair. Check
+the board is still inside its marks and the camera stand unmoved.
+
+**Tolerances.**
+
+| What | Target | Tolerance | How checked | Source |
+|---|---|---|---|---|
+| Room | room temperature | 20 to 24 degrees C (68 to 75 degrees F) | room thermometer at the bench | protocol |
+| Product | Pepperidge Farm Puff Pastry Sheets, 17.3 oz | one lot per series, inside best-by | box label recorded | protocol |
+| Storage | frozen | -18 degrees C or colder; never refrozen | freezer thermometer | package ("keep frozen"); temperature protocol |
+| Thaw | unwrapped, at room temperature, 40 min | no more than 40 min (less only if it unfolds easily sooner) | timer | package |
+| Seams and cracks | pressed together | cracks sprinkled with water and pressed to seal | by eye | package |
+| Sheet thickness | 4.8 mm (3/16 inch) | average 4.3 to 5.3 mm | calipers, 4 edges | maker's size; tolerance protocol |
+| Piece | 11.5 x 24.0 cm at x 18.25 to 29.75, y -12 to 12 | 3 mm each edge | ruler on the ticks, steel tape | protocol |
+| Thaw end to start | within 5 min | | timer | protocol |
+| Flour on the board | 5.0 g | 0.5 g | scale, sieve | package ("lightly floured"); weight protocol |
+| Board | front edge x 10.0, center y 0 | 2 mm; square and level within 0.5 degree | tape marks, steel tape, level app | protocol |
+| Pin start | axis at x 35, centered | 5 mm; rings flush on the barrel's ends within 1 mm | ticks, steel tape | protocol |
+| Ring height | 3.2 mm (1/8 inch = 3.18 mm) | 0.1 mm | calipers, 3 places per ring, every trial | protocol |
+| Gauge zero | 0.00 on the bare board | 3.00 mm of feeler blades read within 0.05 mm, five times | feeler gauge set | protocol |
+| Reading window | all 24 points | within 5 min of the pin's set-down | timer | protocol |
+| Repeat readings | three points re-read | within 0.1 mm | gauge | protocol |
+| Pin down (scored) | level, on its rings | within 3 degrees; rings within 5 mm of the surface | level app, steel tape | scoring |
+| Let go (scored) | no finger on the pin | last 1 s of the video | video | scoring |
+| Thickness points (scored) | 3.2 mm | 2.9 to 3.5 mm at 90 % of points (22 of 24); bands within 0.3 mm | gauge, 0.01 mm | scoring |
+
+The force a person needs to roll this pastry has not been measured, and the protocol does not measure it: the real
+trial is scored only on the measured sheet and the pin's final state.
 
 ## What the task tests
 

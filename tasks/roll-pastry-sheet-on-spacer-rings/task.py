@@ -38,11 +38,13 @@ INSTRUCTION = "Roll this puff pastry out to an even 1/8 inch (3.2 mm) thick."
 
 # --- Scene, in world coordinates (m): x forward from the arm bases, y to the robot's left, z up from the table top.
 BOARD = (0.25, 0.0)  # the pastry board's center (x, y)
-BOARD_SIZE = (0.30, 0.40, 0.015)  # 30 cm deep, 40 cm across (a 12 x 16 inch board), 1.5 cm thick (maple)
+BOARD_SIZE = (0.30, 0.40, 0.019)  # 30 cm deep, 40 cm across, 1.9 cm thick: a 12 x 16 x 3/4 inch maple board
 BOARD_FRICTION = (0.15, 0.10)  # static, dynamic: stands in for a barrel that turns on its bushings (see README)
 BZ = TOP + BOARD_SIZE[2]  # the board's top
 X_RANGE = (BOARD[0] - BOARD_SIZE[0] / 2, BOARD[0] + BOARD_SIZE[0] / 2)  # the board's front and back edges
-CELL = 0.02  # m: the measuring grid's pitch (a 2 cm grid lined up with the board's front edge and center line)
+CELL = 0.02  # m: the pastry model's cell (a 2 cm grid lined up with the board's front edge and center line)
+ROWS = (0, 2, 4, 7, 9, 11)  # the 2 cm bands read: centered 11, 7 and 3 cm either side of the center line
+COLS = slice(0, None, 2)  # every other 2 cm cell along x: x 11, 15, 19, ... cm (a 4 cm pitch from the front edge)
 
 PASTRY = (0.24, 0.0)  # the half sheet's center
 PASTRY_SIZE = (0.115, 0.24, 0.0048)  # half of a 23 x 24 cm sheet: 11.5 cm (x) by 24 cm (y), 4.8 mm (3/16 inch) thick
@@ -62,7 +64,7 @@ PIN_START = (PIN_X, 0.0, BZ + R_RING)
 TARGET_T = 0.0032  # m: 1/8 inch, the sheet's thickness (the rings' gap)
 TOL_T = 0.0003  # m: a point is on spec within 0.3 mm of 3.2 mm (2.9 to 3.5 mm, about 10 %)
 SPEC_SHARE = 0.90  # share of the measured points that must be on spec (the outer row of points, at the cut and rolled
-#                    edges, is a fifth of them; 10 % lets about half that row be off)
+#                    edges, is half of the 24 points; 10 % lets two of 24 be off)
 HALF_T = 0.0037  # m: at least 90 % of points at most 3.7 mm (within 0.5 mm, about one pass to go) earns half
 QUARTER_T = 0.0042  # m: at least 90 % of points at most 4.2 mm (0.6 mm off the 4.8 mm start) and even earns a quarter
 WEDGE_MAX = 0.0003  # m: the 2 cm bands' average thicknesses may differ by at most this across the width (the same
@@ -145,9 +147,10 @@ def released(objects):
 
 
 def points(objects=None):
-    """The thickness (m) at each measuring point: the centers of the 2 cm squares of a grid lined up with the board's
-    front edge and center line (rows: the 2 cm bands running along x), 0 where there is no pastry."""
-    return dk.grid()
+    """The thickness (m) at each measuring point, on a 4 cm grid: every other 2 cm cell along x from the board's front
+    edge (x 11, 15, 19, ... cm), in the bands 3, 7 and 11 cm either side of its center line (rows), 0 where there is no
+    pastry. 24 points on the demo's sheet."""
+    return dk.grid()[list(ROWS)][:, COLS]
 
 
 def sheet(objects=None):
@@ -161,7 +164,7 @@ def sheet(objects=None):
 
 
 def wedge(objects=None):
-    """How much thicker the thickest 2 cm band is than the thinnest, each averaged over its length (m): 0 for a pin
+    """How much thicker the thickest band read is than the thinnest, each averaged over its points (m): 0 for a pin
     kept level, which presses every band alike; a pin with one end lifted leaves that side thicker."""
     t = points(objects)
     means = [row[row > 0].mean() for row in t if (row > 0).any()]
@@ -201,12 +204,13 @@ def success(objects):
 
 
 def score(objects):
-    """The pastry's thickness is read at the centers of the 2 cm squares of a grid lined up with the board's front edge
-    and center line, at every point the pastry covers (the same points a real trial reads with a depth gauge). Doing
+    """The pastry's thickness is read on a 4 cm grid: the centers of every other 2 cm square along x from the board's
+    front edge, in the bands 3, 7 and 11 cm either side of its center line, at every point the pastry covers (24 on
+    the demo's sheet; the same points a real trial reads with a depth gauge). Doing
     nothing scores 0 (the half sheet starts 4.8 mm, 3/16 inch, thick). In the sim only, rolling counts while both
     hands are on the pin (each gripper touching it within 2 mm; the sim's pin slides rather than turns, so this stands
-    in for a pin rolled under two hands, which can keep both ends down). 1.0 if at least 90 % of the points are 3.2 mm
-    (1/8 inch, the rings' gap) within 0.3 mm, the 2 cm bands' average thicknesses differ by at most 0.3 mm across the
+    in for a pin rolled under two hands, which can keep both ends down). 1.0 if at least 90 % of the points (22 of
+    24) are 3.2 mm (1/8 inch, the rings' gap) within 0.3 mm, the bands' average thicknesses differ by at most 0.3 mm across the
     width (a pin with one end lifted leaves a wedge), all the pastry is still on the board, and the pin is set down
     level (within 3 degrees) on its rings on the board or table (within 5 mm) with no hand touching it (2 mm contact
     tolerance). 0.5 if at least 90 % of points are at most 3.7 mm (about one pass to go) but the sheet is not finished,

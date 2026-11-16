@@ -109,12 +109,13 @@ def demo_rolling(t, **kw):
 # -- the model --------------------------------------------------------------------------------------------------------
 
 def test_start_matches_product():
-    """Half a Pepperidge Farm sheet (24 x 23 cm, 3/16 inch): 11.5 x 24 cm at 4.8 mm, 132.5 mL, read at 96 points."""
+    """Half a Pepperidge Farm sheet (24 x 23 cm, 3/16 inch): 11.5 x 24 cm at 4.8 mm, 132.5 mL; on the 4 cm grid of
+    points it covers 18 (24 once rolled)."""
     t = Trial()
     assert m.PASTRY_SIZE == (0.115, 0.24, 0.0048)
     assert abs(dk.volume() - 0.115 * 0.24 * 0.0048) < 1e-12
     pts = m.points()
-    assert pts.shape[0] == 12 and abs(pts[pts > 0] - 0.0048).max() < 1e-12
+    assert pts.shape[0] == 6 and (pts > 0).sum() == 18 and abs(pts[pts > 0] - 0.0048).max() < 1e-12
     assert m.sheet()[0] == 0.0 and m.on_board() and m.pin_down(t.objects())
 
 
@@ -359,7 +360,7 @@ def test_wedge_blocks_full_credit():
 
 def test_thin_or_torn_points_off_spec():
     """Scorer check: points under 2.9 mm (a real sheet dragged thin or torn; the sim cannot make them) are off spec:
-    15 % of the points at 2.5 mm takes a finished sheet to 0.5."""
+    the outer two of the twelve 2 cm bands at 2.5 mm (4 of the 24 points read) take a finished sheet below 1.0."""
     t = Trial()
     demo_rolling(t)
     S = dk._state()
