@@ -56,7 +56,7 @@ poses in the simulator; in a real trial, the three fractions weighed on a 0.01 g
 ## Real-world evaluation (reproducible protocol)
 
 Every real trial starts from the same measured state and is scored on the same shares as the simulator, read by
-weighing. The protocol fixes four things: the debris (one recipe, one stencil, one cook, checked per batch), the
+weighing. The protocol fixes four things: the debris (one named batter, one stencil, one cook, checked per batch), the
 positions (stops and marks on the bench), the outcome measurement (three weighed fractions plus photos) and the reset.
 The tolerances are collected in the table at the end.
 
@@ -74,8 +74,8 @@ The tolerances are collected in the table at the end.
 
 **The stencil (once).** The 88 pieces' outlines (positions, sizes and turns) are those in `task.py`, the same every
 trial. Print them 1:1 with the script below (a 250 x 150 mm sheet: its bottom edge is the lip, its right edge the
-right splash guard) and have them laser-cut through a 3 mm acrylic sheet of that size. A second, 60 x 60 mm, 3 mm
-stencil carries the witness pieces: five 8 x 8 mm holes and one 17.5 x 17.5 mm hole.
+right splash guard) and have them laser-cut through a 3 mm stainless steel sheet of that size (it goes on the hot
+plate, like a metal pancake ring). A second, 60 x 60 mm, 3 mm steel stencil carries the witness pieces: five 8 x 8 mm holes and one 17.5 x 17.5 mm hole.
 
     python3 - <<'EOF'
     import math
@@ -96,10 +96,11 @@ The approach follows how cleaning products are tested on baked-on soil: a soil m
 applied at a fixed amount, baked on a fixed schedule, and its removal measured by weighing (for example the US federal
 specification A-A-7 for oven and grill cleaners, and CSPA DCC-12 for oven cleaners, which bake a standard soil on
 coupons and score removal from the coupons' weights). Those soils are spread as a thin film; this task needs separate
-pieces that keep their outlines, so it uses a paste that holds the stencil's shape when cooked.
+pieces that keep their outlines, so it uses the debris a griddle most often collects, burnt pancake batter, made
+from one named, widely sold mix and set in the steel stencil the way pancake rings hold batter.
 
-**Qualification (once, before the first trial).** Make the paste and cook the witness stencil's pieces on the plate
-(below) for 6, 8, 10 and 12 minutes at 230 degrees C, one set per time. Fix the cook time as the shortest one at which
+**Qualification (once, before the first trial).** Make the batter and cook the witness stencil's pieces on the plate
+(below) for 6, 8, 10 and 12 minutes at 230 degrees C after they set, one set per time. Fix the cook time as the shortest one at which
 the pieces are black through (a crust broken in half shows no pale center). For the first three batches at that time,
 record the witness pieces' masses and their black areas (measured on the top photo against the 1 cm grid): their
 medians are the reference for every later batch. Pieces that are black through and match the reference mass and area
@@ -110,15 +111,19 @@ are the same debris from batch to batch.
 2. Grease: 1.00 g of vegetable oil wiped over the plate with a paper towel, then buffed off with two dry paper towels
    weighed beforehand until they pick up no more. The film left (oil put on less the towels' gain) is at most 0.10 g:
    the plate is seasoned and lightly greased, as on a working griddle, with too little free oil to weigh.
-3. Paste: 100 g all-purpose (plain) wheat flour and 100 g water at room temperature, whisked smooth and rested 10
-   minutes; used within 1 hour. No other ingredients, so any lab can make the same paste.
-4. Stencil: set the main stencil flush with the lip and against the right splash guard, and the witness stencil
-   against the right guard at x 62 to 68. Weigh the bowl of paste, fill every hole level with a palette knife (each
-   piece's paste is its hole's volume: 23 mL in all) and weigh the bowl again: the paste used is within 5 % of the
-   qualification's. Lift the stencils straight up.
-5. Cook: move the griddle to a two-burner range away from the robot's bench. Heat until a contact surface thermometer
-   reads 230 degrees C within 10 at all five points marked on the plate (four corners and the middle of the stencil
-   area), then hold it there for the fixed cook time. Turn the burners off and let the griddle cool on the range until
+3. Batter: Krusteaz Light & Fluffy Buttermilk Complete Pancake Mix (water only), mixed by the box's directions: 1 cup
+   of mix spooned lightly into the cup and leveled (weighed; the weight is recorded at qualification and each batch
+   is within 5 % of it) whisked with 2/3 cup of cold water until just combined (slightly lumpy), rested 2 minutes, and
+   used within 30 minutes. The box's lot number is recorded with each trial.
+4. Stencil and set: move the griddle to a two-burner range away from the robot's bench. Set the lightly oiled main
+   stencil flush with the lip and against the right splash guard, and the witness stencil against the right guard at
+   x 62 to 68. Heat until a contact surface thermometer reads 190 degrees C (375 degrees F, the box's griddle
+   temperature) within 10 at all five points marked on the plate (four corners and the middle of the stencil area).
+   Weigh the bowl of batter, fill every hole level with a palette knife (each piece's batter is its hole's volume:
+   23 mL in all) and weigh the bowl again: the batter used is within 5 % of the qualification's. Wait 60 s for the
+   batter to set, then lift the stencils straight up with tongs (oven gloves on).
+5. Cook: raise the heat until all five points read 230 degrees C within 10, then hold it there for the fixed cook
+   time. Turn the burners off and let the griddle cool on the range until
    all five points read under 40 degrees C. Unplug or turn off the range; nothing hot goes to the robot's bench.
 6. Batch check: photograph the witness area from the overhead mount and measure each witness piece's black area
    against the grid; break the crust in half to check it is black through; lift the witness pieces with the razor
@@ -127,16 +132,16 @@ are the same debris from batch to batch.
    piece shows a pale center. If not, the plate is cleaned (Reset) and a fresh batch cooked. Then wipe the witness
    area clean.
 
-   If a lab cannot make the paste pieces pass this check reliably, a fallback debris is allowed and recorded with the
+   If a lab cannot make the batter pieces pass this check reliably, a fallback debris is allowed and recorded with the
    trial: hardwood lump charcoal broken and sanded into flakes and crusts of the stencil's sizes (sorted by mass to
-   the same per-piece masses within 25 %), each set into its stencil hole on a level skim of the same paste, 0.5 mm
+   the same per-piece masses within 25 %), each set into its stencil hole on a level skim of the same batter, 0.5 mm
    (a 0.5 mm shim stencil), and cooked as above so the skim bonds it to the plate. The pieces then look and break
-   like char and keep exact sizes, while the bond still comes from cooked-on paste. The batch check is the same.
+   like char and keep exact sizes, while the bond still comes from cooked-on batter. The batch check is the same.
 7. Set the griddle back against its stops and clamp it; lay the scraper in its outline; take the before photo (top
    camera, raking light on). Start the trial within 2 hours of the cook.
 
-The cooked residue is charred flour (its water cooks off), estimated at about 12 g in all; the batch check measures
-it. Because each piece's paste is its stencil hole's volume, the pieces' shares of the total are close to the
+The cooked residue is charred batter (its water cooks off), estimated at about 10 g in all; the batch check measures
+it. Because each piece's batter is its stencil hole's volume, the pieces' shares of the total are close to the
 simulator's: a flake 0.7 to 1.2 % of the mass (simulator 0.5 to 1.1 %), a crust 3.5 to 4.3 % (simulator 4.0 to
 4.9 %), so the thresholds keep their meaning: 1 % is about one flake left, 5 % about one crust.
 
@@ -167,7 +172,8 @@ scraper is replaced if its edge has a nick 0.5 mm or deeper. Then make a fresh b
 | Scraper | in its outline at x 25.0, y -25.5 | 5 mm, 3 degrees |
 | Stencil | flush with the lip and the right guard | 1 mm |
 | Oil film after buffing | at most 0.10 g | towels weighed (0.01 g) |
-| Paste used | the qualification's mass | 5 % |
+| Mix and batter used | the qualification's masses | 5 % |
+| Set | 190 degrees C at five points, 60 s | 10 degrees C; 5 s |
 | Cook | 230 degrees C at five points, for the fixed time | 10 degrees C; 15 s |
 | Cool | under 40 degrees C at five points | trial within 2 h |
 | Batch check | flake and crust masses and black areas; black through | within 25 % of the reference medians |
@@ -189,7 +195,7 @@ scraper is replaced if its edge has a nick 0.5 mm or deeper. Then make a fresh b
   = J per square m). Here that is 11 to 14 N per m for a flake and 24 to 28 for a crust. Millimanipulation
   measurements of baked food soils on stainless steel span about 0.3 to 80 J per square m (baked tomato paste 1 to
   20); heavily baked, polymerized lard is about 420 (Ali et al., Food and Bioproducts Processing, 2015). So the pieces
-  are freshly charred bits from the last order: this bond is how the simulator represents the real trials' charred flour paste.
+  are freshly charred bits from the last order: this bond is how the simulator represents the real trials' charred batter.
   Aged, polymerized carbon (years of it, which would need several times the arm's push) is out of scope. The value also sits below what the arm delivers: through the held scraper it frees a full row of
   about eight flakes at once only up to roughly 1.2 N in all; at 0.25 N per square cm the edge rode up over the first
   full row it met, pass after pass (measured in the simulator).
@@ -198,7 +204,7 @@ scraper is replaced if its edge has a nick 0.5 mm or deeper. Then make a fresh b
   (a thirty-second; flakes 0.028, crusts 0.034 to 0.038), so the task writes 32 times the bond (`BREAK_CAL`): flakes come free about 11 %
   under the values above and crusts 10 to 23 % over. A broken bond is not restored by the scene's reset (one trial per
   run).
-- **Real-trial bond.** The real debris is charred flour paste (see Real-world evaluation); the forces above are how
+- **Real-trial bond.** The real debris is charred pancake batter (see Real-world evaluation); the forces above are how
   the simulator represents it. The real bond comes from the fixed recipe, amount and cook, and every batch's witness pieces must match the qualification's masses and black areas within
   25 % and be black through before the batch is used.
 - **Contact settings.** Pieces are at least 2 mm thick (the blade is 1.5 mm, moving 4 cm/s: 0.2 mm per 240 Hz
@@ -249,8 +255,8 @@ frame's feet if needed), clamped to the bench with two C-clamps on its frame. It
 two-burner range away from the bench, and is under 40 degrees C and unplugged when it is clamped down: nothing at the
 bench is hot, so the trial is safe for the robot and the operator. The scraper is a 4 in. stiff griddle scraper with a
 stainless blade and a polypropylene handle in line with it (150 g, handle about 3.0 x 2.4 cm, within the gripper's
-opening). The debris is flour-and-water paste charred onto the plate through a stencil and cooled (see
-Real-world evaluation). Also needed: the two 3 mm acrylic stencils (laser-cut from the script's drawing), a palette
+opening). The debris is pancake batter (one named mix) set in a steel stencil, charred onto the plate and cooled (see
+Real-world evaluation). Also needed: the two 3 mm stainless steel stencils (laser-cut from the script's drawing), a palette
 knife, a contact surface thermometer, a razor-blade
 scraper, a soft brush, weighing boats, paper towels, white plastic catch sheets, two wooden stop blocks, a bubble level,
 a phone on an overhead mount, a desk lamp, and a kitchen scale (0.01 g).
