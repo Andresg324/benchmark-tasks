@@ -13,7 +13,7 @@ Scripted demo (reaches full score):
     inspect-robots run --embodiment yam_arena --policy yam_scripted -E task=tasks/scrape-griddle-into-trough/task.py \
       -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
       --instruction "Scrape the griddle clean into the grease tray with the scraper." \
-      --scorer task_score --max-steps 2200 --store-frames
+      --scorer task_score --max-steps 2400 --store-frames
 
 Model run (Dream-1): the same command with `--policy dream --max-steps 2400`.
 
@@ -33,9 +33,9 @@ see Real-world evaluation).
 | Anywhere else: on the plate, against a guard, on the blade over the griddle, falling into the tray | left on the griddle | not yet delivered |
 
 - **In the tray, by tiers.** 0.25 at 25 % in the tray (about one pancake), 0.5 at 60 %, 0.75 at 90 % with at most
-  5 % left on the griddle (about a fifth of a pancake), and 1.0 (with the set-down below) at 98 % with at most 2 %
-  left: the plate is clean. A fragment is 0.8 to 1.7 % of the mass, so 2 % allows about one fragment to stay behind.
-  Debris pushed loose but left on the plate is not clean: it is the same char in a pile.
+  2 % left on the griddle (about one fragment), and 1.0 (with the set-down below) at 98 % with nothing left on the
+  griddle: every fragment is off the plate. A fragment is 0.8 to 1.7 % of the mass, so a single fragment left behind
+  scores 0.75. Debris pushed loose but left on the plate is not clean: it is the same char in a pile.
 - **Set down.** 1.0 needs the clean plate and the scraper set down on the bench off the griddle (its origin within
   3.0 cm of the bench top and outside the griddle's footprint: a scraper lying on the plate or dropped in the grease
   tray does not count), released (no gripper's palm or fingers touching it: `touching()` in `guardkit.py`, a contact
@@ -92,8 +92,10 @@ one named, widely sold mix, weighed into one named mold, set and burnt on a fixe
 - Catch sheets: white plastic sheet taped to the bench around the griddle and to the floor in front of the bench, so
   nothing that leaves the griddle is lost.
 
-**The mold and its marks.** The Norpro 957R silicone silver-dollar pancake mold has seven 2.75 in. (7 cm) cavities, one
-in the middle and six around it (8.0 cm center to center), with built-in handles. Four cavities make the trial's
+**The mold and its marks.** The Norpro 957R is a silicone silver-dollar pancake mold with seven 2.75 in. (7 cm)
+cavities, a 9.5 x 9 in. footprint and built-in handles, heat safe to 450 F (chefsupplies.ca and bakedeco.com listings).
+The cavities sit one in the middle and six around it, 8.0 cm center to center (inferred from the footprint: seven
+7 cm cavities in 24 x 23 cm; confirmed on the mold before the first trial, and the marks below follow it). Four cavities make the trial's
 pancakes: the middle one and the three next to it toward the lip and to the left, so two pancakes sit side by side near
 the lip and two behind them, offset by half a cavity. A fifth, the cavity behind the middle one on the left, makes the
 witness pancake for the batch check. On the cold plate the mold is set handles up, square to the lip, with its two
@@ -220,9 +222,9 @@ throughout; the scraper is replaced if its edge has a nick 0.5 mm or deeper. The
 
 ## Runtime and seeds
 
-- Demo: a 101 s plan (2,015 control steps), run with `--max-steps 2200`. The recorded run scored 1.0 at step 1,939
-  (the trial ends once the set-down has held for 1 s, before the plan's final wait): at least 98 % in the tray and at
-  most 2 % left on the griddle; the last frame shows the plate clean and the pancakes' fragments in the tray.
+- Demo: a 110 s plan (2,190 control steps), run with `--max-steps 2400`. The recorded run scored 1.0 at step 2,139
+  (the trial ends once the set-down has held for 1 s, before the plan's final wait): at least 98 % in the tray and no
+  fragment left on the griddle; the last frame shows the plate clean and the pancakes' fragments in the tray.
 - Model run limit: 2,400 steps (2 minutes at 20 Hz).
 - The demo: the right hand takes the scraper by the handle from above, fingers closing across the handle (yaw 0: along
   world y), lifts it level and carries it over the right splash guard (tilted, its edge would hang below the guard's
@@ -235,8 +237,9 @@ throughout; the scraper is replaced if its edge has a nick 0.5 mm or deeper. The
   toward the robot at 4 cm/s to x 13.5 (1.5 cm past the lip, over the tray), and lifts it 3 cm in 0.6 s, slowly, so
   what rides on the blade slides off into the tray. Three lanes 5 cm apart (y -7.0, -2.0 and 3.0; the blade covers
   y -12.1 to 8.1), three times over: the first pass breaks the pancakes up and clears most of them, and the later
-  passes pick up the fragments that spill round the blade's ends. A last stroke from x 30.0 along the plate's left
-  side (centered at y 7.5) collects the fragments pushed past the left lane's end. Then the scraper is leveled over
+  passes pick up the fragments that spill round the blade's ends. A cleanup stroke from x 30.0 along each splash guard
+  (centered at y -12.0 and 8.0, the blade's ends 4.5 mm inside the guards) collects the fragments pushed past the
+  outer lanes' ends. Then the scraper is leveled over
   the tray, carried back over the guard, laid back where it was, and let go.
 - Speed: 88 bonded bodies slow the simulator to about 0.3 to 0.6 s per control step, depending on the GPU's load.
 - Seeds: none. The layout is fixed (`object_jitter=0`); the fragments' sizes and places come from a fixed seed in
@@ -257,7 +260,8 @@ Everything is off the shelf; the pages below give each item's published specific
   (https://www.wasserstrom.com/restaurant-supplies-equipment/dexter-russell-p94850-basics®-4-griddle-scraper-122621).
   The handle (3.0 x 2.4 cm in the simulator) is within the gripper's opening.
 - Mold: Norpro 957R silicone silver-dollar pancake mold, seven 2.75 in. (7 cm) cavities, 9.5 x 9 x 1.75 in., built-in
-  handles, heat resistant to 450 F; lifted off before the burn (https://www.bakedeco.com/detail.asp?id=49842).
+  handles, heat safe to 450 F; lifted off before the burn (https://www.bakedeco.com/detail.asp?id=49842,
+  https://chefsupplies.ca/products/norpro-silver-dollar-size-pancake-ring-957r).
 - Mix: Krusteaz Light & Fluffy Buttermilk Complete Pancake Mix (box directions: 1 cup of mix to two-thirds of a cup of water,
   stand 2 minutes, griddle at 375 F; https://www.krusteaz.com/products/pancakes-waffles/buttermilk-pancake/).
 - Balance: Ohaus Scout STX2202, 2,200 g by 0.01 g, 140 x 170 mm pan

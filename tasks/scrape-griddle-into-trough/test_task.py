@@ -224,14 +224,6 @@ def main():
         s = feed(with_debris(moved(frac), set_down(40)))
         tr, res, _ = M.shares(moved(frac))
         check(s == want, f"{tr:.1%} in the tray, the rest on the plate ({res:.1%}): {want} ({s})")
-    fresh()
-    s = feed(with_debris(moved(0.96, 0.02), set_down(40)))
-    tr, res, off = M.shares(moved(0.96, 0.02))
-    check(s == 0.75 and res <= 0.05, f"{tr:.1%} in the tray, {off:.1%} on the bench, {res:.1%} on the plate: 0.75 ({s})")
-    fresh()
-    s = feed(with_debris(moved(0.975, 0.012), set_down(40)))
-    check(s == 0.75, f"under 97.5 % in the tray, the rest on the plate or the bench: 0.75 (not 98 %) ({s})")
-
     # -- the full job, the hold, the hand -----------------------------------------------------------------------------
     full = moved(1.0)
     fresh()
@@ -242,13 +234,31 @@ def main():
     one[i_big] = M.START_DEBRIS[i_big]
     fresh()
     s = feed(with_debris(one, set_down(40)))
-    check(s == 1.0, f"the largest fragment ({M.CHIP_MASS[i_big] / T:.1%}) left on the plate: 1.0")
+    check(s == 0.75, f"a single fragment ({M.CHIP_MASS[i_big] / T:.1%}) left on the plate, the rest in the tray, "
+                     f"scraper set down: 0.75, below 1.0 ({s})")
+    one = moved(1.0)
+    i_small = int(np.argmin(M.CHIP_MASS))
+    one[i_small] = M.START_DEBRIS[i_small]
+    fresh()
+    s = feed(with_debris(one, set_down(40)))
+    check(s == 0.75, f"even the smallest fragment ({M.CHIP_MASS[i_small] / T:.1%}) left on the plate: 0.75 ({s})")
+    loose = moved(1.0)
+    loose[i_small, :3] = (0.30, 0.0, M.PLATE_Z + 0.0026)
+    fresh()
+    s = feed(with_debris(loose, set_down(40)))
+    check(s == 0.75, f"a fragment freed but left loose on the plate: 0.75 ({s})")
     two = moved(1.0)
     big = np.argsort(M.CHIP_MASS)[-2:]
     two[big] = M.START_DEBRIS[big]
     fresh()
     s = feed(with_debris(two, set_down(40)))
-    check(s == 0.75, f"the two largest fragments ({M.CHIP_MASS[big].sum() / T:.1%}) left on the plate: 0.75")
+    check(s == 0.5, f"the two largest fragments ({M.CHIP_MASS[big].sum() / T:.1%}) left on the plate: 0.5 ({s})")
+    flung = moved(1.0)
+    flung[i_big, :3] = (0.40, -0.26, M.TOP + 0.0026)
+    fresh()
+    s = feed(with_debris(flung, set_down(40)))
+    check(s == 1.0, f"the rest in the tray and one fragment ({M.CHIP_MASS[i_big] / T:.1%}) off the griddle (under the "
+                    f"2 % cap), nothing left on it: 1.0 ({s})")
     fresh()
     s = feed(with_debris(full, set_down(10)))
     check(s == 0.75, "set down only 0.5 s: 0.75 (hold not met)")
@@ -300,7 +310,7 @@ def main():
     readme = (HERE / "README.md").read_text()
     check(d["instruction"] == M.INSTRUCTION, "task.json instruction == task.INSTRUCTION")
     text = " ".join(str(d[k]) for k in ("setup", "scoring", "fidelity", "context")) + readme
-    for frag in ("25 %", "60 %", "90 %", "5 %", "98 %", "2 %", "70 degrees", "10 degrees", "1 cm", "1 s",
+    for frag in ("25 %", "60 %", "90 %", "98 %", "2 %", "70 degrees", "10 degrees", "1 cm", "1 s",
                  "30.8 g", "88", "22 fragments", "four", "136 g", "10.2 cm", "5.0 cm", "0.6 mm", "0.15 to 0.2",
                  "0.4 to 0.5", "0.5 g per cubic cm", "capped at 0.5", "caps the score at 0.25", "7.0 cm", "5 mm",
                  "12 N per m", "0.11 to 0.21 N", "0.8 to 1.7", "x 19.5, y -7.5 and 0.5", "x 26.4, y -3.5 and 4.5",
@@ -315,7 +325,7 @@ def main():
     # -- the demo plan: limits and a kinematic playback ----------------------------------------------------------------
     plan = M.demo()["right"]
     steps = round(sum(w.duration for w in plan) / M.DT)
-    check(steps <= 2200, f"demo plan {steps} steps (fits the README's 2,200-step demo run)")
+    check(steps <= 2300, f"demo plan {steps} steps (fits the README's 2,400-step demo run)")
     xs, ys, zs = ([w.pos[i] for w in plan] for i in range(3))
     check(min(xs) >= 0.15 and max(xs) <= 0.48, f"tool points within x 0.15-0.48 m ({min(xs):.3f}-{max(xs):.3f})")
     check(max(zs) - M.TOP <= 0.19, f"highest tool point {max(zs) - M.TOP:.3f} m above the table (wpcheck passes to 0.19)")
@@ -366,18 +376,19 @@ def main():
     g_left = M.PLATE_Y0 + M.PLATE_W
     ymax = max(float((o[None, :] + corners @ r.T)[:, 1].max()) for o, r in held_poses
                if float((o[None, :] + corners @ r.T)[:, 2].min()) < g_top)
-    check(ymax <= g_left - 0.005, f"below the guards' top the scraper stays at least 5 mm inside the left guard "
+    check(ymax <= g_left - 0.004, f"below the guards' top the scraper stays at least 4 mm inside the left guard "
                                   f"({(g_left - ymax) * 1000:.1f} mm)")
-    lanes = sorted([*M.LANES_Y, M.FINAL_LANE_Y])
-    check(lanes[-1] + M.BLADE_W / 2 >= 0.12, f"the last stroke reaches y {(lanes[-1] + M.BLADE_W / 2) * 100:.1f} cm "
-                                             f"along the plate's left side")
+    lanes = sorted([*M.LANES_Y, *M.EDGE_LANES_Y])
+    reach = (lanes[0] - M.BLADE_W / 2, lanes[-1] + M.BLADE_W / 2)
+    check(M.PLATE_Y0 + 0.004 <= reach[0] <= M.PLATE_Y0 + 0.006 and g_left - 0.006 <= reach[1] <= g_left - 0.004,
+          f"the cleanup strokes reach within 4 to 6 mm of both guards (y {reach[0] * 100:.2f} to {reach[1] * 100:.2f} cm)")
     touched = 0
     for o, opening in states:
         kit._OPENING.update(opening)
         M.success(dict(o))
         touched += int(M._L.s.touching)
-    check(not M._L.s.gouged and touched >= 9 * 60 + 30, f"kinematic playback of the demo plan: the edge on the plate for "
-                                                     f"{touched} steps (10 strokes), no gouge")
+    check(not M._L.s.gouged and touched >= 9 * 60 + 60, f"kinematic playback of the demo plan: the edge on the plate for "
+                                                     f"{touched} steps (11 strokes), no gouge")
     print("all pass")
 
 

@@ -202,9 +202,9 @@ BLADE = sk.Blade(center=tuple(EDGE_LOCAL), along=(0, 1, 0), normal=(0, 0, 1), wi
 GRID = sk.Plate(x0=LIP_X, y0=PLATE_Y0, lx=0.57, ly=0.31, z=PLATE_Z, cell=0.01, trough_x0=TRAY_X0,
                 trough_y=(PLATE_Y0, PLATE_Y0 + PLATE_W))
 TIER_TROUGH = (0.25, 0.60, 0.90)  # share of the debris (by mass) in the tray for 0.25, 0.5, 0.75
-RESIDUE_MAX = 0.05  # 0.75 also needs at most 5 % of the debris left on the griddle
+RESIDUE_MAX = 0.02  # 0.75 also needs at most 2 % of the debris left on the griddle (about one fragment)
 FULL_TROUGH = 0.98  # 1.0 needs at least 98 % in the tray ...
-FULL_RESIDUE = 0.02  # ... and at most 2 % left on the griddle (about one fragment), plus the scraper set down
+FULL_RESIDUE = 0.0  # ... and nothing left on the griddle (no fragment: the plate clean), plus the scraper set down
 
 # The plate's surface: seasoned steel with a film of grease on it, slippery to a steel blade and to carbon (greased steel
 # on steel, about 0.15). The simulator's default contact friction (1.2) would let the edge stick and chatter.
@@ -315,7 +315,7 @@ class Ledger:
         return t
 
     def clean(self) -> bool:
-        """The full state: at least 98 % in the tray, at most 2 % left on the griddle, and no cap."""
+        """The full state: at least 98 % in the tray, nothing left on the griddle, and no cap."""
         tr, res, sp = self.shares()
         return (tr >= FULL_TROUGH - 1e-12 and res <= FULL_RESIDUE + 1e-12 and not self.s.gouged
                 and sp <= SPILL_CAP_SHARE + 1e-12)
@@ -351,7 +351,7 @@ def _update(objects):
 
 
 def success(objects):
-    """At least 98 % of the debris (by mass) in the tray, at most 2 % left on the griddle, nothing gouged, at most 2 %
+    """At least 98 % of the debris (by mass) in the tray, nothing left on the griddle, nothing gouged, at most 2 %
     off the griddle, and the scraper set down on the bench, released and still: this step counts toward the 1 s
     hold."""
     _update(objects)
@@ -360,8 +360,8 @@ def success(objects):
 
 def score(objects):
     """By mass of the debris, from where the pieces really are: 0.25 with at least 25 % in the grease tray; 0.5 with at
-    least 60 %; 0.75 with at least 90 % in the tray and at most 5 % left on the griddle; 1.0 with at least 98 % in the
-    tray, at most 2 % left on the griddle and the scraper set down on the bench (off the griddle), released and still
+    least 60 %; 0.75 with at least 90 % in the tray and at most 2 % left on the griddle; 1.0 with at least 98 % in the
+    tray, nothing left on the griddle and the scraper set down on the bench (off the griddle), released and still
     for 1 s. Caps: a gouge (blade over 70 degrees, or the edge tilted over 10 degrees onto a corner, slid 1 cm) caps
     at 0.5; more than 2 % of the debris off the griddle caps at 0.25. Doing nothing scores 0."""
     _update(objects)
@@ -376,21 +376,22 @@ def score(objects):
 # which runs along x), lifts it and tilts it 40 degrees edge-down (Tilted pitch below zero: the approach leans forward),
 # so the edge points at the robot and the handle rises away from it. Each stroke sets the edge on the plate beyond
 # the debris, draws it toward the robot at 4 cm/s over the lip, lifts it slowly (5 cm/s) over the tray and moves
-# back. Three lanes 5 cm apart (each stroke overlaps the last by half the blade), three times over, so the plate ends
-# clean (at most 2 % left), then one long stroke along the plate's left side. The scraper crosses the splash guard only while level and high (tilted, its edge would hang
-# below the guard's top), so it is tilted over the plate and levelled over the tray. Then it goes back to where it lay, level, and is let go.
+# back. Three lanes 5 cm apart (each stroke overlaps the last by half the blade), three times over, then a cleanup stroke
+# along each splash guard, so the plate ends clean (nothing left). The scraper crosses the splash guard only while level
+# and high (tilted, its edge would hang below the guard's top), so it is tilted over the plate and levelled over the
+# tray. Then it goes back to where it lay, level, and is let go.
 SCRAPE_DEG = 40.0  # blade-to-plate angle of the demo's strokes (inside the 20-60 degree band)
 PRESS = 0.010  # m: the edge is aimed this far into the plate (the collider stops it). Holding the scraper, the hand
 # sits 3.5-6.5 mm above its command along the stroke (more toward the robot; measured in the simulator), so a shallower
 # aim lets the edge rise off the plate halfway down the stroke and the debris slip under it.
 LANES_Y = (-0.070, -0.020, 0.030)  # stroke centers: the blade covers y -0.121 to 0.081
 PASSES = 3
-# A last long stroke along the plate's left side: pushed fragments spread sideways, and a few can come to rest just
-# beyond the left lane's end (y about 10 cm, anywhere from the debris to the lip). Centered at y 7.5, the blade covers
-# y 2.4 to 12.6, 9.5 mm inside the left splash guard (13.55).
-FINAL_LANE_Y = 0.075
+# A cleanup pass along both splash guards: pushed fragments spread sideways, and a few can come to rest beyond the outer
+# lanes' ends, as far as the guards, anywhere from the debris to the lip. Centered at y -12.0 and 8.0, the blade covers
+# y -17.1 to -6.9 and 2.9 to 13.1, 4.5 mm inside each guard (-17.55 and 13.55).
+EDGE_LANES_Y = (-0.120, 0.080)
 FINAL_X_START = 0.300  # just inside the debris's far edge (the plate behind it is already clean): the right arm reaches
-# the left side no farther out
+# the left guard no farther out
 X_START, X_END = 0.350, 0.135  # edge from 4.8 cm beyond the debris to 1.5 cm past the lip. The hand lags about 1.5 cm,
 # so the edge lands over 3 cm beyond the debris: an edge that lands on a bonded piece presses it down and slides over
 # it, and pieces knocked back when a bond lets go can come to rest a few cm beyond the debris
@@ -430,11 +431,11 @@ def tcp_for_edge(edge, pitch: float) -> tuple:
     return tuple(float(v) for v in np.asarray(edge, float) - r @ (EDGE_LOCAL - GRASP_LOCAL))
 
 
-def _stroke(plan, y, label, x0=X_START):
+def _stroke(plan, y, label, x0=X_START, approach=1.5):
     p = pitch_for(SCRAPE_DEG)
     E = lambda x, dz: tcp_for_edge((x, y, PLATE_Z + dz), p)  # noqa: E731
     run = (x0 - X_END) / STROKE_SPEED
-    plan += [kit.Tilted(1.5, E(x0, LIFT), FINGER_CLOSED, f"over the start: {label}", GRIP_YAW + YAW_TRIM, pitch=p),
+    plan += [kit.Tilted(approach, E(x0, LIFT), FINGER_CLOSED, f"over the start: {label}", GRIP_YAW + YAW_TRIM, pitch=p),
              kit.Tilted(0.8, E(x0, -PRESS), FINGER_CLOSED, f"edge on: {label}", GRIP_YAW + YAW_TRIM, pitch=p),
              kit.Tilted(run, E(X_END, -PRESS), FINGER_CLOSED, label, GRIP_YAW + YAW_TRIM, pitch=p),
              kit.Tilted(LIFT_S, E(X_END, LIFT), FINGER_CLOSED, f"lift over the tray: {label}", GRIP_YAW + YAW_TRIM, pitch=p)]
@@ -456,7 +457,8 @@ def demo():
     for k in range(PASSES):
         for i, y in enumerate(LANES_Y):
             _stroke(plan, y, f"pass {k + 1} lane {i + 1}")
-    _stroke(plan, FINAL_LANE_Y, "the left side", x0=FINAL_X_START)
+    for y, side in zip(EDGE_LANES_Y, ("right", "left")):  # 3 s to cross to each guard (20 cm across, joints slow)
+        _stroke(plan, y, f"cleanup along the {side} guard", x0=FINAL_X_START, approach=3.0)
     e = tcp_for_edge((X_END, LANES_Y[-1], PLATE_Z + LIFT), p)  # levelled where the arm reaches CARRY_Z easily
     plan += [Waypoint(1.5, (e[0], e[1], CARRY_Z), FINGER_CLOSED, "level it over the tray", GRIP_YAW),
              Waypoint(2.0, (gx, gy, CARRY_Z), FINGER_CLOSED, "back over the bench", GRIP_YAW),
