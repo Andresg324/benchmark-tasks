@@ -692,6 +692,8 @@ def _patch_demo(demo) -> None:
                 goal, rot = np.asarray(w.pos, dtype=float), plain(w.yaw)
             if isinstance(w, Tilted) and (w.roll or w.pitch):
                 rot = _rot_xyz(w.roll, w.pitch) @ rot
+            if w.duration <= 0.0:  # a step the plan skips (read above, so a closed-loop plan can decide): no time,
+                continue  # and the arm does not head for it
             if t < w.duration:
                 s = demo.ik.smoothstep(t / w.duration)
                 return (prev_pos + s * (goal - prev_pos), demo.ik.slerp_matrix(prev_rot, rot, s),

@@ -160,16 +160,16 @@ CAP_WALL, CUP_DEPTH, CAP_END = 0.003, 0.015, 0.004  # E: 3 mm wall, 15 mm deep s
 CUP_R = CAP_ID / 2 + CAP_WALL
 ADAPTER_L, ADAPTER_R = 0.0351, 0.0095  # P: GearWrench 81354, 1.38 in (35.1 mm) long; E: 19 mm across
 ADAPTER_IN_CAP = 0.0095  # E: its 3/8-inch male square sits this deep in the cap's drive
-RATCHET_L = 0.6106  # P: GearWrench 81364XP, 24.04 in overall (from the head's far edge to the handle's end)
-HEAD_W, HEAD_T = 0.0368, 0.0175  # P: its head 1.45 in (36.8 mm) wide, 0.69 in (17.5 mm) thick
-HANDLE_R = 0.011  # E: the handle about 22 mm thick at the grip
+RATCHET_L = 0.4191  # P: GearWrench 81361T, 16.5 in overall (from the head's far edge to the handle's end)
+HEAD_W, HEAD_T = 0.0437, 0.0163  # P: its head 1.72 in (43.7 mm) wide, 0.64 in (16.3 mm) thick
+HANDLE_R, GRIP_L = 0.0125, 0.20  # E: the dual-material grip about 25 mm thick, on the handle's last 20 cm
 HEAD_BOT = CAP_END + ADAPTER_L - ADAPTER_IN_CAP  # the ratchet's head sits on the adapter (2.96 cm above the cap's floor)
 HEAD_TOP = HEAD_BOT + HEAD_T
 HEAD_R = HEAD_W / 2
 HANDLE_Z = HEAD_BOT + HEAD_T / 2  # the handle's axis above the cap's inside floor (mid-head)
 HANDLE_X = (-(RATCHET_L - HEAD_R), -HEAD_R)  # along the tool's -x, from the drive's axis: the handle to its end
-RATCHET_KG, ADAPTER_KG, CAP_KG = 1.361, 0.027, 0.060  # P: 3.000 lb catalog; P: 0.06 lb catalog; E: the steel cap
-TOOL_MASS = RATCHET_KG + ADAPTER_KG + CAP_KG  # 1.45 kg
+RATCHET_KG, ADAPTER_KG, CAP_KG = 1.157, 0.027, 0.060  # P: 2.550 lb catalog; P: 0.06 lb catalog; E: the steel cap
+TOOL_MASS = RATCHET_KG + ADAPTER_KG + CAP_KG  # 1.24 kg
 SEAT_TOL = 0.002  # m: the cap down on the can (the lift within 2 mm of resting on its top)
 CENTER_TOL = 0.003  # m: and centered on its axis within 3 mm (the flutes engage)
 CUP_PLAY = 0.002  # m: over the can, the cup's wall lets each slide move this far off the axis (the flutes' play)
@@ -184,7 +184,7 @@ PAWL_DRAG = 0.2  # N*m: the ratchet freewheeling back
 # Where the wrench starts and works (see the demo): its handle swings clockwise (seen from above) through WRENCH_STROKE
 # degrees from STROKE_A0 (the handle's direction from the filter's axis, degrees from +x) on each stroke. At the start it
 # lies on the bench cap down, its handle along STROKE_A0, slid TOOL_SIDE sideways (along the tool's y) from the axis.
-STROKE_A0 = 280.0
+STROKE_A0 = 270.0
 WRENCH_STROKE = 30.0
 TOOL_SIDE = 0.13
 TOOL_TURN0 = math.radians(STROKE_A0 - 180.0)  # the handle runs along the tool's -x
@@ -330,6 +330,7 @@ class ToolSlideLaw:
 
 
 CHROME = kit.Look((0.80, 0.81, 0.83), 0.2, metallic=0.95)
+GRIP_LOOK = kit.Look((0.10, 0.10, 0.11), 0.7)  # the ratchet's black grip
 CAP_LOOK = kit.Look((0.30, 0.31, 0.33), 0.4, metallic=0.8)  # the cap: dark gray steel
 
 
@@ -343,9 +344,9 @@ def _tool_parts():
     meshes.append(kit.cylinder((0.004, 0.0, HEAD_TOP + 0.0015), 0.006, 0.003, CHROME))  # the direction lever
     hl = HANDLE_X[1] - HANDLE_X[0]
     mid = (HANDLE_X[0] + HANDLE_X[1]) / 2
-    # the handle: a flat beam from the head, then the round contoured grip (polished chrome, no rubber) to its end
+    # the handle: a flat polished beam from the head, then the round dual-material grip (black) to its end
     meshes.append(kit.box((mid, 0.0, HANDLE_Z), (hl, 0.016, 0.012), CHROME))
-    meshes.append(kit.cylinder((HANDLE_X[0] + 0.075, 0.0, HANDLE_Z), HANDLE_R, 0.15, CHROME, axis="x"))
+    meshes.append(kit.cylinder((HANDLE_X[0] + GRIP_L / 2, 0.0, HANDLE_Z), HANDLE_R, GRIP_L, GRIP_LOOK, axis="x"))
     colliders = (kit.Collider((mid, 0.0, HANDLE_Z), size=(hl, 2 * HANDLE_R, 2 * HANDLE_R)),)
     return tuple(meshes), colliders
 
@@ -617,9 +618,13 @@ def score(objects):
 
 # --- Demo ----------------------------------------------------------------------------------------
 GRIP_Z = TOP + SEAT + CAN_H - 0.015  # the tool point 1.5 cm below the can's top (pad tips 2.8 cm down its side)
-R_GRIP = {"right": 0.55, "left": 0.22}  # where each hand holds the wrench's handle, from the cap's axis (m)
-SHARE = {"right": 0.67, "left": 0.33}  # each hand's share of the torque: alike fractions of what each arm can push
-#                                        there (about 13 N right at 0.55 m, 16 N left at 0.22 m, at rated torque)
+R_GRIP = {"right": 0.36, "left": 0.22}  # where each hand holds the wrench's handle, from the cap's axis (m): the right
+#                                         on the grip 3.7 cm from its end, the left 14 cm nearer the head (further out,
+#                                         the left arm cannot reach it with the wrench carried over the filter)
+# The right hand's share of the torque by handle angle: alike fractions of what each arm can push there at its peak
+# torque (worked through the arms' Jacobians, with the torque that holds each arm up and the hands bearing down):
+# right 37 N and left 35 N at 270 degrees, 42 and 32 N at 255, 39 and 29 N at 240.
+SHARE_R = ((240.0, 0.68), (255.0, 0.68), (270.0, 0.63))
 MARGIN = 1.0  # N*m pushed past what the gasket holds, so the filter keeps turning through the stroke
 PAD_BELOW = 0.006  # the pad tips this far below the handle's axis: the fingers close round it
 CARRY_LIFT = 0.021  # the wrench carried with its cap 6 mm over the can's top (it clears it at 1.7 cm of lift)
@@ -683,27 +688,27 @@ def _push(side, a_deg, torque):
     """The pads' push (N, world) for this hand's share of `torque` (N*m, clockwise seen from above) on a handle along
     a_deg."""
     a = math.radians(a_deg)
-    f = SHARE[side] * torque / R_GRIP[side]
+    share = float(np.interp(a_deg, [x for x, _ in SHARE_R], [v for _, v in SHARE_R]))
+    f = (share if side == "right" else 1.0 - share) * torque / R_GRIP[side]
     return (f * math.sin(a), -f * math.cos(a), 0.0)
 
 
-CARRY_FIX = (0.007, 0.008)  # m (wrench x, y): the carried 1.45 kg wrench lands this far short (measured in sim o3dbg:
-# t_x -7 mm, tool -8 mm as the cap met the can's top), more than the arms' give model predicts; aimed past by it
-CARRY_FIX_STEPS = ("over the filter", "cap onto the can")
 PRESS_DOWN = 3.0  # N: each hand bears down on the handle while it pulls, keeping the cap on the flutes,
 PRESS_PER_NM = 0.6  # plus this much per N*m of the stroke's torque (about 14 N each at 19 N*m): in sim o7dbg, with 3 N
 # only, the hands rose about 13 mm on the hardest strokes and lifted the cap off the flutes
-WEIGHT_SHARE = {"right": 0.30, "left": 0.70}  # the wrench's 9.8 N between the hands, by where they hold it
+# The wrench's 12 N between the hands while they carry it: evenly, about 6 N each. The model wrench cannot tilt (its
+# joints are a lift, a turn and two slides), so only the sum holds it up.
+WEIGHT_SHARE = {"right": 0.5, "left": 0.5}
 
 
-def _pair(dur, label, a_deg, lift=0.0, slide=0.0, torque=0.0, finger=None, carry=False):
-    """One waypoint for each hand on the handle."""
+def _pair(dur, label, a_deg, lift=0.0, slide=0.0, torque=0.0, finger=None, carry=False, fix=(0.0, 0.0)):
+    """One waypoint for each hand on the handle (`fix`: the wrench aimed this far further along its x and y)."""
     from yam_arena.constants import FINGER_CLOSED
     out = {}
     for side in ("left", "right"):
         up = WEIGHT_SHARE[side] * TOOL_MASS * 9.81 if carry else (
             -(PRESS_DOWN + PRESS_PER_NM * torque) if torque > 0.0 else 0.0)
-        fx, fy = CARRY_FIX if label in CARRY_FIX_STEPS else (0.0, 0.0)
+        fx, fy = fix
         pos, yaw = _hand(side, a_deg, lift, slide + fy, _push(side, a_deg, torque), up, fx)
         out[side] = Waypoint(dur, pos, FINGER_CLOSED if finger is None else finger, label, yaw)
     return out
@@ -778,6 +783,8 @@ HAND_MAX = 8  # strokes at most (three quarters of a turn is about four; the cap
 DONE_PAST = 270.0
 AIM_PAST = 280.0  # each stroke aims here (inside 240 to 360), so the last one ends a little past DONE_PAST
 WRENCH_MAX = 14
+WRENCH_STALL = 2.0  # degrees: a stroke past 240 that turns the filter less than this means the arms are at their limit
+CENTER_PASSES = 2  # looks at the carried cap's offset from the can's axis before lowering it (0.8 s each)
 
 
 def _hand_phase(st):
@@ -841,7 +848,15 @@ def _wrench_phase(st):
     fixed("grip the handle", 0.8, a0, LIFT_TABLE, side, 0.0, FINGER_CLOSED, False)
     fixed("lift the wrench", 1.6, a0, CARRY_LIFT, side, 0.0, FINGER_CLOSED, True)
     fixed("over the filter", 2.0, a0, CARRY_LIFT, 0.0, 0.0, FINGER_CLOSED, True)
-    fixed("cap onto the can", 1.2, a0, 0.004, 0.0, 0.0, FINGER_CLOSED, True)
+    st["fix"] = (0.0, 0.0)
+    for k in range(CENTER_PASSES):
+        def center():  # the carried cap is seen off the can's axis by (t_x, tool): aim the hands that much further
+            J = tool_joints()
+            err = (J["t_x"], J["tool"])
+            st["fix"] = tuple(f - 0.8 * float(np.clip(e, -0.015, 0.015)) for f, e in zip(st["fix"], err))
+            return a0, CARRY_LIFT, 0.0, 0.0, FINGER_CLOSED, True
+        steps.append(("center the cap over the can", 0.8, center, None))
+    steps.append(("cap onto the can", 1.2, lambda: (a0, 0.004, 0.0, 0.0, FINGER_CLOSED, True), None))
     fixed("seated", 0.6, a0, 0.0, 0.0, 0.0, FINGER_CLOSED, False)
     sub = 5
     for n in range(WRENCH_MAX):
@@ -869,7 +884,9 @@ def _wrench_phase(st):
                       runs))
 
         def back(n=n):  # tight now? then no more strokes
-            if st["wstop"] is None and (_seen_past() >= DONE_PAST or n == WRENCH_MAX - 1):
+            gain = _seen_past() - st["p"]
+            stalled = _seen_past() >= GOOD_LO and gain < WRENCH_STALL
+            if st["wstop"] is None and (_seen_past() >= DONE_PAST or stalled or n == WRENCH_MAX - 1):
                 st["wstop"] = n
             return a0, 0.0, 0.0, 0.0, FINGER_CLOSED, False
         steps.append((f"stroke {n + 1}: ratchet back", 1.6, back,
@@ -890,7 +907,9 @@ def _wrench_phase(st):
         def both(spec=spec, label=label, dur=dur, cache=cache):
             if not cache:
                 a, lift, sl, torque, finger, carry = spec()
-                cache.update(_pair(dur, label, a, lift, sl, torque, finger, carry))
+                low = label in ("over the filter", "center the cap over the can", "cap onto the can")
+                fix = st["fix"] if low else (0.0, 0.0)
+                cache.update(_pair(dur, label, a, lift, sl, torque, finger, carry, fix))
             return cache
 
         for arm in ("left", "right"):

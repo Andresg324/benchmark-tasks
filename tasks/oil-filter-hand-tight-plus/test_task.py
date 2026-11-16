@@ -418,10 +418,11 @@ def tjoints(turn, lift=0.0, x=0.0, y=0.0):
     return {"t_lift": lift, "t_turn": turn, "t_x": x, "tool": y}
 
 
-def tool_run(t, to_past, hands_on=True, step_deg=2.0, handle_r=0.55):
+def tool_run(t, to_past, hands_on=True, step_deg=2.0, handle_r=None):
     """Seat the wrench on the can and swing its handle clockwise in 40-degree strokes (ratcheting back between them),
     pushing each stroke past the gasket's hold, until the filter is `to_past` degrees past contact; a hand on the
     handle near its end if `hands_on`. Each step: the model, then the filter put where the wrench drove it."""
+    handle_r = m.R_GRIP["right"] if handle_r is None else handle_r
     q = math.radians(m.STROKE_A0 - 180.0)
     stroke_left = m.WRENCH_STROKE
     while t.past < to_past - 1e-6:
@@ -547,7 +548,7 @@ case("wrench: tightened to 300 but left on the filter", done(tool_run(tool_trial
 t = tool_run(tool_trial(), 300.0)
 tool_off(t)
 J = tool_joints = m.tool_joints()
-hp = m.tool_point(J, (-0.5, 0.0, m.HANDLE_Z))
+hp = m.tool_point(J, (-m.R_GRIP["right"], 0.0, m.HANDLE_Z))
 case("wrench: laid down but still held", t.hold(30, R=(tuple(hp + np.array([0, 0, 0.013])), 0.05, 0.0)), 0.5)
 case("wrench: only to 200 past contact", done(tool_off(tool_run(tool_trial(), 200.0))), 0.5)
 case("wrench: cranked to 470 (past 1.25 turns)", done(tool_off(tool_run(tool_trial(), 470.0))), 0.0)
