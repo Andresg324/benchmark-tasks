@@ -514,7 +514,11 @@ def _tw(duration, pos, finger, label, pitch=0.0, yaw=None):
 
 GRASP_X = 0.015  # m: the right hand holds the body 1.5 cm behind its middle (toward the crimp), on the wall panels
 def demo():
-    """Left hand holds the brush up, level; right hand doses it; both put things back."""
+    """Left hand holds the brush up, level; right hand doses it; both put things back. (TOOTH_VARIANT=nothing: both
+    hands park high and wait, touching nothing: the scorer's do-nothing check.)"""
+    if os.environ.get("TOOTH_VARIANT") == "nothing":
+        return {"left": [Waypoint(10.0, (0.20, 0.25, TOP + 0.25), finger_for(WIDE), "park", 0.0)],
+                "right": [Waypoint(10.0, (0.20, -0.25, TOP + 0.25), finger_for(WIDE), "park", 0.0)]}
     tx, ty, tz = TUBE_START
     gx = tx + GRASP_X
     push, dose_s = VARIANTS.get(os.environ.get("TOOTH_VARIANT", ""), (DOSE_PUSH, DOSE_S))
@@ -561,5 +565,6 @@ def demo():
              Waypoint(1.5, (bx, by, bz + 0.001), b_hold, "lay it down", GRIP_YAW),
              Waypoint(0.8, (bx, by, bz + 0.001), b_open, "let go", GRIP_YAW),
              Waypoint(1.0, (bx, by, bz + 0.08), b_open, "lift clear", GRIP_YAW),
-             Waypoint(4.0, (bx, by, bz + 0.08), b_open, "wait", GRIP_YAW)]
+             Waypoint(1.0, (bx - 0.06, by + 0.05, bz + 0.15), b_open, "back and up, the head in view", GRIP_YAW),
+             Waypoint(3.0, (bx - 0.06, by + 0.05, bz + 0.15), b_open, "wait", GRIP_YAW)]
     return {"left": left, "right": right}
