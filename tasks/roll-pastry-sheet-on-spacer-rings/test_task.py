@@ -110,7 +110,7 @@ def demo_rolling(t, **kw):
 
 def test_start_matches_product():
     """Half a Pepperidge Farm sheet (24 x 23 cm, 3/16 inch): 11.5 x 24 cm at 4.8 mm, 132.5 mL; on the 4 cm grid of
-    points it covers 18 (24 once rolled)."""
+    patches it is read in 18 (3 a band; 30 once rolled)."""
     t = Trial()
     assert m.PASTRY_SIZE == (0.115, 0.24, 0.0048)
     assert abs(dk.volume() - 0.115 * 0.24 * 0.0048) < 1e-12
@@ -187,14 +187,16 @@ def test_demo_full_score():
 
 
 def test_demo_with_lag_at_turns_full():
-    """The sim's pin trails the hands by about 1 cm at each turn: the demo's strokes still finish the sheet with the
-    pin stopping 2 cm short of each commanded end."""
-    t = Trial()
-    t.lift_to(m.CENTER_X)
-    for e in m.STROKES:
-        x0 = float(t.pin[0])
-        t.roll(e - 0.02 if e > x0 else e + 0.02)
-    assert t.let_go()[0] == 1.0
+    """The sim's pin trails the hands by about 1 cm at each turn (the demo holds 0.5 s there to let it catch up): the
+    demo's strokes still finish the sheet with the pin stopping 1 cm short of each commanded end. Stopping 2 cm short
+    leaves the last centimeter of each end under-rolled, and the end patches, read at their thickest, show it."""
+    for lag, full in ((0.01, True), (0.02, False)):
+        t = Trial()
+        t.lift_to(m.CENTER_X)
+        for e in m.STROKES:
+            x0 = float(t.pin[0])
+            t.roll(e - lag if e > x0 else e + lag)
+        assert (t.let_go()[0] == 1.0) == full, lag
 
 
 def test_not_home_full():
@@ -310,13 +312,15 @@ def test_uniform_3_6_mm_half():
     assert t.let_go()[0] == 0.5
 
 
-def test_two_passes_full():
-    """Two level passes reach 3.3 to 3.4 mm, inside 2.9 to 3.5 mm: 1.0 (the demo makes four)."""
+def test_two_passes_half():
+    """Two level passes reach 3.3 to 3.4 mm in the middle, but the ends, which have grown out past the first passes'
+    turns, are still 3.6 mm: the end patches, read at their thickest, are off spec, so 0.5 (the demo makes four)."""
     t = Trial()
     t.lift_to(m.CENTER_X)
     t.strokes(m.STROKES[:8])
-    assert m.sheet()[0] >= m.SPEC_SHARE
-    assert t.let_go()[0] == 1.0
+    on, half, _, _ = m.sheet()
+    assert on < m.SPEC_SHARE <= half
+    assert t.let_go()[0] == 0.5
 
 
 def test_one_arm_tilt_zero():
@@ -542,18 +546,18 @@ def test_pin_tilted_on_something_capped():
 
 def test_unrolled_end_caught_by_end_points():
     """Review check, Nov 16: strokes that stop short of the near end (x 19.5 cm) leave its last 3 cm at the 4.8 mm start
-    while every row point (every 4 cm along x) is on spec; the end points, 1 cm inside each band's rolled ends, read
-    the unrolled end, so the sheet no longer scores 1.0."""
+    while every point of a fixed 4 cm grid is on spec; the patches tile each band end to end, so the near patch reads
+    the unrolled end and the sheet no longer scores 1.0."""
     t = Trial()
     t.lift_to(m.CENTER_X)
     for _ in range(4):
         t.strokes([0.32, 0.24, 0.195, 0.24])
     t.lift_to(m.PIN_X)
-    rows = dk.grid()[list(m.ROWS)][:, m.COLS]
+    rows = dk.grid()[list(m.ROWS)][:, ::2]  # the earlier row points: every 4 cm along x
     assert (np.abs(rows[rows > 0] - m.TARGET_T) <= m.TOL_T + 1e-9).all()  # the row points alone see a finished sheet
     assert dk.grid().max() > 0.0047  # the near end is still at the start's thickness
     p = m.points()
-    assert (p[:, -2] > 0.0047).all()  # every band's near end point reads it
+    assert (p[:, 0] > 0.0047).all()  # every band's first patch, at its near end, reads it
     assert t.let_go()[0] < 1.0
 
 
