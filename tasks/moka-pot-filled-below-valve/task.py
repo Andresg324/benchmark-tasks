@@ -801,6 +801,50 @@ class _Live(kit.Tilted):
         return self._get()[1]
 
 
+# Once the gasket is pressed the strokes still planned are skipped: each waypoint of them lasts one control step (the
+# open hand holds over the lid), and the other hand's hold on the base is shortened by the same time, so both hands
+# let go as soon as the top is snug instead of waiting out the unused strokes (about 30 s).
+SKIP_S = 0.05
+_SKIPPED = []  # the skippable waypoints
+
+
+class _Skip(_Live):
+    """A _Live waypoint that lasts SKIP_S once `skip()` is true (checked only before the arm reaches it)."""
+
+    def __init__(self, duration, fn, finger, label, skip):
+        self._skip = skip
+        super().__init__(duration, fn, finger, label)
+        _SKIPPED.append(self)
+
+    @property
+    def duration(self):
+        return SKIP_S if self._skip() else self._dur
+
+    @duration.setter
+    def duration(self, v):
+        self._dur = v
+
+
+def skipped_s():
+    """Seconds the skipped waypoints no longer take."""
+    return sum(w._dur - SKIP_S for w in _SKIPPED if w._skip())
+
+
+class _HoldBase(_Live):
+    """The other hand's hold on the base: it ends `skipped_s()` sooner."""
+
+    def __init__(self, duration, pos, finger, label):
+        super().__init__(duration, lambda: (pos, 0.0, finger, 0.0, PITCH_IN), finger, label)
+
+    @property
+    def duration(self):
+        return max(0.5, self._dur - skipped_s())
+
+    @duration.setter
+    def duration(self, v):
+        self._dur = v
+
+
 def _axis():
     """The base's axis (xy) as seen now."""
     return _seen("rim", (BX, BY, FLOOR_Z + RIM))[:2]
@@ -890,7 +934,10 @@ def twist(n_strokes, start_yaw, step_s=0.3, grip_s=0.7, held_at=None, open_s=1.4
         st["z"], st["zmin"] = grip_z()
         st["y0"] = next_yaw()
         st["yn"], st["yf"], st["ylast"] = None, None, st["y0"]
-        st["stop"] = st.get("stop") or _SEEN.get("comp", -1.0) >= C_STOP
+        st["i"] = st.get("i", -1) + 1
+        st.setdefault("stop", False)
+        if not st["stop"] and _SEEN.get("comp", -1.0) >= C_STOP:
+            st["stop"], st["stop_i"] = True, st["i"] - 1
         st["cmd"] = np.array(_about_axis(st["y0"], axis=st["ax"]), float)
         return hold() if st["stop"] else ((*st["cmd"], st["z"]), st["y0"])
 
@@ -952,6 +999,8 @@ def twist(n_strokes, start_yaw, step_s=0.3, grip_s=0.7, held_at=None, open_s=1.4
         if st["stop"]:  # stopped before this stroke: the open hand stays over the top (it came down onto its
             return hold()  # shoulder from there and lifted the screwed-on top off with the basket, d39, d40)
         st["stop"] = st.get("yf") is not None or _SEEN.get("comp", -1.0) >= C_STOP
+        if st["stop"]:
+            st["stop_i"] = st["i"]
         ye = yend()
         d = math.degrees(st["y0"] - ye)
         if st["stop"]:
@@ -969,23 +1018,30 @@ def twist(n_strokes, start_yaw, step_s=0.3, grip_s=0.7, held_at=None, open_s=1.4
             x, y, z = held_at()
             return (x, y, z - 0.002), st["y0"]
         out.append(_Live(open_s, opening, FINGER_OPEN, f"{label}: open the hand"))
+    def after(i):  # stroke i comes after the one the strokes stopped in
+        return lambda: st.get("stop_i") is not None and i > st["stop_i"]
+
+    def back(i):  # stroke i's roll back and descent are not needed: the strokes stopped in it or before
+        return lambda: st.get("stop_i") is not None and i >= st["stop_i"]
+
     for i in range(n_strokes):
-        out.append(_Live(0.8, start, FINGER_OPEN, f"{label}: to the grip offset"))
+        sk = after(i)
+        out.append(_Skip(0.8, start, FINGER_OPEN, f"{label}: to the grip offset", sk))
         for _ in range(REGRIP_FIXES):
-            out.append(_Live(0.8, fix_grip, FINGER_OPEN, f"{label}: fixed pad onto the body"))
-        out.append(_Live(grip_s, turn(0), REGRIP_FINGER, f"{label}: grip"))
+            out.append(_Skip(0.8, fix_grip, FINGER_OPEN, f"{label}: fixed pad onto the body", sk))
+        out.append(_Skip(grip_s, turn(0), REGRIP_FINGER, f"{label}: grip", sk))
         for k in range(1, n + 1):
-            out.append(_Live(step_s, turn(k), REGRIP_FINGER, f"{label}: turn"))
-        out.append(_Live(open_s, turn(n, FINGER_OPEN), FINGER_OPEN, f"{label}: let go"))
+            out.append(_Skip(step_s, turn(k), REGRIP_FINGER, f"{label}: turn", sk))
+        out.append(_Skip(open_s, turn(n, FINGER_OPEN), FINGER_OPEN, f"{label}: let go", sk))
         # straight up off it first: moved sideways at once, the opened hand knocked a part-threaded top off (d12)
-        out.append(_Live(1.2, up, FINGER_OPEN, f"{label}: up off it"))
-        out.append(_Live(0.6, cen(0.025, yend), FINGER_OPEN, f"{label}: center the open hand"))
+        out.append(_Skip(1.2, up, FINGER_OPEN, f"{label}: up off it", sk))
+        out.append(_Skip(0.6, cen(0.025, yend), FINGER_OPEN, f"{label}: center the open hand", sk))
         if i < n_strokes - 1:  # up over the handle, roll back to the next start yaw there, and down round the body
-            out.append(_Live(1.0, cen(LIFT_OVER, yend), FINGER_OPEN, f"{label}: lift over"))
+            out.append(_Skip(1.0, cen(LIFT_OVER, yend), FINGER_OPEN, f"{label}: lift over", sk))
             for k in range(1, n + 1):
-                out.append(_Live(step_s * 0.8, cen(LIFT_OVER, lambda k=k: YAW_END + (next_yaw() - YAW_END) * k / n),
-                                 FINGER_OPEN, f"{label}: roll back"))
-            out.append(_Live(1.0, cen(0.0, next_yaw), FINGER_OPEN, f"{label}: back down"))
+                out.append(_Skip(step_s * 0.8, cen(LIFT_OVER, lambda k=k: YAW_END + (next_yaw() - YAW_END) * k / n),
+                                 FINGER_OPEN, f"{label}: roll back", back(i)))
+            out.append(_Skip(1.0, cen(0.0, next_yaw), FINGER_OPEN, f"{label}: back down", back(i)))
     out.append(_Live(1.2, cen(LIFT_OVER, yend), FINGER_OPEN, f"{label}: lift clear"))
     # straight up well over the pot, then over towards the arm's side, before going home: straight home from over the
     # top, the open hand came down to the top's shoulder and lifted the screwed-on top off with the basket (d39)
@@ -1148,6 +1204,6 @@ def demo():
     # set on popped the basket up ~3 mm and the top's face pinned it there crooked (d15-d17); with nothing over it, the
     # basket settles back down the mouth's lead-in
     left, _, done = left_plan(held + 1.0, None, press=held)
-    right.append(_steady_t(max(0.5, done - held), (STEADY_X, STEADY_Y, FLOOR_Z + BASE_GZ), STEADY_GRIP,
+    right.append(_HoldBase(max(0.5, done - held), (STEADY_X, STEADY_Y, FLOOR_Z + BASE_GZ), STEADY_GRIP,
                            "hold the base"))
     return {"right": right + release_plan(), "left": left}
