@@ -140,7 +140,8 @@ the body to a 6.3 cm gap, 2.6 cm up it. Each stroke starts at the wrist angle th
 plates, read from the chamber's pose, and turns clockwise to the end of the wrist's range (about 180 degrees),
 following the thread down at 3.0 mm a turn and keeping the chamber upright with the wrist. The handle turns with the
 hand, so it is beside the plates again at the next regrip. The hand stops turning the moment the gasket is pressed
-0.15 mm, lets go, and rises over the lid, then straight up and aside. In the run the gasket ended pressed 0.17 mm. By the
+0.15 mm, lets go, and rises over the lid, then straight up and aside; the strokes still planned are skipped, so
+the right hand lets go of the base as soon as the left hand is clear. In the run the gasket ended pressed 0.17 mm. By the
 scorer's model (2.5 N·m per 0.10 mm) that is about 4 N·m at the wrist: above the YAM wrist motor's 3 N·m rated torque
 (DM-J4310) and within its 7 N·m peak, which is the sim's wrist effort limit; the 50 N grip with rubber pads holds
 about 4 N·m on the 7 cm body. Last, the right hand lets go of the base and
@@ -148,7 +149,7 @@ backs out.
 
 ## Runtime and seeds
 
-- Demo: 1.0 in 3,352 steps (the scripted demo, see The demo). Dream-1: not yet run on this version.
+- Demo: 1.0 in 2,583 steps (the scripted demo, see The demo). Dream-1: 0 (ran the full 4,000 steps without finishing).
 - Model run limit: 4,000 steps (200 seconds at 20 Hz). One fixed layout, `object_jitter=0`.
 
 ## Fidelity
