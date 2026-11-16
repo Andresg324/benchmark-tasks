@@ -14,7 +14,6 @@ follows the object however it lies.
         part is not touching it.
 """
 
-import math
 from dataclasses import dataclass
 import numpy as np
 import yamkit as kit

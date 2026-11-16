@@ -143,13 +143,32 @@ def band(path, width: float, thickness: float, look: Look, normal=(1, 0, 0)) -> 
 
 
 @dataclass(frozen=True)
+class Surface:
+    """A physics material for one `Collider`: friction (static, dynamic) and, for a soft part such as a rubber gasket,
+    PhysX compliant contact. `stiffness` (N/m) and `damping` (N*s/m) act PER CONTACT POINT, so a part's overall
+    stiffness depends on how many points PhysX generates: calibrate it in the sim (load it with known forces and read
+    the compression). `combine` is PhysX's friction combine mode ("average", "min", "multiply", "max"; the higher one
+    in that order wins between two surfaces)."""
+
+    friction: tuple = (1.2, 1.0)
+    stiffness: float = 0.0
+    damping: float = 0.0
+    combine: str = "average"
+
+
+@dataclass(frozen=True)
 class Collider:
-    """An invisible box (`size`) or cylinder (`radius`, `height`, along z) collider in the prop's frame."""
+    """An invisible box (`size`) or cylinder (`radius`, `height`, along z) collider in the prop's frame. `quat` (x, y,
+    z, w) turns a box about its center (for oriented pieces such as a thread's helix of segments). `surface` gives it
+    its own physics material (see `Surface`); then every collider of that prop takes its material from the USD (the
+    others from the prop's `friction`), because Isaac Lab binds a prop-wide material over every collider."""
 
     center: tuple
     size: tuple | None = None
     radius: float = 0.0
     height: float = 0.0
+    quat: tuple | None = None
+    surface: Surface | None = None
 
 
 # -- props -----------------------------------------------------------------------------------
@@ -170,6 +189,7 @@ class Prop(Box):
     colliders: tuple = field(default=())
     tilt_xyzw: tuple = (0.0, 0.0, 0.0, 1.0)
     friction: tuple | None = None
+    max_depenetration: float | None = None  # m/s cap on PhysX's push-apart speed (PhysX default: unbounded)
 
 
 def _linear(c: float) -> float:
@@ -207,11 +227,35 @@ def _usda(prop: Prop) -> str:
                    f'        uniform token subdivisionScheme = "none"\n'
                    f'        uniform bool doubleSided = 1\n'
                    f'        rel material:binding = </Root/Looks/M{looks.index(m.look)}>\n    }}\n')
+    surfaces = _surfaces(prop)
+    if surfaces:
+        out.append('    def Scope "PhysicsMaterials"\n    {\n')
+        for i, sf in enumerate(surfaces):
+            out.append(f'        def Material "P{i}" (\n            prepend apiSchemas = ["PhysicsMaterialAPI", '
+                       f'"PhysxMaterialAPI"]\n        )\n        {{\n'
+                       f'            float physics:staticFriction = {sf.friction[0]}\n'
+                       f'            float physics:dynamicFriction = {sf.friction[1]}\n'
+                       f'            float physics:restitution = 0\n'
+                       f'            float physxMaterial:compliantContactStiffness = {sf.stiffness}\n'
+                       f'            float physxMaterial:compliantContactDamping = {sf.damping}\n'
+                       f'            uniform token physxMaterial:frictionCombineMode = "{sf.combine}"\n        }}\n')
+        out.append("    }\n")
     for i, c in enumerate(prop.colliders):
         kind = "Cube" if c.size is not None else "Cylinder"
-        out.append(f'    def {kind} "C{i}" (\n        prepend apiSchemas = ["PhysicsCollisionAPI"]\n    )\n    {{\n'
+        schemas = '"PhysicsCollisionAPI", "MaterialBindingAPI"' if surfaces else '"PhysicsCollisionAPI"'
+        out.append(f'    def {kind} "C{i}" (\n        prepend apiSchemas = [{schemas}]\n    )\n    {{\n'
                    f'        uniform token purpose = "guide"\n')
-        if c.size is not None:
+        if surfaces:
+            sf = c.surface or _prop_surface(prop)
+            out.append(f"        rel material:binding:physics = </Root/PhysicsMaterials/P{surfaces.index(sf)}>\n")
+        if c.size is not None and c.quat is not None:
+            x, y, z, w = c.quat
+            out.append("        double size = 1\n"
+                       f"        double3 xformOp:translate = {_fmt(c.center)}\n"
+                       f"        quatf xformOp:orient = {_fmt((w, x, y, z))}\n"
+                       f"        float3 xformOp:scale = {_fmt(c.size)}\n"
+                       '        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]\n')
+        elif c.size is not None:
             out.append("        double size = 1\n"
                        f"        double3 xformOp:translate = {_fmt(c.center)}\n"
                        f"        float3 xformOp:scale = {_fmt(c.size)}\n"
@@ -224,6 +268,18 @@ def _usda(prop: Prop) -> str:
         out.append("    }\n")
     out.append("}\n")
     return "".join(out)
+
+
+def _prop_surface(prop: Prop) -> Surface:
+    return Surface(friction=tuple(prop.friction) if prop.friction is not None else Surface().friction)
+
+
+def _surfaces(prop: Prop) -> list:
+    """The distinct physics materials a prop's colliders carry, or [] when none has its own `surface` (then Isaac
+    Lab's prop-wide material applies as before)."""
+    if not any(c.surface is not None for c in prop.colliders):
+        return []
+    return list(dict.fromkeys(c.surface or _prop_surface(prop) for c in prop.colliders))
 
 
 def _write(prop: Prop) -> str:
@@ -359,6 +415,8 @@ def _body_usda(name: str, translate, mass, meshes, colliders, looks, floating=Fa
                    f'{i2}    uniform bool doubleSided = 1\n'
                    f'{i2}    rel material:binding = </Root/Looks/M{looks.index(m.look)}>\n{i2}}}\n')
     for i, c in enumerate(colliders):
+        if c.quat is not None or c.surface is not None:
+            raise ValueError("oriented colliders (quat) and surfaces are supported on Props, not on Mechanism bodies")
         kind = "Cube" if c.size is not None else "Cylinder"
         out.append(f'{i2}def {kind} "C{i}" (\n{i2}    prepend apiSchemas = ["PhysicsCollisionAPI"]\n{i2})\n{i2}{{\n'
                    f'{i2}    uniform token purpose = "guide"\n')
@@ -643,12 +701,18 @@ def _patch(scene) -> None:
         mat = scene._grippy()
         if spec.friction is not None:
             mat = type(mat)(static_friction=spec.friction[0], dynamic_friction=spec.friction[1])
-        addon = {"physics_material": mat}
+        # Isaac Lab binds this material over every collider (stronger than descendants); with per-collider surfaces
+        # the USD carries all the materials instead
+        addon = {} if _surfaces(spec) else {"physics_material": mat}
         if spec.mass is None:
             addon.update(func=scene._spawn_fixture,
                          rigid_props=scene.PhysxRigidBodyPropertiesCfg(kinematic_enabled=True))
         else:
             addon.update(collision_props=scene._contact_props())
+            if spec.max_depenetration is not None:  # thin interlocking colliders (a thread) can overlap deeply on
+                # impact; uncapped, PhysX pushes them apart at metres per second and the part is thrown
+                addon.update(rigid_props=scene.PhysxRigidBodyPropertiesCfg(
+                    max_depenetration_velocity=spec.max_depenetration))
         return scene.Object(
             name=spec.name,
             usd_path=_write(spec),

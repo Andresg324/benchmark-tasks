@@ -1,10 +1,11 @@
-"""A 3-cup aluminum stovetop moka pot, taken apart: its empty water chamber (the base, with the brass safety valve on
-its side) already stands on the cold burner grate of a gas stove, its upper chamber stands upright on the counter to
-the left of the stove, a glass carafe of water stands on the counter to the right, and the funnel basket, already
-filled with ground coffee, stands in an espresso cup behind it. Making moka coffee means filling the base with water up
-to just below the safety valve, never over it (the valve could then not vent the steam if the funnel clogs) and not
-far under it (weak, under-extracted coffee), dropping the filled basket into the base, and screwing the upper chamber
-onto the base until it is snug, so steam cannot escape at the gasket and the pot is safe to heat.
+"""A 3-cup aluminum stovetop moka pot, taken apart on the kitchen counter: its empty water chamber (the base, with the
+brass safety valve on its side) stands free on the counter, its upper chamber stands upright to the left of it, a glass
+carafe of water stands to the right, and the funnel basket, already filled with ground coffee, stands in an espresso cup
+behind it. Making moka coffee means filling the base with water up to just below the safety valve, never over it (the
+valve could then not vent the steam if the funnel clogs) and not far under it (weak, under-extracted coffee), dropping
+the filled basket into the base, and screwing the upper chamber onto the base's thread, straight, until the gasket is
+pressed snug, while the other hand steadies the base, so steam cannot escape at the gasket. The pot then goes on the
+stove (not part of this task).
 """
 
 import math
@@ -15,7 +16,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np  # noqa: E402
 import pourkit as pk  # noqa: E402  (the water: volumes, pours, spills)
-import twistkit as tk  # noqa: E402  (regrasp twist plans and the signed wrist-roll grip accounting reused below)
+import threadkit as thk  # noqa: E402  (the screw thread as collider segments, and the gasket)
+import twistkit as tk  # noqa: E402  (signed wrist-roll helpers and the wrist's yaw range)
 import yamkit as kit  # noqa: E402  (modeled props, gripper states, tilted grips)
 import guardkit as gk  # noqa: E402  (gripper contact: holding and letting go)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN, PAD_TIP_PAST_TCP  # noqa: E402
@@ -29,24 +31,25 @@ SCORE_OVER = "end"
 INSTRUCTION = "Get the moka pot ready to brew."
 D = math.radians
 
-# Real size throughout (a 3-cup moka pot is 15.9 cm tall assembled).
-# The stove: a steel hob plate with one burner and a four-finger cast-iron grate, centered on the pot.
+# Real size throughout (a 3-cup moka pot is 15.9 cm tall assembled). The base stands free on the counter.
 BX, BY = 0.27, 0.05  # toward the left arm: it can lift its open hand over the whole upper chamber here (see twist)
-PLATE = (0.14, 0.14, 0.004)
-GRATE_H = 0.014
-FLOOR_Z = TOP + PLATE[2] + GRATE_H  # the grate fingers' top: the pot's base stands here
+FLOOR_Z = TOP
 
-# The base (in a fixed holder on the grate, in the sim and the real build; in a kitchen the other hand steadies it):
-# an aluminum water chamber 8.2 cm across at the foot, 7.2 cm tall, tapering to a threaded collar 6.6 cm across.
-# Heights are in its own frame (origin on its foot, on its axis). Inside it steps in three times (cast wall); the
-# water is modeled in these three sections.
+# The base (free, 0.30 kg empty: an estimate for the cast-aluminum 3-cup base): an aluminum water chamber, octagonal
+# outside (8.0 cm across the flats, as the Moka Express's eight-sided body), 7.2 cm tall, with a threaded collar 6.6 cm
+# across on top. Heights are in its own frame (origin on its foot, on its axis). Inside it steps in three times (cast
+# wall); the water is modeled in these three sections.
 B_FOOT_R, B_COLLAR_R, RIM = 0.041, 0.033, 0.072
+B_FLATS = 0.080
+B_MASS = 0.30
 B_FLOOR = 0.004
 SECTIONS = ((0.036, 0.020), (0.033, 0.020), (0.031, 0.028))  # (inside radius, height) from the floor up
 COLLAR_H = 0.012  # the thread on the collar's outside, under the upper chamber's skirt when screwed on
 VALVE_Z = 0.050  # the safety valve's center; its bore inside the wall is 8 mm across
 VALVE_BORE_R = 0.004
 TOP_LINE_Z = VALVE_Z - VALVE_BORE_R  # 4.6 cm: water above the bore's bottom edge stands in the valve
+
+
 
 
 def ml_below(z):
@@ -63,15 +66,30 @@ VALVE_ML = ml_below(TOP_LINE_Z)  # 155.8 mL: up to the valve bore's bottom edge
 LOW_ML = ml_below(TOP_LINE_Z - 0.010)  # 122.5 mL: 1 cm below it (a fifth less water: weak, under-extracted coffee)
 DRY_ML = 30.0  # under this nothing worth brewing went in (do-nothing included)
 
+
 # The upper chamber (free, 0.20 kg): a 7.0 cm wide aluminum pot with a lid, knob, spout and a black handle, 8.7 cm
 # tall, its skirt (female thread) dropping 1.2 cm over the base's collar. Frame origin: the center of its bottom
-# face, which rests on the base's rim when it is on.
+# face, which rests on the basket's flange (through the gasket) when it is screwed on.
 T_R, T_TOP_R, T_H = 0.035, 0.040, 0.087
 SKIRT_IN, SKIRT_OUT = 0.036, 0.0425  # the skirt (female thread) round the base's collar
-RIB_R = 0.0385  # its ribs' centers (2.5 mm round): inner edge 3.6 cm off the axis, the collar's collider is 3.4 cm
-GRIP_DZ = 0.025  # grip height on its body, above its bottom face
+GRIP_DZ = 0.033  # grip height on its body, above its bottom face (high, clear of the hand holding the base)
 T_WIDTH = 2 * T_R
 HANDLE_ANG = D(45)  # the handle points 45 degrees off the fingers' closing axis at the start (fingers clear of it)
+
+# The thread (threadkit, a helix of collider boxes on each part, so the top really screws on and a crooked start can
+# ride or bind on the wrong groove): 66 mm major diameter, single start, right hand, 3.0 mm pitch, 1.5 turns on each
+# part, 0.3 mm flank clearance. The base's ridge sits 1.5 mm higher than threadkit's default (5.0 mm under the rim)
+# because the upper chamber seats on the basket's 1.5 mm flange, not on the rim.
+TH_MALE = thk.Thread(male_top=-0.0050)
+TH_FEMALE = thk.MOKA
+# The gasket: a ring of compliant boxes standing 0.8 mm proud of the upper chamber's bottom face (threadkit.Gasket).
+GASKET = thk.Gasket(k_point=1.0e4)  # per contact point: 2,500 let a 50 N load punch through (probe p7)
+AL_AL = (1.1, 1.0)  # aluminum on aluminum, dry (handbook static 1.05-1.35): the threads, the base on the counter
+# m/s: PhysX's push-apart speed for the upper chamber, whose thin thread ridges can overlap the base's on impact. Only
+# the upper chamber is capped: with the base capped too, the basket's flange sank through the base's rim at the
+# thread's rate under the gasket's ~20 N and sprang back when unloaded (d33a-d37).
+MAX_DEPEN = 0.05
+SEAT_T = 0.003  # the upper chamber's bottom face as a ring of boxes this thick
 
 # The carafe (free): a 4.9 cm glass carafe 13.5 cm tall holding 175 mL. Pouring all of it in brings the base to 175
 # mL, 19 mL over the valve: the pour has to stop.
@@ -83,85 +101,121 @@ FOOT = 0.001
 TOP_XY = (0.24, 0.19)
 
 # The funnel basket (free, 40 g: 25 g of stainless steel and 15 g of ground coffee), a stainless replacement funnel for
-# a 3-cup pot: a flange 6.5 cm across and 1.5 mm thick, a cup 6.1 cm across at the top tapering to 4.6 cm at its
+# a 3-cup pot: a flange 6.12 cm across and 1.5 mm thick, a cup 6.1 cm across at the top tapering to 4.6 cm at its
 # perforated floor 2.0 cm down, and a stem 1.0 cm across and 3.8 cm long. Frame origin: the center of the flange's
-# bottom face, which rests on the base's rim when it is in (the upper chamber then sits on the flange, 1.5 mm higher).
-# The coffee is level with the flange.
-K_FLANGE_R, K_FLANGE_T = 0.0325, 0.0015
+# bottom face, which rests on the base's rim when it is in (the upper chamber's gasket then presses on the flange).
+# The coffee is level with the flange. The flange has to pass inside the upper chamber's female thread (its crests are
+# 6.44 cm across), so it is narrower than that thread.
+# The flange is 6.12 cm across: its edge (with the cup's 0.2-0.5 mm play in the bore) must stay well inside the upper
+# chamber's female crests (6.44 cm): at 6.24 cm, drawn as 24 boxes whose corners stand 0.3 mm proud, the crests caught
+# it and the screwing dragged the basket 8-14 mm down into the base (d25, d26).
+K_FLANGE_R, K_FLANGE_T = 0.0306, 0.0015
 K_TOP_R, K_FLOOR_R, K_DEPTH = 0.0305, 0.023, 0.020
 K_STEM_R, K_STEM_L = 0.005, 0.038
 # It starts standing in a ceramic espresso cup (5.4 cm across, 5.0 cm tall, 4.2 cm across inside its mouth): the
 # basket's floor rests on the cup's rim and its stem hangs inside, the way it is set down to be filled.
 CUP_XY, CUP_R, CUP_IN, CUP_H = (0.36, -0.07), 0.027, 0.021, 0.050
 BASKET_POS = (*CUP_XY, TOP + CUP_H + K_DEPTH + 0.0005)
-# The base's wall inside the collar, as 24 posts round the 6.2 cm opening (the cup and stem go down inside them, the
-# flange rests on their tops at the rim): center radius and post radius
-WALL_R, POST_R, N_POSTS = 0.0325, 0.0016, 24
-# The basket and the base's mouth are bare metal: they get METAL_MU (static, dynamic), a handbook dry value for steel
-# on aluminum (the stainless basket on the aluminum base), instead of yam_arena's rubber-like default (1.2, 1.0) for
-# things a gripper picks up. With the rubber value a basket dropped 14 degrees crooked wedged on the square-edged posts
-# that model the mouth, 7 mm up (sim runs); with this one it slides down flat.
+# The base's wall inside the collar, as 24 posts round the opening (the cup and stem go down inside them, the flange
+# rests on their tops at the rim), kept inside the thread's root: center radius and post radius
+# The wall's outside at the rim (6.26 cm across) stands 0.9 mm inside the female thread's crests, so a top set on 0.9 mm
+# off the axis still goes down round it onto the thread.
+# The posts are 2.6 mm thick so the flange rests on a 2.5 mm ledge (on 1.5 mm, a basket lying 1.5 mm off center
+# tipped into the opening when the top came down, d12).
+WALL_R, POST_R, N_POSTS = 0.0300, 0.0013, 24  # 1.9 mm round the cup's 5.35 cm band (at 1.1 mm it hung on the posts, d3)
+# The mouth: the collar's inside is turned to a short lead-in over the top 2 mm (r 28.7 mm at 2 mm down to 29.0 mm at
+# the rim), and outside it the rim is the boiler wall's flat top, 2.3 mm wide and 3 mm deep (29.0-31.3 mm, 48 boxes like
+# the flange's ring), that the flange (r 30.6 mm) bears on with its outer 1.6 mm. As on the real pot, the funnel drops
+# into the boiler's mouth: its cup's centering band (r 28.5 mm, see K_BAND_Z) stands in the bore with 0.2 mm play (at
+# most 0.5 mm in the lead-in), so the flange's edge stays within 31.1 mm of the base's axis, 1.1 mm inside the upper
+# chamber's female crests (32.2 mm), and its bearing on the rim never runs out.
+MOUTH_R0, MOUTH_R1, MOUTH_H, MOUTH_T = 0.0287, 0.0290, 0.002, 0.0008
+LEDGE_R, LEDGE_H, LEDGE_N = (0.0290, 0.0313), 0.003, 48
+# The band reaches 6.5 mm down, well into the bore under the 2 mm lead-in (0.2 mm play there): only 1 mm of a 2.6 mm
+# band was below the lead-in, and under the screwing top's gasket the basket crept 1.1-1.3 mm sideways, its flange's
+# 1.0 mm bearing on the ledge ran out on one side and it sank 2.1 mm (d33a, d34).
+K_BAND_R, K_BAND_Z = 0.0285, (-0.0065, -0.0004)  # the basket's centering band, in its frame
+# The basket and the base's mouth are bare metal: METAL_MU (static, dynamic), a handbook dry value for steel on
+# aluminum, instead of yam_arena's rubber-like default (1.2, 1.0). With the rubber value a basket dropped crooked wedged
+# on the posts that model the mouth (sim runs); with this one it slides down flat.
 METAL_MU = (0.6, 0.47)
 
 ALU = kit.Look((0.78, 0.79, 0.80), 0.35, metallic=1.0)
 DARK_ALU = kit.Look((0.45, 0.46, 0.48), 0.5, metallic=1.0)
 BRASS = kit.Look((0.86, 0.66, 0.22), 0.3, metallic=1.0)
 BLACK = kit.Look((0.06, 0.06, 0.07), 0.5)
-IRON = kit.Look((0.12, 0.12, 0.13), 0.7)
 COFFEE = kit.Look((0.20, 0.12, 0.07), 0.9)
 CERAMIC = kit.Look((0.93, 0.92, 0.89), 0.25)
-STEEL = kit.Look((0.55, 0.56, 0.58), 0.35, metallic=1.0)
 GLASS_LOOK = kit.Look((0.86, 0.92, 0.95), 0.05, opacity=0.28)
 WATER_RGB = (0.25, 0.52, 0.95)
 
 
-def _stove():
-    t, g = PLATE[2], GRATE_H
-    meshes = [kit.box((0, 0, t / 2), PLATE, STEEL),
-              kit.cylinder((0, 0, t + 0.003), 0.028, 0.006, BLACK)]  # the burner cap
-    cols = [kit.Collider((0, 0, t / 2), size=PLATE)]
-    for a in (45, 135, 225, 315):  # grate fingers, diagonal so the pot's valve side (-x) stays in view
-        c, s = math.cos(D(a)), math.sin(D(a))
-        r0, r1 = 0.022, 0.066
-        # a finger along its own radial direction, as four blocks (yamkit boxes are axis-aligned)
-        for k in range(4):
-            rr = r0 + (k + 0.5) * (r1 - r0) / 4
-            p = (rr * c, rr * s, t + g / 2)
-            meshes.append(kit.box(p, (0.012, 0.012, g), IRON))
-            cols.append(kit.Collider(p, size=(0.012, 0.012, g)))
-    ring = [(0.066 * math.cos(u), 0.066 * math.sin(u), t + g - 0.003) for u in np.linspace(0, 2 * math.pi, 41)]
-    meshes.append(kit.band(ring, 0.006, 0.006, IRON, normal=(0, 0, 1)))
-    return kit.Prop("stove", pos=(BX, BY, TOP), size=(PLATE[0], PLATE[1], t + g),
-                    meshes=tuple(meshes), colliders=tuple(cols))
+def _yaw_quat(u):
+    return (0.0, 0.0, math.sin(u / 2), math.cos(u / 2))
+
+
+def _mouth(n=24):
+    """The lead-in (n oriented slabs whose inner faces make the cone) and the flat ledge, in the base's frame."""
+    dr, dz = MOUTH_R1 - MOUTH_R0, MOUTH_H
+    L = math.hypot(dr, dz)
+    th = math.atan2(dr, dz)  # the face's lean from vertical
+    nr, nz = math.cos(th), -math.sin(th)  # into the metal: outward and down
+    rm, zm = (MOUTH_R0 + MOUTH_R1) / 2 + nr * MOUTH_T / 2, RIM - dz / 2 + nz * MOUTH_T / 2
+    w = 2 * (MOUTH_R1 + MOUTH_T) * math.tan(math.pi / n) * 1.04
+    qp = (0.0, math.sin(th / 2), 0.0, math.cos(th / 2))  # about the tangent: x -> the normal, z -> up the face
+    out = []
+    for k in range(n):
+        u = 2 * math.pi * k / n
+        qy = _yaw_quat(u)
+        x1, y1, z1, w1 = qy
+        x2, y2, z2, w2 = qp
+        q = (w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2, w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+             w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2, w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2)
+        out.append(kit.Collider((rm * math.cos(u), rm * math.sin(u), zm), size=(MOUTH_T, w, L), quat=q))
+    out += thk.seat_ring(LEDGE_R[0], LEDGE_R[1], RIM - LEDGE_H, RIM, n=LEDGE_N)
+    return out
 
 
 def _base():
     z1 = B_FLOOR + SECTIONS[0][1]
     z2 = z1 + SECTIONS[1][1]
-    outer = [(0.0, 0.0), (B_FOOT_R, 0.0), (B_FOOT_R, 0.006), (0.036, RIM - COLLAR_H - 0.002),
-             (B_COLLAR_R, RIM - COLLAR_H), (B_COLLAR_R, RIM),
-             (SECTIONS[2][0], RIM), (SECTIONS[2][0], z2), (SECTIONS[1][0], z2), (SECTIONS[1][0], z1),
-             (SECTIONS[0][0], z1), (SECTIONS[0][0], B_FLOOR), (0.0, B_FLOOR)]
-    xr = 0.041 - 0.005 * (VALVE_Z - 0.006) / (RIM - COLLAR_H - 0.008)  # outer radius at the valve
-    meshes = [kit.lathe(outer, ALU),
-              # thread ridges on the collar (seen while the upper chamber is off)
-              *[kit.band([(B_COLLAR_R * math.cos(u), B_COLLAR_R * math.sin(u), RIM - 0.003 - 0.003 * k)
-                          for u in np.linspace(0, 2 * math.pi, 33)], 0.0012, 0.0008, DARK_ALU, normal=(0, 0, 1))
-                for k in range(3)],
+    wall_top = RIM - COLLAR_H - 0.002
+    apo = B_FLATS / 2
+    corner = apo / math.cos(math.pi / 8)
+    # the octagonal body (a lathe with 8 sides, its flats facing +-x and +-y), the collar round, the inside stepped
+    outer = [(0.0, 0.0), (corner, 0.0), (corner, wall_top), (0.0, wall_top)]
+    inner = [(B_COLLAR_R, wall_top), (B_COLLAR_R, RIM), (SECTIONS[2][0], RIM), (SECTIONS[2][0], z2),
+             (SECTIONS[1][0], z2), (SECTIONS[1][0], z1), (SECTIONS[0][0], z1), (SECTIONS[0][0], B_FLOOR),
+             (0.0, B_FLOOR)]
+    body = kit.lathe(outer, ALU, n=8)  # corners at 0, 45, ... degrees: turned 22.5 degrees, its flats face the axes
+    c8, s8 = math.cos(math.pi / 8), math.sin(math.pi / 8)
+    body = kit.Mesh(tuple((c8 * p[0] - s8 * p[1], s8 * p[0] + c8 * p[1], p[2]) for p in body.points), body.counts,
+                    body.indices, body.look)
+    meshes = [body, kit.lathe([(0.0, wall_top)] + inner, ALU),
+              thk.ridge_mesh(TH_MALE, TH_MALE.major_r - TH_MALE.depth / 2,
+                             RIM + TH_MALE.male_top - TH_MALE.pitch * TH_MALE.male_turns, TH_MALE.male_turns, DARK_ALU),
               # the safety valve on the side toward the robot (-x): a brass hex body and a pin
-              kit.cylinder((-xr - 0.004, 0, VALVE_Z), 0.0065, 0.008, BRASS, axis="x", n=6),
-              kit.cylinder((-xr - 0.009, 0, VALVE_Z), 0.002, 0.004, BRASS, axis="x"),
+              kit.cylinder((-apo - 0.004, 0, VALVE_Z), 0.0065, 0.008, BRASS, axis="x", n=6),
+              kit.cylinder((-apo - 0.009, 0, VALVE_Z), 0.002, 0.004, BRASS, axis="x"),
               # its bore inside the wall, a brass ring you see when you look into the base
               kit.cylinder((-SECTIONS[2][0] + 0.0004, 0, VALVE_Z), VALVE_BORE_R, 0.001, BRASS, axis="x")]
-    # hollow, so the basket's cup and stem go down inside: a solid bottom 1 cm thick (the stem's end stops 2.5 mm
-    # over it), then the wall as posts up to the rim (the base is fixed, nothing else reaches inside)
+    # a solid bottom 1 cm thick (the stem's end stops 2.5 mm over it), the eight flat sides as oriented boxes (the
+    # steadying hand bears on two of them), the wall inside the collar as posts up to the rim, and the male thread
     cols = [kit.Collider((0, 0, 0.005), radius=0.039, height=0.010)]
-    for k in range(N_POSTS):
-        u = 2 * math.pi * k / N_POSTS
-        cols.append(kit.Collider((WALL_R * math.cos(u), WALL_R * math.sin(u), (0.010 + RIM) / 2), radius=POST_R,
-                                 height=RIM - 0.010))
-    return kit.Prop("base", pos=(BX, BY, FLOOR_Z), size=(2 * B_FOOT_R, 2 * B_FOOT_R, RIM),
-                    meshes=tuple(meshes), colliders=tuple(cols), friction=METAL_MU)
+    side = 2 * apo * math.tan(math.pi / 8) * 1.02
+    for k in range(8):
+        u = k * math.pi / 4
+        # 8 mm thick (inside them only water, modeled apart): a hand's pads pressing on 4 mm walls went through
+        # them and pushed the basket's cup up from inside (d17-d22)
+        cols.append(kit.Collider(((apo - 0.004) * math.cos(u), (apo - 0.004) * math.sin(u), (0.010 + wall_top) / 2),
+                                 size=(0.008, side, wall_top - 0.010), quat=_yaw_quat(u)))
+    # the wall inside the collar as a closed ring of boxes (24 posts left 5 mm gaps a crooked flange's edge slipped
+    # through, letting the basket drop 14 mm into the base, d24)
+    cols += thk.seat_ring(WALL_R - POST_R, WALL_R + POST_R, 0.010, RIM - MOUTH_H, n=N_POSTS)
+    cols += _mouth()
+    cols += thk.colliders(thk.male(TH_MALE, rim_z=RIM))
+    return kit.Prop("base", pos=(BX, BY, FLOOR_Z + 0.0005), size=(2 * B_FOOT_R, 2 * B_FOOT_R, RIM), mass=B_MASS,
+                    meshes=tuple(meshes), colliders=tuple(cols), friction=AL_AL)
 
 
 def _top():
@@ -172,22 +226,23 @@ def _top():
     meshes = [kit.lathe(prof, ALU),
               kit.cylinder((0, 0, T_H + 0.005), 0.008, 0.010, BLACK),  # lid knob
               kit.box((-c * 0.044, -s * 0.044, T_H - 0.008), (0.012, 0.012, 0.010), ALU)]  # spout (opposite the handle)
-    cols = [kit.Collider((0, 0, 0.020), radius=T_R, height=0.040),
+    cols = [kit.Collider((0, 0, (SEAT_T + 0.040) / 2), radius=T_R, height=0.040 - SEAT_T),
             kit.Collider((0, 0, (0.040 + T_H) / 2), radius=0.039, height=T_H - 0.040),
-            kit.Collider((0, 0, T_H + 0.005), radius=0.008, height=0.010)]
-    # the skirt's inside: eight round ribs hidden in it, 2 mm clear of the base's collar, so a top set on straight
-    # drops over the collar and stays centered on it, as the female thread does
-    for k in range(8):
-        u = 2 * math.pi * k / 8
-        cols.append(kit.Collider((RIB_R * math.cos(u), RIB_R * math.sin(u), -COLLAR_H / 2), radius=0.0025,
-                                 height=COLLAR_H))
+            kit.Collider((0, 0, T_H + 0.005), radius=0.008, height=0.010),
+            # its bottom face as a ring of boxes (a flat box ring holds a screwing load; cylinder faces sank, probe p2)
+            *thk.seat_ring(0.026, T_R, 0.0, SEAT_T, n=24),
+            # the skirt's wall round the female thread
+            *thk.seat_ring(TH_FEMALE.female_root_r + 0.0002, SKIRT_OUT, -COLLAR_H, 0.0, n=24),
+            *thk.colliders(thk.female(TH_FEMALE)),
+            *GASKET.colliders()]
     for k in range(3):  # the handle: three short blocks stepping out along its direction
         r = 0.046 + 0.010 * k
         p = (c * r, s * r, 0.060 - 0.012 * k)
         meshes.append(kit.box(p, (0.012, 0.012, 0.022), BLACK))
         cols.append(kit.Collider(p, size=(0.012, 0.012, 0.022)))
     return kit.Prop("top", pos=(*TOP_XY, TOP + COLLAR_H + 0.0005), size=(0.11, 0.11, T_H + COLLAR_H + 0.01),
-                    mass=0.20, meshes=tuple(meshes), colliders=tuple(cols))
+                    mass=0.20, meshes=tuple(meshes), colliders=tuple(cols), friction=AL_AL,
+                    max_depenetration=MAX_DEPEN)
 
 
 def _jug():
@@ -206,9 +261,13 @@ def _basket():
     meshes = [kit.lathe(prof, ALU),
               kit.cylinder((0, 0, f - 0.0008), 0.0288, 0.0012, COFFEE)]  # the ground coffee, level with the flange
     # the tapered cup as two straight bands (its mean width over each), so a gripper's pads bear on a flat face
-    cols = [kit.Collider((0, 0, f / 2), radius=K_FLANGE_R, height=f),
-            kit.Collider((0, 0, -0.007), radius=0.028, height=0.014),
-            kit.Collider((0, 0, -0.017), radius=0.0245, height=0.006),
+    # the flange's bearing ring as boxes (the gasket and the rim are box rings too): as a cylinder it sank through
+    # the rim under the screwing load (d25), as cylinder faces did in the thread probes (threadkit.seat_ring)
+    cols = [kit.Collider((0, 0, f / 2), radius=0.0255, height=f),
+            *thk.seat_ring(0.0255, K_FLANGE_R, 0.0, f, n=48),  # 48 boxes: corners 0.07 mm proud
+            kit.Collider((0, 0, -0.007), radius=0.0268, height=0.014),
+            kit.Collider((0, 0, sum(K_BAND_Z) / 2), radius=K_BAND_R, height=K_BAND_Z[1] - K_BAND_Z[0]),
+            kit.Collider((0, 0, -0.017), radius=0.0235, height=0.006),
             kit.Collider((0, 0, -d - K_STEM_L / 2), radius=K_STEM_R, height=K_STEM_L)]
     return kit.Prop("basket", pos=BASKET_POS, size=(2 * K_FLANGE_R, 2 * K_FLANGE_R, d + K_STEM_L + f), mass=0.04,
                     meshes=tuple(meshes), colliders=tuple(cols), friction=METAL_MU)
@@ -226,7 +285,7 @@ def _cup():
                     colliders=tuple(cols))
 
 
-OBJECTS = [_stove(), _base(), _top(), _jug(), _basket(), _cup()]
+OBJECTS = [_base(), _top(), _jug(), _basket(), _cup()]
 
 
 def _rot(q):
@@ -246,17 +305,25 @@ def _rim(objects):
     return np.asarray(b.pos, float) + _rot(b.quat_xyzw) @ np.array([0.0, 0.0, RIM])
 
 
-# On the base: the upper chamber's bottom face within 4 mm of the base's rim height, its axis within 4 mm of the base's
-# (the skirt's 1.5 mm clearance over the collar plus the thread's 2.5 mm play when it has not caught) and its axis
-# within 4 degrees of the base's (more, it has gone on crooked: cross-threaded).
-ON_DZ, ON_DXY, ON_TILT = 0.004, 0.004, 4.0
+
+# On the base, threaded straight: the upper chamber's bottom face within 4 mm of the rim's height, its axis within 2 mm
+# of the base's and within 1.5 degrees of it. Down in the right groove the thread lets it wobble about 1 degree (its
+# 0.3 mm flank clearance); a top that started crooked and rides or binds on the wrong groove stands at least one
+# groove off on one side, 2.6 degrees over the 66 mm thread (cross-threaded), or rides up on the crests.
+ON_DZ, ON_DXY, ON_TILT = 0.004, 0.002, 1.5
+
+
+def _top_rel(objects):
+    """(offset of the top's origin from the rim, in the base's frame; tilt between their axes in degrees)."""
+    t, b = objects["top"], objects["base"]
+    rb = _rot(b.quat_xyzw)
+    d = rb.T @ (np.asarray(t.pos, float) - _rim(objects))
+    tilt = math.degrees(math.acos(max(-1.0, min(1.0, float(_rot(t.quat_xyzw)[:, 2] @ rb[:, 2])))))
+    return d, tilt
 
 
 def top_on(objects):
-    t, b = objects["top"], objects["base"]
-    d = np.asarray(t.pos, float) - _rim(objects)
-    at, ab = _rot(t.quat_xyzw)[:, 2], _rot(b.quat_xyzw)[:, 2]
-    tilt = math.degrees(math.acos(max(-1.0, min(1.0, float(at @ ab)))))
+    d, tilt = _top_rel(objects)
     return abs(d[2]) < ON_DZ and math.hypot(d[0], d[1]) < ON_DXY and tilt < ON_TILT
 
 
@@ -271,7 +338,7 @@ def _lets_water_in(objects):
 
 
 # The basket is in: its flange's bottom within 2 mm of the rim (resting on it, not propped on something), its axis
-# within 4 mm of the base's (the modeled cup, a band 5.6 cm across, can sit 2.9 mm off center in the 6.2 cm opening)
+# within 4 mm of the base's (the modeled cup, a band 5.35 cm across, can sit 1.9 mm off center in the 5.74 cm opening)
 # and within 5 degrees of it.
 SEAT_DZ, SEAT_DXY, SEAT_TILT = 0.002, 0.004, 5.0
 COFFEE_TIP = 45.0  # degrees: tipped further, the grounds slide out of a 2 cm deep cup filled to its brim
@@ -294,15 +361,19 @@ pk.setup([pk.Vessel("base", sections=SECTIONS, floor=B_FLOOR, fill={}, accepts=_
 pk.set_floor(TOP)
 
 # Scoring
-SEAT = 450.0  # degrees of screwing from sitting on the collar to the gasket meeting the filter plate (a 3-cup pot's
-#               1.25 turns, see README): snug is reaching this seat by the gripper's own turning
-STOP = SEAT + 90.0  # degrees: the thread's hard stop, a quarter turn of gasket squeeze past the seat (model choice);
-#                    the upper chamber turns no further clockwise on the base, so it cannot be over-turned
-SPILL_MAX = 5.0  # mL, a teaspoon on the stove
+SPILL_MAX = 5.0  # mL, a teaspoon on the counter
 UPRIGHT = 10.0  # degrees
 GRIPPERS = ("left_gripper", "right_gripper")
 HOLD_MIN = 0.45  # the pads squeeze the 7 cm body to a reading of 0.55-0.65 in the sim (0.74 nominal)
-DEBT_MAX = D(720)  # counterclockwise wrist roll kept as debt against later credit (see _account)
+# Snug: the gasket pressed at least C_SNUG (m) between the upper chamber's face and the basket's flange: the clamp that
+# SNUG_NM of screwing torque gives through the modeled thread, over the gasket's estimated stiffness. Firm hand-tight
+# is taken as 2.5 N*m for a 65 mm closure from published jar and closure data (see README). Through the modeled thread
+# (square ridges, mean radius 32.4 mm, lead 0.84 degrees, aluminum friction 1.0) and the gasket (friction 0.5 at 28.5
+# mm) 2.5 N*m clamps about 52 N, and at the gasket's estimated 5e5 N/m that is 0.10 mm. A top screwed down without
+# that torque, or cross-threaded, does not press it that far.
+SNUG_NM = 2.5
+SNUG_N = 52.0
+C_SNUG = SNUG_N / GASKET.k  # 0.10 mm
 
 
 # Contact is judged with the gripper's own shape (palm and both fingers at their present opening, guardkit boxes fitted
@@ -313,6 +384,7 @@ TOP_SHAPE = (gk.Ring(0.0, T_R, 0.0, 0.040), gk.Ring(0.0, T_TOP_R, 0.040, T_H),  
              gk.Seg((0.0, 0.0, T_H), (0.0, 0.0, T_H + 0.010), 0.008),  # the lid knob
              *[gk.Block((math.cos(HANDLE_ANG) * (0.046 + 0.010 * k), math.sin(HANDLE_ANG) * (0.046 + 0.010 * k),
                          0.060 - 0.012 * k), (0.012, 0.012, 0.022)) for k in range(3)])  # the handle
+BASE_SHAPE = (gk.Ring(0.0, B_FLATS / 2, 0.0, RIM - COLLAR_H), gk.Ring(0.0, B_COLLAR_R, RIM - COLLAR_H, RIM))
 JUG_SHAPE = gk.Ring(0.0, JUG_R, -JUG_H / 2, JUG_H / 2)
 
 
@@ -324,8 +396,6 @@ def top_held_by(objects, g):
     t = objects["top"]
     r = _rot(t.quat_xyzw)
     along = float((np.asarray(objects[g].pos, float) - np.asarray(t.pos, float)) @ r[:, 2])
-    # the body is 7 cm across up to 4 cm up and 8 cm above that: the fingers' stop follows the width at the grip's
-    # height, so a grip anywhere on the chamber's side counts
     want = (T_WIDTH if along <= 0.040 else 2 * T_TOP_R) / (2 * abs(FINGER_OPEN))
     op = kit.opening(objects, g)
     return HOLD_MIN <= op <= want + tk.HOLD_OVER and bool(gk.touching(objects, "top", TOP_SHAPE, grippers=(g,)))
@@ -340,15 +410,7 @@ def top_held(objects):
 class _History:
     def __init__(self):
         self.episode = kit.episode()
-        self.on = False  # the upper chamber was on the thread (engaged) at the last step
-        self.rel = 0.0  # its yaw relative to the base at the last step
-        self.screwed = 0.0  # rad screwed on (clockwise seen from above) with a gripper's own roll, since it went on
-        self.turned = 0.0  # rad it has turned clockwise on the base since it went on, however (the thread's position)
-        self.unheld = 0.0  # rad it turned on the base without that credit (knocked, swiped, dragged)
-        self.reached = False  # a gripper's own turning has brought it down to the seat since it went on
-        self.budget = 0.0  # signed wrist roll not yet matched by the top (twistkit's roll budget)
-        self.yaw_last = {}
-        self.was_held = False
+        self.on = False  # the upper chamber's skirt was round the collar at the last step
         self.under = False  # the basket was in the base when the upper chamber last went on
         self.tipped = 0  # consecutive steps the basket has been tipped past COFFEE_TIP
         self.coffee_lost = None  # where the grounds fell out (latched), else None
@@ -358,63 +420,10 @@ _H = _History()
 
 
 def _engaged(objects):
-    """The skirt still round the collar: the top's bottom face less than the skirt's 1.2 cm above the rim, its axis
-    within 6 mm and 8 degrees of the base's. A top that sat on the base stays on the thread while this holds; lifted
-    past it (or pushed off), it is off and the count starts again."""
-    t, b = objects["top"], objects["base"]
-    d = np.asarray(t.pos, float) - _rim(objects)
-    at, ab = _rot(t.quat_xyzw)[:, 2], _rot(b.quat_xyzw)[:, 2]
-    tilt = math.degrees(math.acos(max(-1.0, min(1.0, float(at @ ab)))))
-    return -ON_DZ < d[2] < COLLAR_H and math.hypot(d[0], d[1]) < 0.006 and tilt < 8.0
-
-
-def _account(objects):
-    """Screwing the upper chamber on: once it has sat on the base, and while its skirt stays round the collar, its
-    turning relative to the base counts, clockwise seen from above positive. As in twistkit, clockwise turning is
-    credited only while a gripper holds it (at either end of the step) and only from a budget that holding gripper's
-    own wrist roll earns (1.25 x its roll, signed, at most 15 degrees of credit carried over, counterclockwise roll
-    kept as debt): another arm swiping it while a hand rests on it, or a hand wiggling back and forth, earns nothing.
-    Counterclockwise turning always counts against it, held or not (dragged back, it is that much looser)."""
-    on = top_on(objects)
-    eng = _engaged(objects) and (on or _H.on)
-    rel = _yaw(objects["top"].quat_xyzw) - _yaw(objects["base"].quat_xyzw)
-    yaws = {g: tk._grip_yaw(objects[g]) for g in GRIPPERS if g in objects}
-    holder = next((g for g in GRIPPERS if top_held_by(objects, g)), None)
-    if eng and not _H.on:  # it just went on: was the basket already in under it?
-        _H.under = basket_seated(objects) and _H.coffee_lost is None
-    if eng and _H.on:
-        du = -tk._wrap(rel - _H.rel)  # clockwise seen from above = tightening
-        g = holder or _H.was_held
-        credit = 0.0
-        if not (_H.under and basket_seated(objects)):
-            g = None  # screwing counts only with the basket in under it, put in before the top went on
-        if g and g in yaws and g in _H.yaw_last:
-            _H.budget += tk.ROLL_GAIN * -tk._wrap(yaws[g] - _H.yaw_last[g])
-            if du * _H.budget > 0:
-                credit = math.copysign(min(abs(du), abs(_H.budget)), du)
-                _H.budget -= credit
-            # Unused clockwise roll carries over at most 15 degrees (twistkit's cap), but counterclockwise roll is
-            # kept in full as debt: twistkit clips both, so a closed hand wiggling +-20 degrees while another arm
-            # swipes the top round earned about half the swipe; with the debt kept, net zero roll earns nothing.
-            _H.budget = max(-DEBT_MAX, min(_H.budget, tk.ROLL_BUDGET_MAX))
-        else:
-            _H.budget = 0.0
-        if du < 0:
-            credit = du  # loosening counts whoever does it
-        _H.screwed += credit
-        _H.unheld += abs(du - credit)
-        _H.turned += du
-    elif not eng:
-        _H.screwed, _H.budget, _H.turned, _H.reached = 0.0, 0.0, 0.0, False
-    _H.reached = _H.reached or (eng and _H.screwed >= math.radians(SEAT))
-    # past the seat (the stop is then within 90 degrees): the stop's relative yaw, handed to the physics-step hook,
-    # which also holds the top on its seat from the first step it is down on the base there
-    seated = eng and _H.turned > math.radians(SEAT)
-    _STOP["yaw"] = rel - (math.radians(STOP) - _H.turned) if seated else None
-    _STOP["seat"] = seated and (on or _STOP["seat"])
-    _H.on, _H.rel = eng, rel
-    _H.was_held = holder
-    _H.yaw_last = yaws
+    """The skirt round the collar: the top's bottom face less than the skirt's 1.2 cm above the rim, its axis within
+    6 mm and 12 degrees of the base's (a crooked start counts too)."""
+    d, tilt = _top_rel(objects)
+    return -ON_DZ < d[2] < COLLAR_H and math.hypot(d[0], d[1]) < 0.006 and tilt < 12.0
 
 
 def _watch_coffee(objects):
@@ -430,103 +439,11 @@ def _update(objects):
     global _H
     if _H.episode != kit.episode():
         _H = _History()
-        _clear_stop()
     _watch_coffee(objects)
-    _account(objects)
-
-
-# --- The thread's stop and seat. There is no modeled thread (the upper chamber is a free body on the collar), so the
-# sim applies what the thread does once the top is screwed down to the seat (the gasket on the filter plate): before
-# every physics step (240 Hz) a hook holds the top where it sat down on the seat, on the base's axis and level with
-# it, free only to turn about that axis (a seated thread lets it turn, not lift, tip or slide), and turns it back to
-# the hard stop if it has gone past it clockwise, taking away its clockwise spin there. Turned back counterclockwise
-# off the seat, the hold lets go. The scorer (20 Hz) says when the top is seated and where the stop is.
-_STOP = {"yaw": None, "seat": False, "pose": None}  # the stop's relative yaw (rad) past the seat, else None; whether
-#   the top is seated; and its pose (position, quaternion) on the seat, taken by the hook when it first sees it seated
-
-
-def _clear_stop() -> None:
-    _STOP.update(yaw=None, seat=False, pose=None)
-
-
-def _hold_at_stop(base) -> None:
-    if not _STOP["seat"]:
-        _STOP["pose"] = None
-    if _STOP["yaw"] is None:
-        return
-    import torch
-
-    t = lambda a: getattr(a, "torch", a)  # noqa: E731
-    top, bas = base.scene["top"], base.scene["base"]
-    pose = t(top.data.root_link_pose_w)[0].clone()  # (x, y, z, then the quaternion x, y, z, w)
-    q = t(top.data.root_link_quat_w)[0].detach().cpu().numpy().astype(np.float64)
-    qb = t(bas.data.root_link_quat_w)[0].detach().cpu().numpy().astype(np.float64)
-    if _STOP["seat"] and _STOP["pose"] is None:  # it has just come down on the seat: there the thread holds it
-        _STOP["pose"] = (pose[:3].clone(), q.copy())
-    past = -tk._wrap(_yaw(q) - _yaw(qb) - _STOP["yaw"])  # clockwise past the stop (rad)
-    vel = t(top.data.root_com_vel_w)[0].clone()  # (vx, vy, vz, wx, wy, wz)
-    if _STOP["pose"] is not None:  # on the seat: back where it sat, turned only about the vertical (and not past the
-        #                            stop), with no sliding, lifting or tipping
-        pos0, q0 = _STOP["pose"]
-        h = tk._wrap(_yaw(q) - _yaw(q0) + max(past, 0.0)) / 2
-        pose[:3] = pos0
-        pose[3:7] = torch.tensor(kit._quat_mul(np.array([0.0, 0.0, math.sin(h), math.cos(h)]), q0),
-                                 dtype=pose.dtype, device=pose.device)
-        top.write_root_pose_to_sim_index(root_pose=pose[None])
-        vel[0:5] = 0.0
-    elif past > 0.0:  # past the seat but not down on the base (crooked): only turned back to the stop
-        h = past / 2
-        pose[3:7] = torch.tensor(kit._quat_mul(np.array([0.0, 0.0, math.sin(h), math.cos(h)]), q),
-                                 dtype=pose.dtype, device=pose.device)
-        top.write_root_pose_to_sim_index(root_pose=pose[None])
-    if past > -0.01:  # at the stop: no clockwise spin (clockwise seen from above is -z)
-        vel[5] = max(float(vel[5]), 0.0)
-    top.write_root_velocity_to_sim_index(root_velocity=vel[None])
-
-
-def _hook_physics() -> None:
-    try:
-        from yam_arena import inspect_embodiment as ie
-    except Exception:  # noqa: BLE001  (offline: no embodiment)
-        return
-    cls = ie.YamArenaEmbodiment
-    if getattr(cls, "_moka_stop", False):
-        return
-    cls._moka_stop = True
-    ensure = cls._ensure_sim
-
-    def _ensure_sim(self, *a, **k):
-        ensure(self, *a, **k)
-        env = self._env
-        if env is None:
-            return
-        isc = env.unwrapped.scene
-        if getattr(isc, "_moka_stop", False):
-            return
-        write = isc.write_data_to_sim
-
-        def write_data_to_sim(*wa, **wk):
-            try:
-                _hold_at_stop(env.unwrapped)
-            except Exception as e:  # noqa: BLE001
-                if not _STOP.get("failed"):
-                    print(f"moka: thread stop off ({e!r})", file=sys.stderr, flush=True)
-                _STOP["failed"] = True
-            return write(*wa, **wk)
-
-        isc.write_data_to_sim, isc._moka_stop = write_data_to_sim, True
-        base, reset = env.unwrapped, env.unwrapped.reset
-
-        def reset_and_clear(*ra, **rk):  # a new trial: no seat or stop left over from the last one
-            _clear_stop()
-            return reset(*ra, **rk)
-
-        base.reset = reset_and_clear
-
-    cls._ensure_sim = _ensure_sim
-
-
-_hook_physics()
+    eng = _engaged(objects)
+    if eng and not _H.on:  # it just went on: was the basket already in under it?
+        _H.under = basket_seated(objects) and _H.coffee_lost is None
+    _H.on = eng
 
 
 def basket_ok(objects):
@@ -534,17 +451,18 @@ def basket_ok(objects):
     return basket_seated(objects) and _H.coffee_lost is None
 
 
-def screwed_deg():
-    return math.degrees(_H.screwed)
+def gasket_compression(objects):
+    """How far (m) the gasket is pressed: its 0.8 mm standing proud of the upper chamber's face, less the gap between
+    that face and the top of the basket's flange, along the base's axis."""
+    b, k, t = objects["base"], objects["basket"], objects["top"]
+    ax = _rot(b.quat_xyzw)[:, 2]
+    flange_top = np.asarray(k.pos, float) + _rot(k.quat_xyzw)[:, 2] * K_FLANGE_T
+    return GASKET.protrude - float((np.asarray(t.pos, float) - flange_top) @ ax)
 
 
 def screwed_snug(objects):
-    """On the base and screwed down to the seat (450 degrees, 1.25 turns, the gasket on the filter plate) by a gripper's
-    own roll, with the basket in under it before it went on, and still at or past the seat: turned back
-    counterclockwise off the seat (by anything) it is loose again, while a few degrees of give at the stop (the
-    fingers letting go of a top they pressed against it, the next stroke turning it back) leave it snug. The thread's stop (_hold_at_stop) keeps it from turning more than a
-    quarter turn past the seat."""
-    return top_on(objects) and _H.under and _H.reached and math.degrees(_H.turned) >= SEAT
+    """Threaded on straight (top_on), put on after the basket went in, and the gasket pressed at least C_SNUG."""
+    return top_on(objects) and _H.under and basket_ok(objects) and gasket_compression(objects) >= C_SNUG
 
 
 def _jug_held(objects):
@@ -553,18 +471,15 @@ def _jug_held(objects):
 
 
 def _put_away(objects):
-    """The carafe upright, let go and off the stove plate; nothing holding the pot (the base is held in a fixed holder
-    on the grate, so it cannot be knocked over)."""
-    j = objects["jug"]
-    jug_ok = (pk.tilt(objects, "jug") < UPRIGHT and not _jug_held(objects)
-              and not (abs(j.pos[0] - BX) < PLATE[0] / 2 and abs(j.pos[1] - BY) < PLATE[1] / 2))
-    return jug_ok and not top_held(objects) and not _hand_on_top(objects)
+    """The carafe upright and let go; the base still standing upright; no gripper touching the pot."""
+    jug_ok = pk.tilt(objects, "jug") < UPRIGHT and not _jug_held(objects)
+    return (jug_ok and _tilt_deg(objects["base"].quat_xyzw) < UPRIGHT and not top_held(objects)
+            and not _hand_on_pot(objects))
 
 
-def _hand_on_top(objects):
-    """A gripper (palm or either finger) still touching the upper chamber anywhere: its body, skirt, lid knob or
-    handle (guardkit contact, within 2 mm)."""
-    return bool(gk.touching(objects, "top", TOP_SHAPE))
+def _hand_on_pot(objects):
+    """A gripper (palm or either finger) still touching the upper chamber or the base (guardkit contact, 2 mm)."""
+    return bool(gk.touching(objects, "top", TOP_SHAPE)) or bool(gk.touching(objects, "base", BASE_SHAPE))
 
 
 # The grounds, once fallen out, are drawn for the cameras: a disc of bare steel over the coffee in the basket and a
@@ -603,8 +518,7 @@ def _draw_coffee(objects, origin):
     else:
         k = objects["basket"]
         top = np.asarray(k.pos, float) + _rot(k.quat_xyzw) @ np.array([0.0, 0.0, K_FLANGE_T - 0.0001])
-        on_plate = abs(lost[0] - BX) < PLATE[0] / 2 and abs(lost[1] - BY) < PLATE[1] / 2
-        z = TOP + (PLATE[2] if on_plate else 0.0) + 0.0005
+        z = TOP + 0.0005
         items = [(tuple(top), tuple(float(q) for q in k.quat_xyzw), (0.0292, 0.0292, 0.0006)),
                  ((lost[0], lost[1], z), (0, 0, 0, 1), (0.035, 0.028, 0.001))]
     m.visualize(translations=np.array([np.asarray(p, float) + origin for p, _, _ in items]),
@@ -647,6 +561,7 @@ def _job(objects):
 def success(objects):
     """The job done; where the arms end up is not scored. Called first each step, so it also records the history."""
     _update(objects)
+    _see(objects)
     return _job(objects) == 1.0
 
 
@@ -655,22 +570,20 @@ def score(objects):
     mL (nothing to brew; includes doing nothing), and with 30 to 122.5 mL unless the pot is otherwise ready (then
     0.25: weak coffee). With the base filled between the lines: 0.25 if the basket is not in it with its coffee
     (flange within 2 mm of the rim, axis within 4 mm and 5 degrees; tipped past 45 degrees on the way, the grounds
-    fell out); 0.5 if the upper chamber is not screwed snug over it (on the base, put on after the basket went in and
-    turned clockwise to the seat, 450 degrees, by a gripper's own wrist roll since; a hard stop 90 degrees past the
-    seat keeps it from turning further); 0.75 with more than 5 mL spilled, the carafe not set down upright, let go
-    and off the stove, or a gripper still touching the upper chamber. 1.0 otherwise. Possible scores: 0, 0.25, 0.5,
-    0.75, 1."""
+    fell out); 0.5 if the upper chamber is not screwed snug over it (put on after the basket went in, threaded on
+    straight: face within 4 mm of the rim, axis within 2 mm and 1.5 degrees of the base's, and the gasket pressed at
+    least 0.10 mm, what 2.5 N·m of screwing gives); 0.75 with more than 5 mL spilled, the carafe not upright and let
+    go, the base tipped over 10 degrees, or a gripper still touching the pot. 1.0 otherwise. Possible scores: 0, 0.25,
+    0.5, 0.75, 1."""
     return _job(objects)
 
 
 # --- Demo
 YAW, ROLL = math.pi / 2, 1.35  # the right hand comes in from -y, fingers closing along x, tipped about 13 degrees down
 GRIP_Z = 0.065
-LIP_ABOVE = 0.05
+LIP_ABOVE = 0.065  # the lip 6.5 cm over the rim: at 5 cm the tipped carafe pushed the free base 3 mm (d1)
 POUR_PITCH = 1.40  # rad: tuned in the sim so the base ends between the lines (see README)
-TWIST_DEG = 630.0  # up to 7 strokes of 90 degrees; the pads slip a little (about 86 degrees a stroke), so the run
-# ends in success after the sixth, with the top screwed about 514 degrees
-STROKE = 90.0  # a 90-degree stroke keeps the handle 45 degrees off the fingers at every regrasp
+STROKE = 90.0  # the first turn, made holding the top as it was set on (the regrip strokes then run to the wrist's end)
 
 
 def pour_plan(pitch=POUR_PITCH):
@@ -703,6 +616,8 @@ K_RELEASE = 0.032
 # The fingers close along the carry from the cup to the base (toward -x and +y, 45 degrees off each): a pinched basket
 # swings about the line through the two pads, so a carry across that line tipped it 13 degrees in the grip (sim runs).
 K_YAW = math.pi / 4
+K_TIP = 0.0128  # the closed pad tips stand this far past the tool point (guardkit's gripper shape)
+K_PRESS = 0.003  # m commanded past the seated basket's top: the arm's give turns it into a few newtons
 # In the grip the basket sits 1.5 cm off the tool point along the fingers' line: the first finger to touch it pushes it
 # along until its stem meets the espresso cup's wall, and the two pads then hold it wherever it is. Opened all at once,
 # the fingers flick it back toward the tool point and it lands crooked on the rim (sim runs). So the tool point is
@@ -716,6 +631,7 @@ def basket_plan():
     rz = FLOOR_Z + RIM + K_RELEASE + K_GRIP_DZ
     travel = TOP + 0.20
     y = K_YAW
+    press_z = FLOOR_Z + RIM + K_FLANGE_T + K_TIP - K_PRESS  # tool point: the pad tips K_PRESS into a seated basket
     return [Waypoint(2.0, (kx, ky, travel), FINGER_OPEN, "over the basket", y),
             Waypoint(1.5, (kx, ky, gz + 0.03), FINGER_OPEN, "down to it", y),
             Waypoint(1.0, (kx, ky, gz), FINGER_OPEN, "around the cup", y),
@@ -728,114 +644,510 @@ def basket_plan():
             Waypoint(1.0, (BX, BY, rz), 0.35 * FINGER_OPEN, "ease the grip", y),
             Waypoint(1.0, (BX, BY, rz), 0.45 * FINGER_OPEN, "let it slide over the axis", y),
             Waypoint(0.6, (BX, BY, rz), FINGER_OPEN, "let it drop in", y),
-            Waypoint(1.0, (BX, BY, rz + 0.06), FINGER_OPEN, "up off it", y)]
+            Waypoint(1.0, (BX, BY, rz + 0.06), FINGER_OPEN, "up off it", y),
+            # then press it home with the closed fingertips on its middle, as a cook pushes the funnel down: a basket
+            # that dropped a few degrees crooked can hang with its flange's low edge on the mouth's lead-in, 6 mm up
+            # and 13 degrees tipped (d16, d20)
+            Waypoint(0.8, (BX, BY, rz + 0.06), FINGER_CLOSED, "close the hand over it", y),
+            Waypoint(1.5, (BX, BY, press_z + 0.015), FINGER_CLOSED, "down to the coffee", y),
+            Waypoint(1.0, (BX, BY, press_z), FINGER_CLOSED, "press the basket home", y),
+            Waypoint(0.5, (BX, BY, press_z), FINGER_CLOSED, "hold", y),
+            Waypoint(1.0, (BX, BY, rz + 0.06), FINGER_CLOSED, "up off it", y)]
+
+
+
+# The right hand then steadies the base, as a cook's other hand does, once the upper chamber sits on the thread: it
+# comes in from the robot's side (-x), its fingers pointing forward (+x) and closing along y across the base's two y
+# flats, and holds it while the left arm screws the upper chamber on, so the screwing torque does not turn the base on
+# the counter. Sim runs that shaped this: held from -y instead, the hand's palm led the sideways approach and shoved the
+# free base 3.9 cm (d2), and its wrist and wrist camera stood beside the pot where the left hand brings the upper chamber
+# down, so the arms touched and the top landed crooked (d4, d5). From -x the right wrist stays low and behind the pot,
+# out of the left hand's way. The hand is turned to the side well behind the pot (beside it, it knocked the carafe over,
+# d3), waits there while the left hand sets the upper chamber on, and slides in fingertips first. Only one finger of
+# the YAM gripper closes: the other pad stays about 4.45 cm from the tool point (at yaw 0 on the -y side). The hand
+# slides in with that pad 5 mm off the -y flat (with 1 mm it caught the base's corner and shoved it 8 mm, d6), then
+# steps sideways until it stands 1 mm off, and the moving finger presses the base onto it.
+# The fingers close only to a few mm inside the base's 8.0 cm across the flats (a firm hand's hold, not a crush):
+# commanded fully shut, they met the flats at opening 0.86 and kept going to 0.04, through the base's walls (d17-d22).
+STEADY_GRIP = 0.78 * FINGER_OPEN
+BASE_GZ = 0.035  # grip height on the base, above the counter (low, so the hand stays under the left hand's fingers)
+FIXED_PAD = 0.0445  # the gripper's fixed pad face, from the tool point along -y at yaw 0
+STEADY_Y = BY - (B_FLATS / 2 + 0.001) + FIXED_PAD
+SLIDE_Y = BY - (B_FLATS / 2 + 0.005) + FIXED_PAD
+# The YAM's fingers are plates 6.8 cm wide (here standing up), so their bodies reach above the base's shoulder beside
+# the upper chamber's skirt. The tool point stands 3 mm short of the base's axis, so the finger bodies stay at least
+# 44.6 mm from the axis, outside the skirt (42.5 mm): with it 1 cm past the axis the fingers squeezed the skirt as
+# well and the top could not turn freely (d9, d10).
+STEADY_X = BX - 0.003
+PITCH_IN = -1.50  # the hand tipped forward 86 degrees: fingers pointing +x, nearly level
+BACK = 0.13  # where the hand turns and comes in from, behind the pot (-x)
+
+
+def _steady_t(d, p, f, label):
+    return kit.Tilted(d, p, f, label, yaw=0.0, pitch=PITCH_IN)
+
+
+def wait_plan():
+    """Out of the way behind the pot, turned to the side and down at the base's height, while the top is set on."""
+    gz = FLOOR_Z + BASE_GZ
+    return [Waypoint(1.5, (BX - BACK, SLIDE_Y, TOP + 0.14), FINGER_OPEN, "back behind the pot", 0.0),
+            _steady_t(2.0, (BX - BACK, SLIDE_Y, gz + 0.03), FINGER_OPEN, "turn the hand forward, behind the pot"),
+            _steady_t(1.2, (BX - BACK, SLIDE_Y, gz), FINGER_OPEN, "down to the base's height")]
+
+
+def steady_plan():
+    gz = FLOOR_Z + BASE_GZ
+    return [_steady_t(2.0, (STEADY_X, SLIDE_Y, gz), FINGER_OPEN, "slide in, fingertips first, beside its flats"),
+            _steady_t(1.0, (STEADY_X, STEADY_Y, gz), FINGER_OPEN, "the fixed pad up to the flat"),
+            # closed slowly: shut in 0.8 s the grip jolted the free base (1.2 mm up, 2.9 deg) and popped the basket
+            # 5 mm out of its seat (d21)
+            _steady_t(2.0, (STEADY_X, STEADY_Y, gz), STEADY_GRIP, "steady the base")]
+
+
+def release_plan():
+    gz = FLOOR_Z + BASE_GZ
+    t = lambda d, p, f, label: kit.Tilted(d, p, f, label, yaw=0.0, pitch=PITCH_IN)  # noqa: E731
+    return [t(0.8, (STEADY_X, STEADY_Y, gz), FINGER_OPEN, "let go of the base"),
+            t(0.8, (STEADY_X, SLIDE_Y, gz), FINGER_OPEN, "off the flat"),
+            t(1.5, (BX - BACK, SLIDE_Y, gz), FINGER_OPEN, "back out"),
+            t(1.0, (BX - BACK, SLIDE_Y, gz + 0.10), FINGER_OPEN, "up and away"),
+            kit.Home(2.0), kit.Home(1.5, label="hold at home")]
 
 
 def right_plan():
-    """Pour, set the carafe down, then put the basket in; returns the plan and when the right hand is clear of the
-    base (s)."""
+    """Pour, set the carafe down, put the basket in and wait behind the pot; returns the plan and when the hand has
+    left the pot (s)."""
     plan = pour_plan() + basket_plan()
-    clear = sum(w.duration for w in plan)
-    return plan + [kit.Home(2.0), kit.Home(1.5, label="hold at home")], clear
+    plan += wait_plan()
+    return plan, sum(w.duration for w in plan[:-2])
 
 
 # Measured in the sim (demo runs): with a straight-down grip over the base the left arm's tool point settles about
-# (-2.3, 0.9) mm off its command, and a held top's axis sits (1.5, -9.7) mm off the tool point at wrist yaw 0 (turning
-# with the wrist). Commands are offset so the top's axis, not the tool point, is over the base and the wrist turns
-# about that axis.
+# (-2.3, 0.9) mm off its command, and a gripped top standing on the thread has its axis (1.5, -9.7) mm off the tool
+# point at wrist yaw 0 (turning with the wrist). Commands are offset so the top's axis, not the tool point, is over the
+# base and the wrist turns about that axis.
+# The regrip strokes grip lower than the carry: the finger pads' inner faces run from 13 mm under the tool point to
+# 9 mm over it (yam.urdf tip meshes), and the body steps out from r 35 to r 39 mm at 40 mm up. Gripped 33 mm up, the
+# pads' top 2 mm met that step's underside: closing, the finger lifted and tipped the top 1 mm / 2 deg off its groove,
+# then the turn drove it a whole pitch down through the ridges and pushed the basket 2-5 mm into the base (d30).
+# At 26 mm the pads (13-35 mm up the body) stay 5 mm under the step.
+GRIP_TW = 0.026
 ARM_ERR = np.array((-0.0023, 0.0009))
 PAD_OFF = np.array((0.0015, -0.0097))
-PRESS = 0.002  # m: set the top down this far into the rim so it settles
+CREST = 0.0025  # m: a top set on straight rests on the thread's crests about this far above where it seats (probes)
+# Carrying the upper chamber (gripped 3.3 cm up its body at wrist yaw 0, before it touches anything) its axis sat (0.2,
+# -12.2) mm from the commanded tool point, and 2.2 mm lower than commanded (demo run d6: arm sag under the load and the
+# top's place between the pads). The set-down is commanded from that offset, and let go 2 mm higher.
+PLACE_OFF = np.array((0.0002, -0.0122))
+PLACE_SAG = 0.002
 
 
-def _about_axis(yaw):
-    """Tool point xy that puts a held top's axis on the base's axis at wrist yaw `yaw` (rad)."""
+# The demo looks where the parts are (closed loop, like a cook watching the skirt line up over the thread): after every
+# control step the scorer's state read-out (success(), below) also records the base's rim and the upper chamber's
+# bottom face here, and a _Live waypoint works its target out from them when the arm starts on it. The thread only
+# catches a top set on within ~0.9 mm of the base's axis; open loop the carried top came down 0.6-4 mm off (d7-d25).
+_SEEN = {}
+
+
+def _see(objects):
+    _SEEN["rim"] = _rim(objects)
+    _SEEN["top"] = np.array(objects["top"].pos, float)
+    _SEEN["comp"] = gasket_compression(objects) if top_on(objects) else -1.0  # a top knocked off reads nothing
+    _SEEN["top_ax"] = _rot(objects["top"].quat_xyzw)[:, 2]
+    _SEEN["top_yaw"] = _yaw(objects["top"].quat_xyzw)
+    lg = objects.get("left_gripper")
+    _SEEN["ltcp"] = None if lg is None else np.array(lg.pos, float)
+
+
+def _seen(key, default):
+    v = _SEEN.get(key)
+    return np.array(default, float) if v is None else v
+
+
+class _Live(kit.Tilted):
+    """A demo waypoint whose (pos, yaw[, finger[, roll, pitch]]) is `fn()`, worked out once, when the arm starts on
+    it (a yamkit Tilted waypoint, so the grip can also be tipped by `roll` about x and `pitch` about y)."""
+
+    def __init__(self, duration, fn, finger, label):
+        self.duration, self.label = duration, label
+        self._fn, self._v, self._finger = fn, None, finger
+
+    def _get(self):
+        if self._v is None:
+            r = tuple(self._fn())
+            fing = float(r[2]) if len(r) > 2 and r[2] is not None else self._finger
+            rp = (float(r[3]), float(r[4])) if len(r) > 4 else (0.0, 0.0)
+            self._v = (tuple(float(v) for v in r[0]), float(r[1]), fing, *rp)
+        return self._v
+
+    @property
+    def finger(self):
+        return self._get()[2]
+
+    @property
+    def roll(self):
+        return self._get()[3]
+
+    @property
+    def pitch(self):
+        return self._get()[4]
+
+    @property
+    def pos(self):
+        return self._get()[0]
+
+    @property
+    def yaw(self):
+        return self._get()[1]
+
+
+def _axis():
+    """The base's axis (xy) as seen now."""
+    return _seen("rim", (BX, BY, FLOOR_Z + RIM))[:2]
+
+
+def _about_axis(yaw, pad_off=None, axis=None):
+    """Tool point xy that puts a held top's axis on the base's axis (`axis`, default its modeled spot) at wrist yaw
+    `yaw` (rad). `pad_off`: the top's axis from the commanded tool point at yaw 0 (default: the regrasp's PAD_OFF and
+    ARM_ERR)."""
+    po = PAD_OFF + ARM_ERR if pad_off is None else np.asarray(pad_off, float)
     c, s = math.cos(yaw), math.sin(yaw)
-    off = np.array((c * PAD_OFF[0] - s * PAD_OFF[1], s * PAD_OFF[0] + c * PAD_OFF[1]))
-    return tuple(np.array((BX, BY)) - off - ARM_ERR)
+    off = np.array((c * po[0] - s * po[1], s * po[0] + c * po[1]))
+    return tuple(np.array((BX, BY) if axis is None else axis, float) - off)
 
 
 # The open hand rolls back above the whole upper chamber: a top that turns more than 45 degrees per stroke brings its
 # handle under the fingers' path back, so they rise until the pad tips clear the handle (7.1 cm up), the spout (8.4 cm)
 # and the lid (8.7 cm), with 1 cm to spare.
-LIFT_OVER = T_H + 0.010 + PAD_TIP_PAST_TCP - GRIP_DZ  # 8.5 cm over the grip height
+LIFT_OVER = T_H + 0.010 + PAD_TIP_PAST_TCP - GRIP_TW  # 7.7 cm over the grip height
 
 
-def _centered():
+def _centered(axis=None):
     """Tool point xy that puts the open hand's fingers evenly round the top's axis (each 4.7 cm out, 7 mm clear of
-    its 4.0 cm upper body). At the grip offset (see _about_axis) one open finger is only 3.7 cm out, under that
-    upper body: lifted from there it hooks the top and tips it off the collar (runs 5 and 6)."""
-    return tuple(np.array((BX, BY)) - ARM_ERR)
+    its 4.0 cm upper body)."""
+    return tuple(np.array((BX, BY) if axis is None else axis, float) - ARM_ERR)
 
 
-def twist(z, degrees, start_yaw, stroke=STROKE, step=15.0, step_s=0.3, grip_s=0.7, clear=0.03):
-    """Regrasp loop like twistkit's twist_waypoints (grip, roll `stroke` degrees clockwise in `step` steps, let go,
-    lift the open hand over the top, roll back, come down round it again, repeat), but turning about the top's axis
-    rather than the tool point (see _about_axis). The open hand moves up and down only centered on the top."""
+# The strokes stop once the gasket is pressed this far (a margin over the 0.10 mm snug): turning a seated top further
+# only makes the pads slip and wrenches the held base.
+C_STOP = 0.00015
+# Regrip: only one finger of the YAM closes; the other pad face stands FIXED_PAD from the tool point (-y at yaw 0). The
+# open hand is brought (closed loop on the tool point it reaches) to where that pad just touches the body (r 35 mm),
+# so the closing finger squeezes the top against it. Opened 4-8 mm short (open loop: the soft wrist settles a few mm
+# off, and yields further to the closing finger), the finger alone shoved the threaded top sideways, tipped it 2.3 deg
+# off its groove and it dropped a pitch onto the basket's flange, tipping and sinking the basket (d30, d31).
+REGRIP_D = FIXED_PAD - T_R + 0.0001  # tool point from the top's axis, toward +y at yaw 0 (0.1 mm press)
+REGRIP_FIXES = 2
+SEAT_GZ_REL = K_FLANGE_T + GRIP_TW  # grip height over the rim with the top seated on the basket's flange
+
+
+# Regrip yaw from the handle (closed loop on the top's seen yaw): the finger plates are 6.8 cm wide, so with the handle
+# 39-45 degrees off the closing axis the fixed pad's plate landed on it (d32: the open hand stopped 3 mm short, and
+# closing pushed the top over through the handle). Each stroke instead starts with the handle along the plates (90
+# degrees off the closing axis, beside them) and turns as far as the wrist goes (to YAW_END): the handle turns with the
+# hand, so it is beside the plates again at the next regrip, half a turn on.
+YAW_HI, YAW_END, MIN_STROKE = math.radians(70.0), math.radians(-155.0), math.radians(60.0)  # wrist -160..75 at the seat
+N_STROKES = 5  # about 104 + 4 x 180 degrees: past the ~630 the thread needs; the gasket stop ends it sooner
+TURN_GAIN = 0.5  # of the seen tilt corrected at each 15-degree step
+# The regrip squeezes the 7.0 cm body to a 6.3 cm gap (opening 0.68), not fully shut: commanded shut, the finger drove
+# 1-2 cm into the body's collider (opening 0.08-0.17 on a 7 cm top), dragging the threaded top with it (d30-d32).
+REGRIP_FINGER = 0.68 * FINGER_OPEN
+
+
+def _regrip_yaw():
+    """The start yaw that puts the handle along the plates, within the wrist's reach: the largest one (longest stroke)."""
+    h = _SEEN.get("top_yaw", 0.0) + HANDLE_ANG
+    c = [h + math.pi * m for m in range(-4, 5)]
+    ok = [y for y in c if YAW_END + MIN_STROKE <= y <= YAW_HI]
+    if ok:
+        return max(ok)
+    return min((min(max(y, YAW_END + MIN_STROKE), YAW_HI) for y in c), key=lambda y: min(abs(y - x) for x in c))
+
+
+def twist(n_strokes, start_yaw, step_s=0.3, grip_s=0.7, held_at=None, open_s=1.4, n=12):
+    """Regrasp loop (grip, roll clockwise in `n` steps to YAW_END, let go, lift the open hand over the top, roll back
+    to the next start yaw, come down round it again, repeat). Each stroke is worked out from where the base's axis,
+    the top and its handle are when it starts (see _Live): it grips the top GRIP_TW up its body with the handle along
+    the plates (_regrip_yaw), turns about the base's axis and follows the thread down at its 3.0 mm a turn, no lower
+    than the seat and never below the seen top. With `held_at` (a function giving the tool point) the hand already
+    holds the top there at `start_yaw`: it opens first."""
     label = "screw the top on"
-    y0 = math.radians(start_yaw)
-    c = _centered()
-    zo = z + LIFT_OVER
-    out = [Waypoint(1.2, (*c, z + clear), FINGER_OPEN, f"{label}: over the top", y0),
-           Waypoint(1.2, (*c, z), FINGER_OPEN, f"{label}: around it", y0)]
-    left = degrees
-    while left > 1e-6:
-        sdeg = min(stroke, left)
-        n = max(1, math.ceil(sdeg / step))
-        out.append(Waypoint(0.6, (*_about_axis(y0), z), FINGER_OPEN, f"{label}: to the grip offset", y0))
-        out.append(Waypoint(grip_s, (*_about_axis(y0), z), FINGER_CLOSED, f"{label}: grip", y0))
+    pitch = TH_FEMALE.pitch
+    st = {"y0": math.radians(start_yaw), "yn": None}
+
+    def grip_z():
+        rim_z = _seen("rim", (BX, BY, FLOOR_Z + RIM))[2]
+        top_z = _seen("top", (BX, BY, FLOOR_Z + RIM + K_FLANGE_T + CREST))[2]
+        return max(rim_z + SEAT_GZ_REL, top_z + GRIP_TW), rim_z + SEAT_GZ_REL
+
+    def next_yaw():  # latched once per regrip, from the released top's handle
+        if st["yn"] is None:
+            st["yn"] = _regrip_yaw()
+        return st["yn"]
+
+    def start():  # a stroke's first waypoint: latch the axis, yaw and grip height, or stop once the gasket is pressed
+        st["ax"] = _axis()
+        st["z"], st["zmin"] = grip_z()
+        st["y0"] = next_yaw()
+        st["yn"], st["yf"], st["ylast"] = None, None, st["y0"]
+        st["stop"] = st.get("stop") or _SEEN.get("comp", -1.0) >= C_STOP
+        st["cmd"] = np.array(_about_axis(st["y0"], axis=st["ax"]), float)
+        return hold() if st["stop"] else ((*st["cmd"], st["z"]), st["y0"])
+
+    def want_tcp(yaw):  # where the tool point should be: the fixed pad on the body
+        top = _seen("top", (BX, BY, 0.0))[:2]
+        return top + np.array((-math.sin(yaw) * REGRIP_D, math.cos(yaw) * REGRIP_D))
+
+    def fix_grip():  # move the commanded tool point by what the reached one is off where it should be
+        if st["stop"]:
+            return hold()
+        tcp = _SEEN.get("ltcp")
+        if tcp is not None:
+            err = want_tcp(st["y0"]) - tcp[:2]
+            st["cmd"] = st["cmd"] + 0.8 * np.clip(err, -0.006, 0.006)
+        return (*st["cmd"], st["z"]), st["y0"]
+
+    def held_xy(yaw):  # the gripped hand turns rigidly about the base's axis from where it gripped
+        dl = yaw - st["y0"]
+        v = st["cmd"] - st["ax"]
+        return st["ax"] + np.array((math.cos(dl) * v[0] - math.sin(dl) * v[1], math.sin(dl) * v[0] + math.cos(dl) * v[1]))
+
+    def hold():  # snug: the open hand waits over the top, clear of the handle
+        return (*_centered(st["ax"]), st["z"] + LIFT_OVER), st.get("hy", st["y0"]), FINGER_OPEN
+
+    def yaw_at(k):
+        return st["y0"] + (YAW_END - st["y0"]) * k / n
+
+    def turn(k, finger=None):
+        def f():
+            if st["stop"]:
+                return hold()
+            # stop turning the moment the gasket is pressed: turned on through the stroke, it was pressed 0.4-0.7
+            # mm (some hundreds of newtons), and let go, the top sprang 2-3 mm back up its thread, 5 deg crooked (d38)
+            if k > 0 and st["yf"] is None and _SEEN.get("comp", -1.0) >= C_STOP:
+                st["yf"] = st["ylast"]
+            yaw = yaw_at(k) if st["yf"] is None else st["yf"]
+            st["ylast"] = yaw
+            d = math.degrees(st["y0"] - yaw)
+            # follow the thread down, but never below where the top is seen now: a top that lags the thread is
+            # turned, not pushed (pushed, the ridges go through each other, d28, d30)
+            top_z = _seen("top", (0.0, 0.0, 1.0))[2] + GRIP_TW
+            # keep the gripped top upright (closed loop on its seen axis, world roll/pitch as in the line-up): turned
+            # 1.3-1.8 deg crooked, its gasket bore on one side of the flange and dragged the basket 1.3 mm sideways
+            # off its ledge and 2.1 mm down (d33a)
+            if k == 0:
+                st["r"], st["p"] = 0.0, 0.0
+            elif finger is None:
+                ax = _seen("top_ax", (0.0, 0.0, 1.0))
+                st["r"] = float(np.clip(st["r"] + TURN_GAIN * ax[1], -0.05, 0.05))
+                st["p"] = float(np.clip(st["p"] - TURN_GAIN * ax[0], -0.05, 0.05))
+            return ((*held_xy(yaw), max(st["zmin"], min(st["z"] - pitch * d / 360.0, top_z))), yaw, finger,
+                    st["r"], st["p"])
+        return f
+
+    def yend():  # where the stroke ended: at the wrist's end, or where the gasket got pressed
+        return YAW_END if st.get("yf") is None else st["yf"]
+
+    def up():  # let go: snug now? then no more strokes
+        if st["stop"]:  # stopped before this stroke: the open hand stays over the top (it came down onto its
+            return hold()  # shoulder from there and lifted the screwed-on top off with the basket, d39, d40)
+        st["stop"] = st.get("yf") is not None or _SEEN.get("comp", -1.0) >= C_STOP
+        ye = yend()
+        d = math.degrees(st["y0"] - ye)
+        if st["stop"]:
+            st.setdefault("hy", ye)  # the open hand keeps its yaw from here on (rolled, it could catch the handle)
+            return (*held_xy(ye), st["z"] + 0.025), ye
+        return (*held_xy(ye), max(st["zmin"], st["z"] - pitch * d / 360.0) + 0.025), ye
+
+    def cen(h, yaw_fn):
+        return lambda: hold() if st["stop"] else ((*_centered(st["ax"]), st["z"] + h), yaw_fn())
+
+    out = []
+    if held_at is not None:
+        # opened easing 2 mm down: opened in place, the arm springing back up dragged the top 6-12 mm up (d13, d25)
+        def opening():
+            x, y, z = held_at()
+            return (x, y, z - 0.002), st["y0"]
+        out.append(_Live(open_s, opening, FINGER_OPEN, f"{label}: open the hand"))
+    for i in range(n_strokes):
+        out.append(_Live(0.8, start, FINGER_OPEN, f"{label}: to the grip offset"))
+        for _ in range(REGRIP_FIXES):
+            out.append(_Live(0.8, fix_grip, FINGER_OPEN, f"{label}: fixed pad onto the body"))
+        out.append(_Live(grip_s, turn(0), REGRIP_FINGER, f"{label}: grip"))
         for k in range(1, n + 1):
-            yk = y0 - math.radians(sdeg * k / n)
-            out.append(Waypoint(step_s, (*_about_axis(yk), z), FINGER_CLOSED, f"{label}: turn", yk))
-        yend = y0 - math.radians(sdeg)
-        out.append(Waypoint(grip_s, (*_about_axis(yend), z), FINGER_OPEN, f"{label}: let go", yend))
-        out.append(Waypoint(0.6, (*c, z), FINGER_OPEN, f"{label}: center the open hand", yend))
-        left -= sdeg
-        if left > 1e-6:  # up over the handle, roll back there, and down round the body again
-            out.append(Waypoint(1.0, (*c, zo), FINGER_OPEN, f"{label}: lift over", yend))
+            out.append(_Live(step_s, turn(k), REGRIP_FINGER, f"{label}: turn"))
+        out.append(_Live(open_s, turn(n, FINGER_OPEN), FINGER_OPEN, f"{label}: let go"))
+        # straight up off it first: moved sideways at once, the opened hand knocked a part-threaded top off (d12)
+        out.append(_Live(1.2, up, FINGER_OPEN, f"{label}: up off it"))
+        out.append(_Live(0.6, cen(0.025, yend), FINGER_OPEN, f"{label}: center the open hand"))
+        if i < n_strokes - 1:  # up over the handle, roll back to the next start yaw there, and down round the body
+            out.append(_Live(1.0, cen(LIFT_OVER, yend), FINGER_OPEN, f"{label}: lift over"))
             for k in range(1, n + 1):
-                yk = yend + math.radians(sdeg * k / n)
-                out.append(Waypoint(step_s * 0.8, (*c, zo), FINGER_OPEN, f"{label}: roll back", yk))
-            out.append(Waypoint(1.0, (*c, z), FINGER_OPEN, f"{label}: back down", y0))
-    # up over the whole top before going home: from 3 cm up, the way home swept a finger through the handle and
-    # tipped the top off the thread (run 8)
-    out.append(Waypoint(1.2, (*c, zo), FINGER_OPEN, f"{label}: lift clear", yend))
+                out.append(_Live(step_s * 0.8, cen(LIFT_OVER, lambda k=k: YAW_END + (next_yaw() - YAW_END) * k / n),
+                                 FINGER_OPEN, f"{label}: roll back"))
+            out.append(_Live(1.0, cen(0.0, next_yaw), FINGER_OPEN, f"{label}: back down"))
+    out.append(_Live(1.2, cen(LIFT_OVER, yend), FINGER_OPEN, f"{label}: lift clear"))
+    # straight up well over the pot, then over towards the arm's side, before going home: straight home from over the
+    # top, the open hand came down to the top's shoulder and lifted the screwed-on top off with the basket (d39)
+    away = lambda dx, dy: lambda: ((*(np.array(_centered(st["ax"])) + (dx, dy)), st["z"] + LIFT_OVER + 0.12),  # noqa: E731
+                                   st.get("hy", yend()))
+    out.append(_Live(1.5, away(0.0, 0.0), FINGER_OPEN, f"{label}: up away from the pot"))
+    out.append(_Live(1.5, away(0.05, 0.20), FINGER_OPEN, f"{label}: over to the side"))
     return out
 
 
-def left_plan(wait):
-    """Pick the upper chamber up by its body and hold it until `wait` s (the carafe is away), set it on the base,
-    let go, then screw it on clockwise with 90-degree regrasp strokes and go home."""
+PLACE_FIXES = 4  # looks and corrections before setting the top on
+PLACE_GAIN = 0.8  # of each correction (the full step overshot: the arm was still settling from the last, d27)
+PLACE_HOVER = 0.035  # lined up with the skirt's bottom edge well over the basket's flange (the top can sit 1-2 cm
+#                      lower in the hand than carried: at 16 and 24 mm its skirt hung 0-2 mm over the rim, d27, d28)
+PLACE_REST = 0.002  # m: set on with its bottom face this far over gasket touch (it rests on the crests 0.3-2.7 mm up)
+HELD_PRESS = 0.002  # m the held first turn eases down: the thread's 0.75 mm a quarter turn, and a light press
+# The left hand picks, carries and sets the upper chamber with its wrist turned 45 degrees, so the handle stands 90
+# degrees off the fingers' closing axis, beside the finger plates: at 45 degrees off, the opening finger caught the
+# handle when it let go after the first turn and tipped the top 13 degrees (d29). The regrip strokes then work at
+# wrist yaw 0, where the handle is 45 degrees off the fingers at every regrip.
+PLACE_YAW = math.radians(45.0)
+STROKE_YAW = 0.0
+
+
+def press_plan(at):
+    """The left hand waits at home until `at` s, then presses the basket home with its closed fingertips on its middle
+    (the base is held by then; holding it can unseat the basket a few mm, d17, d21)."""
+    pz = FLOOR_Z + RIM + K_FLANGE_T + K_TIP - K_PRESS
+    hi = FLOOR_Z + RIM + 0.10
+    cx, cy = tuple(np.array((BX, BY)) - ARM_ERR)
+    return [kit.Home(max(0.5, at - 2.0), label="wait while the base is filled and held"),
+            Waypoint(2.0, (cx, cy, hi), FINGER_CLOSED, "over the basket", PLACE_YAW),
+            Waypoint(1.5, (cx, cy, pz + 0.015), FINGER_CLOSED, "down to the coffee", PLACE_YAW),
+            Waypoint(1.0, (cx, cy, pz), FINGER_CLOSED, "press the basket home", PLACE_YAW),
+            Waypoint(0.5, (cx, cy, pz), FINGER_CLOSED, "hold", PLACE_YAW),
+            Waypoint(1.0, (cx, cy, hi), FINGER_CLOSED, "up off it", PLACE_YAW)]
+
+
+def left_plan(go, steady, press=None):
+    """Pick the upper chamber up by its body and hold it aside until `go` s (the right hand has left the pot), set it
+    on the collar straight and keep holding it there until `steady` s (the base is held; None: just set on), turn it a
+    quarter turn clockwise still holding it, then screw it on with regrip strokes (see twist) and go home. Returns the
+    plan, when the top is set on (s) and when it is done screwing (s)."""
     tx, ty = TOP_XY
     gz = TOP + COLLAR_H + 0.0005 + GRIP_DZ
-    cx, cy = _about_axis(0.0)
-    seat_gz = FLOOR_Z + RIM + K_FLANGE_T + GRIP_DZ - PRESS  # the top sits on the basket's flange
-    plan = [Waypoint(2.0, (tx, ty, gz + 0.10), FINGER_OPEN, "over the upper chamber", 0.0),
-            Waypoint(1.0, (tx, ty, gz + 0.10), FINGER_OPEN, "steady", 0.0),
-            Waypoint(2.0, (tx, ty, gz), FINGER_OPEN, "around it", 0.0),
-            Waypoint(0.8, (tx, ty, gz), FINGER_CLOSED, "grip", 0.0),
-            Waypoint(1.2, (tx, ty, seat_gz + 0.03), FINGER_CLOSED, "lift", 0.0)]
-    # held 2 cm further back and to the left than where it stood: nearer, the right arm reaching over the base with the
-    # basket brushed the held chamber and was pushed 3 cm off the base's axis (sim runs)
-    plan.append(Waypoint(max(0.5, wait - sum(w.duration for w in plan)), (tx - 0.02, ty + 0.02, seat_gz + 0.03),
-                         FINGER_CLOSED, "hold it aside while the base is filled", 0.0))
-    plan += [Waypoint(2.0, (cx, cy, seat_gz + 0.03), FINGER_CLOSED, "over the base", 0.0),
-             Waypoint(1.5, (cx, cy, seat_gz + 0.016), FINGER_CLOSED, "lower to the collar", 0.0),
-             Waypoint(1.0, (cx, cy, seat_gz + 0.016), FINGER_CLOSED, "settle", 0.0),
-             Waypoint(1.5, (cx, cy, seat_gz), FINGER_CLOSED, "down over the collar", 0.0),
-             Waypoint(0.8, (cx, cy, seat_gz), FINGER_OPEN, "let go", 0.0)]
+    cx, cy = _about_axis(PLACE_YAW, PLACE_OFF)
+    seat_gz = FLOOR_Z + RIM + K_FLANGE_T + GRIP_DZ  # the top seated on the basket's flange
+    place_gz = seat_gz + CREST + PLACE_SAG  # set on the thread's crests
+    plan = [] if press is None else press_plan(press)
+    plan += [Waypoint(2.0, (tx, ty, gz + 0.10), FINGER_OPEN, "over the upper chamber", PLACE_YAW),
+            Waypoint(1.0, (tx, ty, gz + 0.10), FINGER_OPEN, "steady", PLACE_YAW),
+            Waypoint(2.0, (tx, ty, gz), FINGER_OPEN, "around it", PLACE_YAW),
+            Waypoint(0.8, (tx, ty, gz), FINGER_CLOSED, "grip", PLACE_YAW),
+            Waypoint(1.2, (tx, ty, seat_gz + 0.04), FINGER_CLOSED, "lift", PLACE_YAW)]
+    # carried high: 3-4 cm over the seat the swinging top's skirt clipped the collar on the way in (d11)
+    plan.append(Waypoint(max(0.5, go - sum(w.duration for w in plan)), (tx - 0.02, ty + 0.02, seat_gz + 0.07),
+                         FINGER_CLOSED, "hold it aside while the base is filled", PLACE_YAW))
+    plan += [Waypoint(2.0, (cx, cy, seat_gz + 0.06), FINGER_CLOSED, "over the base", PLACE_YAW),
+             Waypoint(2.0, (cx, cy, place_gz + PLACE_HOVER), FINGER_CLOSED, "lower to the collar", PLACE_YAW),
+             Waypoint(1.0, (cx, cy, place_gz + PLACE_HOVER), FINGER_CLOSED, "settle", PLACE_YAW)]
+    # line the skirt up over the thread from where the top's bottom face and the base's rim are, and stand the top
+    # upright with the wrist (closed loop: the arm sags, and the top hangs a few degrees crooked between the pads; set
+    # on 3 degrees crooked it cocked to 7 degrees and cross-threaded, d27)
+    fix = {"d": np.zeros(2), "r": 0.0, "p": 0.0, "dz": None}
+
+    def line_up():
+        rim, top, ax = _SEEN.get("rim"), _SEEN.get("top"), _SEEN.get("top_ax")
+        if rim is not None and top is not None and ax is not None:
+            fix["d"] = np.clip(fix["d"] + PLACE_GAIN * (rim[:2] - top[:2]), -0.015, 0.015)
+            fix["r"] = float(np.clip(fix["r"] + PLACE_GAIN * ax[1], -0.15, 0.15))
+            fix["p"] = float(np.clip(fix["p"] - PLACE_GAIN * ax[0], -0.15, 0.15))
+            fix["dz"] = float(top[2] - (place_gz + PLACE_HOVER))  # the top's bottom face below the tool point
+        return placed(PLACE_HOVER)()
+
+    def on_z():
+        """Tool height that sets the top's bottom face PLACE_REST over gasket touch (closed loop on its seen height
+        in the hand: it can sit 1-2 cm lower between the pads than carried, and pushed down that much more the
+        ridges were forced through each other, d28)."""
+        if fix["dz"] is None:
+            return place_gz
+        rim_z = _seen("rim", (BX, BY, FLOOR_Z + RIM))[2]
+        want = rim_z + K_FLANGE_T + GASKET.protrude + PLACE_REST
+        return float(np.clip(want - fix["dz"], place_gz - 0.02, place_gz + PLACE_HOVER))
+
+    def placed(dz=None):
+        return lambda: ((cx + fix["d"][0], cy + fix["d"][1], on_z() if dz is None else place_gz + dz), PLACE_YAW,
+                        None, fix["r"], fix["p"])
+
+    for _ in range(PLACE_FIXES):
+        plan += [_Live(0.6, line_up, FINGER_CLOSED, "line the top up over the thread"),
+                 _Live(1.0, placed(PLACE_HOVER), FINGER_CLOSED, "settle")]
+    plan.append(_Live(1.5, placed(), FINGER_CLOSED, "onto the thread"))
+    plan.append(_Live(0.5, placed(), FINGER_CLOSED, "settle on the thread"))
+    up = sum(w.duration for w in plan)
+    if steady is not None:
+        plan.append(_Live(max(0.5, steady - up), placed(), FINGER_CLOSED,
+                          "hold it on the thread while the base is steadied"))
     lo, hi = tk.yaw_range("left", (BX, BY, seat_gz))
-    start = math.floor((hi - 10) / 90.0) * 90.0  # a multiple of 90: the fingers land where they first gripped
-    if start - STROKE < lo:
+    if math.degrees(PLACE_YAW) - STROKE < lo or math.degrees(PLACE_YAW) > hi:
         raise ValueError(f"left wrist range {lo:.0f}..{hi:.0f} is too small for a {STROKE:.0f}-degree stroke")
-    plan += twist(seat_gz + PRESS, TWIST_DEG, start)
-    plan += [kit.Home(2.0), kit.Home(1.5, label="hold at home")]
-    return plan
+    # the first stroke without letting go: the whole hand turns rigidly about the base's axis (its tilt correction
+    # turning with it), pressing down a little, so the top finds its groove upright; let go on the crests, a top cocks
+    # (probes, d27)
+    hs = {}
+
+    def held(k, n):
+        def f():
+            if not hs:
+                hs["ax"] = _axis()
+                hs["p0"] = np.array(placed()()[0])
+            dlt = -math.radians(STROKE * k / n)
+            c, sn = math.cos(dlt), math.sin(dlt)
+            v = hs["p0"][:2] - hs["ax"]
+            xy = hs["ax"] + np.array((c * v[0] - sn * v[1], sn * v[0] + c * v[1]))
+            r, pp = fix["r"], fix["p"]
+            z = hs["p0"][2] - HELD_PRESS * k / n
+            return (xy[0], xy[1], z), PLACE_YAW + dlt, None, c * r - sn * pp, sn * r + c * pp
+        return f
+
+    n = max(1, math.ceil(STROKE / 10.0))
+    for k in range(1, n + 1):
+        plan.append(_Live(0.4, held(k, n), FINGER_CLOSED, "screw the top on: first turn, held upright"))
+    plan.append(_Live(1.4, held(n, n), FINGER_OPEN, "screw the top on: let go"))
+    yend = PLACE_YAW - math.radians(STROKE)
+
+    def over_z():  # pad tips over the handle, spout and lid, from where the top is now
+        hs["over"] = float(_seen("top", hs["p0"] - (0, 0, GRIP_TW))[2] + GRIP_TW + LIFT_OVER)
+        return hs["over"]
+
+    def lift(h, yaw):
+        return lambda: ((*held(n, n)()[0][:2], hs["p0"][2] + h), yaw)
+
+    plan += [_Live(1.2, lift(0.025, yend), FINGER_OPEN, "screw the top on: up off it"),
+             _Live(1.0, lambda: ((*_centered(_axis()), over_z()), yend), FINGER_OPEN, "screw the top on: lift over")]
+    def ry():  # the first regrip's yaw: the released top's handle along the plates
+        if "ry" not in hs:
+            hs["ry"] = _regrip_yaw()
+        return hs["ry"]
+
+    for k in range(1, 7):
+        plan.append(_Live(0.25, lambda k=k: ((*_centered(_axis()), hs["over"]), yend + (ry() - yend) * k / 6),
+                          FINGER_OPEN, "screw the top on: roll back"))
+    plan.append(_Live(1.0, lambda: ((*_centered(_axis()), hs["over"] - LIFT_OVER), ry()), FINGER_OPEN,
+                      "screw the top on: back down"))
+    plan += twist(N_STROKES, math.degrees(STROKE_YAW))
+    done = sum(w.duration for w in plan)
+    return plan + [kit.Home(2.0), kit.Home(1.5, label="hold at home")], up, done
 
 
 def demo():
-    """The right arm pours from the carafe into the base, tipping it about its lip 5 cm over the rim, sets it back
-    down, then lifts the basket out of its cup and drops it into the base. The left arm then sets the upper chamber on
-    the base and screws it on with 90-degree wrist strokes (up to seven); once it is snug and let go the run ends."""
-    right, clear = right_plan()
-    return {"right": right, "left": left_plan(clear)}
+    """The right arm pours from the carafe into the base, tipping it about its lip 6.5 cm over the rim, sets it back
+    down, lifts the basket out of its cup and drops it into the base, and comes round behind the pot to hold the base by
+    two of its flats. The left arm then sets the upper chamber on the collar, turns it a quarter turn still holding it,
+    and screws it on with regrip strokes (each starting with the handle beside the finger plates and turning to the
+    wrist's end) until the gasket is pressed. It lets go and lifts clear, and the right hand lets go of the base."""
+    right, _ = right_plan()
+    right += steady_plan()
+    held = sum(w.duration for w in right)
+    # the other hand takes hold of the free base before the upper chamber comes over it: gripping it with a top already
+    # set on popped the basket up ~3 mm and the top's face pinned it there crooked (d15-d17); with nothing over it, the
+    # basket settles back down the mouth's lead-in
+    left, _, done = left_plan(held + 1.0, None, press=held)
+    right.append(_steady_t(max(0.5, done - held), (STEADY_X, STEADY_Y, FLOOR_Z + BASE_GZ), STEADY_GRIP,
+                           "hold the base"))
+    return {"right": right + release_plan(), "left": left}

@@ -53,7 +53,6 @@ Usage in task.py (next to yamkit.py and pourkit.py):
 from __future__ import annotations
 
 import math
-import os
 import sys
 from dataclasses import dataclass, field
 
