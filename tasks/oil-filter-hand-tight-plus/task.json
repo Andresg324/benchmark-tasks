@@ -19,6 +19,6 @@
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "Unscrew the filter, wipe and re-oil its gasket, spin it back on to gasket contact, check the witness lines meet, and back it off three quarters of a turn. Replace the filter if it was tightened past a full turn (its gasket is deformed). Lay the wrench back on the bench on its tape outline, cap down, handle along the outline.",
   "fidelity": "Past contact the gasket's torque rises linearly to 18 N·m at 0.75 turn (Kawasaki's figure), 29 N·m at 1.25 turns. A hand on the can slips at about 2.5 N·m, so the wrench does the rest. The cap is drawn only: centered on the can it is held on the flutes and drives it through a 400 N·m/rad spring; the ratchet freewheels back. 18 N·m is 1.7 times the arms' rated two-hand torque (10.7 N·m) and 76% of their peak (23.8), used in short strokes. No oil or gasket deformation is simulated.",
-  "scores": "Dream-1 run: PENDING (2,400 steps); demo: 1.0 (1,919 steps)",
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0 (1,919 steps)",
   "media": "M-85G98T"
 }

@@ -151,6 +151,8 @@ moves first, the trial scores at most 0.5.
 
 - Demo: 1.0 in 1,919 steps (96 s; the run ends 1 s after full credit is held).
 - Model run limit: 2,400 steps (2 minutes at 20 Hz).
+- Dream-1: 0 in 2,400 steps on the same task.py. Its hands went toward the filter and the wrench's handle, but it
+  never took up the wrench or brought the filter 90 degrees past contact.
 - Seed 0, one fixed layout (`object_jitter=0`).
 
 ## Fidelity
