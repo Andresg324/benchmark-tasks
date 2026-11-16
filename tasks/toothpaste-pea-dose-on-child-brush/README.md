@@ -296,8 +296,8 @@ mouth. Discard each dosed brush, or wash it.
 ## Runtime and seeds
 
 - Run limit: 1,200 control steps at 20 Hz (1 minute).
-- Scripted demo: **1.0** (success at step 512, 25.6 s; task.py sha256 7bd09be57cce, before the drop/throw check
-  was added: re-run pending). In the run, 0.284 g landed on
+- Scripted demo: **1.0** (success at step 512, 25.6 s; task.py sha256 f37e868b5638, with the release check
+  that each item is laid on the counter, not dropped or thrown). In the run, 0.284 g landed on
   the bristles and 0.010 g off them; the brush was held level (bristles within 1.1 degrees of up) and laid back flat;
   the tube was laid back and released. The left hand lifts the brush by its handle, turns it handle-left and holds it
   10 cm over the counter. The right hand lifts the tube by its body with a light holding grip, turns it nozzle-down

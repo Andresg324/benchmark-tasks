@@ -10,7 +10,9 @@ its task folder became the base and every spec change from `~/ideas-nov16/TOOTHP
 primary has pushed nothing newer since (checked before every sim).
 
 ## Result
-- **Demo: 1.0**, success at step 512 (25.6 s). task.py sha256 7bd09be57cce, the same file for every run below.
+- **Demo: 1.0**, success at step 512 (25.6 s). task.py sha256 f37e868b5638 (with QC's release rule: each item laid
+  on the counter, middle under 3 cm up and under 0.3 m/s when let go), the same file for every run below. The demo
+  passed the rule unchanged; re-run Nov 16 after the QC scorer fixes, with the variants giving the same scores.
   0.284 g on the bristles, 0.010 g off; the brush held level (1.1 deg); the brush and tube laid back and released.
 - Variants: too much (`TOOTH_VARIANT=much`, 2.5 mm for 1.5 s) **0.25** (0.461 g on, 0.070 g off). Smear (`smear`,
   1.2 mm for 0.6 s) **0.25** (0.111 g on). Do nothing (`nothing`, both hands park) **0**.

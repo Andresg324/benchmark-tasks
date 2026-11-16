@@ -17,6 +17,6 @@
   "run_limit": "1,200 steps (1 minute at 20 Hz)",
   "reset_notes": "Each trial uses a clean, dry brush (weighed) laid at its mark, and the tube at its mark with 50 to 70 g of paste left (gross weight minus the weighed empty tube): roll it flat from the crimp up to the paste, wipe the nozzle flush, flip the cap fully open and let it lie 1 min so the laminate springs back. In simulation the tube always holds 60 g and the brush starts clean.",
   "fidelity": "Rigid bodies. The tube is a rigid core with four sprung wall panels and a snap-hinged flip lid (shut, it seals the nozzle). The paste is a flow model, not a fluid: pressure from the panels' push on 8 mL of air, a 1.44 kPa yield (300 Pa paste, 7.5 mm nozzle), flow past it, dropped plumb from the nozzle onto a 1 mm bristle grid that moves with the brush. No ribbon touch-down, stringing or tail break-off (README). Squeeze constants are estimates, calibrated on the trial tube.",
-  "scores": "Dream-1 run: not run; demo: 1.0 (success at step 512, 25.6 s; re-run pending after the drop check)",
+  "scores": "Dream-1 run: not run; demo: 1.0 (success at step 512, 25.6 s; task.py sha256 f37e868b5638)",
   "media": "PENDING"
 }
