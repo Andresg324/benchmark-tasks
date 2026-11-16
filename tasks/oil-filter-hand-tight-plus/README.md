@@ -30,7 +30,7 @@ pressure, and the filter may not come off at the next change.
 | `task.py` | Scene, scorer (`score()`, `success()`) and scripted demo (`demo()`), for the `yam_arena` embodiment (Isaac Lab-Arena, bimanual YAM, `station` scene). Its docstrings explain every rule. |
 | `guardkit.py` | The task's helper module for contact checks: the grippers' own shapes (boxes fitted to the YAM's collision meshes) and the 2 mm contact test used to decide whether a hand is still on the filter. |
 | `task.py` (wrench) | The cap wrench and ratchet are a second articulation on the bench (lift, turn about the filter's axis, two slides) with laws in `task.py`: lying on the bench it stays put; lifted it moves freely; centered on the can and down it couples to the filter through the ratchet (`ToolModel`, `tool_step`). |
-| `twistkit.py` | Threaded parts: the filter is the "cap" of an articulation (a slide along the nipple coupled to a hinge, 1.5 mm per turn), with a seat (gasket contact), a gasket friction growing with the angle past it, a hard stop 540 degrees past it, and "off" five turns back. Gives the scorer the filter's angle from contact and which gripper holds it, and builds the demo's regrasp loop. Built on `yamkit.py`. |
+| `twistkit.py` | Threaded parts: the filter is the "cap" of an articulation (a slide along the nipple coupled to a hinge, 1.5 mm per turn), with a seat (gasket contact), a gasket friction growing with the angle past it, a hard stop 540 degrees past it, and "off" five turns back. Gives the scorer (and the demo, which senses it) the filter's angle from contact, and the scorer which gripper holds it. Built on `yamkit.py`. |
 | `yamkit.py` | Helper that spawns the modeled props and articulations, and gives the scorer the grippers. It patches `yam_arena` in memory at import; no files change. |
 | `test_task.py` | Offline scorer checks: step-by-step histories of the thread and the grippers, near misses included. No simulator needed. |
 | `task.json` | The task card. |
@@ -59,8 +59,8 @@ By hand. The left arm opens over the filter, comes down with its fingers around 
 clockwise (seen from above) in short regrip strokes: close, roll 90 degrees in 15-degree steps (sinking with the
 thread), open, roll back, close again. After each stroke it checks how far that stroke turned the filter. There is no
 set number of strokes. While the filter runs on freely, each stroke turns it nearly the full 90 degrees. Past gasket
-contact the gasket's resistance rises until the pads slip on the can, at about 2.5 N·m (about 40 degrees past contact
-in this model). The first stroke that turns the filter less than 10 degrees means the filter is hand-tight: the hand
+contact the gasket's resistance rises until the pads slip on the can, at about 2.5 N·m (about 36 degrees past contact
+in this sim). The first stroke that turns the filter less than 10 degrees means the filter is hand-tight: the hand
 lets go and lifts clear (at most 8 strokes). The right arm waits at home until then.
 
 With the wrench. Both hands take the wrench's handle where it lies (the right on the grip 0.55 m from the cap's axis,
@@ -75,7 +75,7 @@ handle with 3 N plus 0.6 N per N·m of the stroke's torque, so the cap stays on 
 reads the angle again. Once the filter is 270 degrees past contact, where the gasket takes Kawasaki's 18 N·m, the
 strokes stop. They also stop if two strokes in a row turn the filter less than 2 degrees each (the arms at their
 limit), and after 14 strokes at most. The hands ease off, lift the wrench off the can, set it on the bench beside the
-head, let go and go home. Result on this version: RESULT_TEXT.
+head, let go and go home. Result on this version: 1.0 in 1,919 steps (96 s).
 
 ## Scoring
 
@@ -149,7 +149,7 @@ moves first, the trial scores at most 0.5.
 
 ## Runtime and seeds
 
-- Demo: 1.0 in 1,861 steps (93 s; the run ends 1 s after full credit is held).
+- Demo: 1.0 in 1,919 steps (96 s; the run ends 1 s after full credit is held).
 - Model run limit: 2,400 steps (2 minutes at 20 Hz).
 - Seed 0, one fixed layout (`object_jitter=0`).
 
@@ -169,8 +169,9 @@ was left that gives way at that torque, either way (stick-slip friction, not a s
 is held where it was by a stiff spring (2,000 N·m/rad) whose torque is capped at the gasket's. The endpoints come from the
 makers (Kawasaki's 18 N·m for this filter; the filter makers' three quarters of a turn past contact); the straight line
 between them is our model of the gasket's squeeze, stated as such. Before contact the filter runs on with about
-0.3 N·m. A hand turning the can itself slips on it at about 2.5 N·m (measured in this sim in our previous revision:
-two pads at the gripper's 50 N on a 3.3 cm radius), which the gasket reaches about 40 degrees past contact. So the rest
+0.3 N·m. A hand turning the can itself slips on it at about 2.5 N·m (two pads at the gripper's 50 N on a 3.3 cm
+radius), which the gasket reaches about 36 degrees past contact: in this version's demo the hand's last stroke turned
+the filter from 36.2 to 38.3 degrees past contact and no further. So the rest
 needs the wrench, as on a real engine.
 
 The wrench: a 65 mm, 14-flute, 3/8-inch-drive cap filter wrench on a 24-inch, 1/2-inch-drive ratchet through a 1/2
