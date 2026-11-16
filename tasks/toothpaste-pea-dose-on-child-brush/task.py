@@ -1,6 +1,6 @@
 """On a bathroom counter (the station table), in front of the arms: a child's manual toothbrush lies on its back,
 bristles up, on the robot's left, and a kids' fluoride toothpaste tube (a Crest Kid's 4.6 oz / 130 g tube, partly
-used, its flip cap snapped shut) lies on its side on the right.
+used, its flip cap flipped open) lies on its side on the right.
 
 The job is to get the brush ready for a 4-year-old: a pea-sized dab of toothpaste (0.25 g; 0.15 to 0.35 g scores full)
 on the bristles, nothing off the bristles, the tube put down. The US guidance for ages 3 to 6 is no more than a
@@ -68,9 +68,12 @@ BODY_X = (-0.050, 0.050)  # 10 cm of round body
 # The used end, rolled flat up to the paste (as the reset rolls it): a flat roll 55 mm wide (the 35 mm tube laid flat),
 # 10 mm thick and 2.4 cm long, lying on the counter. It is the tube's wide, rigid foot: lying on its sprung bottom
 # panel alone, the tube rocked over 40 degrees in the second probe.
-CRIMP = ((0.062, 0.0, -BODY_R + 0.005), (0.024, 0.055, 0.010))
+CRIMP = ((0.062, 0.0, -0.018 + 0.005), (0.024, 0.055, 0.010))  # its underside level with the cap's (18 mm)
 SHOULDER_R, SHOULDER_X = 0.010, (-0.058, -0.050)
-CAP_R, CAP_X = 0.015, (-0.071, -0.058)  # the flip cap's base, 30 mm across and 13 mm long (screwed on the shoulder)
+# The flip cap: 36 mm across (a stand-up cap, a little wider than the body [M]) and 13 mm long. With the rolled foot
+# it carries the lying tube 0.5 mm clear of its wall panels: in the fifth probe the bottom panel bore the tube's
+# weight, bounced on the paste's pressure and pumped paste out of the open nozzle.
+CAP_R, CAP_X = 0.018, (-0.071, -0.058)
 LID_T = 0.005  # the flip lid: a 5 mm disc over the cap's face, hinged at one edge, with a thumb tab at the other
 NOZZLE_D, NOZZLE_L = 0.0075, 0.009  # m: the orifice, 7.5 mm across (generic tubes 0.28-0.32 in, US 9567138), 9 mm long
 TIP = (CAP_X[0], 0.0, 0.0)  # the nozzle's mouth at the cap's face, under the lid
@@ -101,7 +104,7 @@ def p_yield_kpa(tau_pa: float = TAU_Y_PA) -> float:
 
 P_YIELD_KPA = p_yield_kpa()  # 1.44 kPa
 FLOW = 0.10  # mL/s per kPa past the yield: a firm squeeze (5 kPa) runs a 7.5 mm ribbon about 1 cm/s (calibrate)
-TUBE_START = (0.260, -0.150, TOP + BODY_R)  # lying on its side, nozzle toward the robot, lid hinge underneath
+TUBE_START = (0.260, -0.150, TOP + CAP_R)  # lying on its side on cap and foot, nozzle toward the robot, hinge on top
 LAMINATE = kit.Look((0.95, 0.85, 0.20), 0.5)
 PASTE_RGB = (0.35, 0.75, 0.95)  # blue kids' gel
 
@@ -132,43 +135,43 @@ def _panel(link: str, axis: str, side: float):
                     damping=0.0, law=_Wall("tube", -side, k=K_WALL, area_m2=PANEL_AREA_M2, lo=lo, hi=hi))
 
 
-# The flip lid: a hinge along the tube's y at the cap face's lower edge (lying on the counter the hinge is underneath).
-# Opening turns the lid's top toward the nozzle side (joint position negative). A snap hinge: within LID_SHUT_RAD of
-# shut it is pulled shut (0.03 N m at the edge of that zone, about 1 N on the thumb tab); past LID_SNAP_RAD it is pulled
-# to its open rest; between, it swings free. The nozzle is open (paste can leave) once the lid is LID_OPEN_RAD off it.
+# The flip lid: a hinge along the tube's y at the cap face's upper edge (lying on the counter the hinge is on top).
+# Opening swings the lid's free edge out past the nozzle and up (joint position positive). A snap hinge: within
+# LID_SHUT_RAD of shut it is pulled shut (0.03 N m at the edge of that zone, about 1 N on the thumb tab); past
+# LID_SNAP_RAD it is pulled to its open rest; between, it swings free. The nozzle is open (paste can leave) once the
+# lid is LID_OPEN_RAD off it. The trial starts with the lid at its open rest (see the README: why the cap starts open).
 LID_SHUT_RAD, LID_SNAP_RAD, LID_REST_RAD, LID_MAX_RAD = 0.5, 1.1, 2.5, 2.7
 LID_OPEN_RAD = 1.0
 K_LID = 0.06  # N m/rad
-TAB = ((-LID_T / 2, 0.0, 2 * CAP_R + 0.004), (0.003, 0.010, 0.008))  # the thumb tab, 8 mm proud of the cap's rim (a
-# real tab stands 3-4 mm [M]; modeled taller so a fingertip clears the rim: see the README's fidelity note)
+TAB = ((-LID_T / 2, 0.0, -2 * CAP_R - 0.002), (0.003, 0.010, 0.004))  # the thumb tab, 4 mm proud at the free edge
 
 
 class Snap:
-    """The flip lid's snap hinge (a mechkit-style law; joint position q <= 0, opening = -q)."""
+    """The flip lid's snap hinge (a mechkit-style law; joint position q >= 0, opening = q)."""
 
-    sets_limits = True  # shut until the law acts (its COM leans out past the hinge: it would fall open in the settle)
+    sets_limits = True  # held at its start until the law acts (the arena settles the scene before the first step)
 
     def drive(self, key, q, qd, J, mem):
-        mem["limits"] = (-LID_MAX_RAD, 0.0)
-        a = -q
-        mem["open"] = a >= LID_OPEN_RAD
-        if a <= LID_SHUT_RAD:
+        mem["limits"] = (0.0, LID_MAX_RAD)
+        mem["open"] = q >= LID_OPEN_RAD
+        if q <= LID_SHUT_RAD:
             return 0.0, K_LID, 0.0, 2e-4
-        if a >= LID_SNAP_RAD:
-            return -LID_REST_RAD, K_LID, 0.0, 2e-4
+        if q >= LID_SNAP_RAD:
+            return LID_REST_RAD, K_LID, 0.0, 2e-4
         return q, 0.0, 0.0, 2e-4
 
 
-LID = kit.Link("lid", "revolute", "Y", anchor=(CAP_X[0], 0.0, -CAP_R), lower=-1e-4, upper=1e-4, start=0.0,
-               mass=0.004,
-               meshes=(kit.cylinder((-LID_T / 2, 0.0, CAP_R), CAP_R, LID_T, kit.Look((0.20, 0.45, 0.85), 0.5), axis="x"),
-                       kit.box(*TAB, kit.Look((0.20, 0.45, 0.85), 0.5))),
-               colliders=(kit.Collider((-LID_T / 2, 0.0, CAP_R), radius=CAP_R, height=LID_T, axis="X"),
+_LID_LOOK = kit.Look((0.20, 0.45, 0.85), 0.5)
+LID = kit.Link("lid", "revolute", "Y", anchor=(CAP_X[0], 0.0, CAP_R), lower=LID_REST_RAD - 1e-4,
+               upper=LID_REST_RAD + 1e-4, start=LID_REST_RAD, mass=0.004,
+               meshes=(kit.cylinder((-LID_T / 2, 0.0, -CAP_R), CAP_R, LID_T, _LID_LOOK, axis="x"),
+                       kit.box(*TAB, _LID_LOOK)),
+               colliders=(kit.Collider((-LID_T / 2, 0.0, -CAP_R), radius=CAP_R, height=LID_T, axis="X"),
                           kit.Collider(*TAB)),
                law=Snap())
 
 TUBE = sq.free_body(kit.Mechanism(
-    "tube", pos=TUBE_START, yaw=0.0, mass=TUBE_KG, size=(CRIMP[0][0] + CRIMP[1][0] / 2 - CAP_X[0] + LID_T, 2 * BODY_R, 2 * BODY_R + 0.006),
+    "tube", pos=TUBE_START, yaw=0.0, mass=TUBE_KG, size=(CRIMP[0][0] + CRIMP[1][0] / 2 - CAP_X[0] + 2 * CAP_R, 2 * BODY_R, 2 * BODY_R + 2 * CAP_R),
     meshes=(kit.box((PANEL_X, 0, 0), CORE, LAMINATE),
             kit.cylinder((0, 0, 0), BODY_R - 0.001, BODY_X[1] - BODY_X[0], LAMINATE, axis="x"),
             kit.box(*CRIMP, LAMINATE),
@@ -270,7 +273,7 @@ def pushes(objects) -> list:
 def lid_open(objects) -> bool:
     """The flip lid swung at least LID_OPEN_RAD off the nozzle (read from its hinge)."""
     try:
-        return -kit.joint(objects, "tube/lid").pos >= LID_OPEN_RAD
+        return kit.joint(objects, "tube/lid").pos >= LID_OPEN_RAD
     except KeyError:  # no joint state (offline tests): treated as open
         return True
 
@@ -506,56 +509,19 @@ def _tw(duration, pos, finger, label, pitch=0.0, yaw=None):
 
 
 GRASP_X = 0.015  # m: the right hand holds the body 1.5 cm behind its middle (toward the crimp), on the wall panels
-FLICK_TCP = (0.330, -0.100, TOP + 0.080)  # the right hand's tool point while the left hand flicks the lid open
-FLICK_YAW = -math.pi / 2  # the right hand turned so the nozzle points left (+y), toward the left hand
-FLICK_O = 0.025  # m: the left fingers open 25 mm each side; the rear one (toward the tube) pushes the tab
-FLICK_R = 0.034  # m: the push lands this far from the hinge (the tab spans 30-38 mm)
-FLICK_DEG = (0.0, 25.0, 50.0, 80.0)  # the lid swung past LID_SNAP_RAD (63 deg) snaps open by itself
-
-
-def _rz(a):
-    c, s_ = math.cos(a), math.sin(a)
-    return np.array([[c, -s_, 0], [s_, c, 0], [0, 0, 1]])
-
-
-def flick_tcps() -> list:
-    """Left tool points (world) that push the thumb tab round the hinge with the rear finger's inner face, from the
-    tab's back at 0 deg to 80 deg open: the tube as the right hand holds it at FLICK_TCP, turned FLICK_YAW."""
-    rt = _rz(FLICK_YAW)
-    hinge = np.asarray(FLICK_TCP) - rt @ np.array([GRASP_X, 0.0, 0.0]) + rt @ np.array([CAP_X[0], 0.0, -CAP_R])
-    out = []
-    for d in FLICK_DEG:
-        f = math.radians(d)
-        c = hinge + rt @ np.array([-FLICK_R * math.sin(f), 0.0, FLICK_R * math.cos(f)])  # contact, tube frame turned
-        push = rt @ np.array([-1.0, 0.0, 0.0])  # the tab is pushed toward the nozzle's side: world +y
-        out.append(c + FLICK_O * push + np.array([0.0, 0.0, PAD_TIP - 0.002]))  # finger bottom 2 mm under the contact
-    return out
-
-
 def demo():
-    """Right hand lifts the tube; left fingertip flicks its lid open; left hand holds the brush up; right hand doses
-    it; both put things back."""
-    tcps = flick_tcps()
-    fx, fy, fz = (float(v) for v in tcps[0])
-    straddle = finger_for(FLICK_O)
+    """Left hand holds the brush up, level; right hand doses it; both put things back."""
     tx, ty, tz = TUBE_START
     gx = tx + GRASP_X
     push, dose_s = VARIANTS.get(os.environ.get("TOOTH_VARIANT", ""), (DOSE_PUSH, DOSE_S))
     hold, dose = tube_grip(HOLD_PUSH), tube_grip(push)
     over, at = dose_tcp(0.040), dose_tcp()
-    fl = tuple(float(v) for v in FLICK_TCP)
+    lifted = (gx, ty, tz + CARRY_DZ)
     right = [_tw(1.5, (gx, ty, tz + 0.08), finger_for(WIDE), "above the tube"),
              _tw(1.5, (gx, ty, tz), finger_for(WIDE), "around the tube"),
              _tw(0.8, (gx, ty, tz), hold, "hold it"),
-             _tw(1.5, (gx, ty, tz + CARRY_DZ), hold, "lift"),
-             _tw(1.5, fl, hold, "hold it up for the lid, nozzle to the left", yaw=FLICK_YAW)]
-    t_ready = sum(w.duration for w in right)
-    left = [Waypoint(t_ready, (fx, fy, fz + 0.030), straddle, "fingers astride the thumb tab, above", 0.0),
-            Waypoint(1.0, (fx, fy, fz), straddle, "rear finger behind the thumb tab", 0.0)]
-    for k, p in enumerate(tcps[1:], 1):
-        left.append(Waypoint(0.5, tuple(float(v) for v in p), straddle, f"flick the lid {FLICK_DEG[k]:.0f} deg", 0.0))
-    left.append(Waypoint(1.0, tuple(float(v) for v in tcps[-1] + np.array([0.0, 0.03, 0.05])), straddle,
-                         "fingers away", 0.0))
+             _tw(1.5, lifted, hold, "lift")]
+    left = []
     bx, by, bz = (float(v) for v in np.asarray(BRUSH_START) + BRUSH_GRIP_LOCAL)
     c, sn = math.cos(HOLD_YAW), math.sin(HOLD_YAW)
     hx, hy, hz = (float(v) for v in np.asarray(HOLD_BRUSH_AT) + np.array([[c, -sn, 0], [sn, c, 0], [0, 0, 1]]) @ BRUSH_GRIP_LOCAL)
@@ -566,7 +532,7 @@ def demo():
              Waypoint(1.5, (bx, by, bz + 0.08), b_hold, "lift", GRIP_YAW),
              Waypoint(1.5, (hx, hy, hz), b_hold, "hold it bristles-up", HOLD_YAW)]
     t_brush = sum(w.duration for w in left)
-    right.append(_tw(max(0.5, t_brush - t_ready), fl, hold, "wait for the brush", yaw=FLICK_YAW))
+    right.append(_tw(max(0.5, t_brush - sum(w.duration for w in right)), lifted, hold, "wait for the brush"))
     side = (over[0], SIDE_Y, TOP + 0.180)  # beside the held brush, clear of it, where the arm can still hold it level
     right += [_tw(2.0, side, hold, "carry it level beside the brush"),
               _tw(1.5, side, hold, "turn it nozzle-down beside the brush", PITCH),

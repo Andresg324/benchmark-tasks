@@ -117,6 +117,21 @@ class Trial:
         return M._L.paste.off_g()
 
 
+def test_lid_shut_seals():
+    t = Trial()
+    t.nozzle_over()
+    kit._JOINTS["tube/lid"] = kit.JointState(0.0, 0.0, False)
+    try:
+        t.squeeze(*M.VARIANTS["much"])
+        check(t.on + t.off == 0.0, "with the flip lid shut, a hard squeeze dispenses nothing")
+    finally:
+        kit._JOINTS["tube/lid"] = kit.JointState(M.LID_REST_RAD, 0.0, False)
+    t2 = Trial()
+    t2.nozzle_over()
+    t2.squeeze(M.DOSE_PUSH, M.DOSE_S)
+    check(M.PEA_G[0] <= t2.on <= M.PEA_G[1], f"with the lid at its open rest the demo squeeze doses ({t2.on:.3f} g)")
+
+
 def test_nothing():
     t = Trial()
     check(t.step(0.0, 60) == 0.0, "doing nothing scores 0")
@@ -308,9 +323,6 @@ def test_demo_plan():
     t_done = until("right", "lift off the dab")
     t_held = until("left", "hold it bristles-up")
     t_free = until("left", "hold still while it is dosed")
-    check(until("left", "flick the lid 80 deg") <= until("right", "wait for the brush")
-          and until("left", "rear finger behind the thumb tab") >= until("right", "hold it up for the lid, nozzle to the left"),
-          "the lid is flicked while the tube is held up")
     check(t_held <= t_at and t_done <= t_free, "the brush is held still for the whole dose")
 
 
