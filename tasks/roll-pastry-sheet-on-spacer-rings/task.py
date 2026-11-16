@@ -45,6 +45,8 @@ X_RANGE = (BOARD[0] - BOARD_SIZE[0] / 2, BOARD[0] + BOARD_SIZE[0] / 2)  # the bo
 CELL = 0.02  # m: the pastry model's cell (a 2 cm grid lined up with the board's front edge and center line)
 ROWS = (0, 2, 4, 7, 9, 11)  # the 2 cm bands read: centered 11, 7 and 3 cm either side of the center line
 COLS = slice(0, None, 2)  # every other 2 cm cell along x: x 11, 15, 19, ... cm (a 4 cm pitch from the front edge)
+END_IN = 0.01  # m: each band is also read 1 cm inside each of its rolled ends, so an unrolled end shows up
+END_CLEAR = 0.02  # m: a row point within 2 cm of an end point is left to the end point (no near-duplicate readings)
 
 PASTRY = (0.24, 0.0)  # the half sheet's center
 PASTRY_SIZE = (0.115, 0.24, 0.0048)  # half of a 23 x 24 cm sheet: 11.5 cm (x) by 24 cm (y), 4.8 mm (3/16 inch) thick
@@ -63,8 +65,8 @@ PIN_START = (PIN_X, 0.0, BZ + R_RING)
 # --- The rule's numbers (reasons in score() and the README).
 TARGET_T = 0.0032  # m: 1/8 inch, the sheet's thickness (the rings' gap)
 TOL_T = 0.0003  # m: a point is on spec within 0.3 mm of 3.2 mm (2.9 to 3.5 mm, about 10 %)
-SPEC_SHARE = 0.90  # share of the measured points that must be on spec (the outer row of points, at the cut and rolled
-#                    edges, is half of the 24 points; 10 % lets two of 24 be off)
+SPEC_SHARE = 0.90  # share of the measured points that must be on spec (the outer bands and the end points, at the cut
+#                    and rolled edges, are most of the points; 10 % lets about three of 30 be off)
 HALF_T = 0.0037  # m: at least 90 % of points at most 3.7 mm (within 0.5 mm, about one pass to go) earns half
 QUARTER_T = 0.0042  # m: at least 90 % of points at most 4.2 mm (0.6 mm off the 4.8 mm start) and even earns a quarter
 WEDGE_MAX = 0.0003  # m: the 2 cm bands' average thicknesses may differ by at most this across the width (the same
@@ -147,10 +149,24 @@ def released(objects):
 
 
 def points(objects=None):
-    """The thickness (m) at each measuring point, on a 4 cm grid: every other 2 cm cell along x from the board's front
-    edge (x 11, 15, 19, ... cm), in the bands 3, 7 and 11 cm either side of its center line (rows), 0 where there is no
-    pastry. 24 points on the demo's sheet."""
-    return dk.grid()[list(ROWS)][:, COLS]
+    """The thickness (m) at each measuring point, one row per band read (the 2 cm bands 3, 7 and 11 cm either side of
+    the board's center line): the points every 4 cm along x from 1 cm behind the board's front edge (x 11, 15, 19, ...
+    cm) that the pastry covers, except any within 2 cm of an end point, then the two end points 1 cm inside the band's
+    rolled ends (last two columns); 0 where nothing is read. 30 points on the demo's sheet."""
+    xc = dk.cell_x()[COLS]
+    grid = dk.grid()[list(ROWS)][:, COLS]
+    strips = dk.strips()
+    out = np.zeros((len(ROWS), grid.shape[1] + 2))
+    for r, j in enumerate(ROWS):
+        e, t = strips[j]
+        ends = (e[0] + END_IN, e[-1] - END_IN)
+        row = grid[r].copy()
+        for k, x in enumerate(ends):
+            row[np.abs(xc - x) < END_CLEAR] = 0.0
+            i = int(np.clip(np.searchsorted(e, x, side="right") - 1, 0, len(t) - 1))
+            out[r, grid.shape[1] + k] = t[i]
+        out[r, :grid.shape[1]] = row
+    return out
 
 
 def sheet(objects=None):
@@ -204,20 +220,20 @@ def success(objects):
 
 
 def score(objects):
-    """The pastry's thickness is read on a 4 cm grid: the centers of every other 2 cm square along x from the board's
-    front edge, in the bands 3, 7 and 11 cm either side of its center line, at every point the pastry covers (24 on
-    the demo's sheet; the same points a real trial reads with a depth gauge). Doing
-    nothing scores 0 (the half sheet starts 4.8 mm, 3/16 inch, thick). In the sim only, rolling counts while both
-    hands are on the pin (each gripper touching it within 2 mm; the sim's pin slides rather than turns, so this stands
-    in for a pin rolled under two hands, which can keep both ends down). 1.0 if at least 90 % of the points (22 of
-    24) are 3.2 mm (1/8 inch, the rings' gap) within 0.3 mm, the bands' average thicknesses differ by at most 0.3 mm across the
-    width (a pin with one end lifted leaves a wedge), all the pastry is still on the board, and the pin is set down
-    level (within 3 degrees) on its rings on the board or table (within 5 mm) with no hand touching it (2 mm contact
-    tolerance). 0.5 if at least 90 % of points are at most 3.7 mm (about one pass to go) but the sheet is not finished,
-    or if the sheet is done but a hand still touches the pin or it is not set down. 0.25 if at least 90 % of points
-    are at most 4.2 mm and the bands are within 0.3 mm of each other (about two passes to go). 0 otherwise (nothing
-    done, one pass, a wedge left by a tilted pin, or pastry pushed off the board). Where the arms end is not scored.
-    Possible scores: 0, 0.25, 0.5, 1.0."""
+    """The pastry's thickness is read in the 2 cm bands 3, 7 and 11 cm either side of the board's center line: in each
+    band at the points every 4 cm along x from 1 cm behind the board's front edge that the pastry covers, and 1 cm
+    inside each of the band's rolled ends (a point within 2 cm of an end point is left to it); 30 points on the demo's
+    sheet, the same points a real trial reads with a depth gauge. Doing nothing scores 0 (the half sheet starts 4.8 mm,
+    3/16 inch, thick). In the sim only, rolling counts while both hands are on the pin (each gripper touching it within
+    2 mm; the sim's pin slides rather than turns, so this stands in for a pin rolled under two hands, which can keep
+    both ends down). 1.0 if at least 90 % of the points are 3.2 mm (1/8 inch, the rings' gap) within 0.3 mm, the bands'
+    average thicknesses differ by at most 0.3 mm across the width (a pin with one end lifted leaves a wedge), all the
+    pastry is still on the board, and the pin is set down level (within 3 degrees) on its rings on the board or table
+    (within 5 mm) with no hand touching it (2 mm contact tolerance). 0.5 if at least 90 % of points are at most 3.7 mm
+    (about one pass to go) but the sheet is not finished, or if the sheet is done but a hand still touches the pin or it
+    is not set down. 0.25 if at least 90 % of points are at most 4.2 mm and the bands are within 0.3 mm of each other
+    (about two passes to go). 0 otherwise (nothing done, one pass, a wedge left by a tilted pin, or pastry pushed off
+    the board). Where the arms end is not scored. Possible scores: 0, 0.25, 0.5, 1.0."""
     return _score(objects)
 
 

@@ -540,6 +540,23 @@ def test_pin_tilted_on_something_capped():
     assert t.let_go()[0] == 0.5
 
 
+def test_unrolled_end_caught_by_end_points():
+    """Review check, Nov 16: strokes that stop short of the near end (x 19.5 cm) leave its last 3 cm at the 4.8 mm start
+    while every row point (every 4 cm along x) is on spec; the end points, 1 cm inside each band's rolled ends, read
+    the unrolled end, so the sheet no longer scores 1.0."""
+    t = Trial()
+    t.lift_to(m.CENTER_X)
+    for _ in range(4):
+        t.strokes([0.32, 0.24, 0.195, 0.24])
+    t.lift_to(m.PIN_X)
+    rows = dk.grid()[list(m.ROWS)][:, m.COLS]
+    assert (np.abs(rows[rows > 0] - m.TARGET_T) <= m.TOL_T + 1e-9).all()  # the row points alone see a finished sheet
+    assert dk.grid().max() > 0.0047  # the near end is still at the start's thickness
+    p = m.points()
+    assert (p[:, -2] > 0.0047).all()  # every band's near end point reads it
+    assert t.let_go()[0] < 1.0
+
+
 def test_numbers_in_text():
     doc = " ".join(m.score.__doc__.split())
     for s in ("2 cm", "3.2 mm", "1/8 inch", "0.3 mm", "90 %", "3.7 mm", "4.2 mm", "4.8 mm", "3 degrees", "5 mm",
