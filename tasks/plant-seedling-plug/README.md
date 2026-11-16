@@ -63,7 +63,7 @@ Colliver 1987, Profile meters for detailed measurement of soil surface heights, 
 3(1):47-51). Pinboards in soil-roughness work use pins of about 3 mm on 18.5 mm spacing (Thomsen et al. 2015,
 SOIL 1:399-410); ours is a single 9.5 mm (3/8 in) steel dowel pin set on the mix at each point in turn, wider so it
 rests on the crumbs of loose mix instead of slipping between them, and its top read with a digital depth gauge from a
-steel straight edge laid across the box's top edge (tools below). Every tool is a catalog item: nothing is made,
+pair of steel flat bars laid across the box's top edge (tools below). Every tool is a catalog item: nothing is made,
 printed or drilled.
 
 **The points follow the plug.** They are set out from the plug's own faces, not from the box, so wherever the plug
@@ -93,24 +93,28 @@ or the hole's edge. A hole filled round a plug 0.5 cm off-center and turned 0-13
 centered one (1.0 after the push); one bare side is still caught (0.5); a plug 0.55 cm or more off the axis, or tilted
 11 degrees, scores 0.
 
-**The tools** (all off the shelf; one set serves every trial):
+**The tools** (all off the shelf, low cost; one set serves every trial; about $255 in all, see Cost below):
 
-| Tool | Product (checked on a maker's or dealer's page) | Use | Resolution / accuracy |
-|---|---|---|---|
-| Height reference, x2 | Starrett 380-24 steel straight edge: 24 in (600 mm) x 1-13/32 in (36 mm) x 11/64 in (4.4 mm), straight within 0.0002 in per foot (starrett.com) | laid flat and parallel across the box's top edge, 20 mm apart | sag 0.13 mm at most, own weight plus the gauge (computed: steel, E 200 GPa, 36 x 4.4 mm, span up to 42 cm on a diagonal) |
-| Depth gauge | Mitutoyo 571-201-30 ABSOLUTE Digimatic depth gage, 0-150 mm, base 100 x 6 mm (Penn Tool Co. listing) | base across both straight edges, rod lowered onto the pin's top | 0.01 mm display, +-0.02 mm; recorded to 0.1 mm |
-| Probe foot | 0.375 x 0.375 in (9.5 x 9.5 mm) alloy steel dowel pin to ASME B18.8.2 (AFT Fasteners PINDOW030003P; the B18.8.2 chamfered end has a flat face 0.350-0.365 in across, Aspen Fasteners 0.375 in listing) | set chamfered (flat) end down on the mix at each point; about 5 g, so it rests without sinking in | its 9.5 mm face is the simulator's 9.5 mm probe |
-| Rule | Shinwa 24612 flush-ended 300 mm stainless rule, 0.5 mm marks, length within +-0.15 mm (Workshop Heaven listing) | sets each point from the plug's faces; measures the plug's offset from the walls and the straight edges' gap | 0.5 mm |
-| Square | Starrett 3020-3 toolmaker's square, 3 in blade, hardened stainless (MSI-Viking listing) | laid flat on the plug's top, beam on a face's top edge, blade square to the face | squareness 0.0002 in per 6 in |
-| Brush | any soft 2.5 cm paintbrush | brushes mix off the plug's top edges onto its top | |
-| Hole corer | an empty 401 x 411 (No. 2.5) food can, lid cut off | cores the planting hole | 10.3 cm across, by the can-size code |
-| Scale | American Weigh Scales SC-2KG (maker's SC-series manual) | weighs the water, the loose mix, the spill and the seedlings | 0.1 g |
-| Push | Pesola 20100 Micro-Line spring scale, 100 g x 1 g, and a cotton thread | the firmness check: drawn level to 50 g | 1 g, +-0.3% (maker) |
+| Tool | Product (checked on a maker's or dealer's page) | Price | Use | Resolution / accuracy |
+|---|---|---|---|---|
+| Height reference, x2 | Everbilt plain steel flat bar, 1-1/2 x 36 in, 1/4 in thick (38 x 914 x 6.35 mm), model 801827 (Home Depot) | about $26 each | laid flat and parallel across the box's top edge, 12 mm apart | sag 0.05 mm at most, own weight plus the gauge (computed: steel, E 200 GPa, 38 x 6.35 mm, span up to 42 cm on a diagonal); bow: see Cost and accuracy |
+| Depth gauge | iGaging OriginCal IP54 digital depth caliper, 0-6 in (150 mm), model 100-700-34 (Penn Tool Co.) | $74.83 | base across both bars, rod lowered onto the pin's top | 0.01 mm display, +-0.025 mm (0.001 in, maker); recorded to 0.1 mm |
+| Probe foot | 0.375 x 0.375 in (9.5 x 9.5 mm) alloy steel dowel pin to ASME B18.8.2 (AFT Fasteners PINDOW030003P; the B18.8.2 chamfered end has a flat face 0.350-0.365 in across, Aspen Fasteners 0.375 in listing) | $41.27 per 100 (one is used) | set chamfered (flat) end down on the mix at each point; about 5 g, so it rests without sinking in | its 9.5 mm face is the simulator's 9.5 mm probe |
+| Rule | any flush-ended 300 mm steel rule with 0.5 mm marks (e.g. Shinwa 24612, Workshop Heaven listing) | about $10-20 | sets each point from the plug's faces; measures the plug's offset and the bars' gap | 0.5 mm |
+| Square | any 3 in (75 mm) machinist's engineer square | about $10-15 | laid flat on the plug's top, beam on a face's top edge, blade square to the face | 0.5 mm over the 20 mm it is used |
+| Brush | any soft 2.5 cm paintbrush | about $3 | brushes mix off the plug's top edges onto its top | |
+| Hole corer | an empty 401 x 411 (No. 2.5) food can, lid cut off | about $2 | cores the planting hole | 10.3 cm across, by the can-size code |
+| Scale | American Weigh Scales SC-2KG (maker's SC-series manual) | about $25 | weighs the water, the loose mix, the spill and the seedlings | 0.1 g |
+| Push | a 100 g x 1 g tubular spring scale (e.g. Pesola 20100 Micro-Line), and a cotton thread | about $10 | the firmness check: drawn level to 50 g; checked once at 50 g against the scale with 50 g of water | 1 g |
+| Gripper covers | Dukal Tech-Med 4404XL nitrile finger cots, powder-free, about 0.08 mm thick, 144 per box | about $10 | one rolled over each gripper finger's pad, new each trial (see Keeping the robot clean) | |
+| Drop cloth | a clear plastic painter's drop cloth, 0.7 mil | about $5 | under the planter box and round it on the bench | |
 
-The reference for every height is the straight edges' top, resting on the box's top edge, which does not move as the
-mix is firmed. With the pin on the firmed surface the gauge reads about 4.9 mm (4.4 + 10 - 9.5) and on the hole's floor
-about 66.9 mm. The pin's top stands at most 4.9 mm above the firmed surface before it meets the gauge's base; a point
-where the mix is higher than that is full (fill 1, level at the surface), which is what the cap gives it anyway.
+The reference for every height is the bars' top, resting on the box's top edge, which does not move as the mix is
+firmed. With the pin on the firmed surface the gauge reads about 6.9 mm (6.35 + 10 - 9.5) and on the hole's floor
+about 68.9 mm, inside the gauge's 150 mm. The pin's top stands at most 6.9 mm above the firmed surface before it meets
+the gauge's base; a point where the mix is higher than that is full (fill 1, level at the surface), which is what the
+cap gives it anyway. A 12 mm gap passes the gauge's rod and the 3.6 mm stem; the gauge's base needs only to reach
+1 cm onto each bar (32 mm in all), which any depth caliper's base does.
 
 **Setting a point.** Lay the square flat on the plug's top, its beam along the face's top edge (brush loose mix off
 that edge first, onto the plug's top, never into the gap), its blade out over the gap. Slide it until the blade's edge
@@ -121,13 +125,14 @@ at the face: the pin spans 5.25-14.75 mm), and let go. The three root-ball point
 7.1 mm in from one 5.7 cm face (call it +x) and 4.7 mm from its middle toward +y; 12.9 mm in from the +y face and
 9.0 mm from its middle toward +x; 12.9 mm in from the -y face and 9.0 mm from its middle toward -x.
 
-**Reading a point.** Lay the two straight edges flat across the box's top edge, parallel and 20 mm apart (checked on the
-rule at both walls), with the stem and the pin on the line midway between them (the stem passes up through the gap,
-the leaves stay above the 4.4 mm steel; hold a leaf aside by hand if it hangs in the way). Set the gauge's base across
+**Reading a point.** Lay the two bars flat across the box's top edge, parallel and 12 mm apart (checked on the rule at
+both walls), with the stem and the pin on the line midway between them (the stem passes up through the gap, the leaves
+stay above the 6.35 mm steel; hold a leaf aside by hand if it hangs in the way). Lay each bar the same face up every
+time (a marker dot on its end). Set the gauge's base across
 both, over the pin, and lower its rod until it just touches the pin's top; never push the pin. Lift the pin off and go
 on: set it at the next point, and pivot the pair about the stem to it. One pin is used, one point at a time (adjacent
 points on the 4.9 cm faces are 7.4-8.6 mm apart, closer than the pin's 9.5 mm, so pins cannot stand at all of them at
-once). A point takes about 25 s: 10 s to set the pin, 10 s to lay the pair and read, 5 s to lift it. A pin that a straight edge rests on, or that stops the gauge's base, stands
+once). A point takes about 25 s: 10 s to set the pin, 10 s to lay the pair and read, 5 s to lift it. A pin that a bar rests on, or that stops the gauge's base, stands
 in mix heaped above the surface: that point is full.
 
 **A real reading, step by step** (the same tools, references, order and tolerances in every trial):
@@ -157,14 +162,14 @@ in mix heaped above the surface: that point is full.
 | Room | room temperature | 20 to 24 degrees C (68 to 75 degrees F) | room thermometer at the bench | protocol setting |
 | Mix moisture | 350 g water per liter of bagged mix, rested 1 h | 1 g of water | the scale | protocol setting |
 | Loose mix | 200 g, heaped round the hole | 1 g | the scale | protocol setting |
-| Seedling | 'California Wonder', 8 weeks from sowing, 4 true leaves | 60-80 g (weigh five, use those in range) | the scale | seed packet (8-10 weeks to transplant); weight protocol setting |
+| Seedling | a retail or wholesale sweet pepper six-pack transplant in the standard 3601 insert, 4 true leaves, one flat per series | 60-80 g; stem 8-10 cm above the plug | the scale, the rule | insert size (maker); weight protocol setting |
 | Hole | 10.3 cm across (the can), 62 mm deep | each of two diameters at least 10.3 cm; depth 3 mm at each of 4 floor points | depth gauge, step 1 | can-size code; depth protocol setting |
 | Hole center | recorded, not set | 0.5 mm as read | square and rule, step 1 | protocol setting |
 | Pin placement | the points above | 0.5 mm (inside the 1.35 mm margin) | square and rule | protocol setting; rule's marks (maker) |
 | Plug offset | at most 0.5 cm | 0.5 mm (two 0.5 mm gaps, halved) | square and rule, step 3 | the placement range (scorer) |
-| Heights | as read | 0.1 mm recorded; straight-edge sag 0.13 mm at most | depth gauge | gauge +-0.02 mm (maker); sag computed |
+| Heights | as read | 0.1 mm recorded; error 0.3 mm at most (see Cost and accuracy) | depth gauge | gauge +-0.025 mm (maker); sag computed; bow assumed |
 | Reading window | all 19 points, one at a time, and the offset | start within 2 min, done within 12 min of the trial's end | timer | protocol setting |
-| Reset | core, measure, heap, set the plant | about 5 min | timer | protocol setting |
+| Reset | core, measure, heap, set the plant, clean the grippers | about 6 min | timer | protocol setting |
 
 These are small against the 1 cm side-level and depth tolerances and the 0.6 mm of backfill per 1% of fill.
 
@@ -261,46 +266,57 @@ itself afterwards (0-2 degrees after release in the demo runs).
 - Loose mix: the cored mix, 200 g (about 440 mL), weighed on the scale, crumbled and heaped round the hole. The gap
   round a level plug is about 350 mL.
 - Scale: American Weigh Scales SC-2KG, 2000 g x 0.1 g (for the mix, the spill and the seedlings).
-- Seedling (held by the root ball, never the stem): a 'California Wonder' sweet pepper (Botanical Interests seed), sown 8 weeks before the trial (the packet: start 8 to 10 weeks before transplanting) and grown in a 3601 insert (cell 4.9 x
-  5.7 cm at the top, 5.7 cm deep, 118 mL), the stem 3-4 mm across and 8-10 cm tall above the plug, with its seed
-  leaves and four true leaves; weigh five and use those within 60-80 g. Set it with its leaves toward the robot's
+- Seedling (held by the root ball, never the stem): a sweet pepper transplant as garden centers and wholesale
+  bedding-plant growers sell them in six-packs of the standard 3601 insert (T.O. Plastics 3601: cell 1.94 x 2.23 in
+  at the top, 2.23 in deep, 4.05 fl oz, recommended for bedding plants; Hummert listing), i.e. 4.9 x 5.7 cm, 5.7 cm
+  deep, 118 mL, the simulator's plug. Buy one flat (36 plants, one variety, e.g. 'California Wonder', one grower's lot)
+  per series of trials and keep it watered; each trial pops a plant from its cell in under a minute. the stem 3-4 mm across and 8-10 cm tall above the plug, with its seed
+  leaves and four true leaves; weigh it and use those within 60-80 g. Set it with its leaves toward the robot's
   right.
-- Measuring tools: two Starrett 380-24 steel straight edges, a Mitutoyo 571-201-30 digital depth gauge, a 9.5 x 9.5 mm
-  steel dowel pin (0.375 x 0.375 in), a Shinwa 24612 300 mm rule, a Starrett 3020-3 square and a soft 2.5 cm paintbrush (see Measuring
-  the soil: The tools).
+- Measuring tools: two Everbilt 38 x 6.35 mm steel flat bars, an iGaging 100-700-34 digital depth caliper, a
+  9.5 x 9.5 mm steel dowel pin (0.375 x 0.375 in), a 300 mm steel rule, a 3 in engineer square and a soft 2.5 cm
+  paintbrush (see Measuring the soil: The tools).
 - Scoring a real trial (the same end state): photograph the seedling; read the placement, the three root-ball points and the
   16 points within the fixed window (Measuring the soil, steps 2-6); then push a 3 mm bamboo skewer 3 cm into
   the root ball 1.5 cm from the stem, zero a phone inclinometer on it, loop a cotton thread round the stem 5 cm above the
-  plug's top and draw it level with a Pesola 20100 Micro-Line spring scale (100 g x 1 g) to a reading of 50 g, 1 s each
+  plug's top and draw it level with the 100 g spring scale to a reading of 50 g, 1 s each
   way, reading the turn; gather the mix off the bench and floor and
   weigh it on the scale against the 200 g loaded (spill: a direct mass, no conversion; mix left on the
   surface outside the hole is neither spill nor fill); photograph again: a creased, kinked or broken stem, a crushed
   or torn leaf, or a root ball broken apart, scores 0.
 - Safety: nothing hazardous; wear gloves if the mix contains fertilizer.
 
-### Budget build
+### Keeping the robot clean
 
-The named items above stay as they are, and nothing changes for the sim or the scoring (the sim's probe is the 9.5 mm
-pin, not these tools). These cheaper equivalents meet the accuracy the scoring needs (heights recorded to 0.1 mm;
-the binding tolerances are 1 cm for side level and depth and 0.6 mm of backfill per 1 % fill):
+Damp mix must not reach the shared robot's joints, and nothing here changes the manipulation.
 
-- Depth gauge: an iGaging OriginCal IP54 digital depth caliper, 0-6 in, $79.95 (Penn Tool 100-700-26), in place of
-  the Mitutoyo 571-201-30 ($380 to $500). It reads to 0.01 mm, +-0.02 mm, the same as the Mitutoyo. Check that its
-  base spans both straight edges (92 mm with the Starretts 20 mm apart, about 70 mm with the bars below).
-- Straight edges: two 24 in lengths of plain cold-rolled steel flat bar, 6.35 x 38 mm, from a hardware store
-  (Everbilt or Hillman stock, about $15 each), in place of the two Starrett 380-24 ($274). At 6.35 mm thick the bar is
-  about 3 times as stiff as the Starrett, so sag stays under the 0.13 mm above; only its middle 10 cm is used, which
-  is straight to a few hundredths of a mm, and the surface S is read off the same bars at reset, so a slight bow
-  cancels. The pin's free height becomes about 6.9 mm instead of 4.9 mm. Do not use thin aluminum straightedges
-  (about 9 times the sag).
-- Square: any 3 in machinist's engineer square (about $10 to $15) in place of the Starrett 3020-3 ($115). It sets
-  pins to 0.5 mm over about 20 mm.
-- Spring scale: a generic 100 g x 1 g tubular spring scale (about $8 to $10) in place of the Pesola 20100 ($50),
-  checked once at 50 g against the SC-2KG with 50 g of water.
-- Rule: any 300 mm flush-ended steel rule with 0.5 mm marks (about $10) in place of the Shinwa 24612; the points are
-  set to 0.5 mm.
+- Before each trial: roll a new nitrile finger cot (Dukal Tech-Med 4404XL, powder-free, about 0.08 mm thick) over the
+  pad of each gripper finger, four in all. Lay the drop cloth under the planter box and round it on the bench.
+- After each trial (after scoring): peel the cots off into a bin; brush any mix off the fingers and wrists with the
+  paintbrush onto the drop cloth; wipe the fingers with a damp lint-free wipe and dry them. About 1 minute, part of
+  the reset; the mix on the drop cloth is weighed with the spill.
+- Grip: a cot adds 0.08 mm to each finger's face, nothing against the gripper's position control and its 50 N limit,
+  and nitrile is a high-friction glove material, so the hold on the damp root ball is not weaker (checked once per
+  series: a plug held by covered fingers is lifted and shaken gently, without slipping). The simulator models bare
+  pads; the scorer reads nothing the covers change.
 
-Primary rig about $1,020; budget build about $275 (excluding the robot and a phone).
+### Cost and accuracy
+
+The tools above cost about $260 in all, under $275 (excluding the robot, a phone and the consumables: mix, plants,
+cans): two flat bars $52, depth caliper $75, a pack of dowel pins $41, rule up to $20, square up to $15, scale about
+$25, spring scale $10, finger cots $10, drop cloth $5, brush $3, can $2.
+
+They clear the thresholds with room to spare:
+
+- Heights: the caliper reads within +-0.025 mm; the bars sag 0.05 mm at most; a bar bowed 1 mm over its 914 mm (an
+  assumed worst case for hardware-store bar; laid the same face up each time) moves the reading at the middle by at
+  most 0.21 mm on a 42 cm diagonal span and 0.11 mm on a 30 cm one, so 0.1 mm between orientations once S is read the
+  same way. In all, about 0.3 mm at most. Against that: a side level and the plug's depth have 10 mm tolerances (3%
+  used), and 1% of fill is 0.62 mm of backfill, so a point's fill moves by under 0.5%, against fill thresholds of 40%,
+  60% and 85%.
+- Placement: the rule and square set a pin within 0.5 mm, inside the 1.35 mm clearance to the hole's wall; the plug's
+  offset is read within 0.5 mm against the 5 mm range (see The placement range).
+- Firmness: the spring scale reads 1 g at 50 g (2%), checked against the 0.1 g scale.
 
 ## Runtime and seeds
 
