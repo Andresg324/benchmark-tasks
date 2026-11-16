@@ -16,7 +16,6 @@ from __future__ import annotations
 import importlib.abc
 import importlib.util
 import sys
-import warnings
 
 _REQ: dict = {}
 _APPLIED: dict = {}
@@ -69,7 +68,7 @@ def _patch(scene) -> None:
         try:
             _apply(env)
         except Exception as e:  # a failed push must be visible in the log, never silent
-            warnings.warn(f"pushkit: could not apply the push: {e!r}", RuntimeWarning, stacklevel=2)
+            print(f"pushkit: could not apply the push: {e!r}", flush=True)
         return out
 
     scene.object_states = object_states
