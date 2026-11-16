@@ -18,6 +18,6 @@
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "Lift the plant out, scoop the backfill and the loose mix into a lidded tub (a drop cloth under the box catches spill), re-core the hole with the can, record its center (square and rule), read the firmed surface S and the floor at 4 points with the depth gauge (each S + 62 mm within 3 mm), heap 200 g of loose mix round it by weight, and use a fresh plug from the same tray (an undamaged seedling may be reused). About 5 minutes; the moistened mix is prepared ahead in a lidded tub.",
   "fidelity": "Real size and mass (plug 70 g, shoot 5.5 g). The stem is two springy segments, stiffness from E measured along young tomato stems (Coutand & Moulia 2000). Leaves are flat plates on springy stalks, all on one side. Kink limit set from a 3% stretch of the stem's surface. Loose mix: 200 rigid 1.1 cm clods that cannot compact; the root ball is rigid. The probe is a 9.5 mm disc on the clods at points carried with the plug; tilt, top and offset come from its pose. The push acts at the root ball.",
-  "scores": "Dream-1 run: PENDING on this task.py (d607c7d59c64); demo: 1.0 (2,234 steps). Previous task.py: Dream-1 run: 0 (2,400 steps)",
-  "media": "M-FW4BDE"
+  "scores": "Dream-1 run: 0 (2,400 steps, the run limit) on this task.py (d607c7d59c64); demo: 1.0 (2,234 steps). Previous task.py: Dream-1 run: 0 (2,400 steps)",
+  "media": "M-KFC45C"
 }
