@@ -18,6 +18,6 @@
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "Lift the plant out, scoop the backfill and the loose mix into a lidded tub (a drop cloth under the box catches spill), re-dig the hole with the former to its depth stop and check it with the template (each of the 16 empty readings 7.2 cm, within 3 mm), heap 200 g of loose mix round it by weight, and use a fresh plug from the same tray (an undamaged seedling may be reused).",
   "fidelity": "Real size and mass (plug 70 g, shoot 5.5 g). The stem is two springy segments, stiffness from E measured along young tomato stems (Coutand & Moulia 2000). Leaves are flat plates on springy stalks, all on one side. Kink limit derived, not measured. Loose mix: 200 rigid 1.1 cm clods that cannot compact; the root ball is rigid. The probe is a 9.5 mm disc on the clods; tilt and plug top come from its pose. The push acts at the root ball.",
-  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0 (2,233 steps)",
+  "scores": "Dream-1 run: pending; demo: 1.0 (2,234 steps)",
   "media": "M-6RPAJZ"
 }

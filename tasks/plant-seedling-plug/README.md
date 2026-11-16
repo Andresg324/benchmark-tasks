@@ -179,7 +179,7 @@ itself afterwards (0-2 degrees after release in the demo runs).
 
 ## Runtime and seeds
 
-- Demo: 2,233 control steps (112 s simulated); it ends once the full score (with the firmness push passed) has held
+- Demo: 2,234 control steps (112 s simulated); it ends once the full score (with the firmness push passed) has held
   for 1 s. The plan is 113 s (2,266 steps).
 - Model run limit: 2,400 steps (2 minutes at 20 Hz).
 - One fixed layout (`object_jitter=0`); the clods' layout comes from a fixed seed. The clods are spawned outside
