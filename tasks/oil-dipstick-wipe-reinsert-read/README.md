@@ -237,7 +237,8 @@ are boxes inside them. The tube is modeled straight and vertical; the drawing's 
 bend under the cap. The dipstick has its weight and slides on the tube's axis even when out of the tube (a guide), so
 it cannot be laid down or tilted, and the sim never asks the robot to line the tip up with the bore on the way back
 in; a real trial uses the free dipstick, so it does test that. The dipstick's length and its marks are not published:
-the length is derived from the drawing and the marks are modeled. The oil is drawn, not simulated: the smear, its
+the length is derived from the drawing and the marks are modeled. The real trials record whether the free dipstick
+goes back into the tube unaided (see Real-world build). The oil is drawn, not simulated: the smear, its
 removal by the rag and the trial's level are visuals driven by the scorer's state. The rag is a rigid pad.
 Clearances were checked offline along the demo at all three levels (forward kinematics of the demo's joint commands
 against the arms' meshes, the engine's visual shapes and colliders, the dipstick, rag, puck, card and table): apart
@@ -246,16 +247,87 @@ puck), nothing comes within 10 mm, and nothing passes through a visual-only part
 
 ## Real-world build
 
-A Kohler KT725 (or another KT7000-series engine with the same fill tube; cold, drained of fuel) bolted by its
-mounting surface to a steel plate on the robot's bench, turned as in the sim (fill tube at x 36, y -12), with its own
-dipstick and a folded shop towel. Measure and record the dipstick's length and the height of its indicator marks.
-Trials run in blocks of three, one at each level, in an order shuffled by a die roll, so every level is tested
-equally often. Before each trial, set the oil with a syringe to just under the indicator's bottom, mid-range, or just
-over its top, check it with a pull and a wipe out of the camera's view, wipe the blade, smear oil on its lower 6 cm
-and up the inside of the tube, and seat it. The check card is a tray of two layers of 5 mm foam board (or a 3D print),
-6 x 16 cm, with three 4.4 cm square holes in the top layer, the floors painted amber, green and red, labeled ADD, OK
-and OVER and marked with the same white symbols as the sim, taped to the bench at x 20, y 13. The puck is a white
-checkers piece glued to a second one (3 cm across, about 2 cm tall). Score from the video as under Scoring: the
+The rig needs a real dipstick in a real fill tube over a real oil reservoir, with the handle at the engine's height
+and corner. Either of two builds gives that; the robot's task, the instruction and the scoring are the same on both.
+Prices are as listed on November 16, 2026.
+
+**Build A, a used engine.** A used Kohler 7000 Series engine (KT715 to KT745, the KT725's series, which share its
+dipstick part) from eBay's Multi-Purpose Engines category (Kohler, vertical shaft) or a local lawn tractor parts seller. Kohler
+7000 Series engines listed on eBay on November 16 ranged from about $220 to $1,600, with KT715 and KT725 listings at
+$747 to $1,080 (eBay listings collected on used.forsale/kohler-engines). The rig engine stays cold and unfueled, so a
+non-running engine serves as well as a running one: it needs its crankcase, oil pan, fill tube and dipstick, and it holds oil
+overnight on the drip tray with the tray staying dry. Drain the fuel, bolt it by its mounting surface to a steel plate, turned
+as in the sim (fill tube at x 36, y -12). If its dipstick or tube is missing, fit the genuine parts below.
+
+**Build B, a lower-cost equivalent from new parts (under $30 in parts, plus plywood offcuts).**
+
+| Part | What it is | Price, where | Note |
+|---|---|---|---|
+| Dipstick | Kohler 32 038 14-S, dipstick assembly | $7.99, Russo Power (special order) | listed for the KT715-KT745 (L&S Engineers; eReplacementParts' KT725 cross-reference) |
+| Fill tube | Kohler 32 123 14-S, tube assembly, oil fill | $6.10, Russo Power (special order) | on the KT725 crankcase parts lists (Rehlko engine parts, KT725-3037; Jack's Small Engines, KT725-3048) |
+| Oil reservoir | Uline S-7342, unlined tin-plated steel paint can, 1 gallon, 6.2 in lid | $156 a carton of 34 (about $4.60 a can), Uline | the tube goes down through a hole drilled in the lid to its outside diameter; the oil stays below the lid, so a plain hole serves |
+| Housing | 41 x 41 cm box of 12 mm plywood, 30 cm tall, painted black, on a 47 x 50 cm plate | plywood offcuts | stands where the blower housing is, with the tube at its front corner as in the sim |
+| Oil | 10W-30 or SAE 30 engine oil | one quart | grades from Kohler's manual, p.4 |
+
+The can stands inside the box on spacers, so the tube's mouth is 27.5 cm above the plate (the drawing's height) and
+the dipstick's tip, seated, is about 2 cm above the can's floor. The tube's lower end, with its O-ring, goes through
+the lid, and its tab is screwed to the box's corner with an M5 screw, as Kohler's manual (p.82) secures it to the
+engine's backing plate. The robot meets the same thing as on the engine: a T-handle over a cap at 28-29 cm above the bench, at
+the corner of a housing it has to work beside, the long blade drawn straight up, and an oil level that shows only
+after the wipe and reseat. Measure the genuine dipstick's length and mark positions on arrival and
+record them. The sim's stick (29 cm overall, marks 0.8 and 2.0 cm from the tip) is derived from the drawing and modeled;
+if the genuine blade differs from 24.5 cm by more than 1 cm, record the difference with the results. The real tube
+bends just under the cap; the sim's is straight.
+
+**Dimensions, sim against real** (the real build is checked against these with a tape and a steel rule):
+
+| Part | Dimension | Sim | Real build tolerance | Source |
+|---|---|---|---|---|
+| Fill tube mouth | height above the mounting surface | 27.5 cm | +-1 cm | Kohler service manual 32 690 03 Rev. H, p.5 drawing |
+| Fill tube | place | housing's front corner, x 36, y -12 | +-1 cm | drawing p.5 ("OIL FILL & DIPSTICK (YELLOW)") |
+| Blower housing | footprint, top height | 41 x 41 cm, 30 cm | +-2 cm | drawing p.5 |
+| Dipstick | overall length, blade | 29 cm, 24.5 cm | as measured, recorded | derived from the drawing (not published) |
+| Dipstick | ADD and FULL marks from the tip | 0.8 and 2.0 cm | as on the genuine stick, recorded | modeled |
+| Fill tube | outside diameter | 2.1 cm | as supplied | estimated |
+| Oil band | levels set | 0.4, 1.4, 2.7 cm from the tip | 3 mm or more from a mark, else reset | modeled, set by syringe |
+| Shop rag | folded pad | 4 x 4 x 2.5 cm | +-0.5 cm | estimated (folded shop towel) |
+| Check card | pockets | 4.4 cm square, 5 mm deep | +-1 mm | built (foam board) |
+| Puck | size | 3 cm across, 2 cm tall | +-2 mm | built (two checkers) |
+| Room | temperature | oil drawn | 20-24 degrees C | set so the oil's thickness on the blade is the same every trial |
+
+**Keeping the oil off the robot.** The shared rig stays clean with these, fitted before each trial and replaced
+after it:
+
+- Each gripper finger wears a disposable nitrile glove as a cover: GloveWorks HD GWON48100 (Ammex), 8 mil, orange,
+  diamond-textured on both sides, size XL ($28.53 a box of 100, Fisheries Supply). The finger goes into the glove's
+  palm, the glove's own fingers are folded back along the outside of the robot's finger and the cuff is wrapped round
+  the finger's base with a turn of tape, so the pads, the tips and the inner faces are covered by one layer of nitrile
+  and the tape is away from the grip faces. Four gloves a trial; the used ones go in the oily-waste bag. (A glove fits
+  the YAM's pads, about 4 cm wide; finger cots, such as Uline S-15365, suit narrower fingers.)
+- The engine (or the box and can) stands in a Lisle 19722 Catch-All Drip Pan, 24 x 36 x 1.5 in, polyethylene, 8 quart
+  ($33.29, JB Tools), with a PIG Oil-Only Absorbent Mat Pad MAT403 (New Pig, 15 x 20 in, polypropylene, $105 a bag of
+  100) in it under the fill tube, where a drop from the blade lands. Two more MAT403 pads cover the bench under the
+  rag's place and the card. A fresh shop towel each trial; the used one goes in the oily-waste bag.
+- Grip: the sim's grasped objects have a rubber-like contact (static friction 1.2, dynamic 1.0, `yam_arena`'s
+  `GRIPPY_FRICTION`), and the covers keep a rubber (nitrile) face on the grip, textured, at 0.2 mm thick; the handle's
+  1.8 cm grip is unchanged within that. The loads held are light (the 50 g dipstick, the 40 g rag, the 15 g puck), far
+  under the 50 N grip cap. Before each session, with the covers on, the arm holds the dipstick out by its handle for
+  10 s and lifts the rag and the puck without a slip; a cover that shifts on the finger is taped again.
+
+**Free withdrawal and reinsertion.** The sim's dipstick slides on the tube's axis even when out; the real one is
+free, so the real trials score the guided part directly: in each trial the tester records whether the tip went back
+into the mouth without help on each push (the reseat and the closing seat) and how many tries it took. A dipstick that
+the robot drops or lays down, or that the tester has to guide, ends the trial, scored on what was done up to that
+moment. The results report this separately as the free-reinsertion rate, the measure of the gap between the guided
+sim stick and the free real one.
+
+**Each trial.** Trials run in blocks of three, one at each level, in an order shuffled by a die roll, so every level is
+tested equally often. Before each trial, set the oil with a syringe to just under the indicator's bottom, mid-range, or
+just over its top, check it with a pull and a wipe out of the camera's view, wipe the blade, smear oil on its lower 6
+cm and up the inside of the tube, and seat it. The check card is a tray of two layers of 5 mm foam board (or a 3D
+print), 6 x 16 cm, with three 4.4 cm square holes in the top layer, the floors painted amber, green and red, labeled
+ADD, OK and OVER and marked with the same white symbols as the sim, taped to the bench at x 20, y 13. The puck is a
+white checkers piece glued to a second one (3 cm across, about 2 cm tall). Score from the video as under Scoring: the
 dipstick handled only by its handle, the rag drawn along at least 5.4 cm of the blade's lower 6 cm in contact, the gap
 under the cap after each push (a 3 mm feeler strip), the second pull's 1 s hold (the video's timer), the frame the
 puck goes into a pocket and the pocket it ends in, and the rag back on the table.
@@ -279,8 +351,8 @@ right reports.
 Real trial: after each trial the tester pulls the dipstick, wipes it, reseats it, pulls it again and measures the oil
 band from the tip with a steel rule to the millimeter, photographed against the blade. One row per trial:
 
-| Trial | Block | Level set (die) | Band measured (mm from tip) | Level by the marks | Pocket the puck is in | Puck in before the 1 s hold? | Score |
-|---|---|---|---|---|---|---|---|
+| Trial | Block | Level set (die) | Band measured (mm from tip) | Level by the marks | Tip back in unaided (reseat, closing seat; tries) | Pocket the puck is in | Puck in before the 1 s hold? | Score |
+|---|---|---|---|---|---|---|---|---|
 
 The measured band, not the planned one, decides the right pocket (against the dipstick's own marks); a set level that
 lands within 3 mm of a mark is reset and the trial rerun.
