@@ -63,16 +63,19 @@ contact the gasket's resistance rises until the pads slip on the can, at about 2
 in this model). The first stroke that turns the filter less than 10 degrees means the filter is hand-tight: the hand
 lets go and lifts clear (at most 8 strokes). The right arm waits at home until then.
 
-With the wrench. Both hands take the wrench's handle where it lies (HANDS_TEXT), lift it, carry the cap over the
-filter and lower it onto the can. They swing the handle clockwise in strokes of up to 30 degrees from 280 degrees,
+With the wrench. Both hands take the wrench's handle where it lies (the right on the grip 0.55 m from the cap's axis,
+4.2 cm from its end; the left 0.22 m out), lift it and carry the cap over the filter. There the demo reads where the
+cap is (the wrench's slides) and aims the hands further by what it is off the can's axis, twice, before lowering it
+onto the can. They swing the handle clockwise in strokes of up to 30 degrees from 280 degrees,
 ratcheting back between them without letting go. Each stroke is sized from the filter's angle when it starts: it aims
 at 280 degrees past contact, plus the few degrees the wrench flexes before the filter moves. The hands push with what
 the gasket takes at each point plus 1 N·m, each hand taking a share in proportion to what its arm can push there. Each
-hand is aimed past the handle by its arm's give (J K^-1 J^T from the servos' stiffness; while carrying the wrench, a
-further 7-8 mm that the sim showed the load needs). Each also bears down on the handle with 3 N plus 0.6 N per N·m of
-the stroke's torque, so the cap stays on the flutes. After each stroke the demo reads the angle again. Once the filter
-is 270 degrees past contact, where the gasket takes Kawasaki's 18 N·m, the strokes stop. The hands ease off, lift the
-wrench off the can, set it on the bench beside the head, let go and go home. Result on this version: RESULT_TEXT.
+hand is aimed past the handle by its arm's give (J K^-1 J^T from the servos' stiffness), and each bears down on the
+handle with 3 N plus 0.6 N per N·m of the stroke's torque, so the cap stays on the flutes. After each stroke the demo
+reads the angle again. Once the filter is 270 degrees past contact, where the gasket takes Kawasaki's 18 N·m, the
+strokes stop. They also stop if two strokes in a row turn the filter less than 2 degrees each (the arms at their
+limit), and after 14 strokes at most. The hands ease off, lift the wrench off the can, set it on the bench beside the
+head, let go and go home. Result on this version: RESULT_TEXT.
 
 ## Scoring
 
@@ -162,36 +165,90 @@ not the real 1.1 mm; the score reads the thread's angle, not the filter's height
 
 The gasket's resistance: past contact the filter takes a torque that rises linearly with the angle, to 18 N·m at three
 quarters of a turn past contact and on at the same slope (29 N·m at 1.25 turns). It is a stiff hold where the filter
-was left that gives way at that torque, either way (stick-slip friction, not a spring). The endpoints come from the
+was left that gives way at that torque, either way (stick-slip friction, not a spring): each control step the filter
+is held where it was by a stiff spring (2,000 N·m/rad) whose torque is capped at the gasket's. The endpoints come from the
 makers (Kawasaki's 18 N·m for this filter; the filter makers' three quarters of a turn past contact); the straight line
 between them is our model of the gasket's squeeze, stated as such. Before contact the filter runs on with about
 0.3 N·m. A hand turning the can itself slips on it at about 2.5 N·m (measured in this sim in our previous revision:
 two pads at the gripper's 50 N on a 3.3 cm radius), which the gasket reaches about 40 degrees past contact. So the rest
 needs the wrench, as on a real engine.
 
-The wrench: a 65 mm, 14-flute, 3/8-inch-drive cap filter wrench on a 24-inch, 1/2-inch-drive ratchet through a 1/2 to
-3/8-inch adapter, as a second articulation (lift, turn about the filter's axis, two slides; 1.45 kg: GearWrench's
-catalog weight for the ratchet, 3.0 lb or 1.36 kg, plus about 0.1 kg for the cap and adapter, estimated; only its
-handle collides). The cap is drawn only. It goes down over the can only centered within 3 mm of its axis; once its rim
+The wrench: a 65 mm, 14-flute, 3/8-inch-drive cap filter wrench on a 24-inch, 1/2-inch-drive ratchet through a 1/2
+to 3/8-inch adapter. It is a second articulation (lift, turn about the filter's axis, two slides), so it cannot tilt;
+only its handle collides. Its dimensions in the sim, with their sources ("published" is the maker's or seller's
+listing; "estimated" is not published, to be measured when the rig is built):
+
+| Part | Dimension | Sim | Source |
+|---|---|---|---|
+| Ratchet, GearWrench 81364XP | overall length | 610.6 mm (24.04 in) | published |
+| | head width, thickness | 36.8 mm (1.45 in), 17.5 mm (0.69 in) | published |
+| | drive | 1/2 in | published |
+| | weight | 1.361 kg (3.000 lb) | published (catalog) |
+| | handle | contoured, polished chrome | published |
+| | grip thickness | 22 mm, on the handle's last 15 cm | estimated |
+| Adapter, GearWrench 81354 | length | 35.1 mm (1.38 in), 9.5 mm of it in the cap's drive | published; depth estimated |
+| | weight | 27 g (0.06 lb) | published (catalog) |
+| Cap, Parts Unlimited 3801-0295 | inside across the flutes | 65 mm (2-9/16 in), 14 flutes | published |
+| | drive | 3/8 in | published |
+| | skirt depth, wall, end plate | 15 mm, 3 mm, 4 mm | estimated |
+| | weight | 60 g | estimated |
+| All | mass | 1.448 kg | sum |
+
+In the sim the handle runs from 18.4 mm to 592.2 mm from the cap's axis (the overall length less half the head), at
+mid-head height, 38 mm above the cap's floor (the 4 mm end plate, the adapter's 25.6 mm above it, half the head's
+17.5 mm). The sim spreads the mass over the handle's collider (PhysX takes the center of mass from the colliders), so
+the center of mass sits mid-handle, 31 cm from the axis, rather than the real one's, nearer the head; the wrench
+cannot tilt, so this changes only how much each hand lifts while carrying it.
+
+The cap is drawn only. It goes down over the can only centered within 3 mm of its axis; once its rim
 is below the can's top, the cup's wall keeps it within 2 mm of the axis each way (its play on the flutes) until it is
 lifted clear (1.7 cm), so it cannot leave the can sideways and nothing pushes it up. Down on the can, the model holds
 it on the flutes until it is lifted 8 mm (about half the cup's 15 mm depth), as the accepted compression-joint task's
-model holds its spanner's jaws on the nut. The demo's hands bear down on the handle while they push, 3 N each plus 0.6 N per N·m of the stroke's torque (about
-14 N each on the last strokes; the arm presses down about 52 N continuously). While the ratchet drives (the handle turned clockwise), the cap couples to the
-filter through a stiff spring (400 N·m/rad: the cap, the drive and the can flexing, 2.6 degrees at 18 N·m), and the
-filter turns once that spring's torque passes the gasket's; turned back, the ratchet freewheels with 0.2 N·m of pawl
-drag. Lifted 1.7 cm the cap clears the can; lying on the bench the wrench stays where it was set down.
+model holds its spanner's jaws on the nut. The demo's hands bear down on the handle while they push, 3 N each plus
+0.6 N per N·m of the stroke's torque (about 15 N each on the last strokes). While the ratchet drives (the handle turned
+clockwise), the cap couples to the filter through a stiff spring (400 N·m/rad: the cap, the drive and the can flexing,
+2.6 degrees at 18 N·m), and the filter turns once that spring's torque passes the gasket's; turned back, the ratchet
+freewheels with 0.2 N·m of pawl drag. Lifted 1.7 cm the cap clears the can; lying on the bench the wrench stays where
+it was set down.
 
 The arms' strength. The YAM's servos are Damiao DM-J4340 on joints 1-3 (9 N·m rated, 27 N·m peak) and DM-J4310 on
-joints 4-6 (3 N·m rated, 7 N·m peak); the sim's arm uses the same peak limits (i2rt's yam_v1 config). Worked through the
-arms' Jacobians at the stroke's hand positions (right 0.55 m and left 0.22 m along the handle, handle angles
-280 to 250 degrees), with the torque that holds each arm up included, the two hands together turn the handle with
-10.6 N·m at rated (continuous) torque and 23.6 N·m at peak, at the stroke's weakest point. 18 N·m is
-1.7 times the rated figure and 76 % of the peak. It is needed only near the end of the last strokes, a few
-seconds each, which is what a servo's peak rating is for; the continuous rating bounds heating over minutes of steady
-load. We state this rather than claim the task is within the continuous rating. In the sim the arms are PD-controlled
-(80 N·m/rad on joints 1-3, 10 on 4-6): pushing 20-30 N sideways, each hand has to be aimed well past the handle
-(about 6 mm per newton, mostly the wrist's give), which the demo plans.
+joints 4-6 (3 N·m rated, 7 N·m peak); the sim's arm uses the same peak limits (i2rt's yam_v1 config). We worked the
+joint torques through each arm's Jacobian at the hand positions on the handle: the torque that holds the arm up (from
+the URDF's link masses, the gripper included), plus the hand's push along the swing, plus its bearing down (3 N plus
+0.6 N per N·m, as the demo does). Each joint is held within its limit. With the right hand 0.55 m and the left 0.22 m
+along the handle, and the handle swinging from 280 to 250 degrees:
+
+| Handle angle | Right hand, rated / peak | Left hand, rated / peak | Both, rated / peak |
+|---|---|---|---|
+| 280 degrees | 13 / 28 N | 17 / 39 N | 10.8 / 24.1 N·m |
+| 265 degrees | 13 / 30 N | 15 / 34 N | 10.7 / 23.8 N·m |
+| 250 degrees | 19 / 45 N | 14 / 31 N | 13.7 / 31.6 N·m |
+
+So the two hands turn the handle with at least 10.7 N·m within the servos' rated torque and 23.8 N·m at their peak.
+Kawasaki's 18 N·m is 1.7 times the rated figure and 76 % of the peak, and the demo's hardest push (what the gasket
+takes at 280 degrees past contact, plus 1 N·m: 19.7 N·m) is 83 % of the peak. That is needed only on the last two or
+three strokes, a few seconds each. A servo's peak rating covers that; its rated (continuous) torque bounds heating over
+minutes of steady load. The task needs the arms above their rated torque, and we say so here rather than claim
+otherwise. The rated figures also hold only close to the bases: holding the arm up alone takes more than joint 2's
+rated 9 N·m once the hand is beyond about 0.38 m from its base at the handle's height (9.6 N·m at 0.40 m). Bearing
+down on the handle helps here, since the handle pushes the hand up. In the sim the arms are PD-controlled (80 N·m/rad
+on joints 1-3, 10 on 4-6): pushing 25-45 N sideways, each hand has to be aimed well past the handle (mostly the
+wrist's give), which the demo plans (J K^-1 J^T).
+
+Why a 24-inch ratchet. Each hand pushes at most about 30-45 N at peak, so the torque grows with the handle's length. A
+search over the head's position, the handle's angle and both grips, for 30-degree strokes, gives the best two-hand
+torque at the stroke's weakest point, at peak, for the outer hand's distance from the cap's axis: 7.4 N·m at 0.18 m (a
+standard 9.4-inch 3/8-inch-drive ratchet, GearWrench 81208T), 16.0 N·m at 0.27 m (a 13-inch 3/8-inch-drive
+long-handle ratchet, 81265T), 22.0 N·m at 0.33 m and 24.4 N·m at 0.36 m. So no standard-length ratchet reaches 18 N·m
+(an 11-inch 1/2-inch-drive ratchet, 81304T, leaves the hand about 0.22 m out). On paper a 1/2-inch-drive long-handle
+ratchet of 15 to 17 inches could. At this layout, where the left hand spins the filter on and both hands reach the
+handle, the 16.5-inch 81361T (hands 0.36 m and 0.22 m out, strokes 270 to 240 degrees) gives 20.4 N·m at peak, and
+the 15-inch 81360T 18.5-20.1. We tried the 16.5-inch one in the sim, modeled to its published dimensions: the demo's
+strokes drove the filter to 232 degrees past contact (15.5 N·m) and then stalled for five strokes. The arms, aimed
+through their PD give, gave about three quarters of the computed peak at the 30-40 N each hand then needs. The
+24-inch ratchet needs about a quarter less push at the hands (23-29 N), which the arms deliver, so the task keeps it.
+An 18-inch breaker bar would not do either: it is shorter, and it does not ratchet, so every stroke would mean lifting
+the cap off the can and setting it back on the flutes.
 
 No oil, gasket deformation or leak is simulated; the scorer reads the angle, and a real trial reads the same angle from
 the witness marks (the line across the can and head, and the protractor ring), then checks the torque directly with a
@@ -207,9 +264,11 @@ click torque wrench.
 - Wrench: a 65 mm, 14-flute cap-type oil filter wrench (Parts Unlimited 3801-0295, 65 mm (2-9/16 in), 14 flutes,
   3/8-inch drive, sold for Honda and Kawasaki filters; 65 mm / 14 flutes is the size listed for the Hiflo HF204 /
   K&N KN-204, which cross to this filter on the Teryx4 750; check its fit on the filter's flutes when the rig is built)
-  on a GearWrench 81364XP ratchet (1/2-inch drive, 24.0 inches overall, catalog weight 3.0 lb) through a GearWrench
-  81354 adapter (1/2-inch female to 3/8-inch male). It lies
-  on the bench cap down at the start, its handle where the setup gives.
+  on a GearWrench 81364XP extra-long-handle ratchet (1/2-inch drive, 24.04 inches overall, head 1.45 in wide and
+  0.69 in thick, catalog weight 3.000 lb; gearwrench.com) through a GearWrench 81354 adapter (1/2-inch female to 3/8-inch male,
+  1.38 in long, 0.06 lb). Measure the cap's depth, wall and weight and the grip's thickness when the rig is built (the
+  sim's estimates are in the Fidelity table). It lies on the bench cap down at the start, its handle where the setup
+  gives.
 - Torque check after each trial: a 3/8-inch-drive click torque wrench whose range covers 18 N·m (13 ft·lb), set to
   18 N·m, in the cap's square drive (no adapter needed).
 - Torque spec source: Kawasaki Teryx4 750 owner's manual, torque table (p. 101): "Oil Filter 18 N·m (1.8 kgf·m,

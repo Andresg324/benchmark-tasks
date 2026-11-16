@@ -1,9 +1,9 @@
 """A new spin-on oil filter (Kawasaki 49065-0710, the Teryx and Teryx4 filter) has been started on the threaded nipple
 of a remote oil filter mount (a filter head) bolted to the bench, filter pointing up, three quarters of a turn short of
 its gasket touching the head. Beside it on the bench lies the tool Kawasaki's torque figure assumes: a 65 mm, 14-flute
-cap-type filter wrench (3/8-inch drive) on a 24-inch, 1/2-inch-drive ratchet through a 1/2 to 3/8-inch adapter. Fitting it is the engine maker's service procedure: spin
-it on by hand until the gasket contacts the head, then tighten it with the wrench to the specified 18 N*m, about three
-quarters of a turn past contact, then take the wrench off. Left at contact or a little past it, the filter can work
+cap-type filter wrench (3/8-inch drive) on a 24-inch, 1/2-inch-drive ratchet through a 1/2 to 3/8-inch adapter. Fitting it is the engine maker's service procedure: spin it on by hand until the gasket contacts the head,
+then tighten it with the wrench to the specified 18 N*m, about three quarters of a turn past contact, then take the
+wrench off. Left at contact or a little past it, the filter can work
 loose under engine vibration and leak; cranked much past it, the gasket can be crushed, roll out of its groove and blow
 out under oil pressure, and the filter may not come off at the next change.
 """
@@ -43,8 +43,8 @@ FILTER_MASS = 0.25
 # that rises linearly with the angle, to TORQUE_SPEC at three quarters of a turn past contact (the makers' equivalence:
 # 3/4 turn past contact gives the specified torque), and on at the same slope (29 N*m at 1 1/4 turns): a stiff hold
 # where it was left that slips at that torque, so it opposes turning either way and never turns the filter by itself
-# (stick-slip friction, not a spring). A hand turning the can itself slips on it at about 2.5 N*m, about 40 degrees
-# past contact; the rest needs the wrench. The hard stop at 540 degrees past contact (a turn and a half) is the gasket
+# (stick-slip friction, not a spring). A hand turning the can itself slips on it at about 2.5 N*m, about 36 degrees
+# past contact (where the demo's hand stalled in the sim); the rest needs the wrench. The hard stop at 540 degrees past contact (a turn and a half) is the gasket
 # squeezed flat. The can travels down at most 0.5 mm past contact (the gasket compressing). twistkit's slide spring
 # (3,000 N/m) sags about 0.8 mm under the filter, so its gasket starts about 0.3 mm above the land rather than the
 # thread's 1.1 mm; the score reads the angle, not the height.
@@ -52,10 +52,15 @@ FILTER_MASS = 0.25
 # (1.8 kgf*m, 13 ft*lb)", after a thin film of oil on the gasket.
 TORQUE_SPEC = 18.0  # N*m
 GASKET_RATE = TORQUE_SPEC / math.radians(270.0)  # 3.8 N*m per radian past contact
+# Past contact the filter is held where it was at the last control step by a stiff spring, 2,000 N*m/rad, that gives
+# way at the gasket's torque: turned by a hand at 2.5 N*m it gives 0.07 degrees a step. (twistkit's default, 20 N*m/rad,
+# re-anchored each step, held only about 1 N*m against a wrist rolling 2.5 degrees a step, whatever the angle, so in
+# the sim a hand alone could tighten the filter all the way.)
+GASKET_HOLD = 2000.0
 RUN_ON = 0.3  # N*m: turning it on the thread before contact (the wrench meets this before the gasket touches)
 THREAD = tk.Thread(pitch=0.0015, turns=5.0, start=-270.0, max_tight=540.0, resist=0.03, tight_resist=0.05,
                    gasket=GASKET_RATE, gasket_max=GASKET_RATE * math.radians(540.0), seat_travel=0.0005,
-                   max_torque=40.0)
+                   max_torque=40.0, gasket_hold=GASKET_HOLD)
 
 
 def gasket_torque(past_deg: float) -> float:
@@ -145,10 +150,10 @@ def _head():
 
 
 # --- The wrench: a 65 mm, 14-flute, 3/8-inch-drive cap-type filter wrench (Parts Unlimited 3801-0295) on a 24-inch,
-# 1/2-inch-drive ratchet (GearWrench 81364XP) through a 1/2 to 3/8-inch adapter (GearWrench 81354;
-# 24.0 in overall). Modeled like the accepted compression-joint task's spanner: the cap is drawn only, and once it is
-# down on the can, centered within 3 mm, the model holds it on the flutes (until it is lifted 8 mm) and couples it to the filter. The ratchet
-# drives the cap when turned clockwise (seen from above: tightening) and freewheels the other way (pawl drag 0.2 N*m),
+# 1/2-inch-drive ratchet (GearWrench 81364XP) through a 1/2 to 3/8-inch adapter (GearWrench 81354).
+# Modeled like the accepted compression-joint task's spanner: the cap is drawn only, and once it is down on the can,
+# centered within 3 mm, the model holds it on the flutes (until it is lifted 8 mm) and couples it to the filter. The
+# ratchet drives the cap when turned clockwise (seen from above: tightening) and freewheels the other way (pawl drag 0.2 N*m),
 # so the handle swings back for the next stroke without letting go. Its handle is the only collider (the hands hold
 # it). An articulation on the bench: lift (z) -> turn about the filter's axis -> slide x -> slide y (the wrench), in
 # the frame of a point on the filter's axis at the can's top. The wrench lies on the bench, cap down, beside the head
@@ -160,16 +165,16 @@ CAP_WALL, CUP_DEPTH, CAP_END = 0.003, 0.015, 0.004  # E: 3 mm wall, 15 mm deep s
 CUP_R = CAP_ID / 2 + CAP_WALL
 ADAPTER_L, ADAPTER_R = 0.0351, 0.0095  # P: GearWrench 81354, 1.38 in (35.1 mm) long; E: 19 mm across
 ADAPTER_IN_CAP = 0.0095  # E: its 3/8-inch male square sits this deep in the cap's drive
-RATCHET_L = 0.4191  # P: GearWrench 81361T, 16.5 in overall (from the head's far edge to the handle's end)
-HEAD_W, HEAD_T = 0.0437, 0.0163  # P: its head 1.72 in (43.7 mm) wide, 0.64 in (16.3 mm) thick
-HANDLE_R, GRIP_L = 0.0125, 0.20  # E: the dual-material grip about 25 mm thick, on the handle's last 20 cm
+RATCHET_L = 0.6106  # P: GearWrench 81364XP, 24.04 in overall (from the head's far edge to the handle's end)
+HEAD_W, HEAD_T = 0.0368, 0.0175  # P: its head 1.45 in (36.8 mm) wide, 0.69 in (17.5 mm) thick
+HANDLE_R, GRIP_L = 0.011, 0.15  # E: the contoured grip (polished chrome) about 22 mm thick, on the last 15 cm
 HEAD_BOT = CAP_END + ADAPTER_L - ADAPTER_IN_CAP  # the ratchet's head sits on the adapter (2.96 cm above the cap's floor)
 HEAD_TOP = HEAD_BOT + HEAD_T
 HEAD_R = HEAD_W / 2
 HANDLE_Z = HEAD_BOT + HEAD_T / 2  # the handle's axis above the cap's inside floor (mid-head)
 HANDLE_X = (-(RATCHET_L - HEAD_R), -HEAD_R)  # along the tool's -x, from the drive's axis: the handle to its end
-RATCHET_KG, ADAPTER_KG, CAP_KG = 1.157, 0.027, 0.060  # P: 2.550 lb catalog; P: 0.06 lb catalog; E: the steel cap
-TOOL_MASS = RATCHET_KG + ADAPTER_KG + CAP_KG  # 1.24 kg
+RATCHET_KG, ADAPTER_KG, CAP_KG = 1.361, 0.027, 0.060  # P: 3.000 lb catalog; P: 0.06 lb catalog; E: the steel cap
+TOOL_MASS = RATCHET_KG + ADAPTER_KG + CAP_KG  # 1.45 kg
 SEAT_TOL = 0.002  # m: the cap down on the can (the lift within 2 mm of resting on its top)
 CENTER_TOL = 0.003  # m: and centered on its axis within 3 mm (the flutes engage)
 CUP_PLAY = 0.002  # m: over the can, the cup's wall lets each slide move this far off the axis (the flutes' play)
@@ -184,7 +189,7 @@ PAWL_DRAG = 0.2  # N*m: the ratchet freewheeling back
 # Where the wrench starts and works (see the demo): its handle swings clockwise (seen from above) through WRENCH_STROKE
 # degrees from STROKE_A0 (the handle's direction from the filter's axis, degrees from +x) on each stroke. At the start it
 # lies on the bench cap down, its handle along STROKE_A0, slid TOOL_SIDE sideways (along the tool's y) from the axis.
-STROKE_A0 = 270.0
+STROKE_A0 = 280.0
 WRENCH_STROKE = 30.0
 TOOL_SIDE = 0.13
 TOOL_TURN0 = math.radians(STROKE_A0 - 180.0)  # the handle runs along the tool's -x
@@ -330,7 +335,6 @@ class ToolSlideLaw:
 
 
 CHROME = kit.Look((0.80, 0.81, 0.83), 0.2, metallic=0.95)
-GRIP_LOOK = kit.Look((0.10, 0.10, 0.11), 0.7)  # the ratchet's black grip
 CAP_LOOK = kit.Look((0.30, 0.31, 0.33), 0.4, metallic=0.8)  # the cap: dark gray steel
 
 
@@ -344,9 +348,9 @@ def _tool_parts():
     meshes.append(kit.cylinder((0.004, 0.0, HEAD_TOP + 0.0015), 0.006, 0.003, CHROME))  # the direction lever
     hl = HANDLE_X[1] - HANDLE_X[0]
     mid = (HANDLE_X[0] + HANDLE_X[1]) / 2
-    # the handle: a flat polished beam from the head, then the round dual-material grip (black) to its end
+    # the handle: a flat beam from the head, then the round contoured grip to its end, all polished chrome
     meshes.append(kit.box((mid, 0.0, HANDLE_Z), (hl, 0.016, 0.012), CHROME))
-    meshes.append(kit.cylinder((HANDLE_X[0] + GRIP_L / 2, 0.0, HANDLE_Z), HANDLE_R, GRIP_L, GRIP_LOOK, axis="x"))
+    meshes.append(kit.cylinder((HANDLE_X[0] + GRIP_L / 2, 0.0, HANDLE_Z), HANDLE_R, GRIP_L, CHROME, axis="x"))
     colliders = (kit.Collider((mid, 0.0, HANDLE_Z), size=(hl, 2 * HANDLE_R, 2 * HANDLE_R)),)
     return tuple(meshes), colliders
 
@@ -618,13 +622,12 @@ def score(objects):
 
 # --- Demo ----------------------------------------------------------------------------------------
 GRIP_Z = TOP + SEAT + CAN_H - 0.015  # the tool point 1.5 cm below the can's top (pad tips 2.8 cm down its side)
-R_GRIP = {"right": 0.36, "left": 0.22}  # where each hand holds the wrench's handle, from the cap's axis (m): the right
-#                                         on the grip 3.7 cm from its end, the left 14 cm nearer the head (further out,
-#                                         the left arm cannot reach it with the wrench carried over the filter)
+R_GRIP = {"right": 0.55, "left": 0.22}  # where each hand holds the wrench's handle, from the cap's axis (m): the right
+#                                         on the grip 4.2 cm from its end, the left on the beam near the head
 # The right hand's share of the torque by handle angle: alike fractions of what each arm can push there at its peak
 # torque (worked through the arms' Jacobians, with the torque that holds each arm up and the hands bearing down):
-# right 37 N and left 35 N at 270 degrees, 42 and 32 N at 255, 39 and 29 N at 240.
-SHARE_R = ((240.0, 0.68), (255.0, 0.68), (270.0, 0.63))
+# right 28 N and left 39 N at 280 degrees, 30 and 34 N at 265, 45 and 31 N at 250.
+SHARE_R = ((250.0, 0.78), (265.0, 0.69), (280.0, 0.65))
 MARGIN = 1.0  # N*m pushed past what the gasket holds, so the filter keeps turning through the stroke
 PAD_BELOW = 0.006  # the pad tips this far below the handle's axis: the fingers close round it
 CARRY_LIFT = 0.021  # the wrench carried with its cap 6 mm over the can's top (it clears it at 1.7 cm of lift)
@@ -694,11 +697,13 @@ def _push(side, a_deg, torque):
 
 
 PRESS_DOWN = 3.0  # N: each hand bears down on the handle while it pulls, keeping the cap on the flutes,
-PRESS_PER_NM = 0.6  # plus this much per N*m of the stroke's torque (about 14 N each at 19 N*m): in sim o7dbg, with 3 N
+PRESS_PER_NM = 0.6  # plus this much per N*m of the stroke's torque (about 15 N each at 19.7 N*m): in sim o7dbg, with 3 N
 # only, the hands rose about 13 mm on the hardest strokes and lifted the cap off the flutes
-# The wrench's 12 N between the hands while they carry it: evenly, about 6 N each. The model wrench cannot tilt (its
-# joints are a lift, a turn and two slides), so only the sum holds it up.
-WEIGHT_SHARE = {"right": 0.5, "left": 0.5}
+# The wrench's 14 N between the hands while they carry it, by where they hold it: the sim puts its mass at its
+# collider's middle (the handle's, 0.31 m out), so each hand's share balances the moment about the other hand.
+COM_R = -(HANDLE_X[0] + HANDLE_X[1]) / 2
+WEIGHT_SHARE = {"right": (COM_R - R_GRIP["left"]) / (R_GRIP["right"] - R_GRIP["left"]),
+                "left": (R_GRIP["right"] - COM_R) / (R_GRIP["right"] - R_GRIP["left"])}
 
 
 def _pair(dur, label, a_deg, lift=0.0, slide=0.0, torque=0.0, finger=None, carry=False, fix=(0.0, 0.0)):
@@ -783,7 +788,7 @@ HAND_MAX = 8  # strokes at most (three quarters of a turn is about four; the cap
 DONE_PAST = 270.0
 AIM_PAST = 280.0  # each stroke aims here (inside 240 to 360), so the last one ends a little past DONE_PAST
 WRENCH_MAX = 14
-WRENCH_STALL = 2.0  # degrees: a stroke past 240 that turns the filter less than this means the arms are at their limit
+WRENCH_STALL = 2.0  # degrees: two strokes in a row that turn the filter less than this: the arms are at their limit
 CENTER_PASSES = 2  # looks at the carried cap's offset from the can's axis before lowering it (0.8 s each)
 
 
@@ -857,7 +862,7 @@ def _wrench_phase(st):
             return a0, CARRY_LIFT, 0.0, 0.0, FINGER_CLOSED, True
         steps.append(("center the cap over the can", 0.8, center, None))
     steps.append(("cap onto the can", 1.2, lambda: (a0, 0.004, 0.0, 0.0, FINGER_CLOSED, True), None))
-    fixed("seated", 0.6, a0, 0.0, 0.0, 0.0, FINGER_CLOSED, False)
+    fixed("seated", 1.2, a0, 0.0, 0.0, 0.0, FINGER_CLOSED, False)
     sub = 5
     for n in range(WRENCH_MAX):
         runs = (lambda n=n: st["wstop"] is None or st["wstop"] >= n)
@@ -884,9 +889,9 @@ def _wrench_phase(st):
                       runs))
 
         def back(n=n):  # tight now? then no more strokes
-            gain = _seen_past() - st["p"]
-            stalled = _seen_past() >= GOOD_LO and gain < WRENCH_STALL
-            if st["wstop"] is None and (_seen_past() >= DONE_PAST or stalled or n == WRENCH_MAX - 1):
+            if st["wstop"] is None:
+                st["stalls"] = st.get("stalls", 0) + 1 if _seen_past() - st["p"] < WRENCH_STALL else 0
+            if st["wstop"] is None and (_seen_past() >= DONE_PAST or st["stalls"] >= 2 or n == WRENCH_MAX - 1):
                 st["wstop"] = n
             return a0, 0.0, 0.0, 0.0, FINGER_CLOSED, False
         steps.append((f"stroke {n + 1}: ratchet back", 1.6, back,
@@ -925,10 +930,11 @@ def demo():
     pads' 2.5 N*m) it lets go and lifts clear. The right arm waits at home meanwhile. Then both hands take the
     wrench's handle, lift it, carry the cap over the filter and lower it onto the can, and swing the handle clockwise
     in strokes of up to 30 degrees, ratcheting back between them; each stroke is worked out from the filter's angle
-    when it starts (aiming at 285 degrees past contact), pushing with what the gasket takes plus 1 N*m, each hand
-    aimed past the handle by its arm's give and bearing down on it. Once the filter is 270 degrees past contact
-    (where the gasket takes 18 N*m) they ease off, lift the wrench off, lay it on the bench beside the head, let go
-    and go home."""
+    when it starts (aiming at 280 degrees past contact), pushing with what the gasket takes plus 1 N*m, each hand
+    aimed past the handle by its arm's give and bearing down on it. Before lowering the cap they read where it is
+    (the wrench's slides) and aim it onto the can's axis. Once the filter is 270 degrees past contact (where the
+    gasket takes 18 N*m), or after two strokes in a row that turn it less than 2 degrees, they ease off, lift the
+    wrench off, lay it on the bench beside the head, let go and go home."""
     st = {"stop": None, "gains": [], "wstop": None}
     left = _hand_phase(st)
     hand = list(left)
