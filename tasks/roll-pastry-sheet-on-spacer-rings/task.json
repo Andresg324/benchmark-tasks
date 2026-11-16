@@ -17,6 +17,6 @@
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "A new sheet every trial (the rolled one is thrown away): Pepperidge Farm Puff Pastry Sheets from one lot, thawed unwrapped 35 minutes at room temperature (20 to 24 degrees C), inside the box's 40-minute limit with the set-up, unfolded on the board with its seams pressed together, cut to 11.5 x 24.0 cm with the ruler and a pizza wheel along the edge ticks (within 3 mm), and started within 5 minutes. Scrape the board, wipe it dry and re-flour it with 5.0 g of flour, weighed. Brush the pin and ruler clean and lay the pin on its rings at x 35, axis along y (within 5 mm). Check each ring with calipers at three places (3.2 mm within 0.1 mm; replace the pair if not), the board inside its marks and the camera stand, and check the depth gauge (0.00 on the bare board, 3.00 mm on the leaves).",
   "fidelity": "The pastry is a model (doughkit) with no collider: the pin rides on its rings, and each slice the barrel crosses is pressed to the gap plus half its excess (springback, an estimate), volume kept; it lengthens, not widens. It presses only while both hands touch the pin, since the pin slides rather than turns; the real trial has no hand rule. The dough gives no rolling resistance. It cannot tear or go below 3.2 mm; a depth gauge checks a real sheet patch by patch.",
-  "scores": "Dream-1 run: PENDING (to run on this task.py, f79ef2137262); demo: 1.0 (1,167 steps).",
-  "media": "M-UYHXNM"
+  "scores": "Dream-1 run: 0 (2,400 steps, the run limit) on this task.py (f79ef2137262); demo: 1.0 (1,167 steps).",
+  "media": "M-FC24F7"
 }
