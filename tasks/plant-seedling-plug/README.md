@@ -24,6 +24,9 @@ Scripted demo (reaches full score):
 
 Model run (Dream-1): the same command with `--policy dream --max-steps 2400`.
 
+Results on this task.py: scripted demo 1.0 in 2,234 steps (success); Dream-1 0 in 2,400 steps (run limit; the
+seedling was not moved into the planter box).
+
 Render the videos of a run with `inspect-robots video <log.json>`.
 
 Offline checks (no simulator): `python3 test_task.py`.
