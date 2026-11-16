@@ -10,10 +10,11 @@ crushing a leaf.
 
 Every clod of loose mix is its own rigid body (soilkit). The plug and plant are one free articulated body: the root
 ball, and a springy stem (two segments, each on a two-axis spring joint) carrying the leaves, which the hands and the
-soil collide with. The score reads the end state: the soil's height in the hole at 16 fixed points round the plug, read
-as a real trial reads them with a probe lowered through a template (the fill, and the level on each of the plug's four
-sides), the plug's tilt and depth, the hands off it, and a 0.5 N side push on the stem (pushkit) that a firmed plug resists. A
-damaged seedling (the stem bent past its kink angle, or the stem or a leaf squeezed between a hand's fingers) scores
+soil collide with. The score reads the end state: the plug centered in the hole (its top's center within 0.6 cm of
+the hole's axis, turned any way), the soil's height at 16 points set out from the plug's own faces, so they follow the
+plug wherever it stands and however it is turned, read as a real trial reads them with a probe lowered through a
+template laid over the plug (the fill, and the level on each of the plug's four sides), the plug's tilt and depth, the
+hands off it, and a 0.5 N side push on the stem (pushkit) that a firmed plug resists. A damaged seedling (the stem bent past its kink angle, or the stem or a leaf squeezed between a hand's fingers) scores
 0. Every threshold below appears once, with the same value in task.json and the README.
 """
 from __future__ import annotations
@@ -296,27 +297,35 @@ sk.setup(GRAINS)
 OBJECTS = [_planter(), _plug()]
 
 # -- scoring ------------------------------------------------------------------------------------------------------------
-# The soil in the hole is read the way a real trial reads it: a probe lowered at fixed points until it rests on the mix
-# (a pin profile meter). A template on the box's top edge fixes 16 points on a ring 4.4 cm from the hole's center, four
-# on each side of the plug: 10 and 30 degrees either side of the middle of each face (the plug's faces lie along x and
-# y). Every point is 1.0-1.9 cm out from the plug's face and 0.8 cm in from the hole's wall, and neighboring points
-# are 1.5-2.3 cm apart. The probe is a 9.5 mm flat-ended dowel; in the simulator it is a 9.5 mm disc that comes down
-# until any part of it meets a clod (each clod's own turned cube) or the plug, else the hole's floor.
+# The soil in the hole is read the way a real trial reads it: a probe lowered at 16 points until it rests on the mix (a
+# pin profile meter). The points are set out from the plug, not from the box: a template laid over the plug's top
+# outline (in the simulator, the plug's own frame at its top) puts four points beside each face, 1.0 cm out from the
+# face, at 15 and 50 percent of the way from the face's middle toward either end. So wherever the plug stands and
+# however it is turned, every probe lands in the gap: its 9.5 mm end 5.25 mm clear of the face (tilted 10 degrees, the
+# plug's lower side comes at most 3.5 mm past its top's outline, 4.5 mm for the simulator's three stepped layers). The probe is a
+# 9.5 mm flat-ended dowel; in the simulator it is a 9.5 mm disc that comes down until any part of it meets a clod
+# (each clod's own turned cube) or the plug, else the hole's floor (the firmed surface beyond the hole's wall).
+# - Placement range: the plug's top centered within PLACE_R of the hole's axis, any turn about its axis, upright within
+#   TILT_FULL. Inside it, every probe lands wholly inside the hole's wall (the farthest point is 4.04 cm from the plug's
+#   center: 4.04 + 0.475 + 0.6 = 5.12 cm, 0.8 mm inside the 5.2 cm wall, the margin for lining the template up by
+#   eye).
+#   Outside it the readings could fall on the hole's edge, so the trial is not scored as planted: 0.
 # - Fill at a point: how far the soil there has risen from the hole's floor, as a share of the hole's 6.2 cm depth,
 #   capped at 1: mix heaped above the surface counts as full, never more. The fill is the mean over the 16 points.
 # - The soil level on a side of the plug: the mean height of that side's four points (each capped at the surface).
 #   A side is filled when its level is within 1 cm of the plug's top.
-# The plug's top is planted level when it is within 1 cm of the firmed surface (Z_S). Upright is within 10 degrees.
+# The plug's top is planted level when it is within 1 cm of the firmed surface (Z_S). Upright is within 10 degrees,
+# for every tier: more lean would bring the plug's lower side under the probes.
 DEPTH_TOL = 0.010
 LEVEL_TOL = 0.010
 TILT_FULL = 10.0  # deg
-TILT_PART = 20.0
-FILL_FULL = 0.85  # mean fill at the 16 points, for 1.0
+FILL_FULL = 0.85  # mean fill at the 16 probe points, for 1.0
 FILL_HALF = 0.60
 FILL_QUARTER = 0.40
-PROBE_RING = 0.044  # m from the hole's center
-PROBE_DEGS = tuple(float(f + s * d) % 360.0 for f in (0.0, 90.0, 180.0, 270.0) for s in (-1, 1) for d in (10.0, 30.0))
-PROBE_SIDE = tuple(k // 4 for k in range(16))  # the side (+x, +y, -x, -y) each point is on
+PLACE_R = 0.006  # m: the plug's top center from the hole's axis, in plan
+PROBE_OUT = 0.010  # m: each probe point's distance out from its face of the plug's top
+PROBE_ALONG = (-0.5, -0.15, 0.15, 0.5)  # where along the face, as a share of its half-length from its middle
+PROBE_SIDE = tuple(k // 4 for k in range(16))  # the side (+x, +y, -x, -y, in the plug's frame) each point is on
 PROBE_D = 0.0095  # m: a 3/8 in hardwood dowel, flat-ended
 PROBE_SAMPLES = 13  # points across the probe's end: its center, 6 at half its radius, 6 on its rim
 SPILL_MAX = 0.10  # share of the clods out of the planter box (on the bench or the floor): more caps the score at 0.5
@@ -396,10 +405,17 @@ def plug_top(objects) -> np.ndarray:
     return c + r @ np.array([0.0, 0.0, PLUG_H / 2])
 
 
-def in_hole(objects) -> bool:
-    """The plug's center over the hole (within the hole's radius of its axis, in plan) and below the surface."""
+def offset(objects) -> float:
+    """How far the plug's top center is from the hole's axis, in plan (m)."""
+    top = plug_top(objects)
+    return math.hypot(float(top[0]) - POT[0], float(top[1]) - POT[1])
+
+
+def centred(objects) -> bool:
+    """In the hole, inside the placement range: its top's center within PLACE_R of the hole's axis, its center below
+    the surface."""
     c, _ = plug_frame(objects)
-    return bool(math.hypot(c[0] - POT[0], c[1] - POT[1]) < R_HOLE and c[2] < Z_S)
+    return bool(offset(objects) <= PLACE_R + 1e-9 and c[2] < Z_S)  # 1e-9: float noise
 
 
 def soil(objects) -> np.ndarray:
@@ -416,21 +432,27 @@ def soil_quats(objects, n: int) -> np.ndarray:
     return np.asarray(q, float).reshape(-1, 4)
 
 
-def probe_points() -> np.ndarray:
-    """The 16 template points (x, y), world frame."""
-    a = np.radians(np.array(PROBE_DEGS))
-    return np.column_stack([POT[0] + PROBE_RING * np.cos(a), POT[1] + PROBE_RING * np.sin(a)])
+def probe_offsets() -> np.ndarray:
+    """(16, 2): the template's points in the plug's frame, on its top (x, y from the stem's axis), side by side."""
+    hx, hy = PLUG_TOP[0] / 2, PLUG_TOP[1] / 2
+    out = []
+    for sx, sy in ((1, 0), (0, 1), (-1, 0), (0, -1)):  # +x, +y, -x, -y faces
+        for f in PROBE_ALONG:
+            out.append((sx * (hx + PROBE_OUT) + sy * f * hx, sy * (hy + PROBE_OUT) + sx * f * hy))
+    return np.array(out, float)
 
 
-def _probe_samples() -> np.ndarray:
-    """(16, PROBE_SAMPLES, 2): the points across each probe's flat end."""
-    r = PROBE_D / 2
-    off = [(0.0, 0.0)] + [(rr * math.cos(math.radians(a)), rr * math.sin(math.radians(a)))
-                          for rr in (r / 2, r) for a in range(0, 360, 60)]
-    return probe_points()[:, None, :] + np.array(off)[None, :, :]
+PROBE_OFF = probe_offsets()
+PROBE_END = np.array([(0.0, 0.0)] + [(rr * math.cos(math.radians(a)), rr * math.sin(math.radians(a)))
+                                     for rr in (PROBE_D / 4, PROBE_D / 2) for a in range(0, 360, 60)])  # across its end
 
 
-PROBE_XY = _probe_samples()
+def probe_points(objects) -> np.ndarray:
+    """The 16 points (x, y), world frame: the template's points carried with the plug's top (its position and turn)."""
+    top = plug_top(objects)
+    _, r = plug_frame(objects)
+    p = top[None, :] + np.column_stack([PROBE_OFF, np.zeros(16)]) @ r.T
+    return p[:, :2]
 
 
 def _drop_onto_boxes(xy, centers, rots, halves) -> np.ndarray:
@@ -455,7 +477,8 @@ def _drop_onto_boxes(xy, centers, rots, halves) -> np.ndarray:
 
 def probe_heights(objects, s=None) -> np.ndarray:
     """The 16 probe readings (m, world z): where a 9.5 mm flat-ended probe lowered at each template point comes to
-    rest, on the highest clod or plug face under any part of its end, else on the hole's floor."""
+    rest, on the highest clod or plug face under any part of its end, else on the hole's floor (or the surface, for
+    any part of its end beyond the hole's wall)."""
     s = soil(objects) if s is None else s
     q = soil_quats(objects, len(s))
     rots = [rotm(v) for v in q]
@@ -465,9 +488,11 @@ def probe_heights(objects, s=None) -> np.ndarray:
         centers.append((c + r @ np.asarray(blk.center, float))[None, :])
         halves.append((np.asarray(blk.size, float) / 2)[None, :])
         rots.append(r)
-    z = _drop_onto_boxes(PROBE_XY.reshape(-1, 2), np.concatenate(centers), np.array(rots), np.concatenate(halves))
-    z = z.max(axis=1).reshape(PROBE_XY.shape[:2]).max(axis=1)
-    return np.maximum(z, HOLE_FLOOR)
+    xy = probe_points(objects)[:, None, :] + PROBE_END[None, :, :]  # (16, PROBE_SAMPLES, 2)
+    z = _drop_onto_boxes(xy.reshape(-1, 2), np.concatenate(centers), np.array(rots), np.concatenate(halves))
+    inside = np.hypot(xy[..., 0] - POT[0], xy[..., 1] - POT[1]) < R_HOLE
+    floor = np.where(inside, HOLE_FLOOR, Z_S)  # the hole's floor, or the firmed surface beyond its wall
+    return np.maximum(z.max(axis=1).reshape(xy.shape[:2]), floor).max(axis=1)
 
 
 def point_fill(h) -> np.ndarray:
@@ -563,7 +588,7 @@ class Ledger:
         h = probe_heights(objects, s)
         lv = side_levels(h)
         st = dict(tilt=tilt_deg(r), depth=float(top[2] - Z_S), levels=[v - float(top[2]) for v in lv],
-                  fill=fill_share(h), spill=spill_share(s), hole=in_hole(objects), off=hands_off(objects))
+                  fill=fill_share(h), spill=spill_share(s), hole=centred(objects), offset=offset(objects), off=hands_off(objects))
         st["sides"] = sum(v >= -LEVEL_TOL for v in st["levels"])
         st["full"] = (st["hole"] and st["sides"] == 4 and st["fill"] >= FILL_FULL and st["tilt"] <= TILT_FULL
                       and abs(st["depth"]) <= DEPTH_TOL and st["spill"] <= SPILL_MAX and st["off"])
@@ -574,9 +599,9 @@ class Ledger:
         if self.damage is not None or not st or not st["hole"]:
             return 0.0
         t = 0.0
-        if st["tilt"] <= TILT_PART and st["fill"] >= FILL_QUARTER:
+        if st["tilt"] <= TILT_FULL and st["fill"] >= FILL_QUARTER:
             t = 0.25
-        if st["tilt"] <= TILT_PART and st["fill"] >= FILL_HALF and st["sides"] >= 3 and st["off"]:
+        if st["tilt"] <= TILT_FULL and st["fill"] >= FILL_HALF and st["sides"] >= 3 and st["off"]:
             t = 0.5
         if st["full"]:
             t = 0.75  # planted and filled, firmness not yet shown
@@ -612,7 +637,7 @@ def _update(objects):
     st = _L.planted(objects, s)
     _L.state = st
     if os.environ.get("SEEDLING_TRACE") and n is not None and n % 40 == 0:  # a debugging trace of the scored state
-        print(f"seedling {n}: tilt {st['tilt']:.1f} depth {st['depth'] * 100:.2f} cm levels "
+        print(f"seedling {n}: offset {st['offset'] * 100:.2f} cm tilt {st['tilt']:.1f} depth {st['depth'] * 100:.2f} cm levels "
               f"{[round(v * 100, 2) for v in st['levels']]} fill {st['fill']:.2f} spill {st['spill']:.2f} "
               f"off {st['off']} bends {[round(b) for b in bends]} damage {_L.damage} firm {_L.firm}", flush=True)
     c, r = plug_frame(objects)
@@ -656,8 +681,9 @@ def _update(objects):
 
 
 def success(objects):
-    """Planted: in the hole upright (within 10 degrees), its top within 1 cm of the surface, soil within 1 cm of its
-    top on all four sides, the hole at least 85 % filled at the 16 probe points, at most 10 % of the mix spilled, hands off, it
+    """Planted: in the hole, its top's center within 0.6 cm of the hole's axis (any turn), upright within 10 degrees,
+    its top within 1 cm of the surface, soil within 1 cm of its top on all four sides, the hole at least 85 % filled at
+    the 16 probe points, at most 10 % of the mix spilled, hands off, it
     held through the 0.5 N side push (turned under 5 degrees), and the seedling undamaged."""
     _update(objects)
     return bool(_L.firm and _L.state.get("full") and _L.damage is None)
@@ -665,8 +691,9 @@ def success(objects):
 
 def score(objects):
     """From the end state: 1.0 planted, filled on all four sides, hands off and firm under the side push; 0.75 the
-    same but not yet pushed, or tipping under the push; 0.5 upright within 20 degrees, 3 sides filled and at least 60 %
-    filled, hands off; 0.25 in the hole within 20 degrees with at least 40 % filled. More than 10 % of the mix spilled
+    same but not yet pushed, or tipping under the push; 0.5 three sides filled and at least 60 % filled, hands off;
+    0.25 at least 40 % filled. Every tier needs the plug inside the placement range: its top's center within 0.6 cm of
+    the hole's axis (any turn about its own) and upright within 10 degrees; outside it, 0. More than 10 % of the mix spilled
     caps the score at 0.5. A damaged seedling (a stem joint bent past 45 degrees, or the stem or a leaf squeezed
     between one hand's fingers, either for 2 control steps running) scores 0 for the whole trial. Doing nothing
     scores 0."""

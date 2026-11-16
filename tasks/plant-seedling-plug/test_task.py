@@ -1,7 +1,8 @@
 """Offline checks of the planting scorer and demo, no simulator. Crumbs are given as the simulator gives them (each
 crumb's center in objects["soil"]); the plug's pose and the grippers are built from the task's own geometry. Covers the
-starting layout (crumbs apart, inside the planter box, enough mix to fill the hole), the 16 probe points (placement,
-an empty hole reads 0, heaped mix counts as full and never more, a hole filled on one side only, a pocket between
+starting layout (crumbs apart, inside the planter box, enough mix to fill the hole), the 16 probe points (set out from
+the plug: in the gap and inside the hole's wall for every plug placement in the permitted range, off-centre, turned
+and tilted; a filled hole round an off-centre, turned plug scores full; outside the range scores 0; an empty hole reads 0, heaped mix counts as full and never more, a hole filled on one side only, a pocket between
 points, the 40/60/85 % boundaries), every tier, the spill cap, a hand left on the plug, a tilted or proud plug, the
 firmness push (requested on the plug, passed and failed), a new trial, the thresholds in the text, and the demo plan
 (finger signs, timing, run limit).
@@ -34,9 +35,42 @@ def check(cond, what):
 
 
 def quat(r):
+    """A rotation matrix as (x, y, z, w), by its largest component (exact for turns near 180 degrees too)."""
     r = np.asarray(r, float)
-    w = math.sqrt(max(1e-12, 1 + r[0, 0] + r[1, 1] + r[2, 2])) / 2
-    return np.array([(r[2, 1] - r[1, 2]) / (4 * w), (r[0, 2] - r[2, 0]) / (4 * w), (r[1, 0] - r[0, 1]) / (4 * w), w])
+    tr = r[0, 0] + r[1, 1] + r[2, 2]
+    if tr > 0:
+        w = math.sqrt(1 + tr) / 2
+        return np.array([(r[2, 1] - r[1, 2]) / (4 * w), (r[0, 2] - r[2, 0]) / (4 * w), (r[1, 0] - r[0, 1]) / (4 * w), w])
+    i = int(np.argmax(np.diag(r)))
+    j, k = (i + 1) % 3, (i + 2) % 3
+    v = math.sqrt(max(1e-12, 1 + r[i, i] - r[j, j] - r[k, k])) / 2
+    out = np.zeros(4)
+    out[i] = v
+    out[j] = (r[j, i] + r[i, j]) / (4 * v)
+    out[k] = (r[k, i] + r[i, k]) / (4 * v)
+    out[3] = (r[k, j] - r[j, k]) / (4 * v)
+    return out
+
+
+def rz(a):
+    c, s = math.cos(a), math.sin(a)
+    return np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
+
+
+def tilted(deg, toward):
+    """A tilt of `deg` degrees with the plug's top leaning toward the plan direction `toward` (degrees)."""
+    a = math.radians(toward)
+    return rz(a) @ np.array([[math.cos(math.radians(deg)), 0.0, math.sin(math.radians(deg))], [0.0, 1.0, 0.0],
+                             [-math.sin(math.radians(deg)), 0.0, math.cos(math.radians(deg))]]) @ rz(-a)
+
+
+def placed(off=(0.0, 0.0), yaw=0.0, rot=None, depth=None):
+    """(position, rotation) of the plug with its top's center `off` (m) from the hole's axis in plan, turned `yaw`
+    degrees about its axis (then `rot` applied, e.g. a tilt), its top `depth` under the surface."""
+    r = (np.eye(3) if rot is None else rot) @ rz(math.radians(yaw))
+    depth = M.SET_DEPTH if depth is None else depth
+    top = np.array([M.POT[0] + off[0], M.POT[1] + off[1], M.Z_S - depth])
+    return tuple(top - r @ np.array([0.0, 0.0, M.PLUG_H / 2])), r
 
 
 def rx(a):
@@ -60,12 +94,16 @@ START_SOIL = np.array([g.pos for g in M.GRAINS])
 PLANTED = (M.POT[0], M.POT[1], M.Z_S - M.SET_DEPTH - M.PLUG_H / 2)
 
 
-def filled_soil(sides=(True, True, True, True), share=1.0, spill=0):
-    """Crumbs as a filled hole: a hex fill of the gap round a level plug (only the given sides, in the plug's +x, +y,
-    -x, -y order), the rest left on the surface ring, and `spill` crumbs on the bench."""
-    pts, pitch = [], 2 * M.GRAIN_R + 0.0003  # clods stacked square in the gap, beside the tapered plug
+def filled_soil(sides=(True, True, True, True), share=1.0, spill=0, off=(0.0, 0.0), yaw=0.0):
+    """Crumbs as a filled hole: clods stacked square, in the plug's own frame, in the gap round a level plug whose top's
+    center is `off` from the hole's axis and which is turned `yaw` degrees (only the given sides, in the plug's +x, +y,
+    -x, -y order), the rest left on the surface ring, and `spill` crumbs on the bench. With `yaw`, pass
+    clod_quats(yaw) as the clods' turn."""
+    pts, pitch = [], 2 * M.GRAIN_R + 0.0003
     z0 = M.Z_S - M.SET_DEPTH - M.PLUG_H  # the plug's bottom
     z = M.HOLE_FLOOR + M.GRAIN_R
+    r = rz(math.radians(yaw))[:2, :2]
+    corners = np.array([(sx * M.GRAIN_R, sy * M.GRAIN_R) for sx in (-1, 1) for sy in (-1, 1)]) @ r.T
     layer = 0
     while z < M.Z_S + M.GRAIN_R * 0.5:
         frac = min(1.0, max(0.0, (z - z0) / M.PLUG_H))
@@ -73,15 +111,16 @@ def filled_soil(sides=(True, True, True, True), share=1.0, spill=0):
         o = (pitch / 2) * (layer % 2)
         for j in range(-9, 10):
             for i in range(-9, 10):
-                x, y = i * pitch + o, j * pitch + o
-                if math.hypot(abs(x) + M.GRAIN_R, abs(y) + M.GRAIN_R) > M.R_HOLE + 0.002:
+                x, y = i * pitch + o, j * pitch + o  # in the plug's frame, from its axis
+                w = np.array(off) + r @ np.array([x, y])  # from the hole's axis
+                if np.hypot(*(w + corners).T).max() > M.R_HOLE + 0.002:
                     continue
                 if z > z0 - M.GRAIN_R and abs(x) < hx + M.GRAIN_R and abs(y) < hy + M.GRAIN_R:
                     continue
                 a = math.degrees(math.atan2(y, x))
                 k = min(range(4), key=lambda q: abs((a - (0, 90, 180, -90)[q] + 180) % 360 - 180))
                 if sides[k]:
-                    pts.append((M.POT[0] + x, M.POT[1] + y, z))
+                    pts.append((M.POT[0] + w[0], M.POT[1] + w[1], z))
         z += pitch
         layer += 1
     n_fill = int(round(len(pts) * share))
@@ -93,10 +132,17 @@ def filled_soil(sides=(True, True, True, True), share=1.0, spill=0):
     return soil
 
 
-def objs(plug_pos=PLANTED, plug_rot=np.eye(3), soil=None, left=None):
+def clod_quats(yaw):
+    a = math.radians(yaw)
+    return np.tile(np.array([0.0, 0.0, math.sin(a / 2), math.cos(a / 2)]), (len(M.GRAINS), 1))
+
+
+def objs(plug_pos=PLANTED, plug_rot=np.eye(3), soil=None, left=None, quats=None):
     o = {"planter": st((M.POT[0], M.POT[1], M.TOP))}
     o["plug"] = st(plug_pos, plug_rot)
     o["soil"] = START_SOIL.copy() if soil is None else soil
+    if quats is not None:
+        o["soil_quat"] = quats
     opening = {}
     for g, p in AWAY.items():
         o[g] = st(p, grip_rotation(0.0))
@@ -194,10 +240,10 @@ def test_sides_and_fill():
     check(s == 0.0 and abs(f - 0.25) < 1e-9, f"a hole filled on one side only: fill {f:.2f}, 0 (got {s})")
 
 
-def probes_at(fills, plug_z=None):
+def probes_at(fills, plug_pos=PLANTED):
     """Soil as one clod under each template point, its top at that point's given fill (share of the hole's depth
     above the floor; above 1 is heaped over the surface); a fill of 0 leaves the point bare."""
-    pts = M.probe_points()
+    pts = M.probe_points(objs(plug_pos=plug_pos)[0])
     soil = START_SOIL.copy()
     for k, f in enumerate(fills):
         if f > 0:
@@ -205,22 +251,72 @@ def probes_at(fills, plug_z=None):
     return soil
 
 
+PLACEMENTS = [(0.0, 0.0), (0.003, 0.0)] + [(M.PLACE_R * math.cos(math.radians(a)), M.PLACE_R * math.sin(math.radians(a)))
+                                           for a in range(0, 360, 15)]
+TILTS = [None] + [tilted(M.TILT_FULL, a) for a in range(0, 360, 45)]
+
+
 def test_probe_points():
-    pts = M.probe_points()
-    r = np.hypot(pts[:, 0] - M.POT[0], pts[:, 1] - M.POT[1])
-    hx, hy = M.PLUG_TOP[0] / 2, M.PLUG_TOP[1] / 2
-    clear = np.maximum(np.abs(pts[:, 0] - M.POT[0]) - hx, np.abs(pts[:, 1] - M.POT[1]) - hy)
-    check(len(pts) == 16 and all(M.PROBE_SIDE.count(k) == 4 for k in range(4)), "16 points, four on each side")
-    check(clear.min() - M.PROBE_D / 2 > 0.004, f"every probe lands {clear.min() * 100:.2f} cm out from the plug's face")
-    check(r.max() + M.PROBE_D / 2 < M.R_HOLE, "every probe lands inside the hole's wall")
-    d = np.linalg.norm(pts[:, None] - pts[None], axis=2) + np.eye(16)
-    check(d.min(axis=1).max() < 0.024, f"each point's nearest neighbor within {d.min(axis=1).max() * 100:.1f} cm")
-    fresh()
+    """For every placement in the permitted range (the top's center up to 0.6 cm off the hole's axis in 24
+    directions, turned every 10 degrees, upright or tilted 10 degrees eight ways), an empty hole reads its floor at
+    all 16 points: each probe's whole end lands inside the hole's wall and clear of the plug."""
     o, _ = objs()
-    h = M.probe_heights(o, START_SOIL)
-    check(np.allclose(h, M.HOLE_FLOOR) and M.fill_share(h) == 0.0, "an empty hole reads the floor at every point: fill 0")
+    pts = M.probe_points(o)
+    check(len(pts) == 16 and all(M.PROBE_SIDE.count(k) == 4 for k in range(4)), "16 points, four on each side")
+    far = START_SOIL[:1]  # no mix in the hole
+    n, worst_wall, worst = 0, 1.0, 0.0
+    for off in PLACEMENTS:
+        for yaw in range(0, 360, 10):
+            for rot in TILTS:
+                pos, r = placed(off, yaw, rot)
+                o, _ = objs(plug_pos=pos, plug_rot=r)
+                h = M.probe_heights(o, far)
+                worst = max(worst, float(np.abs(h - M.HOLE_FLOOR).max()))
+                p = M.probe_points(o)
+                worst_wall = min(worst_wall, float(M.R_HOLE - M.PROBE_D / 2 - np.hypot(p[:, 0] - M.POT[0],
+                                                                                         p[:, 1] - M.POT[1]).max()))
+                n += 1
+    check(worst < 1e-9, f"{n} placements in range: every probe reads the empty hole's floor (off by at most "
+                        f"{worst * 1000:.2f} mm): in the gap, never on the plug or the hole's edge")
+    check(worst_wall >= 0.0008, f"the probes' ends stay {worst_wall * 1000:.1f} mm or more inside the hole's wall")
+    upright = []
+    for yaw in range(0, 360, 10):  # the clearance to the plug's faces
+        _, r = placed((0.0, 0.0), yaw)
+        rel = (M.probe_points(objs(plug_pos=placed((0.0, 0.0), yaw)[0], plug_rot=r)[0]) - np.array(M.POT)) @ r[:2, :2]
+        upright.append(np.maximum(np.abs(rel[:, 0]) - M.PLUG_TOP[0] / 2, np.abs(rel[:, 1]) - M.PLUG_TOP[1] / 2).min())
+    check(abs(min(upright) - M.PROBE_OUT) < 1e-9, f"every point {M.PROBE_OUT * 100:.1f} cm out from its face, any turn")
+    fresh()
     s = run(30)
     check(s == 0.0, "the plug in an empty hole scores 0")
+
+
+def test_off_centre_turned():
+    """A hole filled round a plug that stands off-centre (up to the 0.6 cm limit) and turned: full credit, as for a
+    centered one; one side left bare is still caught; past the limit the trial scores 0."""
+    cases = ((M.PLACE_R, 0.0, 0.0), (0.0, -M.PLACE_R, 0.0), (0.0042, 0.0042, 30.0), (-M.PLACE_R, 0.0, 45.0),
+             (0.003, -0.005, 72.0), (0.0, 0.0, 90.0), (-0.004, 0.004, 137.0), (0.0, M.PLACE_R, -20.0))
+    for x, y, yaw in cases:
+        fresh()
+        pos, r = placed((x, y), yaw)
+        soil = filled_soil(off=(x, y), yaw=yaw)
+        kw = dict(soil=soil, plug_pos=pos, plug_rot=r, quats=clod_quats(yaw))
+        s = run(M.HOLD_STEPS - 1, **kw)
+        st0 = M._L.state
+        check(s == 0.75 and st0["sides"] == 4 and st0["fill"] >= M.FILL_FULL,
+              f"off-centre ({x * 100:.2f}, {y * 100:.2f}) cm, turned {yaw:.0f} deg, filled: fill {st0['fill']:.2f}, "
+              f"4 sides, 0.75 before the push (got {s})")
+        s = run(3 + 2 * M.PUSH_STEPS + M.SETTLE_STEPS, **kw)
+        check(s == 1.0, f"  and 1.0 after the push (got {s})")
+        fresh()
+        bare = filled_soil(sides=(True, True, True, False), off=(x, y), yaw=yaw)
+        s = run(30, soil=bare, plug_pos=pos, plug_rot=r, quats=clod_quats(yaw))
+        check(s == 0.5 and M._L.state["sides"] == 3, f"  the same with its -y side bare: 3 sides, 0.5 (got {s})")
+    for x, y, yaw in ((0.008, 0.0, 0.0), (0.0, -0.0065, 30.0), (-0.012, 0.012, 45.0)):
+        fresh()
+        pos, r = placed((x, y), yaw)
+        s = run(30, soil=filled_soil(off=(x, y), yaw=yaw), plug_pos=pos, plug_rot=r, quats=clod_quats(yaw))
+        check(s == 0.0 and not M._L.state["hole"],
+              f"top's center {math.hypot(x, y) * 100:.2f} cm off the axis (past 0.6 cm): outside the range, 0 (got {s})")
 
 
 def test_heaped_capped():
@@ -234,7 +330,7 @@ def test_heaped_capped():
     lv = M.side_levels(M.probe_heights(o, probes_at(heaped)))
     check(max(lv) <= M.Z_S + 1e-9, "a side's level is capped at the surface")
     soil = filled_soil(sides=(True, True, False, False))
-    pts = M.probe_points()
+    pts = M.probe_points(o)
     for k in range(8):  # pile clods high on the two filled sides
         soil[-1 - k] = (pts[k, 0], pts[k, 1], M.Z_S + 0.03)
     s = run(30, soil=soil)
@@ -281,7 +377,7 @@ def test_fill_boundaries():
     sunk = (PLANTED[0], PLANTED[1], M.Z_S - 0.0099 - M.PLUG_H / 2)
     for ff, want in ((0.80 + eps, 0.5), (0.80 - eps, 0.25)):
         fresh()
-        s = run(5, soil=probes_at([ff] * 12 + [0.0] * 4), plug_pos=sunk)
+        s = run(5, soil=probes_at([ff] * 12 + [0.0] * 4, plug_pos=sunk), plug_pos=sunk)
         st0 = M._L.state
         check(st0["sides"] == 3 and abs(st0["fill"] - 0.75 * ff) < 1e-9 and s == want,
               f"three sides at {ff:.3f}, one bare: fill {st0['fill']:.4f}, {want} (got {s})")
@@ -290,11 +386,14 @@ def test_fill_boundaries():
 def test_tilt_depth_hand_spill():
     fresh()
     soil = filled_soil()
-    s = run(60, soil=soil, plug_rot=rx(math.radians(15)))
-    check(s == 0.5, f"tilted 15 degrees: 0.5 (got {s})")
-    fresh()
-    s = run(60, soil=soil, plug_rot=rx(math.radians(25)))
-    check(s == 0.0, f"tilted 25 degrees: 0 (got {s})")
+    pos, r = placed(rot=rx(math.radians(9)))
+    s = run(M.HOLD_STEPS - 1, soil=soil, plug_pos=pos, plug_rot=r)
+    check(s == 0.75, f"tilted 9 degrees: still planted, 0.75 before the push (got {s})")
+    for deg in (11, 15, 25):
+        fresh()
+        pos, r = placed(rot=rx(math.radians(deg)))
+        s = run(60, soil=soil, plug_pos=pos, plug_rot=r)
+        check(s == 0.0, f"tilted {deg} degrees: outside the range (upright within 10), 0 (got {s})")
     fresh()
     proud = (PLANTED[0], PLANTED[1], PLANTED[2] + 0.02)
     s = run(60, soil=soil, plug_pos=proud)
@@ -438,7 +537,7 @@ def test_text():
     check(tj["instruction"] == M.INSTRUCTION, "task.json instruction matches task.py")
     check(len(tj["context"]) <= 1000, f"context {len(tj['context'])} chars")
     sc = tj["scoring"]
-    for txt in ("1 cm", "10 degrees", "20 degrees", "85%", "60%", "40%", "10%", "0.5 N", "5 cm", "5 degrees", "16 points",
+    for txt in ("1 cm", "10 degrees", "0.6 cm", "1.0 cm", "85%", "60%", "40%", "10%", "0.5 N", "5 cm", "5 degrees", "16 points",
                 "9.5 mm", "Hirschi"):
         check(txt in sc, f"scoring text says {txt}")
     check(":" not in tj["title"], "no colon in the title")
