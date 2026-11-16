@@ -66,22 +66,24 @@ Too much is the easy failure, as it is for parents.
 
 ### How it differs from other squeeze and dosing tasks
 
-**#1919 (pipe a shell border on a cake):**
+**Piping a shell border on a cake (another team's task):**
 - Icing goes through a rigid syringe whose piston the hand pushes, and the score is the shape the icing leaves (shell
   heads, tails and ridges).
 - Here the hand squeezes a deformable tube's walls. The output is a dose by mass, onto a target the robot holds and
   aims with its other hand.
 - Nothing here is graded on shape.
 
-**#2254 and #2101 (pour a 10 mL dose; pour to a line):** these pour a liquid by tilting a container, with gravity
+**Pouring a 10 mL dose, or pouring to a line (other tasks):** these pour a liquid by tilting a container, with gravity
 setting the flow. A toothpaste tube cannot be poured. The paste moves only while the walls are pressed hard enough to
 overcome its yield stress, and the dose depends on the squeeze, not the tilt.
 
-**#2283 (glue a mug handle):** squeezes a glue tube standing in a holder onto two fixed broken faces, as one step of
-a repair scored mainly on the dry fit and seating. Here the squeeze is the whole task, with these differences:
+**Gluing a broken mug handle back on (another team's task):** one hand takes a gel-glue tube from its holder and
+squeezes a thin bead onto two broken faces of a mug lying in a cradle, as one step of a repair scored mainly on the
+dry fit, seating and press; the bead is a volume band, and the glue flows as soon as the squeeze passes a force. Here the squeeze is the whole task, with these differences:
 - both hands work together: one holds the brush, the other squeezes;
 - the target is held in the air, not fixed;
-- the score is a weighed mass band from real dosing data.
+- the score is a weighed mass band from real children's dosing data, and the paste's yield and after-flow make the
+  stop, not just the start, the hard part.
 
 ## Scoring
 
@@ -91,7 +93,7 @@ The real trial weighs grams directly, so the density matters only in simulation.
 
 | Score | Condition | Why this level |
 |---|---|---|
-| 1.0 | the 0.75 state; the bristles within 45 degrees of facing up (held or set down); the tube lying on the counter (its middle under 3 cm up) and released; both still (under 1 cm/s) for 1 s | the brush is ready and the tube is out of the hand, so no more paste can come |
+| 1.0 | the 0.75 state; the bristles within 45 degrees of facing up (held or set down); the tube lying on the counter (its middle under 3 cm up) and released; each let go lying on the counter, not dropped or thrown; both still (under 1 cm/s) for 1 s | the brush is ready and the tube is out of the hand, so no more paste can come |
 | 0.75 | 0.15 to 0.35 g on the bristle field and at most 0.05 g anywhere else | the right dose, not yet finished |
 | 0.5 | 0.15 to 0.35 g on the bristles but more than 0.05 g off them (counter, head sides, neck, handle) | the right dose, with a mess that a parent would wipe up |
 | 0.25 | 0.05 to 0.15 g (a smear: the under-3 dose, too little at 4) or 0.35 to 0.70 g (too much: a half load) | the wrong dose for the child, but some control of the squeeze |
@@ -117,6 +119,14 @@ amount the real trial weighs reliably after a tissue wipe. More is a visible sme
 45 degrees a soft dab can start to slide off the bristle tips. This is a proxy, not modeled: the real trial reads the
 angle from the video. The tube must be put down because while it is in a hand the squeeze is not over and more paste
 can still come. Neither the arms' final pose nor the brush's place on the counter is scored.
+
+**Why put down, not dropped or thrown.** A dropped open tube lands on its walls and can squirt paste, and a dropped
+brush can bounce and smear or shed the dab; a parent lays both down. So whenever a hand lets go of the tube or the
+brush, it must already be lying on the counter (the tube's middle, or the bristle top's middle, under 3 cm up: within
+about 1.2 and 1.6 cm of their resting heights) and moving under 0.3 m/s. A free fall reaches 0.3 m/s after 4.6 mm,
+so only a hand that lays the thing down passes; picking it up again and laying it down clears a drop. A tube or brush
+that ends below the counter (on the floor) is not put down. Real trial: from the video, each is let go resting on or
+within about 1 cm of the counter, not tossed, and both end on the counter or in a hand.
 
 **Turning the bristles past sideways** (more than 90 degrees from up) with paste on them caps the score at 0.25 for
 the rest of the trial. The dab can fall off or smear on the counter, and the real trial would have to re-weigh
@@ -148,7 +158,8 @@ motion as picking it up, and the task starts just after that.
 `squeezekit` (the house squeeze-bottle kit), with a toothpaste tube's numbers.
 
 **Walls.**
-- The tube's round body is a rigid core with four wall panels on prismatic joints, each sprung at 0.4 N per mm.
+- The tube's round body is a rigid core with four wall panels on prismatic joints, each sprung at 2.5 N per mm (an
+  estimate; at 0.4 N per mm the holding grip could not keep the tube from sliding in the fingers once the dose left).
 - A hand dispenses only by pushing panels in. Their inward push is read from the joints every control step. A grip on
   the cap, shoulder or rolled end squeezes nothing.
 - Each panel displaces 1.0 mL per cm pushed. The 8 mL of air inside is compressed isothermally, and the air's pressure
@@ -162,7 +173,7 @@ motion as picking it up, and the task starts just after that.
   formula (US 5202112). The 7.5 mm bore is a conventional tube opening of 0.28-0.32 in (US 9567138).
 - As paste leaves, the air re-expands and the flow dies away, so paste keeps coming briefly after the squeeze stops.
   Easing off draws air back in and stops it.
-- A 0.4 mm holding grip (about 1.4 N a side) makes 1.0 kPa, under the 1.44 kPa yield, and dispenses nothing.
+- A 0.4 mm holding grip (about 2.2 N a side) makes 1.0 kPa, under the 1.44 kPa yield, and dispenses nothing.
 
 **Where it lands.**
 - The paste's own weight is left out (an open tube held nozzle-down does not drip), and it feeds whichever way the
@@ -213,7 +224,8 @@ area (1.0 mL/cm), the air (8 mL), the flow (0.10 mL/s per kPa) and the yield str
 4. Set `AREA_ML_PER_CM`, `AIR_ML` and `TAU_Y_PA` so the model's doses match the means.
 
 **Forces (computed, not measured).**
-- The demo's squeeze makes about 4.6 kPa inside: about 6.3 N on each panel, far inside the gripper's 50 N.
+- The demo's squeeze makes about 4.6 kPa inside: about 9.9 N on each panel (4.4 N of wall spring, 5.6 N of
+  pressure), far inside the gripper's 50 N.
 - The finger's position servo (5,000 N/m) is a spring in series with the wall, so the demo commands each finger
   past the wall by the force it must make over that stiffness.
 - The brush weighs 14 g and the tube about 72 g.
@@ -284,7 +296,8 @@ mouth. Discard each dosed brush, or wash it.
 ## Runtime and seeds
 
 - Run limit: 1,200 control steps at 20 Hz (1 minute).
-- Scripted demo: **1.0** (success at step 512, 25.6 s; task.py sha256 7bd09be57cce). In the run, 0.284 g landed on
+- Scripted demo: **1.0** (success at step 512, 25.6 s; task.py sha256 7bd09be57cce, before the drop/throw check
+  was added: re-run pending). In the run, 0.284 g landed on
   the bristles and 0.010 g off them; the brush was held level (bristles within 1.1 degrees of up) and laid back flat;
   the tube was laid back and released. The left hand lifts the brush by its handle, turns it handle-left and holds it
   10 cm over the counter. The right hand lifts the tube by its body with a light holding grip, turns it nozzle-down

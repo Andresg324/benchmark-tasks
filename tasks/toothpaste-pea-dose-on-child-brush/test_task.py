@@ -4,7 +4,7 @@ geometry the demo uses; the tube's wall pushes are set as its joint states. Cove
 strip); too little (a smear); paste off the bristles (on the counter; on the bristles' edge, running off); the dose
 scored the same wherever and however the brush is held (moved, tilted, laid down after dosing); bristles tipped past
 60 degrees while squeezing (nothing lands); the brush flipped with paste on it; the tube still in hand; the 1 s hold;
-a new trial; the thresholds in the text; and the demo plan's reach.
+the tube or brush dropped, thrown or left on the floor; a new trial; the thresholds in the text; and the demo plan's reach.
 
     python3 test_task.py
 """
@@ -67,6 +67,7 @@ class Trial:
         self.brush = (np.array(M.BRUSH_START, float), np.eye(3))
         self.tube = (np.array(M.TUBE_START, float), np.eye(3))
         self.hand_on_tube = False
+        self.hand_on_brush = False
         self.s = 0.0
 
     def nozzle_over(self, dx=0.0, dy=0.0, gap=M.NOZZLE_GAP, rot=NOZZLE_DOWN):
@@ -92,6 +93,10 @@ class Trial:
                 tp, tr = self.tube
                 o["right_gripper"] = st(tp, tr @ rz(math.pi / 2) @ GRIP_DOWN)
                 opening["right_gripper"] = M.tube_grip(push)
+            if self.hand_on_brush:
+                bp, br = self.brush
+                o["left_gripper"] = st(bp + br @ M.BRUSH_GRIP_LOCAL, br @ GRIP_DOWN)
+                opening["left_gripper"] = M.finger_for(M.HANDLE[1] / 2 - 0.001)
             kit._OPENING.update(opening)
             M.success(o)
             self.s = M.score(o)
@@ -290,6 +295,72 @@ def test_brush_left_on_side():
     t.squeeze(M.DOSE_PUSH, M.DOSE_S)
     t.brush = (t.brush[0], rx(math.radians(60)))
     check(t.finish() == 0.75, "brush left with the bristles 60 degrees from up: 0.75")
+
+
+def dosed():
+    t = Trial()
+    t.nozzle_over()
+    t.squeeze(M.DOSE_PUSH, M.DOSE_S)
+    return t
+
+
+def let_go(t, start, end, n_fall):
+    """The tube in hand at `start`, let go there, then moving in `n_fall` steps to `end` and lying still there."""
+    t.tube = (np.asarray(start, float), np.eye(3))
+    t.hand_on_tube = True
+    t.step(0.0, 3)
+    t.hand_on_tube = False
+    for k in range(1, n_fall + 1):
+        t.tube = (np.asarray(start, float) + (np.asarray(end, float) - np.asarray(start, float)) * k / n_fall, np.eye(3))
+        t.step(0.0)
+    return t.step(0.0, 40)
+
+
+def test_tube_dropped_or_thrown():
+    """Putting the tube down is not dropping or throwing it: a tube let go 15 cm up (it falls in 0.17 s), or let go
+    on the counter while flung sideways at 0.8 m/s, ends lying on the counter but scores 0.75; the same tube laid
+    down and let go scores 1.0, and a dropped tube picked up again and laid down scores 1.0."""
+    up = np.array(M.TUBE_START) + np.array([0.0, 0.0, 0.15])
+    check(let_go(dosed(), up, M.TUBE_START, 4) == 0.75, "tube dropped from 15 cm onto the counter: 0.75")
+    side = np.array(M.TUBE_START) + np.array([0.0, 0.12, 0.0])
+    check(let_go(dosed(), side, M.TUBE_START, 3) == 0.75, "tube flung along the counter at 0.8 m/s: 0.75")
+    check(let_go(dosed(), M.TUBE_START, M.TUBE_START, 1) == 1.0, "tube laid down and let go: 1.0")
+    t = dosed()
+    let_go(t, up, M.TUBE_START, 4)
+    check(let_go(t, M.TUBE_START, M.TUBE_START, 1) == 1.0, "dropped, then picked up and laid down again: 1.0")
+
+
+def test_brush_dropped():
+    """The same for the brush: let go 10 cm up with the dab on it, it lands bristles-up but scores 0.75; held still
+    in the hand at the end (handed over ready) it scores 1.0; laid down and let go, 1.0."""
+    for label, h, want in (("brush dropped from 10 cm", 0.10, 0.75), ("brush laid down", 0.0, 1.0)):
+        t = dosed()
+        t.tube_down()
+        t.hand_on_brush = True
+        rest = np.array(M.BRUSH_START, float)
+        t.brush = (rest + np.array([0.0, 0.0, h]), np.eye(3))
+        t.step(0.0, 3)
+        t.hand_on_brush = False
+        for k in range(1, 4):
+            t.brush = (rest + np.array([0.0, 0.0, h * (1 - k / 3)]), np.eye(3))
+            t.step(0.0)
+        check(t.step(0.0, 40) == want, f"{label}: {want}")
+    t = dosed()
+    t.tube_down()
+    t.brush = (np.array(M.HOLD_BRUSH_AT, float), rz(M.HOLD_YAW))
+    t.hand_on_brush = True
+    check(t.step(0.0, 40) == 1.0, "brush held still, bristles up, at the end: 1.0 (held or set down)")
+
+
+def test_off_the_counter():
+    """A tube or brush that ends on the floor is not put down on the counter."""
+    t = dosed()
+    t.tube = (np.array([0.26, -0.15, M.TOP - 0.70]), np.eye(3))
+    check(t.step(0.0, 40) == 0.75, "tube still on the floor below the counter: 0.75")
+    t = dosed()
+    t.tube_down()
+    t.brush = (np.array([0.32, 0.08, M.TOP - 0.70]), np.eye(3))
+    check(t.step(0.0, 40) == 0.75, "dosed brush lying bristles-up on the floor: 0.75")
 
 
 def test_new_trial():

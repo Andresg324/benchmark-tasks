@@ -189,6 +189,7 @@ TUBE = sq.free_body(kit.Mechanism(
            _panel("panel_t", "Z", 1.0), _panel("panel_b", "Z", -1.0), LID)),
     com=(0.0, 0.0, 0.0))
 TUBE_PARTS = (gk.Seg((CAP_X[0] + CAP_R, 0, 0), (BODY_X[1], 0, 0), BODY_R), gk.Block(*CRIMP))
+BRUSH_PARTS = tuple(gk.Block(c, s) for c, s in BRUSH_PARTS_BOX)
 
 OBJECTS = [BRUSH, TUBE]
 
@@ -211,7 +212,12 @@ SMEAR_G = 0.05  # ... at least this much (under 0.15 g) is a smear or rice grain
 OVER_G = 0.70  # ... above 0.35 g is too much (a half load), above 0.70 g a full adult strip
 OFF_G = 0.05  # g of paste off the bristles (counter, head, neck, handle) allowed for 0.75 and 1.0
 UP_DEG = 45.0  # at the end the bristles face within 45 degrees of straight up ...
-TUBE_DOWN_Z = TOP + 0.030  # ... and the tube lies on the counter (its middle below this), released
+TUBE_DOWN_Z = TOP + 0.030  # ... and the tube lies on the counter (its middle below this, above the counter), released
+# Put down, not dropped or thrown: each time a hand lets go of the tube or the brush, it must be lying on the counter
+# (the tube's middle, the bristle top's middle, under 3 cm up: 1.2 and 1.6 cm over their resting heights) and moving
+# under PLACE_V. A free fall reaches 0.3 m/s after 4.6 mm, so this passes only a hand that lays the thing down.
+BRUSH_DOWN_Z = TOP + 0.030
+PLACE_V = 0.30  # m/s
 FLIP_DEG = 90.0  # the bristles turned past sideways with paste on them: the dab is counted as fallen off
 STILL_STEP = 0.0005  # m per control step (1 cm/s)
 HOLD_STEPS = round(SUCCESS_HOLD_S / DT)
@@ -286,6 +292,10 @@ def tube_held(objects) -> bool:
     return bool(gk.touching(objects, "tube", TUBE_PARTS, grippers=GRIPPERS))
 
 
+def brush_held(objects) -> bool:
+    return bool(gk.touching(objects, "brush", BRUSH_PARTS, grippers=GRIPPERS))
+
+
 def dose_tier(on_g: float, off_g: float) -> float:
     """The paste part of the score from the grams on the bristles and off them."""
     if on_g > OVER_G + 1e-12 or on_g < SMEAR_G - 1e-12:
@@ -305,6 +315,8 @@ class Ledger:
         self.flipped = False
         self.last = None
         self.good = 0
+        self.held = {"brush": False, "tube": False}
+        self.placed = {"brush": True, "tube": True}  # each was last let go lying low and slow (both start lying)
 
     def step(self, objects) -> None:
         b, t = objects["brush"], objects["tube"]
@@ -333,9 +345,17 @@ class Ledger:
         tp = np.asarray(t.pos, float)
         still = self.last is not None and max(float(np.linalg.norm(bp - self.last[0])),
                                               float(np.linalg.norm(tp - self.last[1]))) <= STILL_STEP
+        for name, held, p, prev, low in (("brush", brush_held(objects), bp, None if self.last is None else self.last[0],
+                                          BRUSH_DOWN_Z),
+                                         ("tube", tube_held(objects), tp, None if self.last is None else self.last[1],
+                                          TUBE_DOWN_Z)):
+            if self.held[name] and not held:  # let go this step: laid down, or dropped or thrown?
+                v = 0.0 if prev is None else float(np.linalg.norm(p - prev)) / DT
+                self.placed[name] = float(p[2]) <= low and v <= PLACE_V
+            self.held[name] = held
         self.last = (bp, tp)
-        done = (self.tier() == 0.75 and up <= UP_DEG and float(tp[2]) <= TUBE_DOWN_Z and not tube_held(objects)
-                and still)
+        done = (self.tier() == 0.75 and up <= UP_DEG and TOP < float(tp[2]) <= TUBE_DOWN_Z and float(bp[2]) > TOP
+                and not self.held["tube"] and self.placed["tube"] and self.placed["brush"] and still)
         self.good = self.good + 1 if done else 0
 
     def tier(self) -> float:
@@ -361,8 +381,8 @@ def _update(objects):
 
 
 def success(objects):
-    """A pea-sized dab on the bristles, nothing off them, the bristles up, the tube down and released, all still: this
-    step counts toward the 1 s hold."""
+    """A pea-sized dab on the bristles, nothing off them, the bristles up, the tube down and released, neither dropped
+    nor thrown, all still: this step counts toward the 1 s hold."""
     _update(objects)
     return _L.good >= 1
 
@@ -371,7 +391,7 @@ def score(objects):
     """Grams on the bristles (mL x 1.30 g/mL): 0.15 to 0.35 g with at most 0.05 g off the bristles scores 0.75, with
     more off them 0.5; 0.05 to 0.15 g (a smear) or 0.35 to 0.70 g (too much) 0.25; under 0.05 g or over 0.70 g 0.
     1.0: the 0.75 state with the bristles within 45 degrees of facing up and the tube lying on the counter, released,
-    both still for 1 s. Turning the bristles past sideways with paste on them caps the score at 0.25. Doing nothing
+    both still for 1 s; each let go lying on the counter, not dropped or thrown. Turning the bristles past sideways with paste on them caps the score at 0.25. Doing nothing
     scores 0."""
     _update(objects)
     s = _L.tier()
@@ -458,7 +478,7 @@ HOLD_BRUSH_AT = (0.300, 0.020, TOP + 0.100)  # the bristle top's middle while th
 HOLD_YAW = -math.pi / 2  # the held brush turned so its handle points left (+y), the left hand clear of the right
 NOZZLE_GAP = 0.004  # m: the nozzle's mouth over the bristle top while squeezing
 PITCH = -math.radians(80.0)
-HOLD_PUSH = 0.0004  # m a side: holds the tube (1.4 N a side, 1.0 kPa inside, under the 1.44 kPa yield)
+HOLD_PUSH = 0.0004  # m a side: holds the tube (2.2 N a side, 1.0 kPa inside, under the 1.44 kPa yield)
 DOSE_PUSH = 0.00175  # m a side: the dosing squeeze (about 0.25 g in the offline model at 300 Pa)
 DOSE_S = 1.2  # s held
 # Variants for checking the scorer in the simulator (TOOTH_VARIANT=much | smear): a firmer, longer squeeze (too much, a
