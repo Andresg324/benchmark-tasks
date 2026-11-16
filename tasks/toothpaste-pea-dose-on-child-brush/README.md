@@ -114,7 +114,7 @@ g bottom is half-way between the CDC pea and the about-0.1 g rice-grain smear fo
 amount the real trial weighs reliably after a tissue wipe. More is a visible smear on the brush head or counter.
 
 **Why the bristles within 45 degrees of up, and the tube released.** The brush is handed over ready, dab on top. Past
-45 degrees a soft dab can start to slide off the bristle tips. This is a proxy, not modelled: the real trial reads the
+45 degrees a soft dab can start to slide off the bristle tips. This is a proxy, not modeled: the real trial reads the
 angle from the video. The tube must be put down because while it is in a hand the squeeze is not over and more paste
 can still come. Neither the arms' final pose nor the brush's place on the counter is scored.
 
@@ -132,12 +132,12 @@ whatever stayed on.
 
 **Why the cap starts open.** A parent flips the cap open with the thumb of the hand holding the tube, in the same
 motion as picking it up, and the task starts just after that.
-- The flip lid is modelled (a snap hinge) and starts at its open rest. Shut, it seals the nozzle: squeezing raises
+- The flip lid is modeled (a snap hinge) and starts at its open rest. Shut, it seals the nozzle: squeezing raises
   the pressure but nothing leaves (`test_lid_shut_seals`). Paste can leave only while the lid is at least 57 degrees
   open.
 - A closed start was built and tried in four simulator probes. The left fingertip had to push a thumb tab only 3-4 mm
   proud of the rim, beside the right hand holding the tube, and it landed 1 to 1.5 cm off the tab in each probe. The
-  arms track to about a centimetre that close together, and the YAM's parallel gripper has no thumb to flick a tab
+  arms track to about a centimeter that close together, and the YAM's parallel gripper has no thumb to flick a tab
   with the holding hand.
 - With a closed start, the trial would mostly test whether a fingertip finds a 4 mm tab, not the dose this task is
   about. So the cap starts open, the same in simulation and in the real trial.
@@ -169,7 +169,7 @@ motion as picking it up, and the task starts just after that.
   nozzle points.
 - It drops plumb from the nozzle. The plumb line is cut with the bristle plane, and the hit point is stored in the
   brush's frame on a 1 mm grid of the 20 x 9 mm bristle field, so the dab moves with the brush.
-- A grid cell holds a bead 4.5 mm tall; more slumps into its neighbours, and slump over the field's edge counts as off
+- A grid cell holds a bead 4.5 mm tall; more slumps into its neighbors, and slump over the field's edge counts as off
   the bristles. Paste that misses the field (counter, hand, head sides) is off the bristles.
 - The dab is drawn as blue tiles on the bristles, turned and carried with the brush.
 
@@ -192,7 +192,7 @@ holding grip.
 | Yield stress | Yield pressure | Push for 0.15-0.35 g | Demo squeeze (1.75 mm, 1.2 s) |
 |---|---|---|---|
 | 100 Pa | 0.48 kPa | about 0.9-1.75 mm | 0.34 g (in the band, high); the 1.0 kPa holding grip also leaks |
-| 300 Pa (modelled) | 1.44 kPa | about 1.3-2.2 mm | 0.254 g |
+| 300 Pa (modeled) | 1.44 kPa | about 1.3-2.2 mm | 0.254 g |
 | 500 Pa | 2.40 kPa | about 1.7-2.55 mm | 0.18 g (in the band, low) |
 
 So the band can be reached across the whole literature range of yield stress. The squeeze that reaches it moves by
@@ -253,7 +253,7 @@ down. No force gauge and no squeeze readout are used.
 6. From the video: the bristle angle at the end, whether the tube was let go on the counter, and the 1 s of
    stillness. Score with the table above.
 
-Every weight is independent of where the brush and tube end up, and none of them credits or penalises how the
+Every weight is independent of where the brush and tube end up, and none of them credits or penalizes how the
 squeeze was done.
 
 **Safety.** Only a toothbrush and toothpaste are used: nothing sharp, hot or heavy. The brush is never used in a
@@ -271,9 +271,9 @@ mouth. Discard each dosed brush, or wash it.
 | Bristle angle at the end | within 45 degrees of up | video frame, protractor overlay | design choice: dab on top; a proxy (above) |
 | Stillness | under 1 cm/s for 1 s | video | design choice |
 | Paste density | 1.30 g/mL (sim only) | not needed in the real trial | J. Soc. Cosmet. Chem. (https://library.scconline.org/v021n07/32): pastes 1.3-1.6 g/mL |
-| Yield stress | 300 Pa modelled; 100-500 Pa checked (sim only) | not needed in the real trial | arXiv 1903.10888; US 5202112 |
+| Yield stress | 300 Pa modeled; 100-500 Pa checked (sim only) | not needed in the real trial | arXiv 1903.10888; US 5202112 |
 | Tube body | 35 mm across [M: caliper] | 150 mm digital caliper, 0.01 mm | standard 35 mm laminate size (alltub.com data sheet); the carton is 44 x 48 x 180 mm (Target) |
-| Tube length | 15.0 cm as modelled, rolled to the paste [M: caliper] | rule | 165-175 mm unrolled with cap (supplier tables, estimate) |
+| Tube length | 15.0 cm as modeled, rolled to the paste [M: caliper] | rule | 165-175 mm unrolled with cap (supplier tables, estimate) |
 | Nozzle bore | 7.5 mm [M: caliper] | caliper | US 9567138 (conventional openings 0.28-0.32 in) |
 | Flip-cap tab | 3-4 mm proud of the rim [M]; 4 mm in the model | caliper | estimate from retail photos |
 | Brush | 151 mm long; head 26 x 12 mm; bristle field 20 x 9 mm, 9 mm tall; 14 g [M: all] | caliper, scale | no published dimensions for this SKU |
@@ -284,7 +284,15 @@ mouth. Discard each dosed brush, or wash it.
 ## Runtime and seeds
 
 - Run limit: 1,200 control steps at 20 Hz (1 minute).
-- Scripted demo: DEMO_RESULT
+- Scripted demo: **1.0** (success at step 512, 25.6 s; task.py sha256 7bd09be57cce). In the run, 0.284 g landed on
+  the bristles and 0.010 g off them; the brush was held level (bristles within 1.1 degrees of up) and laid back flat;
+  the tube was laid back and released. The left hand lifts the brush by its handle, turns it handle-left and holds it
+  10 cm over the counter. The right hand lifts the tube by its body with a light holding grip, turns it nozzle-down
+  (10 degrees off plumb) beside the brush, carries it over the bristles' middle with the nozzle 4 mm above them,
+  squeezes 1.75 mm a side for 1.2 s, eases to the holding grip for 1.5 s, lifts off and lays the tube back. The left
+  hand then lays the brush back. The demo is open loop.
+- Scorer checks in the simulator (same task.py): `TOOTH_VARIANT=much` 0.25 (0.461 g on, 0.070 g off);
+  `TOOTH_VARIANT=smear` 0.25 (0.111 g on); `TOOTH_VARIANT=nothing` (both hands park) 0.
 - No randomness: the layout is fixed (`-E object_jitter=0`).
 
 ## How the file works
