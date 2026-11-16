@@ -1,8 +1,10 @@
 """Offline checks of the planting scorer and demo, no simulator. Crumbs are given as the simulator gives them (each
 crumb's center in objects["soil"]); the plug's pose and the grippers are built from the task's own geometry. Covers the
-starting layout (crumbs apart, inside the pot, enough mix to fill the hole), every tier, the spill cap, a hand left on
-the plug, a tilted or proud plug, the firmness push (requested on the plug, passed and failed), a new trial, the
-thresholds in the text, and the demo plan (finger signs, timing, run limit).
+starting layout (crumbs apart, inside the planter box, enough mix to fill the hole), the 16 probe points (placement,
+an empty hole reads 0, heaped mix counts as full and never more, a hole filled on one side only, a pocket between
+points, the 40/60/85 % boundaries), every tier, the spill cap, a hand left on the plug, a tilted or proud plug, the
+firmness push (requested on the plug, passed and failed), a new trial, the thresholds in the text, and the demo plan
+(finger signs, timing, run limit).
 
     python3 test_task.py
 """
@@ -134,8 +136,8 @@ def test_layout():
     check(r.min() >= M.R_HOLE + 0.006 and r.max() <= M.BED_X / 2 - M.GRAIN_R, "clods lie round the hole, in the planter box")
     check(p[:, 2].max() + M.GRAIN_R <= M.Z_S + 0.025, "the heap is low (2.5 cm)")
     check(abs(M.PLUG_START[1]) - M.PLUG_TOP[1] / 2 > M.BED_Y / 2 + M.BED_WALL, "the plug stands on the bench, beside the planter box")
-    ratio = M.N_GRAINS / M.HOLE_CAPACITY
-    check(1.7 <= ratio <= 2.1, f"loose mix is {ratio:.2f} x what the hole holds")
+    ratio = M.N_GRAINS * M.GRAIN_BULK / M.VOID
+    check(1.1 <= ratio <= 1.4, f"loose mix is {ratio:.2f} x the gap's volume ({M.VOID * 1e6:.0f} mL)")
     check(abs(M.N_GRAINS * M.GRAIN_MASS * 1000 - 200) < 1, "200 g of loose mix")
     check(abs(M.N_GRAINS * M.GRAIN_BULK * 1e6 - 444) < 5, "about 440 mL of loose mix")
     w = M.PLUG_TOP
@@ -187,9 +189,102 @@ def test_sides_and_fill():
     s = run(30, soil=filled_soil(sides=(True, False, True, False)))
     check(s == 0.25, f"two sides filled: 0.25 (got {s})")
     fresh()
-    soil = filled_soil(share=0.2)
+    s = run(30, soil=filled_soil(sides=(True, False, False, False)))
+    f = M._L.state["fill"]
+    check(s == 0.0 and abs(f - 0.25) < 1e-9, f"a hole filled on one side only: fill {f:.2f}, 0 (got {s})")
+
+
+def probes_at(fills, plug_z=None):
+    """Soil as one clod under each template point, its top at that point's given fill (share of the hole's depth
+    above the floor; above 1 is heaped over the surface); a fill of 0 leaves the point bare."""
+    pts = M.probe_points()
+    soil = START_SOIL.copy()
+    for k, f in enumerate(fills):
+        if f > 0:
+            soil[k] = (pts[k, 0], pts[k, 1], M.HOLE_FLOOR + f * M.HOLE_D - M.GRAIN_R)
+    return soil
+
+
+def test_probe_points():
+    pts = M.probe_points()
+    r = np.hypot(pts[:, 0] - M.POT[0], pts[:, 1] - M.POT[1])
+    hx, hy = M.PLUG_TOP[0] / 2, M.PLUG_TOP[1] / 2
+    clear = np.maximum(np.abs(pts[:, 0] - M.POT[0]) - hx, np.abs(pts[:, 1] - M.POT[1]) - hy)
+    check(len(pts) == 16 and all(M.PROBE_SIDE.count(k) == 4 for k in range(4)), "16 points, four on each side")
+    check(clear.min() - M.PROBE_D / 2 > 0.004, f"every probe lands {clear.min() * 100:.2f} cm out from the plug's face")
+    check(r.max() + M.PROBE_D / 2 < M.R_HOLE, "every probe lands inside the hole's wall")
+    d = np.linalg.norm(pts[:, None] - pts[None], axis=2) + np.eye(16)
+    check(d.min(axis=1).max() < 0.024, f"each point's nearest neighbour within {d.min(axis=1).max() * 100:.1f} cm")
+    fresh()
+    o, _ = objs()
+    h = M.probe_heights(o, START_SOIL)
+    check(np.allclose(h, M.HOLE_FLOOR) and M.fill_share(h) == 0.0, "an empty hole reads the floor at every point: fill 0")
+    s = run(30)
+    check(s == 0.0, "the plug in an empty hole scores 0")
+
+
+def test_heaped_capped():
+    fresh()
+    half = [1.0 if k < 8 else 0.0 for k in range(16)]
+    heaped = [3.0 if k < 8 else 0.0 for k in range(16)]  # the same sides with mix heaped 12 cm above the surface
+    o, _ = objs()
+    f1 = M.fill_share(M.probe_heights(o, probes_at(half)))
+    f2 = M.fill_share(M.probe_heights(o, probes_at(heaped)))
+    check(abs(f1 - 0.5) < 1e-9 and abs(f2 - 0.5) < 1e-9, f"heaped mix counts as full, never more ({f1:.2f}, {f2:.2f})")
+    lv = M.side_levels(M.probe_heights(o, probes_at(heaped)))
+    check(max(lv) <= M.Z_S + 1e-9, "a side's level is capped at the surface")
+    soil = filled_soil(sides=(True, True, False, False))
+    pts = M.probe_points()
+    for k in range(8):  # pile clods high on the two filled sides
+        soil[-1 - k] = (pts[k, 0], pts[k, 1], M.Z_S + 0.03)
     s = run(30, soil=soil)
-    check(M.fill_share(soil) < M.FILL_QUARTER and s == 0.0, f"{M.fill_share(soil):.0%} filled: 0 (got {s})")
+    check(s == 0.25 and abs(M._L.state["fill"] - 0.5) < 1e-9 and M._L.state["sides"] == 2,
+          f"two sides filled and heaped high: still two sides, fill 0.50, 0.25 (got {s})")
+
+
+def test_pocket_between_points():
+    """An empty pocket 3.6 cm long along a face, through the whole gap, anywhere along it: a probe falls in and that
+    side no longer counts as filled. (Points on a side are 1.5 cm apart; a clod beside a pocket reaches 5.5 mm into it
+    and the probe's end is 9.5 mm across, so with 1.1 cm clods a pocket under about 3.5 cm can be bridged.)"""
+    base = filled_soil()
+    for side, (ax, half_face) in enumerate(((0, M.PLUG_TOP[1] / 2), (1, M.PLUG_TOP[0] / 2), (0, M.PLUG_TOP[1] / 2),
+                                            (1, M.PLUG_TOP[0] / 2))):
+        sign = 1.0 if side < 2 else -1.0
+        length = 0.036
+        worst = -1.0
+        for c in np.arange(-half_face + length / 2, half_face - length / 2 + 1e-9, 0.002):
+            soil = base.copy()
+            d = soil[:, :2] - np.array(M.POT)
+            along = d[:, 1 - ax]
+            out = sign * d[:, ax]
+            face = M.PLUG_TOP[ax] / 2
+            pocket = (np.abs(along - c) <= length / 2) & (out > face - 0.001) & (soil[:, 2] < M.Z_S + 0.02)
+            soil[pocket] = START_SOIL[pocket]  # that mix is back on the surface ring
+            o, _ = objs(soil=soil)
+            lv = M.side_levels(M.probe_heights(o, soil))
+            worst = max(worst, lv[side] - (M.Z_S - M.SET_DEPTH))
+        check(worst < -M.LEVEL_TOL, f"side {side}: a 3.6 cm pocket anywhere along it fails the side "
+                                    f"(highest level {worst * 100:.1f} cm)")
+
+
+def test_fill_boundaries():
+    eps = 0.002
+    for f, tier_at, tier_below in ((M.FILL_QUARTER, 0.25, 0.0), (M.FILL_FULL, 0.75, 0.5)):
+        for ff, want in ((f + eps, tier_at), (f - eps, tier_below)):
+            fresh()
+            s = run(5, soil=probes_at([ff] * 16))
+            check(abs(M._L.state["fill"] - ff) < 1e-9 and s == want,
+                  f"every point at {ff:.3f}: fill {M._L.state['fill']:.3f}, {want} (got {s})")
+    # 60 %: three sides filled and one bare. With the plug's top 9.9 mm under the surface (the deepest still level), a
+    # side whose points are at 0.80 of the depth is within 1 cm of the plug's top, so 12 points at 0.80 is a 60 % fill
+    # (with the plug's top at the surface, three filled sides alone already give over 60 %)
+    sunk = (PLANTED[0], PLANTED[1], M.Z_S - 0.0099 - M.PLUG_H / 2)
+    for ff, want in ((0.80 + eps, 0.5), (0.80 - eps, 0.25)):
+        fresh()
+        s = run(5, soil=probes_at([ff] * 12 + [0.0] * 4), plug_pos=sunk)
+        st0 = M._L.state
+        check(st0["sides"] == 3 and abs(st0["fill"] - 0.75 * ff) < 1e-9 and s == want,
+              f"three sides at {ff:.3f}, one bare: fill {st0['fill']:.4f}, {want} (got {s})")
 
 
 def test_tilt_depth_hand_spill():
@@ -343,7 +438,8 @@ def test_text():
     check(tj["instruction"] == M.INSTRUCTION, "task.json instruction matches task.py")
     check(len(tj["context"]) <= 1000, f"context {len(tj['context'])} chars")
     sc = tj["scoring"]
-    for txt in ("1 cm", "10 degrees", "20 degrees", "85%", "60%", "40%", "10%", "0.5 N", "5 cm", "5 degrees"):
+    for txt in ("1 cm", "10 degrees", "20 degrees", "85%", "60%", "40%", "10%", "0.5 N", "5 cm", "5 degrees", "16 points",
+                "9.5 mm", "Hirschi"):
         check(txt in sc, f"scoring text says {txt}")
     check(":" not in tj["title"], "no colon in the title")
     check(re.search(r"TBD", json.dumps(tj)) is None, "no TBD")

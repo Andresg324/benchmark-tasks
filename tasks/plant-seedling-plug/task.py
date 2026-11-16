@@ -10,8 +10,9 @@ crushing a leaf.
 
 Every clod of loose mix is its own rigid body (soilkit). The plug and plant are one free articulated body: the root
 ball, and a springy stem (two segments, each on a two-axis spring joint) carrying the leaves, which the hands and the
-soil collide with. The score reads the end state: the soil level in the hole on each of the plug's four sides, the
-plug's tilt and depth, the hands off it, and a 0.5 N side push on the stem (pushkit) that a firmed plug resists. A
+soil collide with. The score reads the end state: the soil's height in the hole at 16 fixed points round the plug, read
+as a real trial reads them with a probe lowered through a template (the fill, and the level on each of the plug's four
+sides), the plug's tilt and depth, the hands off it, and a 0.5 N side push on the stem (pushkit) that a firmed plug resists. A
 damaged seedling (the stem bent past its kink angle, or the stem or a leaf squeezed between a hand's fingers) scores
 0. Every threshold below appears once, with the same value in task.json and the README.
 """
@@ -249,10 +250,10 @@ def _plug() -> kit.Mechanism:
 
 # -- the loose mix: the mix dug out of the hole, crumbled into clods: 1.1 cm cubes of 1.0 g, 200 of them (200 g; about
 # 440 mL loose). Clods, not balls: moist mix crumbles into lumps that do not roll, so a heap holds its slope at the
-# hole's edge (a heap of 1.2 cm spheres slumped into the hole in the simulator before the trial began). The hole round a
-# level plug holds HOLE_CAPACITY clods: its gap (about 360 mL) is 2.35-2.75 cm wide at the top, two clods across, so
-# the clods pack loosely in it. There are about 1.9 times as many clods as the hole holds. They lie heaped round the hole, from 6 to 10 cm out, two clods deep, turned a little each (a fixed
-# seed): the same every trial.
+# hole's edge (a heap of 1.2 cm spheres slumped into the hole in the simulator before the trial began). The gap round a
+# level plug (about 360 mL) is 2.35-2.75 cm wide at the top, two clods across, so the clods pack loosely in it; the
+# 440 mL of loose mix is about 1.2 times its volume. They lie heaped round the hole, from 6 to 10 cm out, two clods deep, turned a little each (a fixed seed):
+# the same every trial.
 GRAIN_R = 0.0055  # half the clod's side
 GRAIN_MASS = 0.0010
 N_GRAINS = 200
@@ -295,18 +296,29 @@ sk.setup(GRAINS)
 OBJECTS = [_planter(), _plug()]
 
 # -- scoring ------------------------------------------------------------------------------------------------------------
-# The plug's top is planted level when it is within 1 cm of the firmed surface (Z_S). A side of the plug is filled when
-# the soil there reaches within 1 cm of the plug's top: the soil level on a side is the height of the top of the 3rd
-# highest clod in that side's sector of the gap (between the plug and the hole's edge), so one stray clod
-# perched high does not count as a level. Upright is within 10 degrees of vertical.
+# The soil in the hole is read the way a real trial reads it: a probe lowered at fixed points until it rests on the mix
+# (a pin profile meter). A template on the box's top edge fixes 16 points on a ring 4.4 cm from the hole's center, four
+# on each side of the plug: 10 and 30 degrees either side of the middle of each face (the plug's faces lie along x and
+# y). Every point is 1.0-1.9 cm out from the plug's face and 0.8 cm in from the hole's wall, and neighbouring points
+# are 1.5-2.3 cm apart. The probe is a 9.5 mm flat-ended dowel; in the simulator it is a 9.5 mm disc that comes down
+# until any part of it meets a clod (each clod's own turned cube) or the plug, else the hole's floor.
+# - Fill at a point: how far the soil there has risen from the hole's floor, as a share of the hole's 6.2 cm depth,
+#   capped at 1: mix heaped above the surface counts as full, never more. The fill is the mean over the 16 points.
+# - The soil level on a side of the plug: the mean height of that side's four points (each capped at the surface).
+#   A side is filled when its level is within 1 cm of the plug's top.
+# The plug's top is planted level when it is within 1 cm of the firmed surface (Z_S). Upright is within 10 degrees.
 DEPTH_TOL = 0.010
 LEVEL_TOL = 0.010
-LEVEL_RANK = 3
 TILT_FULL = 10.0  # deg
 TILT_PART = 20.0
-FILL_FULL = 0.85  # share of the hole's void (round the plug, up to the surface) filled with clods, for 1.0
+FILL_FULL = 0.85  # mean fill at the 16 points, for 1.0
 FILL_HALF = 0.60
 FILL_QUARTER = 0.40
+PROBE_RING = 0.044  # m from the hole's center
+PROBE_DEGS = tuple(float(f + s * d) % 360.0 for f in (0.0, 90.0, 180.0, 270.0) for s in (-1, 1) for d in (10.0, 30.0))
+PROBE_SIDE = tuple(k // 4 for k in range(16))  # the side (+x, +y, -x, -y) each point is on
+PROBE_D = 0.0095  # m: a 3/8 in hardwood dowel, flat-ended
+PROBE_SAMPLES = 13  # points across the probe's end: its center, 6 at half its radius, 6 on its rim
 SPILL_MAX = 0.10  # share of the clods out of the planter box (on the bench or the floor): more caps the score at 0.5
 HANDS_CLEAR = 0.010  # m: every gripper's own shape at least 1 cm from the plug
 STILL_STEP = 0.0005  # m per control step (1 cm/s)
@@ -361,10 +373,6 @@ def _void_volume() -> float:
 
 
 VOID = _void_volume()
-HOLE_CAPACITY = 105  # clods in the hole filled to the surface round the plug: measured in the simulator for a 10 cm
-# hole by dropping 210 clods into the gap round a plug standing in it (94 settled below the surface; the plug, not held,
-# was knocked over to 36 degrees by them), scaled by the gap's area to the 10.4 cm hole (x 1.11)
-FULL_COUNT = HOLE_CAPACITY
 
 
 def rotm(q) -> np.ndarray:
@@ -401,31 +409,83 @@ def soil(objects) -> np.ndarray:
     return np.asarray(s, float).reshape(-1, 3)
 
 
-def side_levels(objects, s=None) -> list:
-    """The soil level (m, world z) on each of the plug's four sides (+x, +y, -x, -y of the plug's own frame): the top
-    of the 3rd highest clod in that side's 90 degree sector of the gap, from the plug's face to the hole's edge (a clod
-    left on the surface beyond the edge is not backfill). The hole's floor if the sector has fewer than 3 clods."""
+def soil_quats(objects, n: int) -> np.ndarray:
+    q = objects.get(sk.KEY_QUAT)
+    if q is None:  # no orientations given (offline checks): the clods lie square
+        return np.tile(np.array([0.0, 0.0, 0.0, 1.0]), (n, 1))
+    return np.asarray(q, float).reshape(-1, 4)
+
+
+def probe_points() -> np.ndarray:
+    """The 16 template points (x, y), world frame."""
+    a = np.radians(np.array(PROBE_DEGS))
+    return np.column_stack([POT[0] + PROBE_RING * np.cos(a), POT[1] + PROBE_RING * np.sin(a)])
+
+
+def _probe_samples() -> np.ndarray:
+    """(16, PROBE_SAMPLES, 2): the points across each probe's flat end."""
+    r = PROBE_D / 2
+    off = [(0.0, 0.0)] + [(rr * math.cos(math.radians(a)), rr * math.sin(math.radians(a)))
+                          for rr in (r / 2, r) for a in range(0, 360, 60)]
+    return probe_points()[:, None, :] + np.array(off)[None, :, :]
+
+
+PROBE_XY = _probe_samples()
+
+
+def _drop_onto_boxes(xy, centers, rots, halves) -> np.ndarray:
+    """For vertical lines coming down at each (x, y) in `xy` (M, 2): the height (m) where each first meets each box
+    (center, rotation, half sizes); -inf where it misses. Returns (M, K)."""
+    top = Z_S + 0.2
+    o = np.concatenate([xy, np.full((len(xy), 1), top)], axis=1)  # (M, 3)
+    rel = o[:, None, :] - centers[None, :, :]  # (M, K, 3)
+    lo = np.einsum("mki,kij->mkj", rel, rots)  # the line's start in each box's frame
+    ld = np.broadcast_to(-rots[:, 2, :], lo.shape)  # its direction (straight down) in each box's frame
+    h = np.broadcast_to(halves, lo.shape)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        t1 = (-h - lo) / ld
+        t2 = (h - lo) / ld
+    flat = np.abs(ld) < 1e-12
+    inside = np.abs(lo) <= h
+    tmin = np.where(flat, np.where(inside, -np.inf, np.inf), np.minimum(t1, t2)).max(axis=2)
+    tmax = np.where(flat, np.where(inside, np.inf, -np.inf), np.maximum(t1, t2)).min(axis=2)
+    hit = (tmin <= tmax) & (tmax >= 0.0)
+    return np.where(hit, top - np.maximum(tmin, 0.0), -np.inf)
+
+
+def probe_heights(objects, s=None) -> np.ndarray:
+    """The 16 probe readings (m, world z): where a 9.5 mm flat-ended probe lowered at each template point comes to
+    rest, on the highest clod or plug face under any part of its end, else on the hole's floor."""
     s = soil(objects) if s is None else s
+    q = soil_quats(objects, len(s))
+    rots = [rotm(v) for v in q]
+    centers, halves = [np.asarray(s, float)], [np.full((len(s), 3), GRAIN_R)]
     c, r = plug_frame(objects)
-    d = (s - c) @ r  # clods in the plug's frame
-    ang = np.degrees(np.arctan2(d[:, 1], d[:, 0]))
-    rad = np.hypot(d[:, 0], d[:, 1])
-    hx, hy = PLUG_TOP[0] / 2, PLUG_TOP[1] / 2
-    outside_plug = (np.abs(d[:, 0]) > hx - GRAIN_R) | (np.abs(d[:, 1]) > hy - GRAIN_R)
-    near = (np.hypot(s[:, 0] - POT[0], s[:, 1] - POT[1]) < R_HOLE + 0.002) & outside_plug & (rad < R_HOLE + 0.03)
-    out = []
-    for k, a0 in enumerate((0.0, 90.0, 180.0, -90.0)):
-        da = (ang - a0 + 180.0) % 360.0 - 180.0
-        sel = near & (np.abs(da) <= 45.0)
-        z = np.sort(s[sel, 2] + GRAIN_R)[::-1]
-        out.append(float(z[LEVEL_RANK - 1]) if len(z) >= LEVEL_RANK else HOLE_FLOOR)
-    return out
+    for blk in PLUG_PARTS:  # the root ball's three layers
+        centers.append((c + r @ np.asarray(blk.center, float))[None, :])
+        halves.append((np.asarray(blk.size, float) / 2)[None, :])
+        rots.append(r)
+    z = _drop_onto_boxes(PROBE_XY.reshape(-1, 2), np.concatenate(centers), np.array(rots), np.concatenate(halves))
+    z = z.max(axis=1).reshape(PROBE_XY.shape[:2]).max(axis=1)
+    return np.maximum(z, HOLE_FLOOR)
 
 
-def fill_share(s) -> float:
-    """Clods in the hole (within its radius, below 5 mm over the surface) as a share of what the filled hole holds."""
-    inside = (np.hypot(s[:, 0] - POT[0], s[:, 1] - POT[1]) < R_HOLE) & (s[:, 2] < Z_S + 0.005)
-    return float(inside.sum()) / FULL_COUNT
+def point_fill(h) -> np.ndarray:
+    """Each point's fill: the soil's rise from the hole's floor as a share of the hole's depth, 0 to 1 (heaped mix
+    above the surface counts as full, never more)."""
+    return np.clip((np.asarray(h, float) - HOLE_FLOOR) / HOLE_D, 0.0, 1.0)
+
+
+def fill_share(h) -> float:
+    """The mean fill over the 16 points."""
+    return float(point_fill(h).mean())
+
+
+def side_levels(h) -> list:
+    """The soil level (m, world z) on each side of the plug (+x, +y, -x, -y): the mean of its four points' heights,
+    each capped at the surface."""
+    hc = np.minimum(np.asarray(h, float), Z_S)
+    return [float(hc[[k for k in range(16) if PROBE_SIDE[k] == side]].mean()) for side in range(4)]
 
 
 def spill_share(s) -> float:
@@ -500,9 +560,10 @@ class Ledger:
     def planted(self, objects, s) -> dict:
         c, r = plug_frame(objects)
         top = plug_top(objects)
-        lv = side_levels(objects, s)
+        h = probe_heights(objects, s)
+        lv = side_levels(h)
         st = dict(tilt=tilt_deg(r), depth=float(top[2] - Z_S), levels=[v - float(top[2]) for v in lv],
-                  fill=fill_share(s), spill=spill_share(s), hole=in_hole(objects), off=hands_off(objects))
+                  fill=fill_share(h), spill=spill_share(s), hole=in_hole(objects), off=hands_off(objects))
         st["sides"] = sum(v >= -LEVEL_TOL for v in st["levels"])
         st["full"] = (st["hole"] and st["sides"] == 4 and st["fill"] >= FILL_FULL and st["tilt"] <= TILT_FULL
                       and abs(st["depth"]) <= DEPTH_TOL and st["spill"] <= SPILL_MAX and st["off"])
@@ -596,7 +657,7 @@ def _update(objects):
 
 def success(objects):
     """Planted: in the hole upright (within 10 degrees), its top within 1 cm of the surface, soil within 1 cm of its
-    top on all four sides, at least 85 % of the hole's void filled, at most 10 % of the mix spilled, hands off, it
+    top on all four sides, the hole at least 85 % filled at the 16 probe points, at most 10 % of the mix spilled, hands off, it
     held through the 0.5 N side push (turned under 5 degrees), and the seedling undamaged."""
     _update(objects)
     return bool(_L.firm and _L.state.get("full") and _L.damage is None)

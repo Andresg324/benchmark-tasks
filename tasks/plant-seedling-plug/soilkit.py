@@ -7,7 +7,8 @@ yam_arena's object jitter moves every free object independently by up to 3 cm, w
 into each other, so they keep the layout given here (the scene's reset puts them back).
 
 After every control step `objects["soil"]` holds an (N, 3) array: each grain's position (x, y, z, in the same frame as
-the other objects), in the order of `grains`. The scorer reads only that: where the crumbs really are. Nothing is
+the other objects), in the order of `grains`, and `objects["soil_quat"]` an (N, 4) array of their orientations
+(x, y, z, w). The scorer reads only these: where the crumbs really are and how they lie. Nothing is
 drawn or moved by this module; the physics engine moves the grains.
 
 Nothing on disk changes. The module hooks yam_arena.scene when the simulator imports it (as yamkit does), wrapping
@@ -24,6 +25,7 @@ from dataclasses import dataclass
 import numpy as np
 
 KEY = "soil"
+KEY_QUAT = "soil_quat"
 
 
 @dataclass(frozen=True)
@@ -101,18 +103,19 @@ def _objects(scene) -> list:
     return out
 
 
-def read(env) -> np.ndarray:
-    """The grains' positions now: (N, 3), minus the env origin."""
+def read(env) -> tuple:
+    """The grains' positions now, (N, 3) minus the env origin, and their orientations, (N, 4) x, y, z, w."""
     import torch
 
     names = [g.name for g in _SPEC["grains"]]
     if not names:
-        return np.zeros((0, 3))
+        return np.zeros((0, 3)), np.zeros((0, 4))
     base = env.unwrapped
     world = base.arena_world
     origin = base.scene.env_origins[0]
-    t = torch.stack([world.get_pose_w(n)[0, :3] for n in names]) - origin[None, :]
-    return t.detach().cpu().numpy().astype(np.float64)
+    pose = torch.stack([world.get_pose_w(n)[0, :7] for n in names])
+    pos = (pose[:, :3] - origin[None, :]).detach().cpu().numpy().astype(np.float64)
+    return pos, pose[:, 3:7].detach().cpu().numpy().astype(np.float64)
 
 
 def _patch(scene) -> None:
@@ -125,9 +128,9 @@ def _patch(scene) -> None:
         return [*room(*a, **k), *_objects(scene)]
 
     def object_states(env, names):
-        out = states(env, [n for n in names if n != KEY])
+        out = states(env, [n for n in names if n not in (KEY, KEY_QUAT)])
         if _SPEC["grains"]:
-            out[KEY] = read(env)
+            out[KEY], out[KEY_QUAT] = read(env)
         return out
 
     scene.task_room, scene.object_states = task_room, object_states
