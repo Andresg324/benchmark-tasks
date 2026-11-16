@@ -29,9 +29,9 @@ Offline checks (no simulator): `python3 test_task.py` (56 checks, prints "all pa
 
 | Part | What it is | Where |
 |---|---|---|
-| Chopping block | End-grain maple butcher block, 12 x 22 x 8 cm, fixed | center (16.4, 8.5), long side at heading 105 deg, top z 8 |
+| Chopping block | John Boos CCB121203 end-grain maple chopping block, 30.5 x 30.5 x 7.6 cm (12 x 12 x 3 in), fixed | center (6.6, 10.3), sides at headings 15 and 105 deg, top z 7.6 |
 | Knife | 165 mm santoku, 140 g: steel blade 16.5 cm long and 4.5 cm tall at the heel, its spine curving down to the tip, its edge straight with a 6 mm rise over the last 3 cm to the tip and a bright 6 mm ground bevel along it, octagonal magnolia wa handle 9.5 cm with a horn ferrule; balance point 2 cm in front of the bolster | flat on the block, face A down, edge away (heading 15 deg), bolster at (18.8, -0.7), the front 1.5 cm of the handle on the block, the rest reaching past its edge to (21.3, -9.8) |
-| Whetstone | Orange 1000-grit stone 18 x 6 x 2.5 cm in a black rubber holder (21 x 8 x 1.5 cm, 3 cm end clamps) on a 6 cm wooden stand, all fixed | center (39.4, -5.5), long side at heading -15 deg, stone top z 10 |
+| Whetstone | King KW65 1000/6000 stone, 18.5 x 6.3 x 2.5 cm, 1000 side up, in a Naniwa A-902 holder (28.8 x 7.6 x 3.6 cm, the stone's underside 3.2 cm up) on a Shapton glass-stone field holder base used as the stand (25.3 x 8 x 5.3 cm), all fixed | center (43.2, -6.5), long side at heading -15 deg, stone top z 11 |
 
 ### Rule and scoring
 
@@ -64,7 +64,7 @@ fetched and are not cited.
 
 - **Heel to tip.** Most guides sweep every stroke along the edge so the whole edge crosses the stone: Chef Knives To
   Go (CKTG) has the sharpener "move your guiding fingers from the heel toward the tip so that the entire edge makes
-  contact with the stone from heel to tip"; Bob Kramer: "pull the knife towards you, heel to tip, making a swooping
+  contact with the stone from heel to tip"; Bob Kramer: "pull the knife toward you, heel to tip, making a swooping
   motion on the stone"; America's Test Kitchen (ATK) draws the blade "until the tip of the knife runs off the other
   edge". (Knifewear and Korin instead work a section at a time; Wüsthof goes tip to heel.)
   [CKTG](https://www.chefknivestogo.com/how-to-sharpen-a-knife-on-a-whetstone.html),
@@ -153,20 +153,27 @@ demo makes a fixed count (22 per face, in sets of 11). The handle is not lifted 
 square (The demo). The knife is 140 g, as listed for a 165 mm magnolia-handled santoku
 ([Sakai Takayuki VG5](https://us.seisukeknife.com/products/sakai-takayuki-vg5-hammered-santoku-165mm-magnolia-ferrule-black-plastic-handle-kataoka));
 its blade colliders are boxes following the outline, turned along
-the tip's rise so the edge the scorer reads is the one that touches. The sharpening stand is 6 cm tall so the wrist
-housing clears the bench during strokes.
+the tip's rise so the edge the scorer reads is the one that touches. The stand (5.3 cm) and holder put the stone's top 11 cm up so the wrist
+housing clears the bench during strokes. The holder is modeled as a slab with end clamps, the stand as a solid box.
 
 ## Real-world build
 
 All parts are bought, none made:
 - Knife: Sakai Takayuki VG5 hammered santoku, 165 mm, magnolia handle (listed at 140 g, 46 mm tall at the heel; the
   knife the sim's mass is taken from).
-- Stone: King KW65 1000/6000 combination waterstone (about 185 x 63 x 25 mm, against the sim's 180 x 60 x 25 mm),
-  1000-grit side up.
-- Holder: Naniwa adjustable whetstone holder (A-902), stainless steel with a non-slip rubber base.
-- Riser: TODO (Andres): an off-the-shelf block that lifts the holder so the stone's top is 10 cm above the bench, as
-  in the setup (the sim's stand is 6 cm), so the YAM's wrist clears the bench.
-- Chopping block: TODO (Andres): an end-grain butcher block of about 12 x 22 x 8 cm, named by product.
+- Stone: King KW65 1000/6000 combination waterstone, 185 x 63 x 25 mm as in the sim, 1000-grit side up
+  ([Japanwelt](https://www.japanwelt.de/en/cooking-und-dining/japanese-knives/whetstones/king-kw-65-whetstone-1000-/-6000.html),
+  [My Good Knife](https://mygoodknife.com/en/shop/sharpening-stone-matsunaga-king-kw-65-ht-65-10006000-)).
+- Holder: Naniwa adjustable whetstone holder A-902, stainless steel with non-slip rubber, 288 x 76 x 36 mm, holding the
+  stone 32 mm (1-1/4 in) up
+  ([Sharpening Supplies](https://sharpeningsupplies.com/products/naniwa-stainless-steel-toishi-dai-stone-holder)).
+- Stand: Shapton glass-stone field holder base, 253 x 80 x 53 mm (about 10 x 3-1/8 x 2 in), set flat under the
+  Naniwa holder so the stone's top is 11 cm above the bench and the YAM's wrist clears it
+  ([MTC Kitchen](https://mtckitchen.com/products/shapton-glass-sharpening-stone-field-holder),
+  [Woodcraft](https://www.woodcraft.com/products/shapton-sharpening-field-holder-packable)). The Naniwa holder is
+  3.5 cm longer, so its ends overhang the base by 1.8 cm each.
+- Chopping block: John Boos CCB121203, end-grain Northern hard rock maple, reversible, 12 x 12 x 3 in (30.5 x 30.5 x
+  7.6 cm) ([John Boos](https://www.johnboos.com/products/maple-square-chopping-block-reversible-3-thick-ccb-series)).
 - Kitchen scale under the stand for the jointing press; 15, 20 and 22 degree angle guides beside the stone.
 Fix the stand and block to the bench with double-sided tape or clamps at the positions above. Film the top and the
 side.
@@ -209,8 +216,7 @@ edge-leading travel, and full credit needs 20 or more strokes and 12 of 16 point
 the edge tester decides the score in every case; the sim's count only gates the sim.
 
 Where the 20 comes from. No guide gives a fixed count (Technique, above), so the count is taken from a published
-measurement of the edge itself: Verhoeven, "Experiments on Knife Sharpening" (Iowa State University, Department of
-Materials Science and Engineering, 2004), section 4. He hand-sharpened HRC 60 stainless blades on 6000 and 8000 grit
+measurement of the edge itself: Verhoeven, "Experiments on Knife Sharpening" (2004), section 4. He hand-sharpened HRC 60 stainless blades on 6000 and 8000 grit
 Japanese waterstones "with only a very light downward pressure", alternating faces, and examined every edge in a
 scanning electron microscope. Ten of his 4-stroke cycles (20 strokes per face) "ground the edges back from the
 position of the original as-ground edge sufficiently that all remnants of the original burred edges were gone"; with

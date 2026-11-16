@@ -26,12 +26,12 @@ INSTRUCTION = "Sharpen the knife on the whetstone, then put it back on the chopp
 
 
 def _dirs(deg):
-    """(u, v) for a heading: v along the knife from handle to tip, u across it towards the edge (both horizontal)."""
+    """(u, v) for a heading: v along the knife from handle to tip, u across it toward the edge (both horizontal)."""
     a = math.radians(deg)
     return np.array([math.cos(a), math.sin(a), 0.0]), np.array([-math.sin(a), math.cos(a), 0.0])
 
 
-# --- The knife, in its own frame: lying flat, handle axis along +y (handle at -y, tip at +y), edge towards +x,
+# --- The knife, in its own frame: lying flat, handle axis along +y (handle at -y, tip at +y), edge toward +x,
 # origin on the handle axis at the bolster (where the blade meets the handle).
 HANDLE_Y = (-0.095, 0.0)
 HANDLE_W, HANDLE_T = 0.020, 0.018  # across (in the blade's plane) and thickness of the octagonal handle
@@ -70,23 +70,30 @@ EDGE_SAMPLES = np.linspace(0.005, 0.162, 16)  # points along the edge the scorer
 # 15 degrees, its handle over the board's edge so a hand can close round it.
 PARK_HEADING = 15.0
 PARK_TCP = np.array([0.20, -0.05])  # the handle's grip point at the start
-BOARD = (0.12, 0.22, 0.08)  # an end-grain maple butcher block: across x along x height
+BOARD = (0.305, 0.305, 0.0762)  # John Boos CCB121203 end-grain maple chopping block, 12 x 12 x 3 in: across x along x
+#                                  height (johnboos.com, CCB series)
+BOARD_OFF = -0.09  # m across the knife (toward the spine) from the grip line to the block's middle: the 30.5 cm block
+#                   sits mostly on the robot's side of the knife, so its far edge stays 1.7 cm clear of the stone's holder
 P_U, P_V = _dirs(PARK_HEADING)
 BOARD_EDGE = -0.015  # m past the bolster: the board's near edge is under the handle 1.5 cm behind the bolster, so the
 #                     rest of the handle reaches past it and the lower finger closes round it 1.7 cm clear of the board
-BOARD_POS = PARK_TCP + P_V[:2] * (BOARD_EDGE - GRIP_Y + BOARD[1] / 2)
+BOARD_POS = PARK_TCP + P_V[:2] * (BOARD_EDGE - GRIP_Y + BOARD[1] / 2) + P_U[:2] * BOARD_OFF
 KNIFE_START = np.r_[PARK_TCP - GRIP_Y * P_V[:2], TOP + BOARD[2] + BLADE_T / 2]
 
 # --- The stone, fixed in its holder; its long side along the stroke (u at STONE_HEADING).
 STONE_HEADING = -15.0
-STONE = (0.18, 0.06, 0.025)  # a standard 180 x 60 x 25 mm combination stone
-RISER = 0.06  # the wooden sharpening stand the holder sits on
-HOLDER_H = 0.015  # the rubber holder under the stone
-STONE_TOP = RISER + HOLDER_H + STONE[2]  # 10 cm above the bench
+STONE = (0.185, 0.063, 0.025)  # King KW65 1000/6000 combination waterstone, 185 x 63 x 25 mm (Japanwelt, My Good Knife)
+RISER = (0.253, 0.080, 0.053)  # Shapton glass-stone field holder base, 253 x 80 x 53 mm (MTC Kitchen, Hodge Products):
+#                               the stand the holder sits on, so the YAM's wrist clears the bench
+HOLDER = (0.288, 0.076, 0.036)  # Naniwa A-902 whetstone holder, 288 x 76 x 36 mm overall (Sharpening Supplies)
+HOLDER_H = 0.032  # it holds the stone's underside 32 mm (1-1/4 in) above what it stands on
+STONE_TOP = RISER[2] + HOLDER_H + STONE[2]  # 11 cm above the bench
 S_U, S_V = _dirs(STONE_HEADING)
 STROKE_TCP_Y = -0.20  # where the hand works: the stone sits under the blade's middle
 STONE_V = 0.15  # m from the grip point (the stroke's reference) to the stone's middle along the knife
-STONE_POS = np.array([0.355, STROKE_TCP_Y]) + STONE_V * S_V[:2]
+STONE_SHIFT = 0.04  # m along the stone, away from the robot: the 28.8 cm holder's near clamp then ends where the
+#                    hand reaches for the knife's handle no closer than before, so it does not block the grip
+STONE_POS = np.array([0.355, STROKE_TCP_Y]) + STONE_V * S_V[:2] + STONE_SHIFT * S_U[:2]
 
 # --- Scoring
 BAND = (13.0, 22.0)  # deg: the 15-20 degree sharpening angle, plus 2 degrees each way for a hand-held angle
@@ -111,7 +118,7 @@ STROKE = 0.05  # m: edge-leading travel across the edge in one pass, on the ston
 REVERSE = 0.005  # m: moving back this far against a pass ends it (a back-and-forth stroke's turn); less is jitter
 STEEP_TRAVEL = 0.02  # m: a touch with 2 cm of travel steeper than STEEP is a too-steep stroke: none of it counts
 PER_SIDE = 20  # strokes on each face, from the one published count we found measured on the edge itself: Verhoeven
-#               (Iowa State, "Experiments on Knife Sharpening", 2004, section 4) hand-sharpened HRC 60 blades at very
+#               ("Experiments on Knife Sharpening", 2004, section 4) hand-sharpened HRC 60 blades at very
 #               light pressure on 6000 and 8000 grit waterstones and examined the edges in an electron microscope:
 #               10 four-stroke cycles (20 strokes per face) removed every remnant of the old edge, 4 cycles (8 per
 #               face) did not reliably. The guides give no fixed count (a face is worked until a burr runs heel to
@@ -165,7 +172,7 @@ def _blade_colliders():
     for i in range(len(EDGE_KNOTS) - 1):
         (y0, y1), (x0, x1) = EDGE_KNOTS[i:i + 2], EDGE_KNOTS_X[i:i + 2]
         n = math.hypot(x1 - x0, y1 - y0)
-        inward = np.array([-(y1 - y0), x1 - x0]) / n  # (x, y) unit normal pointing from the edge towards the spine
+        inward = np.array([-(y1 - y0), x1 - x0]) / n  # (x, y) unit normal pointing from the edge toward the spine
         c = np.array([(x0 + x1) / 2, (y0 + y1) / 2]) + inward * deep / 2
         out.append(kit.Collider((float(c[0]), float(c[1]), 0.0), size=(deep, n, BLADE_T),
                                 rot_z=-math.degrees(math.atan2(x1 - x0, y1 - y0))))
@@ -211,14 +218,14 @@ KNIFE_SHAPE = _knife_shape()
 
 
 def _stone():
-    hx, hy = STONE[0] + 0.03, STONE[1] + 0.02
-    lip = 0.03  # the holder's end clamps reach 3 cm up (1 cm below the stone's top)
+    hx, hy, lip = HOLDER  # the holder's end clamps reach its full 36 mm up (2.1 cm below the stone's top)
+    r = RISER[2]
     parts = [  # (centre, size, look)
-        ((0, 0, RISER / 2), (hx, hy, RISER), WOOD),
-        ((0, 0, RISER + HOLDER_H / 2), (hx, hy, HOLDER_H), RUBBER),
-        ((0, 0, RISER + HOLDER_H + STONE[2] / 2), STONE, STONE_LOOK),
-        (((hx - 0.012) / 2, 0, RISER + lip / 2), (0.012, hy, lip), RUBBER),
-        ((-(hx - 0.012) / 2, 0, RISER + lip / 2), (0.012, hy, lip), RUBBER),
+        ((0, 0, r / 2), RISER, WOOD),
+        ((0, 0, r + HOLDER_H / 2), (hx - 0.024, hy, HOLDER_H), RUBBER),
+        ((0, 0, r + HOLDER_H + STONE[2] / 2), STONE, STONE_LOOK),
+        (((hx - 0.012) / 2, 0, r + lip / 2), (0.012, hy, lip), RUBBER),
+        ((-(hx - 0.012) / 2, 0, r + lip / 2), (0.012, hy, lip), RUBBER),
     ]
     meshes = tuple(kit.box(c, sz, lk) for c, sz, lk in parts)
     colliders = tuple(kit.Collider(c, size=sz) for c, sz, _ in parts)
@@ -701,8 +708,9 @@ DEMO_HEEL, DEMO_TIP = 0.025, 0.145  # m past the bolster: the part of the blade 
 #                                     stroke starts (the heel: the 0.5 cm scorer point 1.5 cm onto the 6 cm stone)
 #                                     and as it ends (the tip: the last scorer point, 16.2 cm, 1.7 cm onto it)
 DEMO_SWEEP_V = 0.125  # m: where the sweep along the blade ends; the last DEMO_DWELL of the stroke brings the tip on
-DEMO_RUN = {"A": (-0.03, 0.08), "B": (0.08, -0.03)}  # m along the stone from its middle (+ away from the robot): where
-#                    the edge starts and ends each stroke, 11 cm of the stone's 18 cm. Face A's edge faces away, so its
+DEMO_RUN = {"A": (-0.07, 0.04), "B": (0.04, -0.07)}  # m along the stone from its middle (+ away from the robot): where
+#                    the edge starts and ends each stroke, 11 cm of the stone's 18.5 cm (the same places on the bench as
+#                    before the stone moved STONE_SHIFT along). Face A's edge faces away, so its
 #                    edge-leading stroke pushes; face B's faces the robot, so it pulls. Both go heel to tip. A face-A
 #                    pull heel to tip is out of reach: drawing toward the robot and sliding toward the tip both turn
 #                    the wrist (joint 4) further, and it reached its 90 deg limit 6 cm into the stroke (IK check)
