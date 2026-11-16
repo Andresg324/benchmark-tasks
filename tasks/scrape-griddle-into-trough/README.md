@@ -22,7 +22,7 @@ Render the videos of a run with `inspect-robots video <log.json>`. Offline check
 
 `--scorer task_score` gives 1.0 when the task succeeds (the full condition held for 1 s) and otherwise `score()` at
 the end of the trial. Every share is by mass, of the 22.6 g of debris, read from where the 88 pieces really are (their
-poses in the simulator; in a real trial, a 0.01 g scale).
+poses in the simulator; in a real trial, the three fractions weighed on a 0.01 g scale: see Real-world evaluation).
 
 | Where a piece is | Counts as | Why |
 |---|---|---|
@@ -53,28 +53,113 @@ poses in the simulator; in a real trial, a 0.01 g scale).
   raking light.
 - Doing nothing scores 0. Possible scores: 0, 0.25, 0.5, 0.75, 1.0.
 
-### Real-trial measurement
+## Real-world evaluation (reproducible protocol)
 
-The debris is real charred food residue, cooked onto the plate to the simulator's layout before each trial. Season the
-plate, grease it lightly (about 1 g of vegetable oil wiped over it with a paper towel), weigh the empty tray on a 0.01 g
-scale and set it in, and weigh the whole griddle on a 0.1 g bench scale. With the plate cold, lay a template cut from a
-plastic folder (the 88 outlines from `task.py`) over it and put thin pancake batter (pancake mix and water, 1 to 1 by
-weight) through it with a syringe: a 0.25 g dot on each flake's square and a 1.5 g spoonful on each crust's (32 g in
-all). Lift the template off. On a range burner away from the robot's bench, heat the plate to 230 degrees C, hold it
-there for 10 minutes so the batter chars black and sticks, and turn the burner off. Let the griddle cool on the range
-until the plate is under 40 degrees C, read with a contact surface thermometer (or an IR thermometer on a strip of
-masking tape: bare steel reads low). Weigh the griddle again: the gain is the residue, dry because its water has
-cooked off. Clamp the griddle on the bench; nothing there is hot or plugged in. Photograph the plate under a raking
-light.
+Every real trial starts from the same measured state and is scored on the same shares as the simulator, read by
+weighing. The protocol fixes four things: the debris (one recipe, one stencil, one cook, checked per batch), the
+positions (stops and marks on the bench), the outcome measurement (three weighed fractions plus photos) and the reset.
+The tolerances are collected in the table at the end.
 
-After the trial, weigh the tray: its gain is in the tray. Wipe what is left on the plate (still stuck or loose),
-against the guards and on the blade over the griddle with dry paper towels weighed beforehand, and weigh them: their
-gain, less the session's blank, is left on the griddle (the blank: once per session, wipe the freshly greased plate
-the same way, weigh the towels and grease the plate again, so the grease film is not counted as residue). Gather what
-is on the bench, the floor and the scraper the same way: that is off the griddle. Shares are of the three together; if
-they fall short of the residue weighed onto the plate by more than 0.2 g (the bench scale's error), the shortfall counts
-as off the griddle. The thresholds are the simulator's shares. Compare the plate with the photo: a new scratch 1 cm or
-longer is a gouge (cap 0.5). Nothing else about how the job was done is scored.
+**Fixed marks (once).** Positions are measured from the midpoint between the arm bases with a steel rule.
+- Griddle: two wooden stop blocks screwed to the bench, one against the frame's near (tray) side and one against its
+  right side, put the plate's near right corner (where the lip meets the right splash guard) at x 15.0, y -17.55
+  within 2 mm and the lip square to the robot within 0.5 degree. The plate's top is 5.0 cm above the bench within
+  2 mm at all four corners (shim the feet) and level within 0.5 degree (a bubble level). Two C-clamps on the frame.
+- Scraper: its outline traced on masking tape on the bench, blade edge toward the robot, centered at x 25.0, y -25.5.
+  It is laid in the outline within 5 mm and 3 degrees.
+- Camera and light: a phone on a fixed overhead mount 60 cm above the plate (all of the plate in frame) and a lamp on a
+  marked stand at the far right corner shining across the plate at about 15 degrees (raking light). Both stay put.
+- Catch sheets: white plastic sheet taped to the bench around the griddle and to the floor in front of the bench, so
+  nothing that leaves the griddle is lost.
+
+**The stencil (once).** The 88 pieces' outlines (positions, sizes and turns) are those in `task.py`, the same every
+trial. Print them 1:1 with the script below (a 250 x 150 mm sheet: its bottom edge is the lip, its right edge the
+right splash guard) and have them laser-cut through a 3 mm acrylic sheet of that size. A second, 60 x 60 mm, 3 mm
+stencil carries the witness pieces: five 8 x 8 mm holes and one 17.5 x 17.5 mm hole.
+
+    python3 - <<'EOF'
+    import math
+    from yam_arena.task_file import load
+    m = load("tasks/scrape-griddle-into-trough/task.py").module
+    svg = ['<svg xmlns="http://www.w3.org/2000/svg" width="250mm" height="150mm" viewBox="0 0 250 150">',
+           '<rect width="250" height="150" fill="none" stroke="red" stroke-width="0.2"/>']
+    for c in m.CHIPS:  # page right = the robot's right (-y), page up = away from the robot (+x)
+        (x, y, _), (sx, sy, _) = c.pos, c.size
+        u, v = (m.PLATE_Y0 + 0.250 - y) * 1000, (0.300 - x) * 1000
+        svg.append(f'<rect x="{u - sy * 500:.2f}" y="{v - sx * 500:.2f}" width="{sy * 1000:.2f}" '
+                   f'height="{sx * 1000:.2f}" transform="rotate({-math.degrees(c.yaw):.2f} {u:.2f} {v:.2f})" '
+                   'fill="none" stroke="black" stroke-width="0.2"/>')
+    open("griddle_stencil.svg", "w").write("\n".join(svg + ["</svg>"]))
+    EOF
+
+**Qualification (once, before the first trial).** Make the paste and cook the witness stencil's pieces on the plate
+(below) for 6, 8, 10 and 12 minutes at 230 degrees C, one set per time, and push each piece off as in the batch check.
+Fix the cook time as the shortest one at which the pieces are black through (a crust broken in half shows no pale
+center) and record the flake and crust push-off forces and witness masses of the first three batches at that time:
+their medians are the reference for every later batch. The forces are recorded next to the simulator's bond (0.08 to
+0.13 N per flake, 0.41 to 0.50 N per crust) so the two can be compared.
+
+**Making the debris (every trial).**
+1. Plate clean, dry and cold (under 40 degrees C), the tray empty, dry and weighed (0.01 g) and seated.
+2. Grease: 1.00 g of vegetable oil wiped over the plate with a paper towel, then buffed off with two dry paper towels
+   weighed beforehand until they pick up no more. The film left (oil put on less the towels' gain) is at most 0.10 g:
+   the plate is seasoned and lightly greased, as on a working griddle, with too little free oil to weigh.
+3. Paste: 100 g all-purpose (plain) wheat flour and 100 g water at room temperature, whisked smooth and rested 10
+   minutes; used within 1 hour. No other ingredients, so any lab can make the same paste.
+4. Stencil: set the main stencil flush with the lip and against the right splash guard, and the witness stencil
+   against the right guard at x 62 to 68. Weigh the bowl of paste, fill every hole level with a palette knife (each
+   piece's paste is its hole's volume: 23 mL in all) and weigh the bowl again: the paste used is within 5 % of the
+   qualification's. Lift the stencils straight up.
+5. Cook: move the griddle to a two-burner range away from the robot's bench. Heat until a contact surface thermometer
+   reads 230 degrees C within 10 at all five points marked on the plate (four corners and the middle of the stencil
+   area), then hold it there for the fixed cook time. Turn the burners off and let the griddle cool on the range until
+   all five points read under 40 degrees C. Unplug or turn off the range; nothing hot goes to the robot's bench.
+6. Batch check: push each witness piece off sideways through a spare scraper blade held at 40 degrees to the plate,
+   with a 0-10 N digital force gauge (0.01 N resolution) at about 1 cm/s, and note the peak; brush the freed witness
+   pieces into a weighing boat and weigh the five flakes and the crust (0.01 g). The batch is accepted when the flakes'
+   median force and both masses are within 25 % of the reference medians, and the crust's force within 25 %. If not,
+   the plate is cleaned (Reset) and a fresh batch cooked. Then wipe the witness area clean.
+7. Set the griddle back against its stops and clamp it; lay the scraper in its outline; take the before photo (top
+   camera, raking light on). Start the trial within 2 hours of the cook.
+
+The cooked residue is charred flour (its water cooks off), estimated at about 12 g in all; the batch check measures
+it. Because each piece's paste is its stencil hole's volume, the pieces' shares of the total are close to the
+simulator's: a flake 0.7 to 1.2 % of the mass (simulator 0.5 to 1.1 %), a crust 3.5 to 4.3 % (simulator 4.0 to
+4.9 %), so the thresholds keep their meaning: 1 % is about one flake left, 5 % about one crust.
+
+**Measuring the outcome (every trial).** After the trial, take the after photo (same camera and light), then collect
+three fractions, each into its own weighing boat weighed beforehand, on the 0.01 g scale:
+- in the tray (T): lift the tray out and weigh it; T is its gain;
+- left on the griddle (L): everything still on the plate (stuck or loose), against the guards, or on the blade while
+  it is over the griddle, lifted with a razor-blade scraper and a soft brush;
+- off the griddle (O): everything on the catch sheets, the bench, the floor and the scraper, brushed up.
+The total M = T + L + O. The shares are T / M, L / M and O / M, scored with the simulator's thresholds (the tiers, the
+2 % off-griddle cap) and the set-down judged from the trial's video (the scraper lying on the bench off the griddle,
+released and still for 1 s). M must be within 10 % of the mass expected from the batch check (the witnesses' total mass x
+12.4, the ratio of the two stencils' hole areas); otherwise something was lost or mis-weighed and the trial is repeated. The two
+photos are overlaid with a 1 cm grid registered to the plate's corners: the cells holding a dark particle 1 mm or
+larger are counted and kept as the record of where residue was left, and a line visible after but not before, 1 cm or
+longer, is a new scratch: the gouge cap (0.5). The photos and weights are kept with each trial, so anyone can recount.
+
+**Reset (between trials).** Empty the tray, wash, dry and weigh it. Scrape anything left on the plate with the razor
+scraper, wipe it with a damp cloth and dry it; the plate is clean when the grid photo shows no dark particle 1 mm or
+larger. Every 10 trials, or when bare or rusty steel shows, re-season the plate (a thin coat of vegetable oil, 15
+minutes at 250 degrees C, cooled) and take a new reference photo. The same griddle and scraper are used throughout; the
+scraper is replaced if its edge has a nick 0.5 mm or deeper. Then make a fresh batch (above).
+
+| Item | Target | Tolerance |
+|---|---|---|
+| Plate's near right corner | x 15.0, y -17.55 (stops) | 2 mm; lip square within 0.5 degree |
+| Plate's top above the bench | 5.0 cm, level | 2 mm at each corner; 0.5 degree |
+| Scraper | in its outline at x 25.0, y -25.5 | 5 mm, 3 degrees |
+| Stencil | flush with the lip and the right guard | 1 mm |
+| Oil film after buffing | at most 0.10 g | towels weighed (0.01 g) |
+| Paste used | the qualification's mass | 5 % |
+| Cook | 230 degrees C at five points, for the fixed time | 10 degrees C; 15 s |
+| Cool | under 40 degrees C at five points | trial within 2 h |
+| Batch check | flake force, flake and crust masses, crust force | within 25 % of the reference medians |
+| Mass balance | M = T + L + O vs the batch's expected mass | 10 %, else repeat |
+| Weighing | 0.01 g scale | 0.01 g (1 % is about 0.12 g) |
 
 ## The debris (`debriskit.py`)
 
@@ -91,7 +176,7 @@ longer is a gouge (cap 0.5). Nothing else about how the job was done is scored.
   = J per square m). Here that is 11 to 14 N per m for a flake and 24 to 28 for a crust. Millimanipulation
   measurements of baked food soils on stainless steel span about 0.3 to 80 J per square m (baked tomato paste 1 to
   20); heavily baked, polymerized lard is about 420 (Ali et al., Food and Bioproducts Processing, 2015). So the pieces
-  are freshly charred bits from the last order: this bond is how the simulator represents the real trials' charred batter.
+  are freshly charred bits from the last order: this bond is how the simulator represents the real trials' charred flour paste.
   Aged, polymerized carbon (years of it, which would need several times the arm's push) is out of scope. The value also sits below what the arm delivers: through the held scraper it frees a full row of
   about eight flakes at once only up to roughly 1.2 N in all; at 0.25 N per square cm the edge rode up over the first
   full row it met, pass after pass (measured in the simulator).
@@ -100,10 +185,10 @@ longer is a gouge (cap 0.5). Nothing else about how the job was done is scored.
   (a thirty-second; flakes 0.028, crusts 0.034 to 0.038), so the task writes 32 times the bond (`BREAK_CAL`): flakes come free about 11 %
   under the values above and crusts 10 to 23 % over. A broken bond is not restored by the scene's reset (one trial per
   run).
-- **Real-trial bond.** The real debris is charred batter (see Real-trial measurement); the forces above are how
-  the simulator represents it, not a measurement of it. To record the real bond, cook five extra dots and one extra crust at
-  the far end of the plate (x 60 to 70) with each batch, push each one's side through a blade edge with a 0-10 N force
-  gauge, write the forces down with the trial, and wipe that end clean before the griddle is weighed again.
+- **Real-trial bond.** The real debris is charred flour paste (see Real-world evaluation); the forces above are how
+  the simulator represents it. The real bond is measured with every batch: the witness pieces cooked beside the
+  stencil are pushed off with a force gauge, recorded next to these values, and the batch is used only when they are
+  within 25 % of the qualification's reference.
 - **Contact settings.** Pieces are at least 2 mm thick (the blade is 1.5 mm, moving 4 cm/s: 0.2 mm per 240 Hz
   physics step, so nothing passes through); contacts start 2 mm out and rest at zero gap; 16 position iterations; a
   piece pinched into a collider is pushed out no faster than 0.3 m/s.
@@ -112,7 +197,8 @@ longer is a gouge (cap 0.5). Nothing else about how the job was done is scored.
   40 degree blade (tan 40 degrees is 0.84) instead of riding up with it.
 - **The layout is fixed.** The pieces are not in the task's object list, so the simulator's object jitter (which moves
   each free object up to 3 cm on its own) can't pile them into each other; the scene's reset puts them back where they
-  started. The scraper is still jittered.
+  started. The scraper is still jittered. The real trials cut their stencil from the same layout (Real-world
+  evaluation), so the real pieces sit where the simulated ones do.
 - **Why the strokes overlap.** Pushed flakes spread sideways and spill round the blade's ends; a lane's leftovers lie
   in the next lane's path, so the demo's half-blade overlaps and repeated passes pick them up.
 - **The plate's surface.** A working griddle is seasoned and greased, so a steel blade slides on it easily. The plate
@@ -148,12 +234,14 @@ longer is a gouge (cap 0.5). Nothing else about how the job was done is scored.
 Everything is off the shelf. The griddle is a range-top add-on griddle top of the size above (69 x 31 cm overall,
 7-gauge stainless, end grease tray), standing on its own frame with the plate's top 5.0 cm above the bench (shim the
 frame's feet if needed), clamped to the bench with two C-clamps on its frame. It is heated only to make the debris, on a
-range burner away from the bench, and is under 40 degrees C and unplugged when it is clamped down: nothing at the
+two-burner range away from the bench, and is under 40 degrees C and unplugged when it is clamped down: nothing at the
 bench is hot, so the trial is safe for the robot and the operator. The scraper is a 4 in. stiff griddle scraper with a
 stainless blade and a polypropylene handle in line with it (150 g, handle about 3.0 x 2.4 cm, within the gripper's
-opening). The debris is thin pancake batter cooked onto the plate and cooled (see
-Real-trial measurement). Also needed: a template cut from a plastic folder, a syringe, a contact surface thermometer,
-a 0-10 N force gauge, paper towels, a kitchen scale (0.01 g) and a bench scale (0.1 g) that takes the griddle.
+opening). The debris is flour-and-water paste charred onto the plate through a stencil and cooled (see
+Real-world evaluation). Also needed: the two 3 mm acrylic stencils (laser-cut from the script's drawing), a palette
+knife, a contact surface thermometer, a 0-10 N digital force gauge (0.01 N), a spare scraper blade, a razor-blade
+scraper, a soft brush, weighing boats, paper towels, white plastic catch sheets, two wooden stop blocks, a bubble level,
+a phone on an overhead mount, a desk lamp, and a kitchen scale (0.01 g).
 
 ## Files
 
