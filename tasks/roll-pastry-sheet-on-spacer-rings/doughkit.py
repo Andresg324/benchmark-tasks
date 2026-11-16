@@ -25,8 +25,8 @@ Hands (the task's `gate(objects) -> bool`): presses count only while it is True 
     dk.lengths() -> per-strip lengths (m); dk.volume() total volume (m^3); dk.ends() per-strip (x_min, x_max)
 All of it resets when kit.episode() changes.
 
-Visuals: one slab per covered grid cell, as thick as the pastry there, colored by thickness band (Isaac Lab
-VisualizationMarkers, no physics), so the top camera shows the outline growing and any thick or thin band.
+Visuals: one abutting slab per covered grid cell, as thick as the pastry there, all one pastry color (Isaac Lab
+VisualizationMarkers, no physics), so the top camera shows the sheet growing.
 """
 
 import math
@@ -262,6 +262,9 @@ def band(t_m: float) -> int:
     return len(BANDS) - 1
 
 
+PASTRY_BAND = 2  # one pastry color for every slice: the video shows the sheet, not a thickness map
+
+
 def _markers():
     if _VIS["markers"] is not None or _VIS["failed"]:
         return _VIS["markers"]
@@ -294,7 +297,7 @@ def _draw(origin) -> None:
                 tr.append((0.0, 0.0, -10.0)), sc.append((1e-5,) * 3), ids.append(0)
                 continue
             tr.append((xc[i] + origin[0], S.ys[j] + origin[1], sh.board_z + t[j, i] / 2 + origin[2]))
-            sc.append((sh.cell * 0.97, sh.cell * 0.97, t[j, i])), ids.append(band(t[j, i]))
+            sc.append((sh.cell * 1.002, sh.cell * 1.002, t[j, i])), ids.append(PASTRY_BAND)
     m.visualize(translations=np.array(tr, float), orientations=np.tile([0.0, 0.0, 0.0, 1.0], (len(tr), 1)),
                 scales=np.array(sc, float), marker_indices=np.array(ids, int))
 
