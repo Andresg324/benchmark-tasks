@@ -90,7 +90,9 @@ TUBE_G = 12.0  # g: the empty laminate tube and cap
 DENSITY = 1.30  # g/mL: a silica toothpaste (pastes run 1.3-1.6, silica low, chalk high); real trials weigh grams
 PANEL_KG = 0.0015
 TUBE_KG = (TUBE_G + PASTE_ML * DENSITY) / 1000 - 4 * PANEL_KG
-K_WALL = 400.0  # N/m per panel: 0.4 N per mm of push (verify on the trial tube)
+K_WALL = 2500.0  # N/m per panel: 2.5 N per mm of push, a round laminate tube (estimate [M]). At 0.4 N/mm (the first
+# build) the holding grip had nothing but the pressure inside to press on: once the dose left and air was drawn back
+# in, the tube slid down in the fingers onto the brush (seventh probe).
 PANEL_AREA_M2 = PANEL[0] * PANEL[2]
 AREA_ML_PER_CM = 1.0  # mL displaced per cm of one panel's push (calibrate, see the README)
 TAU_Y_PA = 300.0  # Pa: the paste's yield stress (measured 100 Pa on a model paste, arXiv 1903.10888; ~500 Pa on a
@@ -192,10 +194,12 @@ OBJECTS = [BRUSH, TUBE]
 
 # -- the paste model (squeezekit) and the scored thresholds ---------------------------------------------------------------
 # The paste does not drip from an open tube turned nozzle-down (its yield stress holds it), so its own weight is left
-# out (neck 0, a huge cross-section); it is fed at the nozzle whatever way the nozzle points short of straight up.
+# out (neck 0, a huge cross-section). A tube is full of paste up to the nozzle (no air there), so it is fed at the nozzle
+# whichever way the nozzle points and a squeeze never vents air (at the 90 degree default a level tube vented, lost its
+# holding pressure and slipped out of the hand in the sixth probe).
 PASTE = sq.Bottle("tube", tip=TIP, axis=AXIS_TO_TIP, panels=tuple(PANEL_SIGN.items()), capacity=PASTE_ML + AIR_ML,
                   fill=PASTE_ML, area=AREA_ML_PER_CM, cross=1e9, neck=0.0, neck_ml=1.0, p_yield=P_YIELD_KPA,
-                  flow=FLOW, air_in=2.0, down_deg=90.0, settle=0.0)
+                  flow=FLOW, air_in=2.0, down_deg=180.0, settle=0.0)
 import dataclasses  # noqa: E402
 
 _SEALED = dataclasses.replace(PASTE, p_yield=1e9, air_in=0.0, down_deg=180.0)  # shut: no flow, no venting
