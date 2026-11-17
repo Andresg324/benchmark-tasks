@@ -243,7 +243,7 @@ def main():
     # the bonds: every piece stuck to the plate on its own; it comes free under the blade
     check(all(c.bond is not None for c in C), "every piece is bonded to the plate")
     check(all(c.bond == (M.BOND_FORCE, M.BOND_FORCE * M.BOND_PEEL_ARM) for c in C),
-          "break force 0.8 N, break torque 0.8 N x 9.5 mm (the piece's half-width)")
+          "break force 0.8 N, break torque 0.8 N x 2.5 mm")
     check(M.CHIP_LIFT == 0.0, "every piece lies on the plate (no gap under it)")
     check(M.PLATE_FRICTION == (0.70, 0.60) and M.dk._SPEC["physics"].static_friction == 0.70
           and M.dk._SPEC["physics"].dynamic_friction == 0.60, "clean dry steel: 0.7 static, 0.6 sliding, for the "
@@ -484,9 +484,10 @@ def main():
     check([bool(v[0]) for v in M.where(np.array([[0.30, M.PLATE_Y0 - 0.0015, M.PLATE_Z + M.GUARD_H + 0.003, 0, 0, 0,
                                                   1]]))] == [False, True, False],
           "a piece resting on a splash guard's top: left on the griddle")
-    # a press on a piece's edge has to reach the bond's full force to tip it free (no cheap peel)
-    check(abs(M.BOND_PEEL_ARM - M.PIECE_W / 2) < 1e-12, "break torque = bond x the piece's half-width: a press at its "
-                                                         "edge needs the full 0.8 N, like a sideways push")
+    # the bond peels under an edge driven beneath a piece; a press from above is carried by the steel under it
+    check(M.BOND_PEEL_ARM == 0.0025 and M.CHIP_LIFT == 0.0, "break torque = bond x 2.5 mm (an edge under a piece "
+                                                            "peels it), and each piece lies on the steel, which "
+                                                            "carries a press from above")
 
     # -- gouge cap ----------------------------------------------------------------------------------------------------
     fresh()

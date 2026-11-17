@@ -294,9 +294,11 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
 - **Bond strength.** Each piece breaks free at 0.8 N of sideways push, about 33 times its weight: it does not slide
   or tip on its own, and the held scraper's edge frees it. There is no published bond for modeling compound on
   steel; in a real trial the press sets it (a 1 kg water bottle on the cup for 3 s, the same for every piece), and
-  the qualification checks that the scraper frees each piece in one stroke. The break torque is the same 0.8 N at the
-  piece's half-width (9.5 mm): pressing down on a piece's edge or corner (a heel, a fingertip, the flat of the blade)
-  needs as much force as a sideways push, so a piece is not cheaply pried off from above.
+  the qualification checks that the scraper frees each piece in one stroke. The break torque is 0.8 N at 2.5 mm: the
+  scraper's edge driven under a piece's side lifts that side and peels the piece off, as a cook's scraper does. A
+  press from above (a fingertip, a heel, the flat of the blade) pushes the piece onto the steel it lies on, which
+  carries the press, so it does not free the piece: in the simulator, fingertips driven 8 mm down into the corners of
+  three pieces for 2 s each freed none (PRESS_RESULT). A hand on the dough scores 0 in any case.
 - **Break force in PhysX.** PhysX tests a joint's break force against its own measure of the joint's load, not the
   push on the piece, so the task scales the bond it writes (`BREAK_CAL` = 32). Pushed with a slowly rising force in
   the simulator, bonded pieces came free at 0.9 to 1.8 times the bond (0.7 to 1.4 N). A broken bond is not restored by

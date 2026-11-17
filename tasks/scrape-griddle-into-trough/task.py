@@ -96,12 +96,12 @@ CHIP_LIFT = 0.0  # m: each piece lies on the plate, its underside on the steel
 # times a piece's weight, so a piece does not slide or tip on its own, and less than the push of the held scraper's
 # edge, so the blade breaks every piece free. In a real trial the press sets the bond: each piece is pressed with a
 # 1 L water bottle (1 kg) standing on a measuring cup for 3 s, the same every trial, and the qualification checks that
-# the scraper frees each piece in one stroke. Break torque = BOND_FORCE x BOND_PEEL_ARM, with the arm the piece's
-# half-width (9.5 mm): pressing down on a piece's edge or corner (a heel, a fingertip, the flat of the blade) has to
-# reach the full 0.8 N at that edge to tip it free, as much as a sideways push; the blade's sideways push at the
-# piece's side (0 to 4.8 mm up) frees it by shear.
+# the scraper frees each piece in one stroke. Break torque = BOND_FORCE x BOND_PEEL_ARM (2.5 mm): the scraper's edge
+# driven under a piece's side lifts that side and peels the piece off, as a cook's scraper does. A press from above (a
+# fingertip, a heel, the flat of the blade) pushes the piece onto the steel beneath it, which carries the press, so it
+# does not peel the piece (and a hand on the dough scores 0 anyway).
 BOND_FORCE = 0.8  # N per piece
-BOND_PEEL_ARM = 0.0095  # m: the piece's half-width
+BOND_PEEL_ARM = 0.0025  # m
 # PhysX tests a joint's break force against its own internal measure of the joint's load, not the push on the piece,
 # so the value written is the bond x BREAK_CAL. Pushed with a slowly rising force in the simulator, bonded bodies came
 # free at 0.9 to 1.8 times their bond (0.7 to 1.4 N for these pieces).
