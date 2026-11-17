@@ -841,9 +841,9 @@ FEED_PADS = (  # (from phi, to phi, left pads, right pads, right hand's yaw, squ
 # 5.2-5.9 N against 3.9-4.0 N); the plan leans 1 N the other way there so the run shares the push evenly. In the
 # second stretch, against the cord's pull at the trailing end, with equal shares (up to 5.0 N each) and the leading
 # pads 2.5 cm in from the leading end, those pads crept on along the board and off its end; with 1 N leaned onto the
-# trailing hand the curve came off the bearing. The plan there leans 0.5 N onto the trailing hand, and the leading pads
-# press 4 cm in from the end (13 cm or more from the bit's axis) and both hands press 12 N (PRESS_2); the pair pushes 2 N onto the
-# bearing (at 1 N the curve drifted 1-2 mm off it).
+# trailing hand the curve came off the bearing. The plan there leans 0.5 N onto the trailing hand, the leading pads
+# press 4 cm in from the end (13 cm or more from the bit's axis), both hands press 12 N (PRESS_2), and the pair pushes
+# 3.5 N onto the bearing (at 1 N the curve drifted 1-2 mm off it, at 2 N 2-3 mm off it late in the stretch).
 PAD_L, PAD_R = FEED_PADS[0][2], FEED_PADS[0][3]  # at the feed's start
 # Each hand is turned about the vertical so its fingers close roughly toward the bit: the closed fingers then reach
 # 2.4 cm toward it (their thickness), not 3.4 cm (half their 6.8 cm width), and stay out of the 3 in zone with the
@@ -855,7 +855,7 @@ HAND_YAW = {"left": math.radians(-80.0), "right": math.radians(110.0)}  # (the r
 # wrist turns while the pads are lifted, on the way across high over the bit.
 PIVOT_YAW = 0.0
 FEED_ON = 1.0  # N: the hands' push onto the bearing (the cord's line passes up to 0.4 N off it or 0.2 N onto it);
-#               2 N in the feed's second stretch (FEED_PADS)
+#               3.5 N in the feed's second stretch (FEED_PADS)
 PRESS_N = 8.0  # N: each hand's press down on the board in the feed, so its pads' grip carries its share of the push
 #                (each newton of press adds 0.25 N of table friction, so pressing harder also costs push)
 PRESS_2 = 12.0  # N: both hands' press in the second stretch: at 8 N the leading pads slid 2-3 cm along the board
