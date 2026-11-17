@@ -52,7 +52,7 @@ Coordinates in cm from the midpoint between the two arm bases, x forward, y to t
 | Starting pin | steel, 6.4 mm across (0.25 in), 3 cm tall, in the plate | x 33.75, y 1 |
 | Pin guard | clear polycarbonate shield 10 cm across, 6.4 mm thick, its underside 3.8 cm (1-1/2 in) above the table, centered over the bit, on an aluminum arm (3 x 0.8 cm) from an aluminum post (2.5 x 4 cm, 5.3 cm tall); after the Bench Dog ProGuard (1-1/2 in stock clearance under the guard); solid | shield over the bit; post at x 43, y 6 |
 | Board | cherry, 25 x 15 cm, 1.27 cm thick (0.5 in), 250 g; one long side band-sawn to a 30 cm radius (2.7 cm of bow), toward the bit; a free body on the table's planed wooden top, mu 0.25 sliding / 0.3 at rest; a screw eye in its trailing end face at mid-thickness, 1 cm in from the curve | square to the table: curve's ends at (29.5, -19.4) and (29.5, 5.6); back corners (17.2, -19.4) and (17.2, 5.6); 2.2 cm off the pin, 3.4 cm from the bit's axis |
-| Drag | a cord from the board's screw eye, level, over a pulley off the table's right end and through a cam cleat to a 0.300 kg hanging weight: 3.0 N toward the pulley while the cord is taut, none once the cleat holds it (Resistance) | pulley at x 36, y -40 |
+| Drag | a cord from the board's screw eye, level, round a first pulley 13 cm past the table's right end, through a cam cleat and over a second pulley clamped at the bench's right edge, down to a 0.300 kg weight hanging free below that edge: 3.0 N toward the first pulley while the cord is taut, none once the cleat holds it (Resistance) | first pulley at x 36, y -40; second pulley at x 56, y -66, just past the bench's edge |
 
 Mechanism (`task.py`, built with `yamkit.py` and `guardkit.py`, local copies; `guardkit.py` gives the
 grippers' palm and finger shapes used by the touching checks, and the local `yamkit.py` gives the arms' forearm and
@@ -84,7 +84,10 @@ wrist link poses; `cutting_force.py` and `arm_load.py` compute the drag's 3 N an
   shield as its gray 3 mm rim, so the top camera sees the bearing and the trace through it, as through the real clear
   disc.
 - The traced stretch is drawn as a blue band on the board's top along the curve (visual only; the real trace is on
-  the edge, 3.2-8.0 mm up), and the cord as an orange line from the screw eye to the pulley.
+  the edge, 3.2-8.0 mm up). The drag's rig is drawn as it is built: the cord as an orange line from the screw eye
+  round the first pulley, through the cleat and over the second pulley at the bench's edge, down to the bag of washers
+  hanging below the edge with its tape flag; the bag rises as the board draws cord out. The drawing is in place from
+  the first frame; the force itself acts at the eye, toward the first pulley.
 
 ## Scoring (whole-run history, recorded each step by `success()`)
 
@@ -173,8 +176,8 @@ rising (Real-world build).
 The sim applies the rig's drag, and the rig's drag is sized to the real cut:
 
 - Law (task.py `drag_load`, the same on the rig): a cord tied to the screw eye in the board's trailing end runs level
-  to a pulley at x 36, y -40 (13 cm past the table's right end), through a cam cleat, and down to a 0.300 kg weight
-  (2.94 N), trimmed with the pulley's and cleat's drag to 3.0 N at the board. The force is 3.0 N at the eye, along
+  round a pulley at x 36, y -40 (13 cm past the table's right end), through a cam cleat and over a second pulley at
+  the bench's right edge, down to a 0.300 kg weight hanging free below the edge (2.94 N), trimmed with the pulley's and cleat's drag to 3.0 N at the board. The force is 3.0 N at the eye, along
   the cord toward the pulley, whenever the cord is taut, and 0 when it is slack. Fed right to left, the board moves
   away from the pulley, draws cord and lifts the weight; held still there by the hands, it still carries the weight
   (3.0 N). Let go or drawn back toward the pulley, it lets the cord run back until the cleat's cams grip: the cams let a
@@ -228,8 +231,8 @@ the midpoint between the arm bases (x forward, y to the robot's left, table top 
   91259A series), with a 1/8 in long and a 1/4 in long nylon spacer (1/4 in ID, 3/8 in OD, McMaster-Carr 94639A
   series), a washer and a 10-24 nylon-insert nut.
 - Pin guard: a Bench Dog ProGuard.
-- Drag: an Everbilt 1-1/2 in single fixed pulley, a Harken 150 Micro Cam-Matic cam cleat, 1/8 in (3 mm) braided
-  cord, a 2x4 offcut, a small screw eye per board, an S-hook and a quart zip-top bag filled with steel washers (or
+- Drag: two Everbilt 1-1/2 in single fixed pulleys, a Harken 150 Micro Cam-Matic cam cleat, 1/8 in (3 mm) braided
+  cord, 2x4 offcuts, a small screw eye per board, an S-hook and a quart zip-top bag filled with steel washers (or
   sand) to 0.300 kg.
 - Trace: Dykem Hi-Spot Blue spotting paste, mineral spirits and rags to wipe it off.
 - Boards: three planed hardwood boards, each 25 x 15 cm and 0.5 in (12.7 mm) thick, about 250 g (the sim's board at
@@ -240,7 +243,7 @@ the midpoint between the arm bases (x forward, y to the robot's left, table top 
 
 ### Tools
 
-Use a drill with a 1/4 in bit, two C-clamps, a band saw, a digital hanging scale reading in 5 g steps (a postal or fishing scale), a kitchen scale, a
+Use a drill with a 1/4 in bit, three C-clamps, a band saw, a digital hanging scale reading in 5 g steps (a postal or fishing scale), a kitchen scale, a
 protractor, a combination square, a steel rule and a 1/8 in drill bit as a height gauge.
 
 ### Build steps
@@ -259,12 +262,17 @@ protractor, a combination square, a steel rule and a 1/8 in drill bit as a heigh
    rides the bearing.
 4. Drill a 1/4 in hole 5 cm right of the bit's axis (x 33.75, y 1) and press the dowel pin in, standing 3 cm tall.
 5. Screw the Bench Dog ProGuard to the top, its shield 1-1/2 in above the table over the bit's axis.
-6. Screw the pulley and, below it, the cam cleat to the 2x4 offcut, and clamp the offcut to the table's right end so
-   the sheave's top is level with the cord's attachment on the board, at x 36, y -40 (13 cm past the table's edge).
-   Set the cleat so the cord runs freely as the weight rises and grips as soon as it would drop. Wrap a strip of
-   bright tape round the cord just above the weight, in view of the side camera.
-7. Fill the zip-top bag with washers to 0.300 kg (0.300 x 9.81 = 2.94 N) and hang it on the S-hook from the
-   cord, which runs up through the cleat and over the pulley.
+6. Screw the first pulley flat onto a 2x4 offcut, its axle upright, and set the offcut on the bench at x 36, y -40
+   (13 cm past the slab's right end), stacked on offcuts so the sheave's groove is level with the cord's attachment on
+   the board. Screw the cam cleat to it just past the sheave, on the cord's run toward the bench's edge. Screw the
+   second pulley to another 2x4 offcut, its axle level, and C-clamp that offcut to the bench's right edge at x 56, the
+   sheave overhanging the edge (y -66) at the same height. Set the cleat so the cord runs freely as the weight rises
+   and grips as soon as it would drop. Wrap a strip of bright tape round the cord just above the weight, in view of
+   the side camera.
+7. Fill the zip-top bag with washers to 0.300 kg (0.300 x 9.81 = 2.94 N) and hang it on the S-hook from the cord,
+   which runs from the board round the first pulley, through the cleat, over the second pulley and straight down.
+   The bag hangs free below the bench's edge, at least 35 cm below the second pulley, so the 28 cm of cord a whole
+   feed draws out (the demo's run) never lifts it to the sheave.
 8. Trim the drag: hook the hanging scale to the cord's board end and draw it slowly away from the pulley. It reads
    the weight plus the pulley's and cleat's drag. Add or take out washers until it reads 0.305-0.310 kg, which is
    3.0 +/- 0.05 N at the board: the sim's 3.0 N (task.py `CORD_N`). Then pencil-mark the cord at the cleat's jaws,
@@ -330,7 +338,8 @@ lasts a trial and the band records the stretch the bearing passed over.
 | Bearing axis | the bit's axis (x 33, y 6 cm) | 1 mm | shoulder screw in a hole drilled there |
 | Drag at the board | 3.0 N toward the pulley while the cord is taut, 0 once it runs back past the catch | 0.05 N, set on the hanging scale | task.py `CORD_N`, `drag_load`; 0.300 kg weight; the model's mean cutting force against the feed for this pass: 3.0-3.1 N at the demo's 0.3 m/min feed (Curti et al. 2021, cutting_force.py) |
 | Cleat catch | the cams grip as the cord starts back | task.py `CATCH`, steel rule on a pencil mark | task.py `CATCH` |
-| Pulley | x 36, y -40 cm, sheave top level with the screw eye | 1 cm | task.py `PULLEY`; the cord within 8.1 degrees of the feed along it |
+| Pulley | x 36, y -40 cm, sheave groove level with the screw eye | 1 cm | task.py `PULLEY`; the cord within 8.1 degrees of the feed along it |
+| Second pulley | x 56, y -66 cm, at the cord's height, overhanging the bench's right edge | 2 cm | the cord runs on from the first pulley to the weight; the pull's direction at the board is set by the first |
 | Screw eye | trailing end face, mid-thickness, 1 cm in from the curve | 2 mm | task.py `EYE` |
 | Cord set snug | braced on the pin, curve's leading end on the bearing | as set by hand | task.py `SNUG` |
 | Table friction | mu 0.25 sliding, 0.30 at rest, planed wood on the planed wooden top | tilt angle 14-17 degrees (paste wax if steeper) | Engineering ToolBox, clean dry wood on wood 0.25-0.5; task.py `MU_TABLE` |

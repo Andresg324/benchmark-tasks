@@ -43,7 +43,9 @@ _EPISODE = {"count": 0, "last": None}  # trials seen, and the env's step count w
 _PROPS: set[str] = set()
 ARM_LINKS = ("link3", "link4", "link5")  # local addition (router task): the forearm and wrist links whose poses are
 #                                          given as objects "<side>_<link>" (e.g. "left_link4"), for contact checks
-STEP_HOOKS: list = []  # local addition (router task): hook(env.unwrapped, objects) after the states of every control
+STEP_HOOKS: list = []
+BUILD_HOOKS: list = []  # local addition (router task): hook(env.unwrapped) once the env is built, e.g. to create the
+#                         drawing and draw the scene's start state before the first frame  # local addition (router task): hook(env.unwrapped, objects) after the states of every control
 #                        step are read (before success() and score() see them); a task appends its own
 
 
@@ -812,6 +814,18 @@ def _patch(scene) -> None:
         return out
 
     scene.task_object, scene.object_states = task_object, object_states
+    make = getattr(scene, "make_env", None)
+    if make is not None:  # local addition (router task): the build hooks, once the env is built
+        def make_env(*a, **k):
+            env = make(*a, **k)
+            for hook in BUILD_HOOKS:
+                try:
+                    hook(env.unwrapped)
+                except Exception as e:  # noqa: BLE001  (a drawing hook never stops a run)
+                    print(f"yamkit: build hook {getattr(hook, '__name__', hook)} failed ({e!r})", file=sys.stderr)
+            return env
+
+        scene.make_env = make_env
 
 
 class _Hook(importlib.abc.MetaPathFinder, importlib.abc.Loader):

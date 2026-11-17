@@ -306,7 +306,19 @@ STEEL = kit.Look((0.78, 0.79, 0.80), 0.25, metallic=0.8)
 NYLON = kit.Look((0.92, 0.91, 0.87), 0.5)  # the nylon spacers
 PAINT = kit.Look((0.95, 0.95, 0.95), 0.6)  # the painted cutter circle and the drawn 3 in circle
 CORD = kit.Look((0.85, 0.35, 0.10), 0.8)  # the drag's braided cord
-PINE = kit.Look((0.80, 0.66, 0.45), 0.7)  # the 2x4 offcut the pulley and cleat are screwed to
+PINE = kit.Look((0.80, 0.66, 0.45), 0.7)  # the 2x4 offcuts the pulleys and the cleat are screwed to
+WASHERS = kit.Look((0.62, 0.63, 0.66), 0.4)  # the bag of steel washers (the hanging weight)
+FLAG = kit.Look((0.98, 0.78, 0.05), 0.6)  # the bright tape flag on the cord above the weight
+# The drag's rig as it is built (README, Real-world build), drawn for the cameras only: the drag law uses PULLEY alone.
+# The cord runs level from the screw eye round the first pulley, a horizontal sheave at PULLEY whose axle stands in a
+# 2x4 offcut on the table, through the cam cleat beside it, to a second pulley clamped at the table's right edge, over
+# it and straight down to the hanging weight, a bag of washers, with a tape flag on the cord just above it. The weight
+# hangs free below the table's edge and rises as the board draws cord out.
+EDGE_PULLEY = np.array([0.560, -0.660])  # m: the second pulley's sheave, just past the table's right edge (y -0.65)
+SHEAVE_R = 0.019  # m: the pulleys' 1-1/2 in sheaves
+WEIGHT_DROP = 0.36  # m: the bag's top below the table top with the cord set snug
+BAG = (0.08, 0.04, 0.10)  # m: the bag of washers
+_OUT = (EDGE_PULLEY - PULLEY) / np.linalg.norm(EDGE_PULLEY - PULLEY)  # the cord's run from the first pulley onward
 DARK = kit.Look((0.20, 0.20, 0.21), 0.5)
 POLYCARB = kit.Look((0.70, 0.84, 0.93), 0.05)  # the clear polycarbonate shield's edge (its face is clear: not drawn)
 ALUMINUM = kit.Look((0.74, 0.75, 0.77), 0.35, metallic=0.8)  # its anodized aluminum body
@@ -390,6 +402,27 @@ def _ring(r, w, z, look):
                    z - 0.0001, z, look) for a0 in (k * math.pi / 36 for k in range(72))]
 
 
+def _drag_rig():
+    """The drag's pulleys, cleat, offcuts, clamp and the cord's run between the pulleys (visual only), in the bit
+    prop's frame."""
+    a = np.array([PULLEY[0] - BIT[0], PULLEY[1] - BIT[1], 0.0])
+    b = np.array([EDGE_PULLEY[0] - BIT[0], EDGE_PULLEY[1] - BIT[1], 0.0])
+    out = np.array([_OUT[0], _OUT[1], 0.0])
+    side = np.array([-_OUT[1], _OUT[0], 0.0])  # the edge pulley's axle, level and across the cord
+    back = -np.array([0.44, 0.20, 0.0]) / np.linalg.norm([0.44, 0.20])  # behind the first pulley, away from the cord
+    run = float(np.linalg.norm(b - a))
+    hub = a + 0.045 * back
+    edge = b - 0.07 * out
+    return [kit.cylinder(a + (0.0, 0.0, Z_MID), SHEAVE_R, 0.008, STEEL),  # the first pulley's sheave, level
+            kit.cylinder(a + (0.0, 0.0, Z_MID / 2), 0.003, Z_MID + 0.012, DARK),  # its axle
+            kit.box(hub + (0.0, 0.0, 0.019), (0.089, 0.038, 0.038), PINE),  # its 2x4 offcut on the table
+            kit.box(a + 0.06 * out + (0.0, 0.0, Z_MID), (0.030, 0.015, 0.012), DARK),  # the cam cleat
+            kit.cylinder((a + b) / 2 + (0.0, 0.0, Z_MID), 0.0015, run, CORD, axis=out),  # the cord between them
+            kit.cylinder(b + (0.0, 0.0, Z_MID - SHEAVE_R), SHEAVE_R, 0.008, STEEL, axis=side),  # the edge pulley
+            kit.box(edge + (0.0, 0.0, 0.019), (0.089, 0.038, 0.038), PINE),  # its 2x4 offcut at the table's edge
+            kit.box((edge[0], -0.648 - BIT[1], 0.0), (0.030, 0.012, 0.11), DARK)]  # the C-clamp holding it
+
+
 def _bit():
     """The insert plate with the bit's stand-in and the starting pin (fixed; its own prop, so the board touches them).
     No cutter: at the bit's axis a ball bearing of the bit's bearing's size turns on a fixed shoulder screw, between
@@ -404,9 +437,7 @@ def _bit():
               kit.cylinder((0.0, 0.0, (BEAR_Z[1] + SCREW_TOP - 0.0048) / 2), SCREW_R, SCREW_TOP - 0.0048 - BEAR_Z[1],
                            NYLON),  # 1/4 in spacer over it
               kit.cylinder((0.0, 0.0, SCREW_TOP - 0.0024), SCREW_R, 0.0048, DARK),  # the shoulder screw's head
-              # the drag's 2x4 offcut, clamped off the table's right end with the pulley's sheave at the cord's height
-              kit.box((PULLEY[0] - BIT[0], PULLEY[1] - BIT[1] - 0.019, -0.030), (0.089, 0.038, 0.090), PINE),
-              kit.box((PULLEY[0] - BIT[0], PULLEY[1] - BIT[1] + 0.003, Z_MID - 0.019), (0.006, 0.008, 0.038), STEEL),
+              *_drag_rig(),
               kit.cylinder((px, py, PIN_H / 2), RP, PIN_H, STEEL, n=20),  # the starting pin
               kit.cylinder((px, py, 0.0014), 0.0060, 0.0002, DARK),  # its threaded hole's rim
               # the overhead guard: shield, arm and post (see GUARD_R)
@@ -821,29 +852,49 @@ def _markers():
 
         mat = sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(kit._linear(c) for c in TRACE.color), roughness=0.5)
         cord = sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(kit._linear(c) for c in CORD.color), roughness=0.8)
+        bag = sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(kit._linear(c) for c in WASHERS.color), roughness=0.4)
+        flag = sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(kit._linear(c) for c in FLAG.color), roughness=0.6)
         _VIS["markers"] = VisualizationMarkers(VisualizationMarkersCfg(
             prim_path="/World/Visuals/traced_edge",
             markers={"trace": sim_utils.CuboidCfg(size=(TRACE_W, BIN * 1.15, 0.0004), visual_material=mat),
-                     "cord": sim_utils.CuboidCfg(size=(1.0, 0.003, 0.003), visual_material=cord)}))
+                     "cord": sim_utils.CuboidCfg(size=(1.0, 0.003, 0.003), visual_material=cord),
+                     "bag": sim_utils.CuboidCfg(size=BAG, visual_material=bag),
+                     "flag": sim_utils.CuboidCfg(size=(0.025, 0.006, 0.030), visual_material=flag)}))
     except Exception as e:  # visuals are optional
         print(f"router: no traced-edge visuals ({e!r})", file=sys.stderr, flush=True)
         _VIS["failed"] = True
     return _VIS["markers"]
 
 
-def _draw(J):
+def _draw(J, traced=None, lift=None):
+    """Draw the traced band (`traced`, the trial's by default), the cord from the screw eye to the first pulley, and
+    the cord's drop from the edge pulley to the hanging weight, raised `lift` m by the cord drawn out (by default as
+    much as the cleat holds out)."""
     if "isaaclab" not in sys.modules:
         return
     m = _markers()
     if m is None:
         return
+    traced = _H.traced if traced is None else traced
+    if lift is None:
+        lift = _D.drawn - SNUG if _D.episode == kit.episode() else 0.0
+    lift = min(max(float(lift), 0.0), WEIGHT_DROP - 0.03)
     th = J["board_turn"]
     eye = to_world(J, EYE)
     mid, run = (eye + PULLEY) / 2, PULLEY - eye
     yaw = math.atan2(run[1], run[0])
     tr, qs = [(mid[0], mid[1], TOP + Z_MID)], [(0.0, 0.0, math.sin(yaw / 2), math.cos(yaw / 2))]
+    drop = EDGE_PULLEY + SHEAVE_R * _OUT  # where the cord leaves the edge pulley, straight down
+    z_top, z_bag = TOP + Z_MID - SHEAVE_R, TOP - WEIGHT_DROP + lift
+    yo = math.atan2(_OUT[1], _OUT[0])
+    down = (-math.sin(yo / 2) * math.sin(math.pi / 4), math.cos(yo / 2) * math.sin(math.pi / 4),
+            math.sin(yo / 2) * math.cos(math.pi / 4), math.cos(yo / 2) * math.cos(math.pi / 4))  # x axis pointing down
+    level = (0.0, 0.0, math.sin(yo / 2), math.cos(yo / 2))
+    tr += [(drop[0], drop[1], (z_top + z_bag) / 2), (drop[0], drop[1], z_bag - BAG[2] / 2),
+           (drop[0], drop[1], z_bag + 0.03)]
+    qs += [down, level, level]
     for k in range(N_BINS):
-        if not _H.traced[k]:
+        if not traced[k]:
             tr.append((0.0, 0.0, -10.0))
             qs.append((0.0, 0.0, 0.0, 1.0))
             continue
@@ -852,10 +903,35 @@ def _draw(J):
         yaw = a + th
         tr.append((p[0], p[1], TOP + GAP + T + 0.0003))
         qs.append((0.0, 0.0, math.sin(yaw / 2), math.cos(yaw / 2)))
-    sc = np.ones((N_BINS + 1, 3))
+    sc = np.ones((N_BINS + 4, 3))
     sc[0, 0] = float(np.linalg.norm(run))
+    sc[1, 0] = z_top - z_bag
     m.visualize(translations=np.array(tr, float), orientations=np.array(qs, float), scales=sc,
-                marker_indices=np.array([1] + [0] * N_BINS))
+                marker_indices=np.array([1, 1, 2, 3] + [0] * N_BINS))
+
+
+def _prime(base):
+    """At the env's build (a yamkit build hook): create the drawing now and draw the scene's start state after every
+    reset, so the cord and the weight show from the first frame."""
+    if getattr(base, "_router_vis", False) or "isaaclab" not in sys.modules or _markers() is None:
+        return
+    base._router_vis = True
+    start = {"board_turn": START[2], "board_x": START[0], "board": START[1]}
+    _draw(start, np.zeros(N_BINS, bool), 0.0)
+    inner = base.reset
+
+    def reset(*a, **k):
+        out = inner(*a, **k)
+        try:
+            _draw(start, np.zeros(N_BINS, bool), 0.0)
+        except Exception as e:  # noqa: BLE001  (the drawing never stops a run)
+            print(f"router: start drawing off ({e!r})", file=sys.stderr, flush=True)
+        return out
+
+    base.reset = reset
+
+
+kit.BUILD_HOOKS[:] = [h for h in kit.BUILD_HOOKS if getattr(h, "__name__", "") != "_prime"] + [_prime]
 
 
 # --- The scripted demo (both arms carry the board to the pin, the left pivots it onto the bearing, the right takes it
