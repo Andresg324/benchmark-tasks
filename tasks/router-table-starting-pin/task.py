@@ -830,11 +830,15 @@ CARRY_R = np.array([BACK + PAD_IN, ENDS[0] + 0.030])
 # 0.63 times the press. (With one pair of places for the whole feed the larger push would be 5.7 N; at a 6 N press
 # with the pads 2 cm in at both ends the grip needed is 0.84 of the press, more than the sim's pads have.)
 PHI_SPLIT = math.radians(-5.0)  # where the hands change places (the bearing 5 deg past the curve's middle)
+PHI_SPLIT2 = math.radians(-18.5)  # where they regrip on the same spots: the leading pads creep about 4 cm along the
+#                                   board over the second stretch, so they are set back once on the way
 FEED_PADS = (  # (from phi, to phi, left pads, right pads, right hand's yaw, squeeze N, push onto the bearing N),
     #             board frame
     (None, PHI_SPLIT, np.array([BACK + 0.020, ENDS[0] + 0.225]), np.array([BACK + 0.060, ENDS[0] + 0.025]),
      math.radians(140.0), 1.0, 1.0),
-    (PHI_SPLIT, None, np.array([BACK + 0.080, ENDS[0] + 0.210]), np.array([BACK + 0.020, ENDS[0] + 0.050]),
+    (PHI_SPLIT, PHI_SPLIT2, np.array([BACK + 0.080, ENDS[0] + 0.210]), np.array([BACK + 0.020, ENDS[0] + 0.050]),
+     math.radians(110.0), -0.5, 2.0),
+    (PHI_SPLIT2, None, np.array([BACK + 0.080, ENDS[0] + 0.210]), np.array([BACK + 0.020, ENDS[0] + 0.050]),
      math.radians(110.0), -0.5, 2.0))
 # The squeeze: planned with equal shares (4.7 N each), the first stretch ran with the trailing hand pushing 1.1-1.2 N
 # more along the line between the pads and the leading hand that much less (measured from the arms' deflection,
