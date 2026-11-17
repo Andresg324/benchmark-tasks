@@ -237,3 +237,7 @@ whole. Put the tray back empty.
 | `test_task.py` | Offline tests: `python3 test_task.py` |
 
 Third-party assets: none.
+
+## Sources and licenses
+
+- Arm collision geometry: the I2RT Robotics YAM model ([i2rt-robotics/i2rt](https://github.com/i2rt-robotics/i2rt)), MIT License, Copyright (c) I2RT Robotics; the copy used here is vendored in yam-isaac-lab-arena (commit 120c3c8). `yam_links.npz` holds surface points sampled from its link collision meshes; the MIT license text is in `LICENSE.i2rt` in this folder.
