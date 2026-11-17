@@ -1,19 +1,17 @@
-"""On the station table, in front of the arms: a range-top griddle (a 7-gauge stainless plate, 56.8 x 31.1 cm cooking
-surface, with a 7.6 cm grease tray across its near end, toward the robot). Near the lip, four silver-dollar pancakes
-cooked in 7 cm rings were left on the heat and burnt onto the plate. A 4 in. (10.2 cm) griddle scraper lies on the
-bench to the right. In real trials the burnt pancakes are a standard substitute that is made in minutes: black-dyed
-paraffin wax poured into the same 7 cm rings on the cold plate, where it sets and sticks (README).
+"""On the station table, in front of the arms: a range-top griddle's steel plate (56.8 x 31.1 cm cooking surface,
+with a 7.6 cm grease tray across its near end, toward the robot), unheated. Near the lip, 22 separate pieces of black
+modeling compound (Play-Doh), each pressed flat onto the steel, stand in for food burnt onto the plate. A 4 in.
+(10.2 cm) griddle scraper lies on the bench to the right.
 
-The job is to scrape the griddle clean: break the burnt pancakes free and push them along the plate with the scraper,
-over the lip into the grease tray, without flinging them off the griddle or gouging the plate, then set the scraper
-down off the griddle.
+The job is to scrape the griddle clean: break the pieces free and push them along the plate with the scraper, over the
+lip into the grease tray, without flinging them off the griddle or gouging the plate, then set the scraper down off the
+griddle.
 
-Each pancake is a mosaic of rigid fragments (debriskit), each bonded to the plate by a breakable joint that the physics
-solver breaks when the blade pushes it harder than its bond, so a pancake breaks up along its cracks under the blade;
-a freed fragment is a free body on the seasoned plate with real friction. The scraper's blade has to meet the
-fragments, break them free and push them; they fall into the tray under gravity when pushed over the lip. The score
-reads where they really are, by mass: in the tray, still on the griddle, or off it. Every threshold below appears once,
-with the same value in task.json and the README.
+Each piece is a rigid body (debriskit) bonded to the plate by a breakable joint that the physics solver breaks when the
+blade pushes it harder than its bond; a freed piece is a free body on the plate with real friction. The scraper's blade
+has to meet the pieces, break them free and push them; they fall into the tray under gravity when pushed over the lip.
+The score reads where they really are, by mass: in the tray, still on the griddle, or off it. Every threshold below
+appears once, with the same value in task.json and the README.
 """
 from __future__ import annotations
 
@@ -44,7 +42,8 @@ INSTRUCTION = "Scrape the griddle clean into the grease tray with the scraper."
 # A range-top add-on griddle (Assure Parts 177AOGT1227, WebstaurantStore: 27 x 12-1/4 x 4 in. overall, 22-3/8 x 12-1/4
 # in. cooking surface, 7-gauge type 430 stainless plate, 1-1/2 in. rear and side edges, a 3 x 12-1/4 x 1-1/4 in. grease
 # tray across the open front end), set on the bench on its own frame with the plate's top 5.0 cm above the bench, tray
-# end toward the robot. Fixed (clamped to the bench in the real build).
+# end toward the robot. Fixed (clamped to the bench in the real build) and never heated: the trial runs at room
+# temperature.
 PLATE_Z = TOP + 0.050  # the plate's top
 LIP_X = 0.150  # the lip: the plate's near edge, over the tray
 PLATE_LX = 0.568  # 22-3/8 in. along x
@@ -72,35 +71,35 @@ GUARD_L = Box("guard_left", pos=(_GUARD_X0 + _GUARD_LEN / 2, PLATE_Y0 + PLATE_W 
 GUARD_B = Box("guard_back", pos=(LIP_X + PLATE_LX + GUARD_T / 2, PLATE_YC, (TOP + PLATE_Z + GUARD_H) / 2),
               size=(GUARD_T, PLATE_W, PLATE_Z + GUARD_H - TOP), color=STEEL)
 
-# -- the debris: four burnt silver-dollar pancakes stuck to the plate (each a mosaic of rigid fragments: debriskit) ------
-# They were cooked in four of the seven 7 cm cavities of a Norpro 957R silicone silver-dollar pancake mold (one cavity in
-# the middle, six around it, 8.0 cm center to center), then left on the heat after the mold came off until they burnt
-# onto the steel. A burnt pancake cracks as it chars and breaks along the cracks
-# under a scraper, so each disc is a mosaic of fragments about FRAG across, CRACK apart, each bonded to the plate on its
-# own: five rows across the disc, each row split where it cracked (a fixed seed, so the same every trial).
-# In real trials each burnt pancake is a disc of black-dyed paraffin wax (Gulf Wax household paraffin), 14.0 g poured into
-# the same cavity on the cold plate, where it sets in minutes and sticks to the steel: the same place, outline and mass.
-RING_D = 0.070  # m: a cavity's diameter (2.75 in.), the pancake's diameter
-CAKE_T = 0.005  # m: a burnt silver-dollar pancake's thickness
-WAX_DENSITY = 900.0  # kg/m^3: paraffin wax (0.88 to 0.92 g per cubic cm): each disc 13.9 g, as the real 14.0 g pour
-# Centers (x, y) and turn of the mosaic: the mold's middle cavity and the three next to it toward the lip and to the left
-# (two cavities side by side 1.0 cm from the lip, two 6.9 cm behind them, offset half a pitch).
-CAKES = ((0.195, -0.075, 0.35), (0.195, 0.005, -0.20), (0.264, -0.035, 0.10), (0.264, 0.045, -0.45))
-CAKE_ROWS = 5
-FRAG = 0.012  # m: the fragments' nominal size
-CRACK = 0.001  # m: the gap between neighboring fragments
-CHAR_COLORS = ((0.07, 0.05, 0.04), (0.12, 0.08, 0.05), (0.18, 0.11, 0.06))
+# -- the debris: 22 separate pieces of black modeling compound pressed onto the plate (debriskit) ---------------------
+# Food burnt onto a griddle sits in separate stuck-on bits that a scraper has to break free one by one. Here each bit is
+# a piece of black Play-Doh (Hasbro, from a freshly opened 4 oz can each trial): a 2.50 g ball pressed flat onto the
+# plate through a square hole in a fixed template, so it is 1.9 cm square and 4.8 mm thick (the template's foam board),
+# 22 pieces, 55.0 g in all (just under half a can). Each piece sticks only where it was pressed onto the steel; pieces
+# do not touch one another. Laid out in a fixed staggered grid near the lip: four rows 3.5 cm apart (6, 5, 6 and 5
+# pieces, 3.5 cm apart along a row, alternate rows offset by half), the near row's centers 2.5 cm from the lip.
+PIECE_W = 0.019  # m: a pressed piece's side (the template's square hole)
+PIECE_T = 0.0048  # m: its thickness (the template's 3/16 in. foam board)
+PIECE_MASS = 0.0025  # kg: each piece weighed out to 2.50 g
+PITCH = 0.035  # m: center to center, along a row and between rows
+ROWS_X = (0.175, 0.210, 0.245, 0.280)  # row centers: the near row 2.5 cm from the lip (x 15.0)
+ROW_COUNTS = (6, 5, 6, 5)
+PATTERN_YC = -0.020  # the pattern's centerline (the plate's): pieces from y -11.70 to 7.70 cm
+DOUGH_COLORS = ((0.05, 0.05, 0.06), (0.08, 0.07, 0.08), (0.11, 0.10, 0.10))
 CHIP_LIFT = 0.0002  # m: spawned this far above the plate (the bond holds it there; contact offset 2 mm)
-# Each fragment is stuck to the plate by a breakable bond at the middle of its underside (a PhysX fixed joint that the
-# solver breaks for good the first time holding it takes more than its break force or torque). Break force = BOND_EDGE
-# x the fragment's width across the stroke (along y, the lip's direction): a blade clearing a deposit pushes with its
-# removal energy per unit area times the width it meets (N per m of edge = J per m^2). Break torque = break force x
-# BOND_PEEL_ARM (a blade getting under an edge peels a piece off with less push than a flat shove).
-BOND_EDGE = 12.0  # N per m of edge
-BOND_PEEL_ARM = 0.002  # m
-# PhysX tests a joint's break force against its own internal measure of the joint's load, not the push on the fragment,
-# so the value written is the bond x BREAK_CAL. Pushed with a slowly rising force in the simulator, fragments came free at
-# 0.18 to 0.22 N (0.9 to 1.8 times their bond).
+# Each piece is stuck to the plate (and only to the plate) by a breakable bond at the middle of its underside (a PhysX
+# fixed joint that the solver breaks for good the first time holding the piece takes more than its break force or
+# torque). The bond is set, not measured (there is no published value for modeling compound on steel), from the real
+# nudge check every piece passes before a trial: pushed sideways at its side by a fingertip with a 40 g push (0.39 N,
+# the push learned by pressing the fingertip on the balance), it stays put; the scraper's edge, driven under it at a low
+# angle, breaks it free. BOND_FORCE is about twice the nudge, so a nudge does not move a piece, and the held scraper
+# breaks it free. Break torque = BOND_FORCE x BOND_PEEL_ARM: an edge that gets under a piece peels it off with less push
+# than a flat shove.
+BOND_FORCE = 0.8  # N per piece
+BOND_PEEL_ARM = 0.0025  # m
+# PhysX tests a joint's break force against its own internal measure of the joint's load, not the push on the piece,
+# so the value written is the bond x BREAK_CAL. Pushed with a slowly rising force in the simulator, bonded bodies came
+# free at 0.9 to 1.8 times their bond, so a piece holds well above the 0.39 N nudge.
 BREAK_CAL = 32.0
 
 
@@ -111,7 +110,7 @@ def _corners2(cx, cy, sx, sy, yaw):
 
 
 def overlap2(a, b, margin=0.0) -> bool:
-    """Two fragments' footprints (oriented rectangles) overlap, or come closer than `margin` (separating-axis test)."""
+    """Two pieces' footprints (oriented rectangles) overlap, or come closer than `margin` (separating-axis test)."""
     pa, pb = _corners2(a.pos[0], a.pos[1], a.size[0], a.size[1], a.yaw), _corners2(b.pos[0], b.pos[1], b.size[0],
                                                                                    b.size[1], b.yaw)
     for poly in (pa, pb):
@@ -127,37 +126,15 @@ def overlap2(a, b, margin=0.0) -> bool:
     return True
 
 
-def across(c) -> float:
-    """A fragment's width across the stroke: its footprint's extent along y."""
-    return abs(c.size[0] * math.sin(c.yaw)) + abs(c.size[1] * math.cos(c.yaw))
-
-
 def _layout():
-    rng = np.random.default_rng(20261116)
-    r = RING_D / 2
     chips = []
-    for k, (cx, cy, turn) in enumerate(CAKES):
-        cs, sn = math.cos(turn), math.sin(turn)
-        rows = np.linspace(-r, r, CAKE_ROWS + 1)
-        rows[1:-1] += rng.uniform(-0.0015, 0.0015, CAKE_ROWS - 1)  # where the rows cracked
-        for i in range(CAKE_ROWS):
-            u0, u1 = rows[i], rows[i + 1]
-            um, uo = abs(u0 + u1) / 2, max(abs(u0), abs(u1))
-            ue = um + 0.4 * (uo - um) if u0 * u1 > 0 else 0.0  # an outer row's half-length: the disc's chord 0.4 of
-            h = math.sqrt(r * r - ue * ue)  # the way from its middle to its outer edge (corners within 4 mm of the ring)
-            n = max(2, round(2 * h / FRAG))
-            cuts = np.linspace(-h, h, n + 1)
-            cuts[1:-1] += rng.uniform(-0.002, 0.002, n - 1)  # where the row cracked across
-            for j in range(n):
-                v0, v1 = cuts[j], cuts[j + 1]
-                su, sv = u1 - u0 - CRACK, v1 - v0 - CRACK
-                u, v = (u0 + u1) / 2, (v0 + v1) / 2
-                x, y = cx + cs * u - sn * v, cy + sn * u + cs * v
-                col = CHAR_COLORS[int(rng.integers(len(CHAR_COLORS)))]
-                c = dk.Chip(f"cake{k}_{i}{j}", (float(x), float(y), float(PLATE_Z + CAKE_T / 2 + CHIP_LIFT)),
-                            (float(su), float(sv), CAKE_T), float(turn), float(WAX_DENSITY * su * sv * CAKE_T), col)
-                f = BOND_EDGE * across(c)
-                chips.append(dk.Chip(c.name, c.pos, c.size, c.yaw, c.mass, col, (f, f * BOND_PEEL_ARM)))
+    for i, (x, n) in enumerate(zip(ROWS_X, ROW_COUNTS)):
+        for j in range(n):
+            y = PATTERN_YC + (j - (n - 1) / 2) * PITCH
+            col = DOUGH_COLORS[(i + j) % len(DOUGH_COLORS)]
+            chips.append(dk.Chip(f"piece{i}_{j}", (x, float(y), float(PLATE_Z + PIECE_T / 2 + CHIP_LIFT)),
+                                 (PIECE_W, PIECE_W, PIECE_T), 0.0, PIECE_MASS, col,
+                                 (BOND_FORCE, BOND_FORCE * BOND_PEEL_ARM)))
     return tuple(chips)
 
 
@@ -205,13 +182,13 @@ BLADE = sk.Blade(center=tuple(EDGE_LOCAL), along=(0, 1, 0), normal=(0, 0, 1), wi
 GRID = sk.Plate(x0=LIP_X, y0=PLATE_Y0, lx=0.57, ly=0.31, z=PLATE_Z, cell=0.01, trough_x0=TRAY_X0,
                 trough_y=(PLATE_Y0, PLATE_Y0 + PLATE_W))
 TIER_TROUGH = (0.25, 0.60, 0.90)  # share of the debris (by mass) in the tray for 0.25, 0.5, 0.75
-RESIDUE_MAX = 0.02  # 0.75 also needs at most 2 % of the debris left on the griddle (about one fragment)
-FULL_TROUGH = 0.98  # 1.0 needs at least 98 % in the tray ...
-FULL_RESIDUE = 0.0  # ... and nothing left on the griddle (no fragment: the plate clean), plus the scraper set down
+RESIDUE_MAX = 0.05  # 0.75 also needs at most 5 % of the debris left on the griddle (one piece, 4.5 %)
+FULL_TROUGH = 0.98  # 1.0 needs at least 98 % in the tray (in the simulator every piece: one piece is 4.5 %) ...
+FULL_RESIDUE = 0.0  # ... and nothing left on the griddle (no piece: the plate clean), plus the scraper set down
 
-# The plate's surface: seasoned steel (dry: wax does not stick to an oiled plate), smeared with wax where the debris was,
-# slippery to a steel blade and to wax (waxy or greased films on steel, about 0.15). The simulator's default contact
-# friction (1.2) would let the edge stick and chatter.
+# The plate's surface: bare steel, wiped with a damp cloth between trials and left with a light film where the pieces
+# were pressed (modeling compound is oily and salty), slippery to a steel blade (greased or filmed steel on steel, about
+# 0.15 to 0.2). Set, not measured. The simulator's default contact friction (1.2) would let the edge stick and chatter.
 PLATE_FRICTION = (0.20, 0.15)  # static, dynamic
 _PLATE_SIZE = (PLATE_LX, PLATE_W, PLATE_Z - TOP)
 PLATE = kit.Prop("plate", pos=(LIP_X + PLATE_LX / 2, PLATE_YC, (TOP + PLATE_Z) / 2), size=_PLATE_SIZE,
@@ -219,15 +196,14 @@ PLATE = kit.Prop("plate", pos=(LIP_X + PLATE_LX / 2, PLATE_YC, (TOP + PLATE_Z) /
                  colliders=(kit.Collider((0.0, 0.0, 0.0), _PLATE_SIZE),),
                  friction=PLATE_FRICTION)  # plate on its frame, one fixed block
 
-# A dry piece on steel: 0.5 static, 0.4 sliding (estimated); on the plate the plate's lower friction applies (combine
-# "min").
+# A piece on steel: 0.5 static, 0.4 sliding (estimated); on the plate the plate's lower friction applies (combine "min").
 # Every piece is bonded to the plate (the anchor) until the blade breaks it free.
 dk.setup(CHIPS, dk.Physics(static_friction=0.5, dynamic_friction=0.4, break_scale=BREAK_CAL),
          anchor=(PLATE.name, PLATE.pos))
 
 OBJECTS = [PLATE, TRAY, TRAY_WALL, GUARD_R, GUARD_L, GUARD_B, SCRAPER]
 
-SPILL_CAP_SHARE = 0.02  # more than 2 % of the debris off the griddle caps the score at 0.25
+SPILL_CAP_SHARE = 0.05  # more than 5 % of the debris (more than one piece) off the griddle caps the score at 0.25
 SPILL_CAP = 0.25
 GOUGE_CAP = 0.5
 SET_DOWN_Z = TOP + 0.030  # the scraper's origin below this: lying on the bench, not on the griddle (plate at 5.0 cm)
@@ -257,7 +233,9 @@ def off_griddle(p) -> bool:
 def where(debris) -> tuple:
     """Each piece's place from its real pose (center): in the tray (inside the tray's walls, below the plate's top),
     off the griddle (outside its footprint: on the bench, the floor, or carried off on the scraper), or else still on
-    the griddle (on the plate, against a guard, on the blade above the plate, or falling)."""
+    the griddle (on the plate, against a guard, on the blade above the plate, or falling). A piece still on the
+    scraper once it is set down on the bench is off the griddle; one knocked off the blade into the tray before the
+    set-down is in the tray."""
     d = np.asarray(debris, float).reshape(-1, 7)
     x, y, z = d[:, 0], d[:, 1], d[:, 2]
     tray = (x >= TRAY_X0) & (x <= LIP_X) & (y >= PLATE_Y0) & (y <= PLATE_Y0 + PLATE_W) & (z < PLATE_Z)
@@ -356,7 +334,7 @@ def _update(objects):
 
 
 def success(objects):
-    """At least 98 % of the debris (by mass) in the tray, nothing left on the griddle, nothing gouged, at most 2 %
+    """At least 98 % of the debris (by mass) in the tray, nothing left on the griddle, nothing gouged, at most 5 %
     off the griddle, and the scraper set down on the bench, released and still: this step counts toward the 1 s
     hold."""
     _update(objects)
@@ -365,10 +343,10 @@ def success(objects):
 
 def score(objects):
     """By mass of the debris, from where the pieces really are: 0.25 with at least 25 % in the grease tray; 0.5 with at
-    least 60 %; 0.75 with at least 90 % in the tray and at most 2 % left on the griddle; 1.0 with at least 98 % in the
+    least 60 %; 0.75 with at least 90 % in the tray and at most 5 % (one piece) left on the griddle; 1.0 with at least 98 % in the
     tray, nothing left on the griddle and the scraper set down on the bench (off the griddle), released and still
     for 1 s. Caps: a gouge (blade over 70 degrees, or the edge tilted over 10 degrees onto a corner, slid 1 cm) caps
-    at 0.5; more than 2 % of the debris off the griddle caps at 0.25. Doing nothing scores 0."""
+    at 0.5; more than 5 % of the debris (more than one piece) off the griddle caps at 0.25. Doing nothing scores 0."""
     _update(objects)
     s = _L.tier()
     if _L.good >= HOLD_STEPS:
@@ -391,13 +369,13 @@ PRESS = 0.010  # m: the edge is aimed this far into the plate (the collider stop
 # aim lets the edge rise off the plate halfway down the stroke and the debris slip under it.
 LANES_Y = (-0.070, -0.020, 0.030)  # stroke centers: the blade covers y -0.121 to 0.081
 PASSES = 3
-# A cleanup pass along both splash guards: pushed fragments spread sideways, and a few can come to rest beyond the outer
+# A cleanup pass along both splash guards: pushed pieces spread sideways, and a few can come to rest beyond the outer
 # lanes' ends, as far as the guards, anywhere from the debris to the lip. Centered at y -12.0 and 8.0, the blade covers
 # y -17.1 to -6.9 and 2.9 to 13.1, 4.5 mm inside each guard (-17.55 and 13.55).
 EDGE_LANES_Y = (-0.120, 0.080)
-FINAL_X_START = 0.300  # just inside the debris's far edge (the plate behind it is already clean): the right arm reaches
+FINAL_X_START = 0.300  # 1 cm beyond the debris's far edge (x 28.95; the plate behind it is already clean): the right arm reaches
 # the left guard no farther out
-X_START, X_END = 0.350, 0.135  # edge from 4.8 cm beyond the debris to 1.5 cm past the lip. The hand lags about 1.5 cm,
+X_START, X_END = 0.350, 0.135  # edge from 6 cm beyond the debris to 1.5 cm past the lip. The hand lags about 1.5 cm,
 # so the edge lands over 3 cm beyond the debris: an edge that lands on a bonded piece presses it down and slides over
 # it, and pieces knocked back when a bond lets go can come to rest a few cm beyond the debris
 STROKE_SPEED = 0.04  # m/s

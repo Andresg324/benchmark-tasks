@@ -140,7 +140,7 @@ def held_at_rest(n=25):
 def moved(frac_tray, frac_off=0.0):
     """The debris with pieces moved into the tray (in layout order, skipping any that would pass `frac_tray` of the
     mass), then others onto the bench up to `frac_off`; the rest where they lay. Mass shares land just under the
-    fractions asked for (within one flake, under 1.5 %)."""
+    fractions asked for (within one piece, 4.5 %)."""
     d = M.START_DEBRIS.copy()
     used = set()
     for frac, place in ((frac_tray, lambda i: (0.11, -0.10 + 0.002 * (i % 100), M.PLATE_Z - M.TRAY_DEPTH + 0.002)),
@@ -165,42 +165,37 @@ def main():
     import itertools
 
     C = M.CHIPS
-    check(len(C) == 88, f"{len(C)} debris fragments (rigid bodies)")
-    check(not any(M.overlap2(a, b, 0.0005) for a, b in itertools.combinations(C, 2)),
-          "no two fragments overlap or touch at the start (cracks at least 0.5 mm)")
-    check(min(c.size[2] for c in C) >= 0.002, "every fragment at least 2 mm thick (no tunnelling through the blade)")
-    check(all(abs(c.pos[2] - c.size[2] / 2 - M.PLATE_Z - M.CHIP_LIFT) < 1e-9 for c in C), "every fragment on the plate")
-    r = M.RING_D / 2
-    for k, (cx, cy, _) in enumerate(M.CAKES):
-        mine = [c for c in C if c.name.startswith(f"cake{k}_")]
-        far = max(math.hypot(p[0] - cx, p[1] - cy) for c in mine
-                  for p in M._corners2(c.pos[0], c.pos[1], c.size[0], c.size[1], c.yaw))
-        area = sum(c.size[0] * c.size[1] for c in mine)
-        check(len(mine) == 22 and far <= r + 0.004, f"pancake {k + 1}: 22 fragments, corners within 4 mm of its 7 cm ring "
-                                                   f"(farthest corner {far * 1000:.1f} mm from the center)")
-        check(0.75 <= area / (math.pi * r * r) <= 1.0, f"pancake {k + 1}: fragments cover {area / (math.pi * r * r):.0%}"
-                                                       f" of the disc (the rest is cracks)")
-    for a, b in itertools.combinations(M.CAKES, 2):
-        check(math.hypot(a[0] - b[0], a[1] - b[1]) - M.RING_D >= 0.008, "rings at least 8 mm apart")
-    check(all(M.LIP_X + 0.0005 <= p[0] and M.PLATE_Y0 + 0.05 <= p[1] <= M.PLATE_Y0 + M.PLATE_W - 0.05 for c in C
-              for p in M._corners2(c.pos[0], c.pos[1], c.size[0], c.size[1], c.yaw)),
-          "every fragment on the plate behind the lip, 5 cm or more inside the side guards")
+    check(len(C) == 22, f"{len(C)} debris pieces (rigid bodies)")
+    check(not any(M.overlap2(a, b, 0.010) for a, b in itertools.combinations(C, 2)),
+          "no two pieces touch at the start (at least 1 cm apart: separate pieces, each bonded to the plate only)")
+    check(all(c.size == (0.019, 0.019, 0.0048) for c in C), "every piece 1.9 cm square and 4.8 mm thick (the template)")
+    check(all(abs(c.pos[2] - c.size[2] / 2 - M.PLATE_Z - M.CHIP_LIFT) < 1e-9 for c in C), "every piece on the plate")
+    check([sum(1 for c in C if c.pos[0] == x) for x in M.ROWS_X] == [6, 5, 6, 5], "rows of 6, 5, 6 and 5 pieces")
+    check(abs(M.ROWS_X[0] - M.LIP_X - 0.025) < 1e-9 and all(abs(b - a - 0.035) < 1e-9 for a, b in
+                                                            zip(M.ROWS_X, M.ROWS_X[1:])),
+          "near row 2.5 cm from the lip, rows 3.5 cm apart")
+    corners = [p for c in C for p in M._corners2(c.pos[0], c.pos[1], c.size[0], c.size[1], c.yaw)]
+    check(all(M.LIP_X + 0.010 <= p[0] and M.PLATE_Y0 + 0.05 <= p[1] <= M.PLATE_Y0 + M.PLATE_W - 0.05 for p in corners),
+          "every piece on the plate at least 1 cm behind the lip, 5 cm or more inside the side guards")
+    reach = (min(M.LANES_Y) - M.BLADE_W / 2, max(M.LANES_Y) + M.BLADE_W / 2)
+    check(all(reach[0] <= p[1] <= reach[1] for p in corners) and max(p[0] for p in corners) < M.FINAL_X_START,
+          "every piece lies within the demo's three lanes and short of where its strokes land")
     T = M.TOTAL_MASS
-    check(abs(T * 1000 - 55.5) < 0.05, f"debris {T * 1000:.2f} g")
-    sh = M.CHIP_MASS / T
-    check(0.007 <= sh.min() and sh.max() <= 0.018, f"each fragment {sh.min():.1%} to {sh.max():.1%} of the mass")
-    # the bonds: every fragment stuck to the plate, break force from its width across the stroke, far above its weight
-    check(all(c.bond is not None for c in C), "every fragment is bonded to the plate")
-    check(all(abs(c.bond[0] - M.BOND_EDGE * M.across(c)) < 1e-9 for c in C), "break force = 12 N per m of width")
-    check(all(abs(c.bond[1] - c.bond[0] * M.BOND_PEEL_ARM) < 1e-12 for c in C), "break torque = break force x 2 mm")
-    fb = [c.bond[0] for c in C]
-    check(0.10 <= min(fb) and max(fb) <= 0.22, f"fragments break free at {min(fb):.2f}-{max(fb):.2f} N")
-    check(min(c.bond[0] / (c.mass * 9.81) for c in C) >= 20, "every bond holds at least 20 times its fragment's weight")
+    check(abs(T * 1000 - 55.0) < 1e-6 and all(abs(m - 0.0025) < 1e-12 for m in M.CHIP_MASS),
+          f"debris {T * 1000:.2f} g: 22 pieces of 2.50 g")
+    # the bonds: every piece stuck to the plate on its own; it holds the real nudge (40 g) and comes free under the blade
+    check(all(c.bond is not None for c in C), "every piece is bonded to the plate")
+    check(all(c.bond == (M.BOND_FORCE, M.BOND_FORCE * M.BOND_PEEL_ARM) for c in C),
+          "break force 0.8 N, break torque 0.8 N x 2.5 mm")
+    nudge = 0.040 * 9.81
+    check(0.9 * M.BOND_FORCE >= 1.8 * nudge, f"a piece holds the 40 g nudge ({nudge:.2f} N) with margin (frees at "
+                                             f"{0.9 * M.BOND_FORCE:.2f} N or more)")
+    check(min(c.bond[0] / (c.mass * 9.81) for c in C) >= 20, "every bond holds at least 20 times its piece's weight")
     check(M.dk._SPEC["anchor"] == (M.PLATE.name, M.PLATE.pos) and M.PLATE.mass is None,
           "the bonds anchor on the plate, a fixed body")
     p0, q0, p1 = M.dk.bond_frames(C[0])
     check(abs(M.PLATE.pos[2] + p0[2] - (C[0].pos[2] - C[0].size[2] / 2)) < 1e-9 and p1 == (0.0, 0.0, -C[0].size[2] / 2),
-          "each bond sits at the middle of its fragment's underside")
+          "each bond sits at the middle of its piece's underside")
     check(abs(M.blade_angle(M.pitch_for(40.0)) - 40.0) < 1e-6, "demo pitch gives a 40 degree blade")
     check(M.shares(M.START_DEBRIS) == (0.0, 1.0, 0.0), "at the start everything is on the griddle")
 
@@ -219,7 +214,7 @@ def main():
     check(feed(set_down(60)) == 0.0, "doing nothing: 0")
     fresh()
     check(feed(held_at_rest(60)) == 0.0, "picking the scraper up and holding it: 0")
-    for frac, want in ((0.24, 0.0), (0.265, 0.25), (0.615, 0.5), (0.93, 0.5)):
+    for frac, want in ((0.24, 0.0), (0.28, 0.25), (0.595, 0.25), (0.64, 0.5), (0.93, 0.5)):
         fresh()
         s = feed(with_debris(moved(frac), set_down(40)))
         tr, res, _ = M.shares(moved(frac))
@@ -230,35 +225,48 @@ def main():
     s = feed(with_debris(full, set_down(40)))
     check(s == 1.0, "everything in the tray, scraper set down 2 s: 1.0")
     one = moved(1.0)
-    i_big = int(np.argmax(M.CHIP_MASS))
-    one[i_big] = M.START_DEBRIS[i_big]
+    one[0] = M.START_DEBRIS[0]
     fresh()
     s = feed(with_debris(one, set_down(40)))
-    check(s == 0.75, f"a single fragment ({M.CHIP_MASS[i_big] / T:.1%}) left on the plate, the rest in the tray, "
+    check(s == 0.75, f"a single piece ({M.CHIP_MASS[0] / T:.1%}) left stuck on the plate, the rest in the tray, "
                      f"scraper set down: 0.75, below 1.0 ({s})")
-    one = moved(1.0)
-    i_small = int(np.argmin(M.CHIP_MASS))
-    one[i_small] = M.START_DEBRIS[i_small]
-    fresh()
-    s = feed(with_debris(one, set_down(40)))
-    check(s == 0.75, f"even the smallest fragment ({M.CHIP_MASS[i_small] / T:.1%}) left on the plate: 0.75 ({s})")
     loose = moved(1.0)
-    loose[i_small, :3] = (0.30, 0.0, M.PLATE_Z + 0.0026)
+    loose[0, :3] = (0.30, 0.0, M.PLATE_Z + M.PIECE_T / 2)
     fresh()
     s = feed(with_debris(loose, set_down(40)))
-    check(s == 0.75, f"a fragment freed but left loose on the plate: 0.75 ({s})")
+    check(s == 0.75, f"a piece freed but left loose on the plate: 0.75 ({s})")
+    corner = moved(1.0)
+    corner[0, :3] = (M.LIP_X + 0.010, M.PLATE_Y0 + 0.010, M.PLATE_Z + M.PIECE_T / 2)
+    fresh()
+    s = feed(with_debris(corner, set_down(40)))
+    check(s == 0.75, f"a piece pushed into the corner by the lip and a guard, not over it: 0.75 ({s})")
     two = moved(1.0)
-    big = np.argsort(M.CHIP_MASS)[-2:]
-    two[big] = M.START_DEBRIS[big]
+    two[:2] = M.START_DEBRIS[:2]
     fresh()
     s = feed(with_debris(two, set_down(40)))
-    check(s == 0.5, f"the two largest fragments ({M.CHIP_MASS[big].sum() / T:.1%}) left on the plate: 0.5 ({s})")
+    check(s == 0.5, f"two pieces ({M.CHIP_MASS[:2].sum() / T:.1%}) left on the plate: 0.5 ({s})")
     flung = moved(1.0)
-    flung[i_big, :3] = (0.40, -0.26, M.TOP + 0.0026)
+    flung[0, :3] = (0.40, -0.26, M.TOP + M.PIECE_T / 2)
     fresh()
     s = feed(with_debris(flung, set_down(40)))
-    check(s == 1.0, f"the rest in the tray and one fragment ({M.CHIP_MASS[i_big] / T:.1%}) off the griddle (under the "
-                    f"2 % cap), nothing left on it: 1.0 ({s})")
+    check(s == 0.75, f"the rest in the tray and one piece ({M.CHIP_MASS[0] / T:.1%}) flung off the griddle (within the "
+                     f"5 % cap), nothing left on it: 0.75, not 1.0 (under 98 % in the tray) ({s})")
+    # pieces still on the scraper's blade: over the griddle they are left on it; at the set-down they are off it
+    blade = (REST_POS + M.R_REST @ M.EDGE_LOCAL)[:2]
+    carried = moved(1.0)
+    carried[0, :3] = (blade[0] + 0.02, blade[1], M.TOP + 0.006)
+    fresh()
+    s = feed(with_debris(carried, set_down(40)))
+    check(s == 0.75 and M.shares(carried)[2] > 0, f"one piece carried off on the scraper's blade to the bench: off the "
+                                                  f"griddle, 0.75 ({s})")
+    carried[1, :3] = (blade[0] + 0.04, blade[1] + 0.02, M.TOP + 0.006)
+    fresh()
+    s = feed(with_debris(carried, set_down(40)))
+    check(s == 0.25, f"two pieces carried off on the blade (9.1 %): capped at 0.25 ({s})")
+    riding = moved(1.0)
+    riding[0, :3] = (0.11, -0.02, M.PLATE_Z + 0.015)
+    check(M.shares(riding)[1] > 0, "a piece on the blade held over the tray, above the plate's top: still on the griddle "
+                                   "(knocked off into the tray, it counts in the tray)")
     fresh()
     s = feed(with_debris(full, set_down(10)))
     check(s == 0.75, "set down only 0.5 s: 0.75 (hold not met)")
@@ -281,12 +289,13 @@ def main():
 
     # -- caps ---------------------------------------------------------------------------------------------------------
     fresh()
-    s = feed(with_debris(moved(0.96, 0.035), set_down(40)))
-    off = M.shares(moved(0.96, 0.035))[2]
-    check(s == 0.25 and off > 0.02, f"{off:.1%} of the debris pushed off the griddle onto the bench: capped at 0.25 ({s})")
+    s = feed(with_debris(moved(0.90, 0.10), set_down(40)))
+    off = M.shares(moved(0.90, 0.10))[2]
+    check(s == 0.25 and off > 0.05, f"{off:.1%} of the debris (two pieces) pushed off the griddle onto the bench: capped "
+                                    f"at 0.25 ({s})")
     fresh()
-    s = feed(with_debris(moved(0.70, 0.035), set_down(40)))
-    check(s == 0.25, "70 % in the tray but over 2 % off the griddle: 0.25")
+    s = feed(with_debris(moved(0.70, 0.10), set_down(40)))
+    check(s == 0.25, "70 % in the tray but over 5 % off the griddle: 0.25")
     fresh()
     s = feed(stroke(0.0, theta=78.0) + with_debris(full, set_down(40)))
     check(s == 0.5 and M._L.s.gouged, "a stroke at 78 degrees, then everything in the tray: gouge cap 0.5")
@@ -310,12 +319,11 @@ def main():
     readme = (HERE / "README.md").read_text()
     check(d["instruction"] == M.INSTRUCTION, "task.json instruction == task.INSTRUCTION")
     text = " ".join(str(d[k]) for k in ("setup", "scoring", "fidelity", "context")) + readme
-    for frag in ("25 %", "60 %", "90 %", "98 %", "2 %", "70 degrees", "10 degrees", "1 cm", "1 s",
-                 "55.5 g", "88", "22 fragments", "four", "136 g", "10.2 cm", "5.0 cm", "0.6 mm", "0.15 to 0.2",
-                 "0.4 to 0.5", "0.9 g per cubic cm", "capped at 0.5", "caps the score at 0.25", "7.0 cm", "5 mm",
-                 "12 N per m", "0.11 to 0.21 N", "0.8 to 1.7", "x 19.5, y -7.5 and 0.5", "x 26.4, y -3.5 and 4.5",
-                 "1.0 cm from the lip", "6.55 cm", "Norpro 957R", "Zen Principle", "177AOGT1227", "P94850", "14.0 g",
-                 "USS-DBS66-20", "3 minutes"):
+    for frag in ("25 %", "60 %", "90 %", "98 %", "5 %", "70 degrees", "10 degrees", "1 cm", "1 s", "55.0 g", "22 ",
+                 "2.50 g", "1.9 cm", "4.8 mm", "0.8 N", "40 g", "capped at 0.5", "caps the score at 0.25", "136 g",
+                 "10.2 cm", "5.0 cm", "0.6 mm", "0.15 to 0.2", "0.4 to 0.5", "x 17.5, 21.0, 24.5 and 28.0",
+                 "-10.75 to 6.75", "-9.0 to 5.0", "Play-Doh", "177AOGT1227", "P94850", "USS-DBS66-20", "0.40 g",
+                 "tray's rim", "3 minutes", "5 minutes"):
         check(frag in text or frag.replace(" %", "%") in text, f"text states {frag!r}")
     limits = dict(title=120, instruction=1000, context=1000, setup=4000, scoring=4000, fidelity=500, scores=300)
     for k, n in limits.items():
