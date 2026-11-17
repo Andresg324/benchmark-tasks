@@ -71,7 +71,7 @@ never changes.
 | Resistance | for each 2 cm strip in contact (h the largest squeeze there): up, the contact pressure over the contact's footprint, p x 2 cm x sqrt(2 R h - h^2), with p rising to the flow stress (13 kPa) at the yield and equal to it beyond; back against the motion, the plastic work per meter rolled; applied to the pin as a force and torque at the contact before every physics step | the dough's push on the barrel: elastic below its yield, its flow stress above. 13 kPa is set from a hand check on this dough (below) |
 | Put away | the pin set down (axis level within 3 degrees, lying on its rings on the board or on the table, their bottoms within 5 mm of it), its barrel's lowest line at least 1 cm clear of the rolled sheet's outline along its whole length, and let go | resting, not held, not left lying on the dough, not propped on something |
 | Let go | no part of either arm, from the upper arm (link3) to the fingertips, touching the pin: their real collision meshes (yam_links.npz, surface points every 1.5 mm, posed each control step from the simulator's link poses) overlap none of the pin's colliders (a gap of 0 or less) | contact, not nearness: a finger 0.3 mm off the pin has let go. guardkit's box model of the gripper is off by several mm against the real meshes, so it is used only in the offline tests (also as overlap) |
-| Ring-board contact | 0.25 static, 0.20 dynamic friction | the real barrel turns on its bushings, so its silicone rings roll on the board as the pin rolls. The sim's pin is one rigid body held by its handles, so its rings ride along the board on a low sliding friction in place of that rolling (the low end of the wood-on-wood range in Serway and Jewett, Physics for Scientists and Engineers, Table 5.1) |
+| Ring-board contact | 0.25 static, 0.20 dynamic friction | the pin rides on its rings; the ring-board contact uses a low sliding friction (the low end of wood on wood, Serway and Jewett, Physics for Scientists and Engineers, Table 5.1) |
 
 **How the load governs thinning.** The dough is modeled as rigid-plastic with an elastic threshold: it springs back
 from light presses and thins once pressed past its yield. Below the yield the contact pressure rises with the squeeze
@@ -91,8 +91,8 @@ rolling with both rings on the board ends inside the 2.9 to 3.5 mm band.
 temperature, on a bare cutting board set on a kitchen scale, rolled with a rolling pin without rings from about 3/16
 inch to about 1/8 inch. The pin was pushed with the normal working pressure a person uses to roll dough flat: enough
 that the dough stays flat, no extra weight. The scale under the board read about 3.0 to 3.5 kg at its peak (29 to
-34 N). After enough passes the rolled dough stayed flat. The check did not record the sheet's width or the squeeze per
-pass, so 13 kPa is the flow stress at which the sim's first pass carries that measured force: on the sim's first pass
+34 N). After enough passes the rolled dough stayed flat. The sim's flow stress, 13 kPa, is set so that its first pass
+carries the force read in the hand check: on the sim's first pass
 (the 4.8 mm sheet, 24 cm wide, h = 1.6 mm, a = sqrt(2 x 30.5 x 1.6 - 1.6^2) = 9.75 mm), F = stress x 24 cm x 9.75 mm,
 so 29 to 34 N gives 12.4 to 14.5 kPa; the task uses 13 kPa, which gives 30.4 N up (3.1 kg) and 4.2 N back on the
 first pass. A press too light to pass the dough's yield springs back; a lighter push past it thins less a pass and
