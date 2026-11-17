@@ -482,21 +482,34 @@ def main():
     o, op = pusher_state(still, "hand", float(still[0, 0]) + M.PIECE_W / 2, float(still[0, 1]))
     feed([(dict(o), op)] * 10)
     check(not M._L.hands, "a fingertip resting on a bonded piece that does not move: not counted (nothing moved)")
-    # the arm's body: a forearm sweeping pieces over the lip, with the hand and the scraper clear of them
-    fresh()
-    d = M.START_DEBRIS.copy()
-    sweep = []
-    y = float(d[0, 1])
-    for x in list(np.arange(float(d[0, 0]), M.LIP_X - 0.012, -0.008)):
-        d[0, :3] = (x, y, M.PLATE_Z + M.PIECE_T / 2)
-        o, op = objs(REST_POS, M.R_REST, False, debris=d.copy())
-        o = dict(o)
-        c = np.array([x + M.PIECE_W / 2 + M.ARM_R, y, M.PLATE_Z + M.PIECE_T / 2])  # a link low across the plate
-        o["right_gripper" + kit.ARM_SUFFIX] = np.array([c + [0, -0.30, 0.10], c + [0, -0.12, 0.0], c + [0, 0.12, 0.0],
-                                                        c + [0, 0.20, 0.15], c + [0, 0.20, 0.25]])
-        sweep.append((o, op))
-    feed(sweep)
-    check(M._L.hands and not M._L.credit[0], "a forearm sweeping a piece over the lip: the robot on the debris, 0")
+    # the arm's own collision meshes (as the simulator reports each link's pose): a forearm or a fingertip moving a
+    # piece is the robot on the dough; the same link 2 mm clear of it is not
+    def link_sweep(link, gap_m, axis):
+        """Piece 0 pushed along the plate toward the lip; `link` (identity turn) placed so its nearest mesh point is
+        gap_m behind the piece's far side (axis 0) or above its top (axis 2)."""
+        pts = M.mesh(link)[0]
+        k = int(np.argmin(pts[:, axis]))
+        fresh()
+        d = M.START_DEBRIS.copy()
+        out = []
+        y = float(d[0, 1])
+        for x in list(np.arange(float(d[0, 0]), M.LIP_X - 0.012, -0.008)):
+            d[0, :3] = (x, y, M.PLATE_Z + M.PIECE_T / 2)
+            o, op = objs(REST_POS, M.R_REST, False, debris=d.copy())
+            o = dict(o)
+            target = (np.array([x + M.PIECE_W / 2 + gap_m, y, M.PLATE_Z + M.PIECE_T / 2]) if axis == 0 else
+                      np.array([x, y, M.PLATE_Z + M.PIECE_T + gap_m]))
+            o["right_gripper" + kit.ARM_SUFFIX] = {link: (target - pts[k], np.array([0.0, 0.0, 0.0, 1.0]))}
+            out.append((o, op))
+        feed(out)
+        return M._L.hands
+    check(link_sweep("link3", -0.0003, 0), "the upper arm's mesh sweeping a piece toward the lip: the robot on the "
+                                           "dough, 0")
+    check(link_sweep("link4", -0.0003, 0), "the forearm's mesh sweeping a piece: the robot on the dough")
+    check(link_sweep("tip_left", -0.0003, 2), "a fingertip's mesh pressing on a piece as it moves: the robot on the "
+                                              "dough")
+    check(not link_sweep("link4", 0.002, 0), "the forearm's mesh 2 mm clear of a moving piece: not a touch")
+    check(not link_sweep("tip_left", 0.002, 2), "a fingertip's mesh 2 mm above a moving piece: not a touch")
     # a piece on the top of a splash guard is still on the griddle
     check([bool(v[0]) for v in M.where(np.array([[0.30, M.PLATE_Y0 - 0.0015, M.PLATE_Z + M.GUARD_H + 0.003, 0, 0, 0,
                                                   1]]))] == [False, True, False],
@@ -542,7 +555,7 @@ def main():
     text = " ".join(str(d[k]) for k in ("setup", "scoring", "fidelity", "context")) + readme
     for frag in ("25 %", "60 %", "90 %", "98 %", "5 %", "70 degrees", "10 degrees", "1 cm", "1 s", "55.0 g", "22 ",
                  "2.50 g", "1.9 cm", "4.8 mm", "measuring cup", "water bottle", "taped square", "white nitrile", "capped at 0.5", "caps the score at 0.25", "136 g",
-                 "10.2 cm", "5.0 cm", "0.6 mm", "0.7", "0.6", "0.5 mm", "1 mm", "0.5 s", "0.9 to 1.8", "x 17.5, 21.0, 24.5 and 28.0",
+                 "10.2 cm", "5.0 cm", "0.6 mm", "0.7", "0.6", "0.5 mm", "1 mm", "0.5 s", "x 17.5, 21.0, 24.5 and 28.0",
                  "-10.75 to 6.75", "-9.0 to 5.0", "Play-Doh", "177AOGT1227", "P94850", "BOMATA", "0.40 g",
                  "tray's rim", "3 minutes", "5 minutes"):
         check(frag in text or frag.replace(" %", "%") in text, f"text states {frag!r}")

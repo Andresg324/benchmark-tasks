@@ -4,15 +4,15 @@ modeling compound (Play-Doh), each pressed flat onto the steel, stand in for foo
 (10.2 cm) griddle scraper lies on the bench to the right.
 
 The job is to scrape the griddle clean: break the pieces free and push them along the plate with the scraper, over the
-lip into the grease tray, without flinging them off the griddle or gouging the plate, then set the scraper down off the
-griddle.
+lip into the grease tray, without flinging them off the griddle or gouging the plate, then set the scraper down in the
+taped square.
 
 Each piece is a rigid body (debriskit) bonded to the plate by a breakable joint that the physics solver breaks when the
 blade pushes it harder than its bond; a freed piece is a free body on the plate with real friction. The scraper's blade
 has to meet the pieces, break them free and push them; they fall into the tray under gravity when pushed over the lip.
 The score reads where they really are, by mass: in the tray, still on the griddle, or off it. A piece counts in the
 tray only if the scraper put it there: it went over the lip while the held scraper's blade was pushing it (or pushing
-pieces that pushed it), and no gripper ever touched it. A gripper touching any piece at any time scores the trial 0.
+pieces that pushed it), and the robot never touched it. The robot touching any piece at any time scores the trial 0.
 The scraper starts in one place and has to be lifted, used and set down in a taped square elsewhere on the bench.
 Every threshold below appears once, with the same value in task.json and the README.
 """
@@ -92,19 +92,14 @@ DOUGH_COLORS = ((0.05, 0.05, 0.06), (0.08, 0.07, 0.08), (0.11, 0.10, 0.10))
 CHIP_LIFT = 0.0  # m: each piece lies on the plate, its underside on the steel
 # Each piece is stuck to the plate (and only to the plate) by a breakable bond at the middle of its underside (a PhysX
 # fixed joint that the solver breaks for good the first time holding the piece takes more than its break force or
-# torque). There is no published bond strength for modeling compound on steel; 0.8 N is the value chosen: about 33
-# times a piece's weight, so a piece does not slide or tip on its own, and less than the push of the held scraper's
-# edge, so the blade breaks every piece free. In a real trial the press sets the bond: each piece is pressed with a
-# 1 L water bottle (1 kg) standing on a measuring cup for 3 s, the same every trial, and the qualification checks that
-# the scraper frees each piece in one stroke. Break torque = BOND_FORCE x BOND_PEEL_ARM (2.5 mm): the scraper's edge
-# driven under a piece's side lifts that side and peels the piece off, as a cook's scraper does. A hard press from above
-# can free a piece too (a fingertip driven 8 mm into a corner did, in the simulator): with the blade that is scraper
-# use; with a hand the trial scores 0, and with the handle the piece is not credited.
+# torque). Each piece holds under its own weight and breaks free under the scraper's edge; in real trials the same
+# press (a 1 L water bottle on the measuring cup for 3 s) sets the bond, and qualification checks that the scraper frees
+# each piece in one stroke. The scraper's edge driven under a piece's side lifts that side and peels the piece off (the
+# break torque); a piece freed by anything but the blade is not credited.
 BOND_FORCE = 0.8  # N per piece
 BOND_PEEL_ARM = 0.0025  # m
 # PhysX tests a joint's break force against its own internal measure of the joint's load, not the push on the piece,
-# so the value written is the bond x BREAK_CAL. Pushed with a slowly rising force in the simulator, bonded bodies came
-# free at 0.9 to 1.8 times their bond (0.7 to 1.4 N for these pieces).
+# so the value written is the bond x BREAK_CAL.
 BREAK_CAL = 32.0
 
 
@@ -221,8 +216,7 @@ PLATE = kit.Prop("plate", pos=(LIP_X + PLATE_LX / 2, PLATE_YC, (TOP + PLATE_Z) /
                  friction=PLATE_FRICTION)  # plate on its frame, one fixed block
 
 # A piece of dough on steel: 0.7 static, 0.6 sliding. Every piece is bonded to the plate (the anchor) until the blade
-# breaks it free. Linear and angular damping (1 per s) take the solver's stored push out of a piece the moment its bond
-# lets go, so a freed piece does not spring away (real dough does not); it hardly slows a piece being pushed.
+# breaks it free; with its damping, a freed piece stops when the blade stops, as dough does.
 dk.setup(CHIPS, dk.Physics(static_friction=0.7, dynamic_friction=0.6, break_scale=BREAK_CAL, linear_damping=1.0,
                            angular_damping=1.0),
          anchor=(PLATE.name, PLATE.pos))
@@ -239,10 +233,9 @@ HOLD_STEPS = round(SUCCESS_HOLD_S / DT)  # 20 steps = 1 s
 GRIPPERS = ("left_gripper", "right_gripper")
 HANDS_CAP = 0.0  # the robot touching any piece (fingers, palm or arm) at any time: the trial scores 0
 TOUCH_BLADE = 0.0005  # m: blade on a piece, or piece on piece: within 0.5 mm (exact boxes; PhysX rests them at 0)
-TOUCH_HAND = 0.001  # m: the robot's shape on a piece: within 1 mm (the hand's boxes are fitted to its meshes)
+TOUCH_HAND = 0.001  # m: the robot's own collision mesh within 1 mm of a piece, or overlapping it
 MOVE = 0.0002  # m: a contact moves a piece if the piece moved 0.2 mm or more that step (4 mm/s)
 DEPART = 0.0005  # m: a piece has left its place (its bond let go) once it is 0.5 mm from where it was pressed
-ARM_R = 0.035  # m: the arm's links as capsules of this radius between their joints (elbow to wrist)
 FREE_WINDOW = 2  # steps: a piece freed by the blade leaves its place while the blade (or a pile it pushes) is in contact
 # with it, or within 0.1 s of that contact
 PUSH_WINDOW = 10  # steps (0.5 s): a piece is credited when it goes over the lip within 0.5 s of being pushed by the blade
@@ -269,7 +262,7 @@ def where(debris) -> tuple:
     """Each piece's place from its real pose (center): in the tray (inside the tray's walls, below the plate's top),
     off the griddle (outside its footprint: on the bench, the floor, or carried off on the scraper), or else still on
     the griddle (on the plate, against a guard, on the blade above the plate, or falling). A piece still on the
-    scraper once it is set down on the bench is off the griddle; one knocked off the blade into the tray before the
+    scraper once it is set down in the taped square is off the griddle; one knocked off the blade into the tray before the
     set-down is in the tray."""
     d = np.asarray(debris, float).reshape(-1, 7)
     x, y, z = d[:, 0], d[:, 1], d[:, 2]
@@ -287,7 +280,7 @@ def shares(debris) -> tuple:
 
 def scraper_held(objects) -> bool:
     """A gripper's own shape (palm and fingers, opened as they are) touches the scraper's handle (guardkit's contact
-    check, within 2 mm): contact, not nearness."""
+    check: the hand's boxes meet the handle, allowing for the boxes' fit to the gripper's meshes)."""
     return bool(gk.touching(objects, "scraper", HANDLE_PARTS, grippers=GRIPPERS))
 
 
@@ -306,24 +299,45 @@ class _Pose:
         self.pos, self.quat_xyzw = np.asarray(row[:3], float), np.asarray(row[3:7], float)
 
 
+_MESH: dict = {}
+
+
+def mesh(name) -> tuple:
+    """A YAM arm link's own collision mesh (yam_links.npz, from the arm's description: surface points about 0.5 mm
+    apart, in the link's frame), with its centroid and the radius around it."""
+    if not _MESH:
+        d = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), "yam_links.npz"))
+        unit = float(d["unit"][0])  # stored as int16 in 0.05 mm steps
+        for k in d.files:
+            if k != "unit":
+                pts = d[k].astype(float) * unit
+                c = pts.mean(axis=0)
+                _MESH[k] = (pts, c, float(np.linalg.norm(pts - c, axis=1).max()))
+    return _MESH[name]
+
+
 def robot_on(objects, debris, among) -> np.ndarray:
-    """Pieces (of those in `among`) the robot's own shape touches now, within TOUCH_HAND: either gripper's palm and both
-    fingers, opened as they are (guardkit's boxes), or an arm's links, elbow to wrist (capsules of ARM_R between the
-    joints), whichever hand, holding the scraper or not."""
+    """Pieces (of those in `among`) the robot's own shape touches now: any point of an arm link's collision mesh
+    (upper arm, forearm, wrist, palm, both fingertips; each link where the simulator reports it this step) within
+    TOUCH_HAND of the piece or inside it. Offline, where no link poses are given, the grippers' palm and finger boxes
+    (guardkit) stand in."""
     out = np.zeros(len(debris), bool)
-    tcps = [np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects]
-    arms = [np.asarray(objects[g + kit.ARM_SUFFIX], float) for g in GRIPPERS if g + kit.ARM_SUFFIX in objects]
+    links = [(name, pose) for g in GRIPPERS for name, pose in objects.get(g + kit.ARM_SUFFIX, {}).items()]
+    half = np.array([PIECE_W, PIECE_W, PIECE_T]) / 2
     for i in np.nonzero(among)[0]:
         row = debris[i]
         rp = sk.rotm(row[3:7])
-        for joints in arms:
-            for a, b in zip(joints[:-1], joints[1:]):
-                seg = gk.Seg(tuple(a), tuple(b), ARM_R)
-                if gk._dist_local(seg, row[:3]) > 0.02:
+        if links:
+            for name, (o, q) in links:
+                pts, c, r = mesh(name)
+                rl = sk.rotm(q)
+                if float(np.linalg.norm(np.asarray(o) + rl @ c - row[:3])) - r > 0.02:
                     continue
-                if _gap(row[:3], rp, PIECE_PART, np.zeros(3), np.eye(3), seg) <= TOUCH_HAND:
+                loc = ((np.asarray(o) + pts @ rl.T) - row[:3]) @ rp  # the link's points in the piece's frame
+                gap = np.linalg.norm(np.maximum(np.abs(loc) - half, 0.0), axis=1)
+                if float(gap.min()) <= TOUCH_HAND:
                     out[i] = True
-        if out[i] or all(np.linalg.norm(t - row[:3]) > 0.20 for t in tcps):  # a hand reaches 16 cm from its tool point
+                    break
             continue
         o = dict(objects)
         o["_piece"] = _Pose(row)
@@ -497,19 +511,19 @@ def _update(objects):
 
 
 def success(objects):
-    """At least 98 % of the debris (by mass) put in the tray by the scraper, nothing left on the griddle, no hand on
-    the debris, nothing gouged, at most 5 % off the griddle, and the scraper (picked up) set down in the taped square,
+    """At least 98 % of the debris (by mass) put in the tray by the scraper, nothing left on the griddle, no robot
+    contact with the debris, nothing gouged, at most 5 % off the griddle, and the scraper (picked up) set down in the taped square,
     released and still: this step counts toward the 1 s hold."""
     _update(objects)
     return _L.good >= 1
 
 
 def score(objects):
-    """By mass of the debris the scraper put in the grease tray (pushed over the lip by the held blade, directly or
-    through a pile, within 1 s; never touched by a gripper): 0.25 with at least 25 %; 0.5 with at least 60 %; 0.75
+    """By mass of the debris the scraper put in the grease tray (freed by the held blade and pushed over the lip by
+    it, directly or through a pile, within 0.5 s; never touched by the robot): 0.25 with at least 25 %; 0.5 with at least 60 %; 0.75
     with at least 90 % and at most 5 % (one piece) left on the griddle; 1.0 with at least 98 %, nothing left on the
-    griddle and the scraper, after being picked up, set down in the taped square, released and still for 1 s. Caps: a
-    gripper touching any piece at any time scores 0; a gouge (blade over 70 degrees, or the edge tilted over 10 degrees
+    griddle and the scraper, after being picked up, set down in the taped square, released and still for 1 s. Caps: the
+    robot touching any piece at any time scores 0; a gouge (blade over 70 degrees, or the edge tilted over 10 degrees
     onto a corner, slid 1 cm) caps at 0.5; more than 5 % of the debris (more than one piece) off the griddle caps at
     0.25. Doing nothing scores 0."""
     _update(objects)
@@ -541,8 +555,7 @@ EDGE_LANES_Y = (-0.120, 0.080)
 FINAL_X_START = 0.300  # 1 cm beyond the debris's far edge (x 28.95; the plate behind it is already clean): the right arm reaches
 # the left guard no farther out
 X_START, X_END = 0.350, 0.135  # edge from 6 cm beyond the debris to 1.5 cm past the lip. The hand lags about 1.5 cm,
-# so the edge lands over 3 cm beyond the debris: an edge that lands on a bonded piece presses it down and slides over
-# it, and pieces knocked back when a bond lets go can come to rest a few cm beyond the debris
+# so the edge lands over 3 cm beyond the debris, on bare steel, and every stroke meets the pieces from behind
 STROKE_SPEED = 0.04  # m/s
 LIFT = 0.03  # m above the plate between strokes
 LIFT_S = 0.6  # s for the lift at the end of a stroke (0.05 m/s: what rides on the blade slides off into the tray)

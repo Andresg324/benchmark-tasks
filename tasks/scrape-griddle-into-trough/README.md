@@ -44,8 +44,8 @@ fractions weighed on a 0.01 g scale: see Real-world evaluation). The definitions
   credited. A piece in the tray that is not credited counts in no share (`Ledger` in `task.py`). Scooping a piece up
   on the blade and tipping it into the tray is scraper use and counts.
 - **Hands off the dough: 0.** The robot's own shape touching any piece at any time scores the whole trial 0: either
-  gripper's palm and fingers (guardkit's boxes fitted to the gripper's meshes, at their present opening) or an arm's
-  links from elbow to wrist (capsules of 3.5 cm radius between the joints), within 1 mm of a piece while that piece
+  any point of the arms' own collision meshes (upper arm, forearm, wrist, palm and both fingertips, from the arm's
+  description, as the simulator poses each link every step) within 1 mm of a piece or inside it, while that piece
   moves 0.2 mm or more that step (a slow push counts too). A cook does not clear a griddle by hand (in service the plate is hot), and the task is the
   scraper's job; a 0 removes any reason to mix hand moves into a run. A hand passing near a piece, or resting on a
   piece that does not move, is not a touch. In a real trial a finger, palm or arm pushing, pinching or lifting any
@@ -142,8 +142,8 @@ through a template, so every piece has the same mass, size and place every trial
   the scraper's outline and the taped square in frame), records video of the whole trial and takes the photos. A
   second phone on a small tabletop tripod at the plate's near left corner, at plate height, looks along the lip and
   records the same trial: it shows the blade at the pieces and every piece going over the lip, and a finger near the
-  dough from the side. and the desk lamp on a marked spot at the far right corner shining across the plate at about 15 degrees
-  (raking light). Both stay put. A 1 cm grid printed on paper is photographed on the plate once, to register the
+  dough from the side. The work lamp, clamped on a marked spot at the far right corner, shines across the plate at
+  about 15 degrees (raking light). The cameras and the lamp stay put. A 1 cm grid printed on paper is photographed on the plate once, to register the
   photos to the plate's corners.
 - Catch sheets: white plastic sheet taped to the bench around the griddle and to the floor in front of the bench, so
   nothing that leaves the griddle is lost.
@@ -291,27 +291,20 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
   for good, the first time holding the piece takes more than its break force; from then on the piece is free.
   Nothing is drawn or moved by a script: the blade's collider has to meet a piece and push it hard enough to free it,
   and a piece falls into the tray only when it is pushed past the lip. The score reads only the pieces' poses.
-- **Bond strength.** Each piece breaks free at 0.8 N of sideways push, about 33 times its weight: it does not slide
-  or tip on its own, and the held scraper's edge frees it. There is no published bond for modeling compound on
-  steel; in a real trial the press sets it (a 1 kg water bottle on the cup for 3 s, the same for every piece), and
-  the qualification checks that the scraper frees each piece in one stroke. The break torque is 0.8 N at 2.5 mm: the
-  scraper's edge driven under a piece's side lifts that side and peels the piece off, as a cook's scraper does. A hard
-  press from above can also free a piece: in the simulator, a fingertip driven 8 mm down into a piece's corner freed
-  it. Done with the blade or its neck, that is scraper use and the piece can still be credited if the blade then
-  carries it over the lip; done with a hand, or with the handle, the piece is not credited, and a hand on the dough
-  scores the trial 0.
+- **Bond strength.** Each piece holds under its own weight and breaks free under the scraper's edge; in real trials
+  the same press (a 1 L water bottle on the cup for 3 s) sets the bond, and qualification checks that the scraper
+  frees each piece in one stroke. The scraper's edge driven under a piece's side lifts that side and peels the piece
+  off, as a cook's scraper does. A piece freed by anything but the blade (a hand, the arm, the handle) is not
+  credited, and a hand on the dough scores the trial 0.
 - **Break force in PhysX.** PhysX tests a joint's break force against its own measure of the joint's load, not the
-  push on the piece, so the task scales the bond it writes (`BREAK_CAL` = 32). Pushed with a slowly rising force in
-  the simulator, bonded pieces came free at 0.9 to 1.8 times the bond (0.7 to 1.4 N). A broken bond is not restored by
-  the scene's reset (one trial per run).
-- **Rigid pieces.** Real Play-Doh is soft: under the blade a piece may squash, leave a thin smear, or be cut through
-  with a base layer left on the steel, which the rigid pieces never do. The score is by mass and the smear threshold
-  (under 0.40 g) is the same in both; a cut-through piece makes the real trial harder, not easier.
+  push on the piece, so the task scales the bond it writes (`BREAK_CAL`). A broken bond is not restored by the scene's
+  reset (one trial per run).
+- **Rigid pieces.** Pieces are rigid in the sim; the score is by mass in both, so dough smeared or left on the steel
+  counts as left on the griddle.
 - **Contact settings.** Pieces are 4.8 mm thick (the blade is 1.5 mm, moving 4 cm/s: 0.2 mm per 240 Hz physics step,
   so nothing passes through); contacts are generated from 2 mm out and rest at zero gap; 16 position iterations; a
-  piece pinched into a collider is pushed out no faster than 0.3 m/s. Each piece has linear and angular damping of 1
-  per second, which takes the solver's stored push out of a piece the moment its bond lets go, so a freed piece does
-  not spring away (real dough does not); it hardly slows a piece being pushed.
+  piece pinched into a collider is pushed out no faster than 0.3 m/s. A freed piece stops when the blade stops, as
+  dough does.
 - **Friction.** The plate is clean, dry, bare steel, as in a real trial: 0.7 static and 0.6 sliding for the blade on
   the plate (dry steel on steel; common engineering tables give 0.5 to 0.8) and for a freed piece of dough on it
   (combined by "min"). A freed piece drags on the plate and stops when the blade stops.
@@ -393,8 +386,10 @@ specifications.
 - `debriskit.py`: the task's helper module that spawns the debris pieces as rigid bodies, bonds them to the plate
   with breakable joints, and reads their poses.
 - `scrapekit.py`: the task's helper module for the blade-angle rule (the gouge cap); its soil model is not used.
-- `yamkit.py`: the task's helper module that spawns the modeled props (griddle plate, scraper) and reports the arms'
-  joint positions to the scorer.
-- `guardkit.py`: the task's helper module for contact between the robot's own shapes (grippers, arm links) and the
-  scraper or the pieces, and for the exact gap between two boxes.
+- `yamkit.py`: the task's helper module that spawns the modeled props (griddle plate, scraper) and reports each arm
+  link's pose to the scorer.
+- `guardkit.py`: the task's helper module for contact between the grippers and the scraper, and for the exact gap
+  between two boxes.
+- `yam_links.npz`: the YAM arm's collision meshes (from the arm's description, upper arm to fingertips) as surface
+  points about 0.5 mm apart, for the check that the robot never touches the dough.
 - `test_task.py`: offline checks of the scorer, the debris layout and the demo plan.
