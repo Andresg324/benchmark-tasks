@@ -212,8 +212,8 @@ COM = _centroid(OUTLINE)[1] - np.array(CENTRE)  # the board's center of mass fro
 # doi:10.1007/s00107-021-01667-5, Eq. 4 and Table 5): the pass's mean cutting force against the feed (cherry; a 1.25 in
 # two-flute rabbeting bit at 18,000 rpm; 9.5 mm wide, 1/8 in high) is 3.0-3.1 N at the demo's 0.3 m/min feed.
 CORD_N = 3.0  # N: the cord's pull at the board: a 0.300 kg weight (2.94 N) trimmed with the pulley's and cleat's drag
-PULLEY = np.array([0.360, -0.400])  # m: the pulley's sheave, 13 cm past the table's right end, its top level with
-#                                     the eye (so the cord runs flat)
+PULLEY = np.array([0.360, -0.660])  # m: the pulley's sheave, clamped at the bench's right edge (y -0.65), its top
+#                                     level with the eye (so the cord runs flat)
 _X_IN = float(C_L[0] + R * math.cos(ALPHA))  # where the curve meets the ends (board frame x)
 EYE = np.array([_X_IN - 0.010, ENDS[0]])  # the screw eye: in the trailing end face, at mid-thickness, 1 cm in from
 #                                            the curve (board frame)
@@ -306,19 +306,17 @@ STEEL = kit.Look((0.78, 0.79, 0.80), 0.25, metallic=0.8)
 NYLON = kit.Look((0.92, 0.91, 0.87), 0.5)  # the nylon spacers
 PAINT = kit.Look((0.95, 0.95, 0.95), 0.6)  # the painted cutter circle and the drawn 3 in circle
 CORD = kit.Look((0.85, 0.35, 0.10), 0.8)  # the drag's braided cord
-PINE = kit.Look((0.80, 0.66, 0.45), 0.7)  # the 2x4 offcuts the pulleys and the cleat are screwed to
+PINE = kit.Look((0.80, 0.66, 0.45), 0.7)  # the 2x4 offcut the pulley and the cleat are screwed to
 WASHERS = kit.Look((0.62, 0.63, 0.66), 0.4)  # the bag of steel washers (the hanging weight)
 FLAG = kit.Look((0.98, 0.78, 0.05), 0.6)  # the bright tape flag on the cord above the weight
 # The drag's rig as it is built (README, Real-world build), drawn for the cameras only: the drag law uses PULLEY alone.
-# The cord runs level from the screw eye round the first pulley, a horizontal sheave at PULLEY whose axle stands in a
-# 2x4 offcut on the table, through the cam cleat beside it, to a second pulley clamped at the table's right edge, over
-# it and straight down to the hanging weight, a bag of washers, with a tape flag on the cord just above it. The weight
-# hangs free below the table's edge and rises as the board draws cord out.
-EDGE_PULLEY = np.array([0.560, -0.660])  # m: the second pulley's sheave, just past the table's right edge (y -0.65)
-SHEAVE_R = 0.019  # m: the pulleys' 1-1/2 in sheaves
+# The cord runs level from the screw eye through the cam cleat to the pulley, clamped on a 2x4 offcut at the bench's
+# right edge, over it and straight down to the hanging weight, a bag of washers, with a tape flag on the cord just
+# above it. The weight hangs free below the bench's edge and rises as the board draws cord out.
+SHEAVE_R = 0.019  # m: the pulley's 1-1/2 in sheave
 WEIGHT_DROP = 0.36  # m: the bag's top below the table top with the cord set snug
 BAG = (0.08, 0.04, 0.10)  # m: the bag of washers
-_OUT = (EDGE_PULLEY - PULLEY) / np.linalg.norm(EDGE_PULLEY - PULLEY)  # the cord's run from the first pulley onward
+_IN = np.array([0.06, -0.66]) / np.linalg.norm([0.06, -0.66])  # the cord's run onto the pulley (from the board)
 DARK = kit.Look((0.20, 0.20, 0.21), 0.5)
 POLYCARB = kit.Look((0.70, 0.84, 0.93), 0.05)  # the clear polycarbonate shield's edge (its face is clear: not drawn)
 ALUMINUM = kit.Look((0.74, 0.75, 0.77), 0.35, metallic=0.8)  # its anodized aluminum body
@@ -403,24 +401,16 @@ def _ring(r, w, z, look):
 
 
 def _drag_rig():
-    """The drag's pulleys, cleat, offcuts, clamp and the cord's run between the pulleys (visual only), in the bit
-    prop's frame."""
-    a = np.array([PULLEY[0] - BIT[0], PULLEY[1] - BIT[1], 0.0])
-    b = np.array([EDGE_PULLEY[0] - BIT[0], EDGE_PULLEY[1] - BIT[1], 0.0])
-    out = np.array([_OUT[0], _OUT[1], 0.0])
-    side = np.array([-_OUT[1], _OUT[0], 0.0])  # the edge pulley's axle, level and across the cord
-    back = -np.array([0.44, 0.20, 0.0]) / np.linalg.norm([0.44, 0.20])  # behind the first pulley, away from the cord
-    run = float(np.linalg.norm(b - a))
-    hub = a + 0.045 * back
-    edge = b - 0.07 * out
-    return [kit.cylinder(a + (0.0, 0.0, Z_MID), SHEAVE_R, 0.008, STEEL),  # the first pulley's sheave, level
-            kit.cylinder(a + (0.0, 0.0, Z_MID / 2), 0.003, Z_MID + 0.012, DARK),  # its axle
-            kit.box(hub + (0.0, 0.0, 0.019), (0.089, 0.038, 0.038), PINE),  # its 2x4 offcut on the table
-            kit.box(a + 0.06 * out + (0.0, 0.0, Z_MID), (0.030, 0.015, 0.012), DARK),  # the cam cleat
-            kit.cylinder((a + b) / 2 + (0.0, 0.0, Z_MID), 0.0015, run, CORD, axis=out),  # the cord between them
-            kit.cylinder(b + (0.0, 0.0, Z_MID - SHEAVE_R), SHEAVE_R, 0.008, STEEL, axis=side),  # the edge pulley
-            kit.box(edge + (0.0, 0.0, 0.019), (0.089, 0.038, 0.038), PINE),  # its 2x4 offcut at the table's edge
-            kit.box((edge[0], -0.648 - BIT[1], 0.0), (0.030, 0.012, 0.11), DARK)]  # the C-clamp holding it
+    """The drag's pulley, cleat, offcut and clamp at the bench's edge (visual only), in the bit prop's frame."""
+    p = np.array([PULLEY[0] - BIT[0], PULLEY[1] - BIT[1], 0.0])
+    into = np.array([_IN[0], _IN[1], 0.0])
+    axle = np.array([-_IN[1], _IN[0], 0.0])  # the pulley's axle, level and across the cord
+    block = p - 0.05 * into + 0.045 * axle  # the 2x4 offcut beside the cord's run, just inside the edge
+    return [kit.cylinder(p + (0.0, 0.0, Z_MID - SHEAVE_R), SHEAVE_R, 0.008, STEEL, axis=axle),  # the pulley's sheave
+            kit.cylinder(p + (0.0, 0.0, Z_MID - SHEAVE_R) + 0.012 * axle, 0.003, 0.03, DARK, axis=axle),  # its axle
+            kit.box(block + (0.0, 0.0, 0.019), (0.038, 0.089, 0.038), PINE),  # the 2x4 offcut on the bench
+            kit.box(p - 0.05 * into + (0.0, 0.0, Z_MID), (0.012, 0.030, 0.012), DARK),  # the cam cleat on it
+            kit.box((block[0], -0.645 - BIT[1], 0.0), (0.030, 0.012, 0.11), DARK)]  # the C-clamp holding it at the edge
 
 
 def _bit():
@@ -541,6 +531,36 @@ def _bin(ang):
 _DBG = {"n": 0}
 
 
+def _cord_gap(objects, J):
+    """ROUTER_DEBUG only: the smallest gap (m) between the cord's run and any gripper box or forearm or wrist box, and
+    whose it is."""
+    eye = to_world(J, EYE)
+    seg = gk.Seg((float(eye[0]), float(eye[1]), TOP + Z_MID), (float(PULLEY[0]), float(PULLEY[1]), TOP + Z_MID),
+                 CORD_R)
+    objs = {**objects, "cord": _ORIGIN}
+    co, ro = np.zeros(3), np.eye(3)
+    best = (1.0, "")
+    for g in GRIPPERS:
+        if g not in objs:
+            continue
+        o, cg, rg, _, _ = gk._hand_frames(objs, g, "cord")
+        for box in gk.hand_boxes(o):
+            d = gk._box_gap(cg, rg, box, co, ro, seg)
+            if d < best[0]:
+                best = (d, g)
+    for side in ("left", "right"):
+        for ln, boxes in LINK_BOXES.items():
+            st = objects.get(f"{side}_{ln}")
+            if st is None:
+                continue
+            cg, rg = np.asarray(st.pos, float), gk._rot(st.quat_xyzw)
+            for box in boxes:
+                d = gk._box_gap(cg, rg, box, co, ro, seg)
+                if d < best[0]:
+                    best = (d, f"{side}_{ln}")
+    return best
+
+
 def _dbg(J, ang, objects=None):
     """ROUTER_DEBUG=1: print the board's pose, the bearing contact, the traced length and the cord's pull every 20
     steps, and every step the tool points (to measure the hands' forces from the arms' give afterwards)."""
@@ -554,6 +574,9 @@ def _dbg(J, ang, objects=None):
             sys.stderr.write(f"router tcp {_DBG['n']} " + " ".join(f"{v:.5f}" for v in (*tp[0], *tp[1])) +
                              f" turn {J['board_turn']:.5f} sl {J['board_x']:.5f} {J['board']:.5f} drag {f[0]:.3f} "
                              f"{f[1]:.3f}\n")
+        if _DBG["n"] % 5 == 0:
+            gap, who = _cord_gap(objects, J)
+            sys.stderr.write(f"router cordgap {_DBG['n']} {gap * 1000:.1f} mm {who}\n")
     if _DBG["n"] % 20 == 0:
         f = drag_force_now()
         sys.stderr.write(f"router dbg {_DBG['n']}: turn {math.degrees(J['board_turn']):.1f} slides "
@@ -857,9 +880,9 @@ def _draw(J, traced=None, lift=None):
     mid, run = (eye + PULLEY) / 2, PULLEY - eye
     yaw = math.atan2(run[1], run[0])
     tr, qs = [(mid[0], mid[1], TOP + Z_MID)], [(0.0, 0.0, math.sin(yaw / 2), math.cos(yaw / 2))]
-    drop = EDGE_PULLEY + SHEAVE_R * _OUT  # where the cord leaves the edge pulley, straight down
+    drop = PULLEY + SHEAVE_R * _IN  # where the cord leaves the pulley, straight down
     z_top, z_bag = TOP + Z_MID - SHEAVE_R, TOP - WEIGHT_DROP + lift
-    yo = math.atan2(_OUT[1], _OUT[0])
+    yo = math.atan2(_IN[1], _IN[0])
     down = (-math.sin(yo / 2) * math.sin(math.pi / 4), math.cos(yo / 2) * math.sin(math.pi / 4),
             math.sin(yo / 2) * math.cos(math.pi / 4), math.cos(yo / 2) * math.cos(math.pi / 4))  # x axis pointing down
     level = (0.0, 0.0, math.sin(yo / 2), math.cos(yo / 2))
