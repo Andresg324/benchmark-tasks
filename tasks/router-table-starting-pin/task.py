@@ -157,9 +157,8 @@ PIVOT_SLIP = 0.0005  # m per control step: the pin's place on the board moving a
 CLEAR = 0.005  # m: at the end, no part of the board within 5 mm of the cutter circle
 BIN = 0.002  # m: the traced length is kept as 2 mm stretches of the curve (129 of them)
 N_BINS = int(round(ARC / BIN))
-WHOLE = N_BINS - 2  # full credit: the whole curve traced, all but two of its 129 2 mm stretches (the bearing rolls
-#                    off a corner at each end; the demo's start leaves the two at the leading end); in one feed or in
-#                    passes, each begun braced on the pin
+WHOLE = N_BINS - 2  # full credit: the whole curve traced, every 2 mm stretch but the one at each very end (the
+#                    bearing rolls off the corner there); in one feed or in passes, each begun braced on the pin
 MOST = 0.180  # m: 18 cm, 70% of the 25.8 cm curve: most of it, as from a start a few cm in from the leading end
 HALFWAY = MOST / 2  # m: 9 cm: real progress round the bearing
 HANDS = 0.076  # m: the three-inch rule of router-table manuals for hands near a bit: no part of either gripper (its
@@ -794,8 +793,8 @@ def score(objects):
     touched the zone within 7.6 cm (3 in) of the bit's axis and 5 cm of the table, or touched the drag's cord. At most
     0.75 while a gripper, forearm or wrist touches the board (within 2 mm of it). Otherwise: traced length is the
     curve's stretch the bearing passed over touching it (TOUCH, DEEP), the board flat and the cord taut, in passes
-    each begun on the pin, fed right to left. 1.0 with the whole curve traced (all but two of its 2 mm
-    stretches) and the board 5 mm clear of the cutter circle with its trailing end past the bit; 0.75 with the whole curve
+    each begun on the pin, fed right to left. 1.0 with the whole curve traced (every 2 mm stretch but the one at each
+    end) and the board 5 mm clear of the cutter circle with its trailing end past the bit; 0.75 with the whole curve
     but the board left on or before the bit, or with 18 cm traced; 0.5 with 9 cm traced; 0.25 with the curve brought onto the bearing from the pin; 0 otherwise. Where the
     arms end is not scored. Possible scores: 0, 0.25, 0.5, 0.75, 1."""
     return _score(objects)
