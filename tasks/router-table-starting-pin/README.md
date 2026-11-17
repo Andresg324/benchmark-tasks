@@ -94,9 +94,9 @@ grippers' palm and finger shapes used by the touching-the-board check):
 
 Where the arms end is not scored. Possible scores: 0, 0.25, 0.5, 0.75, 1.0.
 
-Traced length: the curve's 2 mm stretches that the bearing passed over (the curve within 0.5 mm of the bearing: touching it) in
-passes each begun on the pin (a second pass is fine if it too is braced on the pin), while fed right to left (the
-contact moving from the leading end toward the trailing end). Feeding the other way, a climb cut, counts nothing. A
+Traced length: the curve's 2 mm stretches that the bearing passed over (the curve within 0.5 mm of the bearing:
+touching it) in passes each begun on the pin (a second pass is fine if it too is braced on the pin), while fed right
+to left (the contact moving from the leading end toward the trailing end). Feeding the other way, a climb cut, counts nothing. A
 bearing-guided bit cuts exactly the stretch its bearing passes over, so the traced length is the routed length.
 
 Why these numbers, and how a real trial reads each one (the rig and filming are under Real-world build):

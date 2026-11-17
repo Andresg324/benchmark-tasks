@@ -650,9 +650,9 @@ def score(objects):
     grab. 0, irreversibly, if any part of a gripper's own shape (palm, finger bodies, pads, tips, at their present
     opening) touched the zone within 7.6 cm (3 in) of the bit's axis and 5 cm of the table. At most 0.75 while a gripper
     touches the board (its palm or fingers within 2 mm of it). Otherwise: traced length is the curve's stretch the
-    bearing passed over (within 0.5 mm of it: touching) in passes each begun on the pin, fed right to left. 1.0 with the whole
-    curve traced (every 2 mm stretch but the one at each end) and the board 5 mm clear of the cutter circle with its
-    trailing end past the bit; 0.75 with the whole curve but the board left on or before the bit, or with 18 cm
+    bearing passed over (within 0.5 mm of it: touching) in passes each begun on the pin, fed right to left. 1.0 with
+    the whole curve traced (every 2 mm stretch but the one at each end) and the board 5 mm clear of the cutter circle
+    with its trailing end past the bit; 0.75 with the whole curve but the board left on or before the bit, or with 18 cm
     traced; 0.5 with 9 cm traced; 0.25 with the curve brought onto the bearing from the pin; 0 otherwise. Where the
     arms end is not scored. Possible scores: 0, 0.25, 0.5, 0.75, 1."""
     return _score(objects)
