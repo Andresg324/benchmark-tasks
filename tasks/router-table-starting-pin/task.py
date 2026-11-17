@@ -857,12 +857,9 @@ def _draw(J):
 # over, then both feed it round the bearing).
 TIP = PAD_TIP_PAST_TCP  # the tool point is this far above the pad tips
 PZ = TOP + GAP + T + TIP - 0.004  # the pads 4 mm into the board's top: pressing on it
-PZ_FIRM = TOP + GAP + T + TIP - 0.020  # aimed 20 mm in: a firm press (about 5-8 N, the arm giving 2.3-3.8 mm/N
-#                                       downward there), so the pads' grip carries the 3-4 N push against the drag
 # The arm gives under a sideways push at the pads (J K^-1 J^T with the YAM's 80 and 10 N*m/rad servos, at the pads
-# over the board): 6.2-7.6 mm per newton (here 6.7-7.1), mostly in the wrist. A hand that pushes the board with a few newtons must be
-# aimed that far past where the pads are; aimed at the pads, it holds nothing.
-GIVE = np.array([[6.8, -0.8], [-0.8, 7.0]]) * 1e-3  # m/N, world x and y
+# over the board): 6.2-7.6 mm per newton, mostly in the wrist. A hand that pushes the board with a few newtons must be
+# aimed that far past where the pads are (_give, _aim); aimed at the pads, it holds nothing.
 
 
 def _board_world(turn, slides, p):
@@ -872,20 +869,6 @@ def _board_world(turn, slides, p):
 def _point_at(turn, slides, p, z=PZ):
     w = _board_world(turn, slides, p)
     return (float(w[0]), float(w[1]), z)
-
-
-def _press_at(turn, slides, z=PZ):
-    return _point_at(turn, slides, PRESS_PT, z)
-
-
-def _lead(turn, force):
-    """Where to aim the hand, past the pads (board frame, m), for it to push the board with `force` (board frame, N)."""
-    return _rot(-turn) @ GIVE @ _rot(turn) @ np.asarray(force, float)
-
-
-# the pads press on the board's middle along its length, 1.2 cm behind its center (8.7 cm in from the top of the
-# curve): a push there barely turns the board (a board pushed at one point swings until its center trails behind)
-PRESS_PT = np.array([CENTRE[0] - 0.012, CENTRE[1]])
 
 
 def _feed_slides(phi, into=0.0005, turn=0.0):
