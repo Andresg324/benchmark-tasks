@@ -97,9 +97,9 @@ CHIP_LIFT = 0.0  # m: each piece lies on the plate, its underside on the steel
 # edge, so the blade breaks every piece free. In a real trial the press sets the bond: each piece is pressed with a
 # 1 L water bottle (1 kg) standing on a measuring cup for 3 s, the same every trial, and the qualification checks that
 # the scraper frees each piece in one stroke. Break torque = BOND_FORCE x BOND_PEEL_ARM (2.5 mm): the scraper's edge
-# driven under a piece's side lifts that side and peels the piece off, as a cook's scraper does. A press from above (a
-# fingertip, a heel, the flat of the blade) pushes the piece onto the steel beneath it, which carries the press, so it
-# does not peel the piece (and a hand on the dough scores 0 anyway).
+# driven under a piece's side lifts that side and peels the piece off, as a cook's scraper does. A hard press from above
+# can free a piece too (a fingertip driven 8 mm into a corner did, in the simulator): with the blade that is scraper
+# use; with a hand the trial scores 0, and with the handle the piece is not credited.
 BOND_FORCE = 0.8  # N per piece
 BOND_PEEL_ARM = 0.0025  # m
 # PhysX tests a joint's break force against its own internal measure of the joint's load, not the push on the piece,

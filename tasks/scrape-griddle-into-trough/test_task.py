@@ -501,10 +501,20 @@ def main():
     check([bool(v[0]) for v in M.where(np.array([[0.30, M.PLATE_Y0 - 0.0015, M.PLATE_Z + M.GUARD_H + 0.003, 0, 0, 0,
                                                   1]]))] == [False, True, False],
           "a piece resting on a splash guard's top: left on the griddle")
-    # the bond peels under an edge driven beneath a piece; a press from above is carried by the steel under it
+    # the bond peels under an edge driven beneath a piece; each piece lies on the steel
     check(M.BOND_PEEL_ARM == 0.0025 and M.CHIP_LIFT == 0.0, "break torque = bond x 2.5 mm (an edge under a piece "
-                                                            "peels it), and each piece lies on the steel, which "
-                                                            "carries a press from above")
+                                                            "peels it); each piece lies on the steel")
+    # a piece pressed loose from above by the handle, then pushed over by the blade: not freed by the blade
+    fresh()
+    d = M.START_DEBRIS.copy()
+    d[0, 2] -= 0.0006  # pressed down 0.6 mm: its bond lets go under the handle
+    r = rz(math.pi) @ M.R_REST
+    org = np.array([d[0, 0] + M.HANDLE[0][0], d[0, 1], d[0, 2] + M.PIECE_T / 2 + M.HANDLE[1][2] / 2])
+    pressed = [objs(org, r, True, 0.0, debris=d.copy())]
+    sts, d = scrape(ALL, d0=d)
+    s = run(pressed + sts, d, set_down(40, pos=SPOT_POS))
+    check(not M._L.freed[0] and s == 0.75, f"a piece pressed loose with the handle, then scraped in: not credited, "
+                                           f"0.75 ({s})")
 
     # -- gouge cap ----------------------------------------------------------------------------------------------------
     fresh()

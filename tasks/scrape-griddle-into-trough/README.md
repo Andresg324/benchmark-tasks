@@ -295,10 +295,11 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
   or tip on its own, and the held scraper's edge frees it. There is no published bond for modeling compound on
   steel; in a real trial the press sets it (a 1 kg water bottle on the cup for 3 s, the same for every piece), and
   the qualification checks that the scraper frees each piece in one stroke. The break torque is 0.8 N at 2.5 mm: the
-  scraper's edge driven under a piece's side lifts that side and peels the piece off, as a cook's scraper does. A
-  press from above (a fingertip, a heel, the flat of the blade) pushes the piece onto the steel it lies on, which
-  carries the press, so it does not free the piece: in the simulator, fingertips driven 8 mm down into the corners of
-  three pieces for 2 s each freed none (PRESS_RESULT). A hand on the dough scores 0 in any case.
+  scraper's edge driven under a piece's side lifts that side and peels the piece off, as a cook's scraper does. A hard
+  press from above can also free a piece: in the simulator, a fingertip driven 8 mm down into a piece's corner freed
+  it. Done with the blade or its neck, that is scraper use and the piece can still be credited if the blade then
+  carries it over the lip; done with a hand, or with the handle, the piece is not credited, and a hand on the dough
+  scores the trial 0.
 - **Break force in PhysX.** PhysX tests a joint's break force against its own measure of the joint's load, not the
   push on the piece, so the task scales the bond it writes (`BREAK_CAL` = 32). Pushed with a slowly rising force in
   the simulator, bonded pieces came free at 0.9 to 1.8 times the bond (0.7 to 1.4 N). A broken bond is not restored by
