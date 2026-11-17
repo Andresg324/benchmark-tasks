@@ -294,8 +294,6 @@ Build steps (details and tolerances in the protocol below):
 6. Set the phone on its overhead stand about 60 cm above the board, the whole board in frame.
 7. Put a box of pastry in a household freezer.
 
-Build time: about 1 hour.
-
 ## Real-world evaluation (reproducible protocol)
 
 Every real trial starts from the same measured piece (11.5 x 24 cm, 4.8 mm) and is scored on the same points as the
@@ -306,7 +304,7 @@ between the arm bases (x forward, y to the robot's left), measured with the stee
 temperature. Anyone handling the pastry wears AMMEX X3 disposable nitrile gloves (a fresh pair each session and
 whenever one tears); the grippers wear their Press'n Seal covers.
 
-Food safety: raw flour and raw dough can carry E. coli and Salmonella, and the FDA and CDC advise not eating raw
+Food safety: raw flour and raw dough can carry harmful bacteria, and the FDA and CDC advise not eating raw
 flour or raw dough. The trial pastry is never eaten: it is thrown away at the end of the session. Handlers wear
 gloves, and the board, pin, strips, straightedge and pizza wheel are washed with hot soapy water after the session.
 
@@ -331,7 +329,7 @@ points: in each band, 1 cm inside the pastry's near and far edges as they lie af
 with the steel tape. A row point within 2 cm of an end point is left to the end point. The demo's sheet gives 30 (3
 row points and 2 end points a band); a longer sheet adds row points, a shorter one has fewer.
 
-**Session start (once per session, about 40 minutes, almost all of it the thaw).**
+**Session start (once per session).**
 1. Take one sheet of Pepperidge Farm Puff Pastry Sheets (17.3 oz) from the household freezer and put the other back at
    once; record the box's lot code. Thaw it unwrapped at room temperature for 35 minutes, as the box directs ("Thaw
    pastry sheet(s) until the pastry unfolds easily no more than 40 minutes"; "Pastry should unfold easily but still be
@@ -343,7 +341,7 @@ row points and 2 end points a band); a longer sheet adds row points, a shorter o
    both flush with the barrel's ends within 1 mm (a ring outside that, torn or loose is replaced as a pair).
 
 **Each trial.**
-1. Form the start piece (about 3 minutes). Lightly flour the rolling pin and the board. Lay the two guide strips along x on the board and set the pin on them, so
+1. Form the start piece. Lightly flour the rolling pin and the board. Lay the two guide strips along x on the board and set the pin on them, so
    the barrel rests on both strips and the rings hang just outside them (the strips' outer edges against the rings'
    inner faces, about 24.8 cm between the strips). Put the dough between them, centered on x 24 (for the session's
    first trial the unfolded sheet; after that the last trial's rolled sheet and all the trimmings, balled together),
@@ -353,13 +351,13 @@ row points and 2 end points a band); a longer sheet adds row points, a shorter o
    the next trial. Read the piece's thickness with the caliper jaws at the middle of each edge: average 4.3 to 5.3 mm,
    otherwise roll it again between the strips. If the dough turns warm or sticky, it goes in the refrigerator for 10
    to 15 minutes first, as the box says.
-2. Set up (about 1 minute). Lay the pin on its rings with its axis over the x 35 ticks (within 5 mm), centered. Fit
+2. Set up. Lay the pin on its rings with its axis over the x 35 ticks (within 5 mm), centered. Fit
    fresh covers on the grippers: a 10 x 10 cm piece of Glad Press'n Seal over each of the four fingers' pad and tip,
    sticky side in, pressed to seal around the finger's back and smooth over the pad's face (one layer, no folds), and
    one more piece over each palm face between the fingers. Take the before photo, with a card in frame giving the
    trial number, the lot code, how many times the session's dough has been rolled, and the piece's average thickness.
-3. Run the trial: at most 2,400 steps (2 minutes).
-4. Measure (at most 5 minutes from the pin's set-down; start the phone's timer when the pin comes to rest).
+3. Run the trial: at most 2,400 steps.
+4. Measure (all points read within 5 minutes of the pin's set-down, the scored reading window; start the phone's timer when the pin comes to rest).
    - Let go: the last 1 s of the trial video shows no gripper finger touching the pin.
    - Pin: lay the phone along the top of the barrel, steadied by a fingertip on the phone, and read the level app
      (zeroed on the bare board): within 3 degrees. Hold the steel tape upright beside each ring: its lowest point is
@@ -368,7 +366,7 @@ row points and 2 end points a band); a longer sheet adds row points, a shorter o
    - Points: band by band, lay the steel tape along the band's line, hooked on the board's front edge. At each point,
      hold the caliper upright with its beam across the band, push the depth rod through the pastry to the board, slide
      the beam down until its end just touches the pastry's top (the hand holds the caliper's weight), and read it to
-     0.01 mm. About 6 s a point and 10 s a band, about 4 minutes for the demo's 30 points. A helper writes the readings
+     0.01 mm. A helper writes the readings
      down (or the phone records the reader's voice). A spot where pastry stuck to the pin and pulled away, at a point,
      is off spec.
    - Repeats: re-read three points (the middle two of the middle row and one end point) in their holes: each within
@@ -377,12 +375,11 @@ row points and 2 end points a band); a longer sheet adds row points, a shorter o
    of each other, all pastry on the board, and the pin down and let go for 1.0; the 0.5 and 0.25 tiers as above; a
    hole or tear on the after photo caps the score at 0.5. The score uses the sheet and the pin only; the hands and the
    sheet's length are free.
-6. Reset (about 2 minutes): unwrap the grippers' covers and throw them away, wipe each pad, tip and palm face with a
+6. Reset: unwrap the grippers' covers and throw them away, wipe each pad, tip and palm face with a
    dry cloth and check by eye that they are clean and dry; brush the pin's barrel and rings with a dry pastry brush;
    ball the rolled sheet together with the trimmings for the next trial and scrape the board.
 
-A trial cycle takes about 14 minutes: about 4 minutes to form and set up, at most 2 rolling, at most 5 measuring and
-about 2 of reset. The dough is re-worked between trials; the hand check above was on re-rolled dough, as trials use it. Trials stay
+The dough is re-worked between trials; the hand check above was on re-rolled dough, as trials use it. Trials stay
 comparable because the score reads only the final thickness, evenness
 and the pin's state, not the force (the offline check above gives the same score from 0 to 15 kPa), and every trial
 starts from the same measured piece. No reuse limit is set: nothing measured gives a basis for one, and the card
@@ -408,7 +405,7 @@ records each trial's rolling count. At the end of the session the dough is throw
 | Grip through the wrap | pin held by its handles, lifted 10 cm and shaken 5 s | no slip | by eye, once per rig | protocol |
 | First-pass force | the sim's 3.6 kg (35.6 N, 15 kPa) | peak recorded beside it | kitchen scale (10 kg) under the board, once per rig, by the rig's builder | protocol |
 | First-pass force, rig reading | hand check (Nov 17, 2026): Pillsbury Original Crescent dough, re-balled and re-rolled as trials use it, 40 min at room temperature, bare cutting board, rolled without rings | peak about 3.0 to 3.5 kg (about 30 to 34 N) | kitchen scale | rig log |
-| Reading window | all points, about 6 s each plus 10 s a band (30 on the demo's sheet) | within 5 min of the pin's set-down | phone timer | protocol setting |
+| Reading window | all points (30 on the demo's sheet) | within 5 min of the pin's set-down | phone timer | protocol setting |
 | Repeat readings | three points re-read in their holes | within 0.05 mm | caliper | protocol |
 | Pin down (scored) | level, on its rings | within 3 degrees; rings within 5 mm of the surface | level app, steel tape | scoring |
 | Let go (scored) | no finger on the pin | last 1 s of the video | video | scoring |
