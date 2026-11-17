@@ -950,23 +950,26 @@ def _wrench_phase(st):
     add("wrench: the cup in front of the filter", 2.2, on(0.03, True))
     st["tfix"] = np.zeros(3)
     st["trfix"] = np.eye(3)
-    for _ in range(3):
-        def center():  # where is the cap, and which way does it point? aim it onto the filter's axis, square to it
+    for k in range(7):
+        def center(square=k < 2, out=0.03 if k < 5 else 0.016):
+            """Where is the cap, and which way does it point? Aim it onto the filter's axis, and (the first two
+            looks) square it to it; the rest only center it (squaring it moves the hands), the last two with the
+            teeth 3.5 mm short of the flutes' ends (the cup clears the flutes by only 0.4 mm)."""
             from yam_arena.urdf import axis_angle_matrix
             fp, fa, _ = _filter_now()
             o = _obj()
             if o is not None and CAP in o:
                 cp, cr = _pose(o, CAP)
-                off = cp - (fp + fa * (CAN_H + 0.0305))
+                off = cp - (fp + fa * (CAN_H + 0.0005))
                 st["tfix"] = st["tfix"] - 0.8 * np.clip(off - np.dot(off, fa) * fa, -0.01, 0.01)
                 have, want = cr[:, 2], np.asarray(fa, float)  # the cap's axis out of its back: along the filter's
                 c = np.cross(have, want)
                 sn = float(np.linalg.norm(c))
-                if sn > 1e-6:  # (the cup clears the flutes by 0.4 mm: it goes on only within about 3 degrees)
+                if square and sn > 1e-6:  # (the cup goes on only within about 3 degrees)
                     st["trfix"] = axis_angle_matrix(c / sn, 0.8 * math.atan2(sn, float(np.dot(have, want)))) \
                         @ st["trfix"]
-            return on(0.03, True)()
-        add("wrench: line the cap up", 0.8, center)
+            return on(out, True)()
+        add("wrench: line the cap up" if k < 5 else "wrench: line the cap up closely", 1.2, center)
     add("wrench: cup over the flutes", 1.4, on(-0.002, False))
     add("wrench: seated", 0.6, on(-0.002, False))
 
