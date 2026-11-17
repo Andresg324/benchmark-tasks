@@ -189,7 +189,7 @@ def _filter_parts():
     return tuple(meshes), tuple(cols)
 
 
-# The filter starts standing on its gasket in the drip pan, left of the engine (as a new filter is set down).
+# The filter starts standing on its gasket on the bench, at the robot's left (as a new filter is set down).
 FILTER_P0 = (0.300, 0.300, TOP + 0.001)  # on the bench, left of the wrench and clear of the crankcase
 R_BASE = _rot_y(-90.0)  # the mount's frame: origin at the land's center, z out along the nipple (world -x), x up
 _b = R_BASE.T @ (np.array(FILTER_P0) - np.array((X_LAND, Y_F, Z_F)))
