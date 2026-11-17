@@ -246,7 +246,7 @@ Parts:
   ring (15-degree marks), motor oil for the gasket, shop towels, an oily-waste bag.
 
 Tools: use a drill with an 8.5 mm bit and a step drill bit that reaches 21 mm, a 30 mm wrench and a 30 mm 3/8-inch-drive socket for the M20
-nuts, a 3/8-inch-drive click torque wrench that covers 18 and 30 N·m (Tekton 24335, 10-80 ft·lb), a steel rule, a tape
+nuts, a 1/2-inch-drive click torque wrench that covers 18 and 30 N·m (e.g. Tekton 24335, 10-150 ft·lb), a steel rule, a tape
 measure and a spirit level.
 
 Build steps:
