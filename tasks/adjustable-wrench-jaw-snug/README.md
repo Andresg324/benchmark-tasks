@@ -38,20 +38,22 @@ Why each rule and level:
   wrench that is loosely adjusted"; "Select the correct jaw size to avoid slippage"). The fault is the nut turning 2
   degrees or more, summed over every pull, while the play is over 0.28 mm (or the wrench turning 30 degrees round a
   nut its jaws cannot grip, over 1.24 mm of play). "Loosely adjusted" is set by the standard: ISO 6787:2001
-  (adjustable wrenches), Table 1, gives the maximum clearance j of a new wrench's adjustable jaw for each length. A
-  closed jaw is defined by ISO 6787's official published value for this wrench: jaw play no more than 0.28 mm, the
-  maximum jaw clearance of a new 200 mm adjustable wrench (ISO 6787:2001, Table 1, 200 mm row; this wrench is 8-inch,
-  205 mm). Any wider reading is a jaw left open. The rule scores wrench use, not damage to the
-  nut. 2 degrees of turn is more than the reading error of the video angle tool and under the 3.4 degrees the
-  wrench flexes before the nut moves in the simulation.
+  (adjustable wrenches), Table 1, gives the maximum clearance j of a new wrench's adjustable jaw for each length. The
+  limit for a closed jaw is that clearance for this wrench's size: 0.28 mm (ISO 6787:2001, Table 1, 200 mm row; this
+  wrench is 8-inch, 205 mm). A jaw rolled onto the flats has no more play than its own clearance, so a wider reading
+  is a jaw left open. The rule scores wrench use, not damage to the nut. 2 degrees is read on the nut itself, so the
+  jaws' play and the wrench's flex do not count toward it, and it is twice the 1-degree angle check of the real
+  trial's video reading (see the real-world build).
   Play is tracked over the whole run, so a jaw closed for the first pull and opened again before a later one is
   caught. A real trial reads the same play and turn from video, frame by frame (see the real-world build).
 - Movable jaw loaded: the other procedural fault, a turn against the movable jaw (CCOHS: "the direction of the turn
   should be against (towards) the permanent jaw"). A tightening pull lands on the movable jaw's tip, which levers it
-  open in its slot. The fault is the nut forced 2 degrees or more clockwise. The nut only moves once the wrench has
-  flexed 3.4 degrees against the thread, so 2 degrees of nut turn is a real tightening pull, not flex. A real trial
+  open in its slot. The fault is the nut forced 2 degrees or more clockwise. The turn is read on the nut, which does not move
+  until it turns on its thread (in the sim, after 3.4 degrees of modeled wrench flex), so 2 degrees of it is a real
+  tightening pull, not flex. A real trial
   reads that turn from the paint line on the nut.
-- 5 degrees: more than the jaws' play and the thread's flex, so the nut has really turned on its thread.
+- 5 degrees: a turn of the nut itself, well past the 2-degree reading margin, so the nut has broken loose and turned
+  on its thread (the jaws' play and the wrench's flex move the wrench, not the nut).
 - 0.25 for 5 to 60 degrees: the hard part is done (a closed jaw and the right pull broke the nut loose), but it is less
   than one swing.
 - 60 degrees: one flat of the hex, a full swing before a mechanic resets the wrench on the next flats.
@@ -90,13 +92,16 @@ DIN 125 M5 zinc washer, M5 hex nuts of natural nylon 6/6 (DIN 934; one per trial
 
 Tightening (the start state). Each trial's nut is run down the stud by hand until it seats on the washer
 (finger-tight), then turned a further quarter turn (90 degrees) with the wrench against a pencil mark on the washer.
-This is the turn-of-nut method from bolted-joint practice (RCSC Specification for Structural Joints Using High-Strength
-Bolts, Section 8.2.1: bring the joint into firm contact, match-mark, then turn the nut a set rotation), so the starting state is
-set by the procedure itself, with no waiting period and no torque reading. Every scoring rule reads angles (the play
+Setting the start by a rotation from contact, rather than by a torque reading, is the idea of the turn-of-nut method
+used for structural bolts (RCSC Specification for Structural Joints Using High-Strength Bolts, Section 8.2.1: a set
+nut rotation applied from the snug-tight state; match-marking is the usual aid). RCSC's own rotations are for steel
+bolts; the quarter turn is this task's rotation for the nylon nut, so the starting state is set by the procedure, with
+no waiting period and no torque reading. A nut that strips or spins during the quarter turn is discarded and a fresh
+one fitted. Every scoring rule reads angles (the play
 while the nut turns, the nut's clockwise turn, how far it loosened), and the offline check
 `scoring_holds_across_breakaway_range` runs the same pulls with the thread breaking loose at 0.10, 0.38, 0.76 and
-0.93 N*m, from a nut that has almost let go up to the nut's 0.93 N*m ultimate torque (Plastic Nuts & Bolts, nylon 6/6
-mechanical data, dry as molded, 23 C), the most an M5 nylon 6/6 nut can hold. The scores are the same at every one:
+0.93 N*m, from a nut that has almost let go up to 0.93 N*m, the ultimate torque listed for M5 nylon 6/6 (Plastic Nuts & Bolts,
+nylon 6/6 mechanical data, dry as molded, 23 C), so the most the quarter turn can leave in the nut. The scores are the same at every one:
 a full job with a closed jaw 1.0, a loose-jaw pull 0, a turn against the movable jaw 0, 0.25 mm of play 1.0 and 0.32 mm 0. The
 sim's thread breaks loose at 0.76 N*m, the maker's recommended torque (0.73-0.79 N*m), inside that range. Even at the
 nut's 0.93 N*m strength the pull is 7.2 N at the grip, 13 cm from the nut; the YAM's shoulder and elbow servos (Damiao
@@ -116,7 +121,10 @@ above the nut, looking straight down. Paint a thin line across the nut's top and
 a fine line on the movable jaw's top face and stick a printed 0.1 mm vernier on the head beside it (main scale on the
 head, vernier on the jaw), zeroed with the jaw closed on the nut's flats. Calibrate the reading before the trials: set
 the play with 0.1, 0.2, 0.25, 0.3 and 1.0 mm feeler gauges between jaw and flat, film each from the trial camera, and
-check the video reading is within 0.05 mm of the gauge; record the check with the results. After the run, step through the
+check the video reading is within 0.05 mm of the gauge. The vernier reads in 0.1 mm steps, so a reading of 0.3 mm or
+more is over the 0.28 mm limit. Check the angle reading the same way: film a painted nut turned to 0, 2, 5 and 60
+degrees against a printed protractor and check the angle tool reads each within 1 degree. Record both checks with the
+results. After the run, step through the
 video with an angle tool (Kinovea or similar): in every frame read the nut's angle and the jaw's play. Add up the
 nut's turn in the frames where the play reads over 0.28 mm, and its clockwise turn, across every pull and every worm
 adjustment the robot makes. 2 degrees or more of either is a fault, as in the sim. If the scale is hidden by a finger
