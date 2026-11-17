@@ -14,7 +14,8 @@ The bit is a stand-in, in the sim and in the real trials alike, so that nothing 
 on a failed run: no cutter is present and nothing spins or cuts. At the bit's place a smooth ball bearing of the bit's
 own bearing's size turns on a fixed shoulder screw, with the 1.25 in cutter's circle painted round it. The cut's
 resistance is a one-way hanging-weight drag on a cord to the board's trailing end: a constant 3.0 N against the
-feed, the cutting force the Curti et al. (2021) model gives for this pass at hand-feed speeds (Resistance). The pass is read from the stretch of edge
+feed, matched to the mean cutting force against the feed that the Curti et al. (2021) model gives for this pass at
+the demo's feed (Resistance). The pass is read from the stretch of edge
 the bearing touched while the drag pulled, in the scorer's 2 mm pieces; on the rig the bearing is coated in blue
 spotting paste, so the edge itself records that stretch, read on the board after the trial along with the top
 video.
@@ -191,15 +192,18 @@ The sim applies the rig's drag, and the rig's drag is sized to the real cut:
   cord's own geometry, the same on the rig as in the sim); the hands' plan pushes 1-3.5 N onto the bearing. The cord
   runs from the eye in the board's trailing end to the pulley, and the hands' plan balances the turn its line puts on
   the board.
-- Where 3 N comes from: the pass's cutting force (`python cutting_force.py` prints the computation). Curti, Marcon, Denaud, Togni, Furferi and Goli (2021),
-  "Generalized cutting force model for peripheral milling of wood, based on the effect of density and fiber
-  orientation", European Journal of Wood and Wood Products 79:667-678, Table 5 (up-milling, straight edge): each
-  tooth's force is (Ks h + Int) ap, with Ks and Int per unit of wood density as functions of the grain angle. Run at
-  the conditions of Goli et al. (2003, CNC routing of oak and Douglas fir), it gives 9-11 N at 0.5 mm and 17-22 N at
-  1.5 mm depth over a 30 mm cut height, which matches their measured range. For this pass (black cherry at 561
-  kg/m3, a 1.25 in two-flute cutter at 22,000 rpm, 9.5 mm wide as set by the bearing, 3.2 mm high), fed by hand at 0.25-1 m/min,
-  it gives 2.9-3.2 N against the feed averaged over a turn, across the 0-25 degree grain angles along this curve. The
-  cord applies a constant 3.0 N, inside that range.
+- Where 3 N comes from: the pass's mean cutting force against the feed (`python cutting_force.py` prints the
+  computation). Curti, Marcon, Denaud, Togni, Furferi and Goli (2021), "Generalized cutting force model for
+  peripheral milling of wood, based on the effect of density, uncut chip cross section, grain orientation and tool
+  helix angle", European Journal of Wood and Wood Products 79:667-678 (doi:10.1007/s00107-021-01667-5), Eq. 4 and
+  Table 5 (up-milling, straight blade): each tooth's force is (Ks h + Int) ap times the wood's density, with Ks and
+  Int functions of the grain angle at the mean chip position. For this pass (black cherry at 561 kg/m3; a 1.25 in
+  two-flute cutter at 18,000 rpm, Freud's maximum speed for 1-1/4 in bits; 9.5 mm wide as set by the bearing;
+  3.2 mm high), with the grain at 10-60 degrees to the cut at the mean chip position along this curve, the model
+  gives 3.0-3.1 N against the feed at the demo's 0.3 m/min feed and 3.4-3.9 N at a 2 m/min hand feed. The model was
+  fitted on mean chips of 40-100 um; this pass's mean chip is 4 um at the demo's feed and 29 um at 2 m/min. The cord
+  applies a constant 3.0 N against the feed, matched to the model's mean cutting force against the feed at the
+  demo's feed.
 - Why 1/8 in high. Router makers' manuals cap one pass at 1/8 in: Ridgid R2900, "do not exceed 1/8 in. depth of cut
   in a single pass, regardless of the bit size or the softness or condition of the workpiece"; Ryobi RE180PL, cuts "at a
   depth not exceeding 1/8 in. (3.2 mm)", deeper ones in several passes. Woodworking guidance (Woodcraft, Fine
@@ -237,7 +241,7 @@ the midpoint between the arm bases (x forward, y to the robot's left, table top 
 
 ### Tools
 
-Use a drill with a 1/4 in bit, two C-clamps, a band saw, a digital luggage scale (10 g steps), a kitchen scale, a
+Use a drill with a 1/4 in bit, two C-clamps, a band saw, a digital hanging scale reading in 5 g steps (a postal or fishing scale), a kitchen scale, a
 protractor, a combination square, a steel rule and a 1/8 in drill bit as a height gauge.
 
 ### Build steps
@@ -262,9 +266,9 @@ protractor, a combination square, a steel rule and a 1/8 in drill bit as a heigh
    bright tape round the cord just above the weight, in view of the side camera.
 7. Fill the zip-top bag with washers to 0.300 kg (0.300 x 9.81 = 2.94 N) and hang it on the S-hook from the
    cord, which runs up through the cleat and over the pulley.
-8. Trim the drag: hook the luggage scale to the cord's board end and draw it slowly away from the pulley. It reads the
-   weight plus the pulley's and cleat's drag. Add or take out washers until it reads 0.30-0.31 kg, which is
-   3.0 +/- 0.1 N at the board: the sim's 3.0 N (task.py `CORD_N`). Then pencil-mark the cord at the cleat's jaws,
+8. Trim the drag: hook the hanging scale to the cord's board end and draw it slowly away from the pulley. It reads
+   the weight plus the pulley's and cleat's drag. Add or take out washers until it reads 0.305-0.310 kg, which is
+   3.0 +/- 0.05 N at the board: the sim's 3.0 N (task.py `CORD_N`). Then pencil-mark the cord at the cleat's jaws,
    draw it out 2 cm and let go: the mark must stop within task.py's `CATCH` of where it was released, read with
    the steel rule; if it runs back further, clean or replace the cleat.
 9. Cut the boards, once: band-saw each board to 25 x 15 cm and one long side to a 30 cm radius from one template, within
@@ -325,7 +329,7 @@ lasts a trial and the band records the stretch the bearing passed over.
 | Stand-in bearing | 12.7 mm across, 4.8 mm tall | catalog size | R188-2Z (1/4 x 1/2 x 3/16 in); the bit's bearing is 1/2 in across |
 | Bearing height above the table | 3.2 to 8.0 mm | 0.2 mm below the sim's 3.4 to 8.2 mm | 1/8 in nylon spacer under it, checked with a 1/8 in drill-bit shank |
 | Bearing axis | the bit's axis (x 33, y 6 cm) | 1 mm | shoulder screw in a hole drilled there |
-| Drag at the board | 3.0 N toward the pulley while the cord is taut, 0 once it runs back past the catch | 0.1 N, set on the luggage scale | task.py `CORD_N`, `drag_load`; 0.300 kg weight; the cut it stands for: 2.9-3.2 N at 0.25-1 m/min (Curti et al. 2021, cutting_force.py) |
+| Drag at the board | 3.0 N toward the pulley while the cord is taut, 0 once it runs back past the catch | 0.05 N, set on the hanging scale | task.py `CORD_N`, `drag_load`; 0.300 kg weight; the model's mean cutting force against the feed for this pass: 3.0-3.1 N at the demo's 0.3 m/min feed (Curti et al. 2021, cutting_force.py) |
 | Cleat catch | the cams grip as the cord starts back | task.py `CATCH`, steel rule on a pencil mark | task.py `CATCH` |
 | Pulley | x 36, y -40 cm, sheave top level with the screw eye | 1 cm | task.py `PULLEY`; the cord within 8.1 degrees of the feed along it |
 | Screw eye | trailing end face, mid-thickness, 1 cm in from the curve | 2 mm | task.py `EYE` |
