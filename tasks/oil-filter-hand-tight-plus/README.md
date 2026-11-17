@@ -226,13 +226,13 @@ bases (x forward, y to the robot's left, bench top at z 0), as in the sim.
   10 cm, is through-bolted to the panel's front with four M8 bolts, washers and nuts, its center at y 5, z 13.
 - Nipple: a Mishimoto MMSPA-M20 stainless steel adapter stud (sold to pass through an oil-filter sandwich
   plate; M20 x 1.5 thread on both ends, the filter's thread: the K&N KN-204 listing gives M20 x 1.5 and K&N
-  cross-references it to Kawasaki 16097-0007). Before building, confirm it is hollow (or drill it) and measure its
-  length. It passes through a 20-21 mm hole in the plate and the panel, level and square to the plate,
-  pointing at the robot (x toward the arms), its axis at y 5, z 13, and is held by a nut on each side with
-  thread-locking compound. A 76 mm steel washer stack, 8 mm thick, under the front nut is the gasket land (the
-  sim's boss), so the filter's gasket seats 0.8 cm in front of the panel. The stud sticks out 7.5 mm past the land;
-  set it to that with the rear nut (or washers behind the plate). Through-bolted plate, two nuts and the clamped base take the 18 N·m (and the 29 N·m of an
-  over-tightened filter) without turning; check it once with the torque wrench at 30 N·m before the first trial.
+  cross-references it to Kawasaki 16097-0007). It passes through a 21 mm hole in the plate and the panel, level and
+  square to the plate, pointing at the robot (x toward the arms), its axis at y 5, z 13. A nut behind the panel and
+  a thin M20 x 1.5 jam nut (under 8 mm) on the plate's face clamp it, with thread-locking compound; the two nuts set
+  its thread to stand 15.5 mm proud of the plate face. Round the jam nut, a 76 mm steel ring 8 mm thick, screwed to
+  the plate, is the gasket land (the sim's boss): the thread stands 7.5 mm past it, as in the sim, and the filter's
+  gasket seats 0.8 cm in front of the plate. The through-bolted plate, the two nuts and the clamped base take the
+  18 N·m (and the 29 N·m of an over-tightened filter) without turning; check it once with the torque wrench at 30 N·m before the first trial.
 - Frame cross tube: a length of 1-inch Schedule 40 steel pipe (33.4 mm across, the sim's 32 mm within 2 mm) running
   across under the filter at x 41.8 from y -12 to 20, its top 4.5 cm under the filter's can (z 5.2), held at both
   ends on wooden blocks with pipe straps.
@@ -261,7 +261,7 @@ bases (x forward, y to the robot's left, bench top at z 0), as in the sim.
 - Room 20-24 degrees C.
 - Torque spec source: Kawasaki Teryx4 750 owner's manual, torque table (p. 101): "Oil Filter 18 N·m (1.8 kgf·m,
   13 ft·lb)", the gasket lightly oiled.
-- Small items: plywood, wood screws, M8 bolts, nuts and washers, thread-locking compound, pipe straps, wooden blocks,
+- Small items: plywood, wood screws, M8 bolts, nuts and washers, an M20 x 1.5 nut and thin jam nut, thread-locking compound, pipe straps, wooden blocks,
   C-clamps, black spray paint, paint pen, tape, shop towels, oily-waste bag.
 
 The robot meets the same clearances in the rig as in the sim, each within the tolerance below (measured with a steel
@@ -270,9 +270,9 @@ rule and a level when the rig is built, and checked before each session):
 | What the robot meets | Sim | Rig | Tolerance | Source |
 |---|---|---|---|---|
 | Nipple's axis | level, at x 45.5 (land), y 5, z 13, pointing at the robot | nipple through the plate, set with a level | ±5 mm, ±2 degrees | parts diagram E1710 (direction); position set for the robot |
-| Engine face behind the land | 8 mm | washer stack | ±1 mm | estimated |
-| Gasket land | 76 mm across | 76 mm washer stack | ±2 mm | estimated |
-| Nipple past the land | 7.5 mm, M20 x 1.5 | MMSPA-M20 stud, set with washers or the nut | ±1 mm | thread: K&N KN-204 listing (M20 x 1.5) |
+| Engine face behind the land | 8 mm | 8 mm steel ring | ±1 mm | estimated |
+| Gasket land | 76 mm across | 76 mm steel ring | ±2 mm | estimated |
+| Nipple past the land | 7.5 mm, M20 x 1.5 | MMSPA-M20 stud, 15.5 mm proud of the plate, set by the nuts | ±1 mm | thread: K&N KN-204 listing (M20 x 1.5) |
 | Engine face | 34 x 24 cm | plywood panel | ±1 cm | estimated |
 | Frame cross tube | 32 mm, top 45 mm under the can, x 41.8 | 1-inch Sch 40 pipe, 33.4 mm | ±2 mm across, ±5 mm position | estimated (owner reports; no drawing) |
 | Intake duct | 60 mm, 30 mm right of the can, x 42.8 | 2-inch Sch 40 PVC, 60.3 mm | ±5 mm | estimated |
@@ -282,7 +282,7 @@ rule and a level when the rig is built, and checked before each session):
 | Filter | 66 x 71 mm, 250 g | genuine 16097-0007 | as bought | KN-204/HF204 cross-reference listings |
 | Gasket's torque | 18 N·m at 270 degrees past contact | the click check after each trial | the wrench clicks before the can moves | owner's manual p. 101 |
 
-Build time: about 2 hours (cut and paint the panel, drill and bolt the plate, fit the nipple and washer stack, set
+Build time: about 2 hours (cut and paint the panel, drill and bolt the plate, fit the stud and land ring, set
 the tube and duct, mark the start positions). Reset per trial: about 2 minutes: unscrew the filter, wipe the nipple,
 the land and the gasket, re-oil the gasket, stand the filter back on its mark, lay the wrench on its outline, fit
 fresh glove covers.
