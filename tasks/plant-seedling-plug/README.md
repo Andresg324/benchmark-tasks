@@ -25,8 +25,7 @@ Scripted demo (reaches full score):
 Model run (Dream-1): the same command with `--policy dream --max-steps 2400`.
 
 Results on this task.py: scripted demo 1.0 in 2,234 steps (success; the plug ended 0.12 cm off the hole's axis and
-1.1 degrees off upright, inside the placement range); Dream-1 scores 0 (2,400 steps) on the same task.py. On the previous task.py (0.6 cm range, 10.4 cm
-hole): Dream-1 0 in 2,400 steps (run limit; the seedling was not moved into the planter box).
+1.1 degrees off upright, inside the placement range); Dream-1 scores 0 (2,400 steps) on the same task.py.
 
 Render the videos of a run with `inspect-robots video <log.json>`.
 
@@ -88,12 +87,12 @@ the worst case the pin's edge is still 0.35 mm inside the wall.
 
 Checked offline for 8,424 placements in the range: the top's center 0, 0.25 cm, or 0.5 cm off the axis in 24
 directions; turned every 10 degrees; upright or tilted 10 degrees eight ways. In every one, an empty hole reads its
-floor at all 16 points, and every probe's end stays 1.3 mm or more inside the hole's wall: no probe touches the plug
+floor at all 16 points, and every probe's end stays 1.35 mm or more inside the hole's wall: no probe touches the plug
 or the hole's edge. A hole filled round a plug 0.5 cm off-center and turned 0-137 degrees scores the same as a
 centered one (1.0 after the push); one bare side is still caught (0.5); a plug 0.55 cm or more off the axis, or tilted
 11 degrees, scores 0.
 
-**The tools** (all off the shelf, low cost; one set serves every trial; about $255 in all, see Cost below):
+**The tools** (all off the shelf, low cost; one set serves every trial; about $260 in all, see Cost below):
 
 | Tool | Product (checked on a maker's or dealer's page) | Price | Use | Resolution / accuracy |
 |---|---|---|---|---|
@@ -162,12 +161,12 @@ in mix heaped above the surface: that point is full.
 | Room | room temperature | 20 to 24 degrees C (68 to 75 degrees F) | room thermometer at the bench | protocol setting |
 | Mix moisture | 350 g water per liter of bagged mix, rested 1 h | 1 g of water | the scale | protocol setting |
 | Loose mix | 200 g, heaped round the hole | 1 g | the scale | protocol setting |
-| Seedling | a retail or wholesale sweet pepper six-pack transplant in the standard 3601 insert, 4 true leaves, one flat per series | 60-80 g; stem 8-10 cm above the plug | the scale, the rule | insert size (maker); weight protocol setting |
+| Seedling | a sweet pepper transplant in the standard 3601 insert (a retail or wholesale six-pack in spring; a flat sown every 2 weeks all year), 4 true leaves, one flat per series, a fresh plant every trial | insert: one plug per flat 4.9 x 5.7 cm and 5.7 cm deep within 3 mm; 60-80 g; stem 8-10 cm above the plug | the scale, the rule | insert size (maker); weight protocol setting |
 | Hole | 10.3 cm across (the can), 62 mm deep | each of two diameters at least 10.3 cm; depth 3 mm at each of 4 floor points | depth gauge, step 1 | can-size code; depth protocol setting |
 | Hole center | recorded, not set | 0.5 mm as read | square and rule, step 1 | protocol setting |
 | Pin placement | the points above | 0.5 mm (inside the 1.35 mm margin) | square and rule | protocol setting; rule's marks (maker) |
 | Plug offset | at most 0.5 cm | 0.5 mm (two 0.5 mm gaps, halved) | square and rule, step 3 | the placement range (scorer) |
-| Heights | as read | 0.1 mm recorded; error 0.3 mm at most (see Cost and accuracy) | depth gauge | gauge +-0.025 mm (maker); sag computed; bow assumed |
+| Heights | as read | 0.1 mm recorded; error 0.3 mm at most (see Cost and accuracy) | depth gauge | gauge +-0.025 mm (maker); sag computed; bow measured (at most 1 mm, once per series) |
 | Reading window | all 19 points, one at a time, and the offset | start within 2 min, done within 12 min of the trial's end | timer | protocol setting |
 | Reset | core, measure, heap, set the plant, clean the grippers | about 6 min | timer | protocol setting |
 
@@ -266,13 +265,21 @@ itself afterwards (0-2 degrees after release in the demo runs).
 - Loose mix: the cored mix, 200 g (about 440 mL), weighed on the scale, crumbled and heaped round the hole. The gap
   round a level plug is about 350 mL.
 - Scale: American Weigh Scales SC-2KG, 2000 g x 0.1 g (for the mix, the spill and the seedlings).
-- Seedling (held by the root ball, never the stem): a sweet pepper transplant as garden centers and wholesale
-  bedding-plant growers sell them in six-packs of the standard 3601 insert (T.O. Plastics 3601: cell 1.94 x 2.23 in
-  at the top, 2.23 in deep, 4.05 fl oz, recommended for bedding plants; Hummert listing), i.e. 4.9 x 5.7 cm, 5.7 cm
-  deep, 118 mL, the simulator's plug. Buy one flat (36 plants, one variety, e.g. 'California Wonder', one grower's lot)
-  per series of trials and keep it watered; each trial pops a plant from its cell in under a minute. the stem 3-4 mm across and 8-10 cm tall above the plug, with its seed
-  leaves and four true leaves; weigh it and use those within 60-80 g. Set it with its leaves toward the robot's
-  right.
+- Seedling (held by the root ball, never the stem): a sweet pepper transplant grown in the standard 3601 insert
+  (T.O. Plastics 3601: cell 1.94 x 2.23 in at the top, 2.23 in deep, 4.05 fl oz, recommended for bedding plants;
+  Hummert listing), i.e. 4.9 x 5.7 cm, 5.7 cm deep, 118 mL, the simulator's plug. A series uses one flat (36 plants,
+  one variety, e.g. 'California Wonder'), kept watered; each trial pops a fresh plant from its cell in under a minute.
+  - Supply, all year: in spring, garden centers and wholesale bedding-plant growers sell pepper transplants in
+    six-packs of the 3601 insert. In every season, flats are also raised on a rolling schedule: a 3601 insert in a
+    standard 1020 tray, one 'California Wonder' seed a cell in seed-starting mix, under an LED shop light at room
+    temperature, a new flat sown every 2 weeks. A flat is ready at about 6 weeks, once its plants pass the plant check
+    below, so a ready flat is always on hand when a series starts and each trial still takes a plant in under a minute.
+  - Insert check, every flat: only flats in the 3601 insert are used (the code is molded on the insert or printed on
+    the tag). One plug per flat is popped out and measured with the rule: 4.9 x 5.7 cm across the top and 5.7 cm deep,
+    each within 3 mm; a flat that fails is not used.
+  - Plant check, every trial: the stem 3-4 mm across and 8-10 cm tall above the plug, with its seed leaves and four
+    true leaves; weighed, and used within 60-80 g. Set with its leaves toward the robot's right. A fresh plant every
+    trial: a planted seedling is not reused.
 - Measuring tools: two Everbilt 38 x 6.35 mm steel flat bars, an iGaging 100-700-34 digital depth caliper, a
   9.5 x 9.5 mm steel dowel pin (0.375 x 0.375 in), a 300 mm steel rule, a 3 in engineer square and a soft 2.5 cm
   paintbrush (see Measuring the soil: The tools).
@@ -302,14 +309,15 @@ Damp mix must not reach the shared robot's joints, and nothing here changes the 
 
 ### Cost and accuracy
 
-The tools above cost about $260 in all, under $275 (excluding the robot, a phone and the consumables: mix, plants,
+The tools above cost about $260 in all (excluding the robot, a phone and the consumables: mix, plants,
 cans): two flat bars $52, depth caliper $75, a pack of dowel pins $41, rule up to $20, square up to $15, scale about
 $25, spring scale $10, finger cots $10, drop cloth $5, brush $3, can $2.
 
 They clear the thresholds with room to spare:
 
-- Heights: the caliper reads within +-0.025 mm; the bars sag 0.05 mm at most; a bar bowed 1 mm over its 914 mm (an
-  assumed worst case for hardware-store bar; laid the same face up each time) moves the reading at the middle by at
+- Heights: the caliper reads within +-0.025 mm; the bars sag 0.05 mm at most; a bar bowed 1 mm over its 914 mm (measured: once per series each bar is stood on edge on the
+  flat table and the largest gap under it read on the rule held upright beside it; a bar with more than 1 mm is
+  replaced; laid the same face up each time) moves the reading at the middle by at
   most 0.21 mm on a 42 cm diagonal span and 0.11 mm on a 30 cm one, so 0.1 mm between orientations once S is read the
   same way. In all, about 0.3 mm at most. Against that: a side level and the plug's depth have 10 mm tolerances (3%
   used), and 1% of fill is 0.62 mm of backfill, so a point's fill moves by under 0.5%, against fill thresholds of 40%,
