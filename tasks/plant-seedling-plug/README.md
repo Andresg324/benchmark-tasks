@@ -92,21 +92,21 @@ or the hole's edge. A hole filled round a plug 0.5 cm off-center and turned 0-13
 centered one (1.0 after the push); one bare side is still caught (0.5); a plug 0.55 cm or more off the axis, or tilted
 11 degrees, scores 0.
 
-**The tools** (all off the shelf, low cost; one set serves every trial; about $260 in all, see Cost below):
+**The tools** (all off the shelf, low cost; one set serves every trial; see Cost and accuracy below):
 
-| Tool | Product (checked on a maker's or dealer's page) | Price | Use | Resolution / accuracy |
-|---|---|---|---|---|
-| Height reference, x2 | Everbilt plain steel flat bar, 1-1/2 x 36 in, 1/4 in thick (38 x 914 x 6.35 mm), model 801827 (Home Depot) | about $26 each | laid flat and parallel across the box's top edge, 12 mm apart | sag 0.05 mm at most, own weight plus the gauge (computed: steel, E 200 GPa, 38 x 6.35 mm, span up to 42 cm on a diagonal); bow: see Cost and accuracy |
-| Depth gauge | iGaging OriginCal IP54 digital depth caliper, 0-6 in (150 mm), model 100-700-34 (Penn Tool Co.) | $74.83 | base across both bars, rod lowered onto the pin's top | 0.01 mm display, +-0.025 mm (0.001 in, maker); recorded to 0.1 mm |
-| Probe foot | 0.375 x 0.375 in (9.5 x 9.5 mm) alloy steel dowel pin to ASME B18.8.2 (AFT Fasteners PINDOW030003P; the B18.8.2 chamfered end has a flat face 0.350-0.365 in across, Aspen Fasteners 0.375 in listing) | $41.27 per 100 (one is used) | set chamfered (flat) end down on the mix at each point; about 5 g, so it rests without sinking in | its 9.5 mm face is the simulator's 9.5 mm probe |
-| Rule | any flush-ended 300 mm steel rule with 0.5 mm marks (e.g. Shinwa 24612, Workshop Heaven listing) | about $10-20 | sets each point from the plug's faces; measures the plug's offset and the bars' gap | 0.5 mm |
-| Square | any 3 in (75 mm) machinist's engineer square | about $10-15 | laid flat on the plug's top, beam on a face's top edge, blade square to the face | 0.5 mm over the 20 mm it is used |
-| Brush | any soft 2.5 cm paintbrush | about $3 | brushes mix off the plug's top edges onto its top | |
-| Hole corer | an empty 401 x 411 (No. 2.5) food can, lid cut off | about $2 | cores the planting hole | 10.3 cm across, by the can-size code |
-| Scale | American Weigh Scales SC-2KG (maker's SC-series manual) | about $25 | weighs the water, the loose mix, the spill and the seedlings | 0.1 g |
-| Push | a 100 g x 1 g tubular spring scale (e.g. Pesola 20100 Micro-Line), and a cotton thread | about $10 | the firmness check: drawn level to 50 g; checked once at 50 g against the scale with 50 g of water | 1 g |
-| Gripper covers | Dukal Tech-Med 4404XL nitrile finger cots, powder-free, about 0.08 mm thick, 144 per box | about $10 | one rolled over each gripper finger's pad, new each trial (see Keeping the robot clean) | |
-| Drop cloth | a clear plastic painter's drop cloth, 0.7 mil | about $5 | under the planter box and round it on the bench | |
+| Tool | Product (checked on a maker's or dealer's page) | Use | Resolution / accuracy |
+|---|---|---|---|
+| Height reference, x2 | Everbilt plain steel flat bar, 1-1/2 x 36 in, 1/4 in thick (38 x 914 x 6.35 mm), model 801827 (Home Depot) | laid flat and parallel across the box's top edge, 12 mm apart | sag 0.05 mm at most, own weight plus the gauge (computed: steel, E 200 GPa, 38 x 6.35 mm, span up to 42 cm on a diagonal); bow: see Cost and accuracy |
+| Depth gauge | iGaging OriginCal IP54 digital depth caliper, 0-6 in (150 mm), model 100-700-34 (Penn Tool Co.) | base across both bars, rod lowered onto the pin's top | 0.01 mm display, +-0.025 mm (0.001 in, maker); recorded to 0.1 mm |
+| Probe foot | 0.375 x 0.375 in (9.5 x 9.5 mm) alloy steel dowel pin to ASME B18.8.2 (AFT Fasteners PINDOW030003P; the B18.8.2 chamfered end has a flat face 0.350-0.365 in across, Aspen Fasteners 0.375 in listing) | set chamfered (flat) end down on the mix at each point; about 5 g, so it rests without sinking in | its 9.5 mm face is the simulator's 9.5 mm probe |
+| Rule | any flush-ended 300 mm steel rule with 0.5 mm marks (e.g. Shinwa 24612, Workshop Heaven listing) | sets each point from the plug's faces; measures the plug's offset and the bars' gap | 0.5 mm |
+| Square | any 3 in (75 mm) machinist's engineer square | laid flat on the plug's top, beam on a face's top edge, blade square to the face | 0.5 mm over the 20 mm it is used |
+| Brush | any soft 2.5 cm paintbrush | brushes mix off the plug's top edges onto its top | |
+| Hole corer | an empty 401 x 411 (No. 2.5) food can, lid cut off | cores the planting hole | 10.3 cm across, by the can-size code |
+| Scale | American Weigh Scales SC-2KG (maker's SC-series manual) | weighs the water, the loose mix, the spill and the seedlings | 0.1 g |
+| Push | a 100 g x 1 g tubular spring scale (e.g. Pesola 20100 Micro-Line), and a cotton thread | the firmness check: drawn level to 50 g; checked once at 50 g against the scale with 50 g of water | 1 g |
+| Gripper covers | Dukal Tech-Med 4404XL nitrile finger cots, powder-free, about 0.08 mm thick, 144 per box | one rolled over each gripper finger's pad, new each trial (see Keeping the robot clean) | |
+| Drop cloth | a clear plastic painter's drop cloth, 0.7 mil | under the planter box and round it on the bench | |
 
 The reference for every height is the bars' top, resting on the box's top edge, which does not move as the mix is
 firmed. With the pin on the firmed surface the gauge reads about 6.9 mm (6.35 + 10 - 9.5) and on the hole's floor
@@ -161,7 +161,7 @@ in mix heaped above the surface: that point is full.
 | Room | room temperature | 20 to 24 degrees C (68 to 75 degrees F) | room thermometer at the bench | protocol setting |
 | Mix moisture | 350 g water per liter of bagged mix, rested 1 h | 1 g of water | the scale | protocol setting |
 | Loose mix | 200 g, heaped round the hole | 1 g | the scale | protocol setting |
-| Seedling | a store-bought transplant with one upright stem (primary: broccoli; any species that passes the checks), in a six-pack of the 3601 or 606 insert, one flat bought on one day per series, used within 2 weeks, a fresh plant every trial | cell: one plug per flat 4.9 x 5.7 cm and 5.7 cm deep within 3 mm; stem 3-4 mm across, 8-10 cm above the plug; 3-6 true leaves, each 8 cm or shorter; 60-80 g | the rule, the scale | cell size (maker); stem, leaves and weight from the simulated plant (protocol setting) |
+| Seedling | a store-bought transplant with one upright stem (primary: a Bonnie Plants pepper six-pack; any vegetable start that passes the checks), in a six-pack of the 3601 or 606 insert, one flat bought on one day per series, used within 2 weeks, a fresh plant every trial | cell: one plug per flat 4.9 x 5.7 cm and 5.7 cm deep within 3 mm; stem 3-4 mm across, 8-10 cm above the plug; 3-6 true leaves, each 8 cm or shorter; 60-80 g | the rule, the scale | cell size (maker); stem, leaves and weight from the simulated plant (protocol setting) |
 | Hole | 10.3 cm across (the can), 62 mm deep | each of two diameters at least 10.3 cm; depth 3 mm at each of 4 floor points | depth gauge, step 1 | can-size code; depth protocol setting |
 | Hole center | recorded, not set | 0.5 mm as read | square and rule, step 1 | protocol setting |
 | Pin placement | the points above | 0.5 mm (inside the 1.35 mm margin) | square and rule | protocol setting; rule's marks (maker) |
@@ -201,7 +201,7 @@ itself afterwards (0-2 degrees after release in the demo runs).
   seedlings out in the garden so that the shoots are at the soil line as they were before transplanting": UMN Extension, Growing peppers), so the plug's top goes level with the soil. (Tomatoes, by contrast, are
   usually buried deeper.)
   The simulator models a pepper; the real trial uses any store-bought transplant of the same build and size
-  (primary: broccoli; see Real-world build), set at the same level, the plug's top level with the soil.
+  (primary: a Bonnie Plants pepper; see Real-world build), set at the same level, the plug's top level with the soil.
 - Stem: 9 cm above the plug, 3.6 mm across (a young plug's; garden-center plants reach a pencil's width, UMN
   Extension), in two 4.5 cm segments. Each joint (at the root ball and at mid-height) bends about both horizontal axes
   with stiffness EI / L, EI = E x pi d^4 / 64: E 600 MPa for the lower segment (the lignified hypocotyl) and 60 MPa for
@@ -272,24 +272,22 @@ itself afterwards (0-2 degrees after release in the demo runs).
   of the standard 3601 cell (T.O. Plastics 3601: 1.94 x 2.23 in at the top, 2.23 in deep, 4.05 fl oz, recommended for
   bedding plants; Hummert listing), i.e. 4.9 x 5.7 cm, 5.7 cm deep, 118 mL, the simulator's plug, under one upright
   stem 8-10 cm tall.
-  - Primary, bought in season: a broccoli transplant (any variety, e.g. 'Green Comet') in a 36-count six-pack flat.
-    Cole crops (broccoli, cabbage, collards, cauliflower, kale) are the garden centers' cool-season transplants: sold
-    in spring everywhere and from late summer through fall and winter where winters are mild (Green Acres Nursery &
-    Supply, California and Texas, lists broccoli 'Green Comet' at $3.25, "typically fall through winter"; a cole-crop
-    six-pack is about $3-6, e.g. Bonnie Plants six-packs of cabbage and collards at $5.98, Tractor Supply; whether a given
-    grower's six-pack has the 3601-size cell is settled by the cell check below). A young
-    broccoli transplant has the simulated plant's build: one upright stem with a few true leaves on stalks.
-  - Accepted equivalents: any transplant that passes the three checks below, whatever the species or
-    store: in practice another cole crop, or in late spring and summer a pepper or eggplant, in a six-pack of the
-    3601 insert or the 606 (six six-packs to a flat; its cell 1.94 x 2.35 x 2.23 in, Greenhouse Megastore). Not
-    accepted: rosettes without a stem (lettuce, pansies, spinach), multi-stem herbs, plants in round pots or in the
-    smaller 806 and 1206 six-packs (1.5 in cells) or jumbo cells, all of which fail the cell check.
-  - A series uses one flat bought on one day (36 plants of one variety and grower, or six matching six-packs), kept
-    watered at room temperature and used within 2 weeks of purchase; each trial pops a fresh plant from its cell in
-    under a minute. A planted seedling is not reused.
-  - Cell check, every flat: one plug popped out and measured with the rule: 4.9 x 5.7 cm across the top and 5.7 cm
-    deep, each within 3 mm (the 3601's and 606's cells pass; the insert code is molded on the insert or printed on the
-    tag). A flat that fails is not used.
+  - Primary: a Bonnie Plants pepper six-pack, the plant the simulator models (e.g. Bonnie Plants Green Bell Sweet
+    Pepper 6-pack, model 2100, Home Depot listing). A young pepper transplant has the simulated plant's build: one
+    upright stem with a few simple true leaves on stalks.
+  - Accepted equivalents: any vegetable start in the same six-pack cell (the 3601 insert, or the 606 with the same
+    cell, 1.94 x 2.35 x 2.23 in, Greenhouse Megastore) that meets the measurements below. Common ones: Bonnie Plants
+    cabbage and collards six-packs (fall and winter), Bonnie Plants tomato or pepper six-packs (spring and summer), and
+    broccoli. Between them they cover the year: at least one of these vegetables is normally on sale as six-pack starts
+    at garden centers in every season, warm-season starts in spring and summer and cole crops (cabbage, collards,
+    broccoli) in late winter and spring and again from late summer into fall, through winter where winters are mild
+    (NC State Extension, "Vegetables You Can Plant for Fall": "September is prime time to set out transplants of
+    cabbage, kale, collards, broccoli, and cauliflower ... Young plants are readily available from local garden
+    centers and nurseries").
+  - A fresh plant every trial, popped from its cell in under a minute; a planted seedling is not reused. A series uses
+    plants of one variety and grower bought on one day, kept watered and used within 2 weeks.
+  - Cell check, every flat: one plug measured with the rule, 4.9 x 5.7 cm across the top and 5.7 cm deep, each within
+    3 mm. A flat that fails is not used.
   - Plant check, every trial (rule and scale, under a minute): one upright stem 3-4 mm across at its base and 8-10 cm
     tall above the plug; 3-6 true leaves, none longer than 8 cm with its stalk; the plant with its root ball 60-80 g.
     Set with its largest leaves toward the robot's right. A plant that fails is replaced by the next one in the flat.
@@ -322,9 +320,9 @@ Damp mix must not reach the shared robot's joints, and nothing here changes the 
 
 ### Cost and accuracy
 
-The tools above cost about $260 in all (excluding the robot, a phone and the consumables: mix, plants,
-cans): two flat bars $52, depth caliper $75, a pack of dowel pins $41, rule up to $20, square up to $15, scale about
-$25, spring scale $10, finger cots $10, drop cloth $5, brush $3, can $2.
+The tools above are common low-cost products (two Everbilt flat bars, an iGaging 100-700-34 depth caliper, a dowel
+pin, a steel rule, a 3 in square, an American Weigh Scales SC-2KG, a Pesola-type spring scale, Dukal finger cots, a drop
+cloth, a brush and an empty can): about $260 in all, excluding the robot, a phone and the consumables (mix, plants).
 
 They clear the thresholds with room to spare:
 
