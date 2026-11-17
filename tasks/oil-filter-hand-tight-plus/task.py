@@ -64,9 +64,18 @@ def _qz_wxyz(a):  # a box turned `a` rad about its frame's z axis (USD orient: w
 # below once the bottom guard is off. The gasket land's center:
 X_LAND, Y_F, Z_F = 0.455, 0.05, TOP + 0.13
 BOSS_R, BOSS_L = 0.038, 0.008  # the machined boss the gasket seals on, 7.6 cm across, 8 mm proud of the case
-NIP_R = 0.0095  # the M20 nipple, drawn (its root; the crests are 20 mm)
-NIP_COL_R = 0.004  # its collider, 8 mm: the filter's 21 mm hole goes on it within 6 mm of the axis (the nipple's
-#                    chamfered end guides it; once the thread catches it draws the filter onto the axis)
+# The nipple's thread and the filter's, ISO 965-1/-2 M20 x 1.5, the general-purpose fit (6H internal on the filter,
+# 6g external on the nipple), in mm. Nipple (6g): major 19.732-19.968, pitch diameter 18.844-18.994, root 18.128 at
+# most; ISO 4753: its end is chamfered (about 45 degrees) down to no more than the root diameter. Filter (6H): minor
+# (its crests) 18.376-18.676, pitch diameter 19.026-19.226. Modeled at the middle of each band: the filter's crests
+# (18.526) over the nipple's chamfered end (18.128) leave 0.20 mm all round (0.12 at the tightest, 0.27 at the
+# loosest); the pitch diameters, 0.207 mm (0.032 to 0.382).
+NIP_CREST_R = 0.019968 / 2  # the nipple's crests, drawn
+NIP_ROOT_R = 0.018128 / 2  # its root and its chamfered end: its collider
+BORE_R = 0.018526 / 2  # the filter's crests: the bore's colliders
+BORE_Z0, BORE_Z1 = 0.003, 0.0105  # the threaded bore, from the gasket's face (the filter's frame)
+LEAD = NIP_CREST_R - NIP_ROOT_R  # 0.92 mm: the chamfer, axially
+PD_CLEAR = (19.126 - 18.919) / 1000  # the pitch diameters' clearance (middles of the bands)
 CASE_X0 = X_LAND + BOSS_L  # the crankcase's front face
 CASE = ((CASE_X0, CASE_X0 + 0.20), (Y_F - 0.17, Y_F + 0.17), (TOP, TOP + 0.24))  # its lower front (x, y, z spans)
 TUBE_R, TUBE_X = 0.016, 0.418  # the frame's lower cross tube (32 mm steel), across under the filter
@@ -91,9 +100,11 @@ FLUTE_IN, FLUTE_W = 0.031, 0.005  # the flutes' roots (radius) and their width; 
 # (1.8 kgf*m, 13 ft*lb)".
 TORQUE_SPEC = 18.0
 THREAD = fk.Thread(pitch=0.0015, turns_to_seat=3.0, run_on=0.3, gasket_rate=TORQUE_SPEC / math.radians(270.0),
-                   max_past=math.radians(540.0))
+                   max_past=math.radians(540.0), root_r=NIP_ROOT_R, crest_r=BORE_R, bore_z0=BORE_Z0, lead=LEAD,
+                   d2=0.019026, pd_clear=PD_CLEAR)
 D0 = THREAD.d0  # 4.5 mm: the gasket face's distance from the land when the thread catches
-NIP_L = D0 + 0.003  # the nipple sticks out 7.5 mm: into the base plate's hole when the thread catches
+NIP_L = THREAD.nip_len  # the nipple stands 8.4 mm out of the land: its chamfered end inside the bore at the catch
+CROSS_DEG = math.degrees(THREAD.cross_tilt)  # 2.6 degrees: started more crooked than this, it cross-threads
 
 # Scoring: degrees past gasket contact.
 LOOSE, SNUG = 90.0, 180.0
@@ -165,8 +176,9 @@ def _filter_parts():
     body_top = CAN_H - FLUTE_L
     meshes = [
         kit.lathe([(0.022, 0.0), (0.0285, 0.0), (0.0285, 0.004), (0.022, 0.004)], RUBBER),  # the gasket
-        kit.lathe([(0.0105, 0.003), (0.031, 0.003), (0.031, 0.006), (0.0105, 0.006)], STEEL),  # the base plate
-        kit.lathe([(0.0105, 0.004), (0.0125, 0.004), (0.0125, 0.010), (0.0105, 0.010)], STEEL),  # its threaded hole
+        kit.lathe([(BORE_R, BORE_Z0), (0.031, BORE_Z0), (0.031, 0.006), (BORE_R, 0.006)], STEEL),  # the base plate
+        kit.lathe([(BORE_R, BORE_Z0 + 0.001), (0.0125, BORE_Z0 + 0.001), (0.0125, BORE_Z1), (BORE_R, BORE_Z1)],
+                  STEEL),  # its threaded bore
         kit.lathe([(CAN_R - 0.001, 0.005), (CAN_R, 0.007), (CAN_R, body_top), (FLUTE_IN, body_top + 0.002),
                    (FLUTE_IN, CAN_H - 0.002), (FLUTE_IN - 0.002, CAN_H), (0.0, CAN_H)], CAN),  # can, fluted end
         kit.lathe([(CAN_R + 0.0004, 0.020), (CAN_R + 0.0004, 0.045), (CAN_R - 0.002, 0.045), (CAN_R - 0.002, 0.020)],
@@ -182,7 +194,8 @@ def _filter_parts():
                                      point=1)
     meshes += flute_meshes
     cols = (_ring(0.022, 0.0285, 0.0, 0.004, n=12)  # the gasket
-            + _ring(0.0105, 0.031, 0.003, 0.0105, n=12)  # the base plate, its hole round the nipple
+            + _ring(BORE_R, BORE_R + 0.0015, BORE_Z0, BORE_Z1, n=36)  # the threaded bore, at its thread's crests
+            + _ring(BORE_R + 0.0012, 0.031, BORE_Z0, 0.006, n=12)  # the base plate round it
             + [kit.Collider((0, 0, (0.0105 + body_top) / 2), radius=CAN_R, height=body_top - 0.0105),
                kit.Collider((0, 0, (body_top + CAN_H) / 2), radius=FLUTE_IN, height=FLUTE_L)]
             + flute_cols)
@@ -197,9 +210,13 @@ FILTER_START = (float(_b[0]), float(_b[1]), float(_b[2]), math.radians(90.0), 0.
 
 
 def _mount():
-    meshes = [kit.cylinder((0, 0, NIP_L / 2), NIP_R, NIP_L, STEEL, n=20)]
-    for k in range(4):  # the thread's crests, drawn
-        meshes.append(kit.cylinder((0, 0, 0.001 + k * 0.0018), NIP_R + 0.0005, 0.0006, STEEL, n=20))
+    body = NIP_L - LEAD
+    meshes = [kit.cylinder((0, 0, NIP_L / 2), NIP_ROOT_R, NIP_L, STEEL, n=32),
+              kit.lathe([(NIP_ROOT_R, body), (NIP_CREST_R, body), (NIP_ROOT_R, NIP_L)], STEEL, n=32)]  # the chamfer
+    z = THREAD.pitch / 2
+    while z < body - 0.0003:  # the thread's crests, drawn
+        meshes.append(kit.cylinder((0, 0, z), NIP_CREST_R, 0.0004, STEEL, n=32))
+        z += THREAD.pitch
     cols = ()  # the nipple's collider is the engine's (a link of this articulation would not collide with it)
     fm, fc = _filter_parts()
     return fk.LooseFilter("mount", pos=(X_LAND, Y_F, Z_F), size=(0.08, 0.08, 0.08), mass=None, meshes=tuple(meshes),
@@ -228,7 +245,7 @@ def _engine():
         meshes.append(kit.box((cx, cy, TOP + ph / 2), (sx, sy, ph), PAN_LOOK))
     cols = [kit.Collider(((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), size=(x1 - x0, y1 - y0, z1 - z0)),
             kit.Collider((X_LAND + BOSS_L / 2, Y_F, Z_F), radius=BOSS_R, height=BOSS_L, axis="X"),
-            kit.Collider((X_LAND - NIP_L / 2, Y_F, Z_F), radius=NIP_COL_R, height=NIP_L, axis="X"),  # the nipple
+            kit.Collider((X_LAND - NIP_L / 2, Y_F, Z_F), radius=NIP_ROOT_R, height=NIP_L, axis="X"),  # the nipple
             kit.Collider((TUBE_X, sum(TUBE_Y) / 2, TUBE_Z), radius=TUBE_R, height=TUBE_Y[1] - TUBE_Y[0], axis="Y"),
             kit.Collider((DUCT_X, DUCT_Y, (DUCT_Z0 + z1) / 2), radius=DUCT_R, height=z1 - DUCT_Z0),
             kit.Collider(((px0 + px1) / 2, (py0 + py1) / 2, TOP + 0.0015), size=(px1 - px0, py1 - py0, 0.003))]
@@ -608,6 +625,9 @@ HAND_STALL = 8.0  # a stroke past contact that turns it less than this: hand-tig
 SPIN_MAX = 12
 CARRY_X = 0.38  # the filter is carried across here, clear of the crankcase, the cross tube and the wrench
 PRESS = 0.0015  # the hand aims 1.5 mm past where the threads' crests meet (the arm's give presses it on)
+OUT_NEAR = NIP_L - BORE_Z0 + 0.0015  # lining up closely: the bore's entry 1.5 mm short of the nipple's end
+FINE_MM, FINE_DEG = 0.06, 0.4  # lined up: within 0.06 mm of the axis (the bore's clearance is 0.2) and 0.4 degrees
+FINE_LOOKS = 8
 
 
 def _horiz(roll_deg):
@@ -638,28 +658,58 @@ def _hand_phase(st):
     st["fix"] = [0.0, 0.0]
     st["rfix"] = np.eye(3)
 
-    def align():  # where is the gasket face, and which way does the filter point? aim it onto the axis
-        from yam_arena.urdf import axis_angle_matrix
+    def align(out, gain=0.7, clip=0.015):
+        """Where is the bore's entry, and which way does the filter point? Aim it onto the nipple's axis, its gasket
+        face `out` from the land."""
+        def f():
+            from yam_arena.urdf import axis_angle_matrix
+            p, a, _ = _filter_now()
+            b = p + BORE_Z0 * np.asarray(a, float)  # the bore's entry, where the nipple's end goes in
+            # (the arm sags 2-3 cm under the filter in this pose: the aim takes it up, at most 4 cm)
+            st["fix"][0] = float(np.clip(st["fix"][0] - gain * np.clip(b[1] - Y_F, -clip, clip), -0.04, 0.04))
+            st["fix"][1] = float(np.clip(st["fix"][1] - gain * np.clip(b[2] - Z_F, -clip, clip), -0.04, 0.04))
+            want, have = np.array((-1.0, 0.0, 0.0)), np.asarray(a, float)  # its axis to the closed end: -x
+            c = np.cross(have, want)
+            s = float(np.linalg.norm(c))
+            if s > 1e-6:
+                st["rfix"] = axis_angle_matrix(c / s, 0.8 * math.atan2(s, float(np.dot(have, want)))) @ st["rfix"]
+            return _tcp_for_gasket(X_LAND - out, st["fix"]), st["rfix"] @ r_pick, F_CAN
+        return f
+
+    def off_axis():
+        """(mm off the axis at the bore's entry, degrees of tilt) seen now."""
         p, a, _ = _filter_now()
-        # (the arm sags 2-3 cm under the filter in this pose: the aim takes it up, at most 4 cm)
-        st["fix"][0] = float(np.clip(st["fix"][0] - 0.7 * np.clip(p[1] - Y_F, -0.015, 0.015), -0.04, 0.04))
-        st["fix"][1] = float(np.clip(st["fix"][1] - 0.7 * np.clip(p[2] - Z_F, -0.015, 0.015), -0.04, 0.04))
-        want, have = np.array((-1.0, 0.0, 0.0)), np.asarray(a, float)  # its axis to the closed end: -x
-        c = np.cross(have, want)
-        s = float(np.linalg.norm(c))
-        if s > 1e-6:
-            st["rfix"] = axis_angle_matrix(c / s, 0.8 * math.atan2(s, float(np.dot(have, want)))) @ st["rfix"]
-        return _tcp_for_gasket(X_LAND - D0 - 0.008, st["fix"]), st["rfix"] @ r_pick, F_CAN
+        b = p + BORE_Z0 * np.asarray(a, float)
+        tilt = math.degrees(math.acos(float(np.clip(-a[0], -1.0, 1.0))))
+        return 1000 * math.hypot(b[1] - Y_F, b[2] - Z_F), tilt
+
+    def fine(label, gate=lambda: True):
+        """Up to FINE_LOOKS close looks. Each one, when it starts, checks whether the last brought the bore's entry
+        within FINE_MM of the axis and FINE_DEG of square; once one has, the rest are skipped (decided as each starts,
+        so a look already made keeps its time)."""
+        g = {"done": None}
+
+        def look(i):
+            def f():
+                e, t = off_axis()
+                if g["done"] is None and e <= FINE_MM and t <= FINE_DEG:
+                    g["done"] = i
+                return align(OUT_NEAR, 0.8, 0.002)()
+            return f
+        return [_Live(0.7, look(i), label, lambda i=i: gate() and (g["done"] is None or i <= g["done"]))
+                for i in range(FINE_LOOKS)]
 
     def onto():
         return _tcp_for_gasket(X_LAND - D0 + PRESS, st["fix"]), st["rfix"] @ r_pick, F_CAN
 
     def off_nipple():  # not on it (the base plate met the nipple's end): back off and look again
-        return _tcp_for_gasket(X_LAND - D0 - 0.008, st["fix"]), st["rfix"] @ r_pick, F_CAN
+        return _tcp_for_gasket(X_LAND - OUT_NEAR - 0.003, st["fix"]), st["rfix"] @ r_pick, F_CAN
 
-    for _ in range(5):
-        out.append(_Live(0.6, align, "filter: line it up"))
-    out.append(_Live(1.2, onto, "filter: onto the nipple"))
+    for _ in range(5):  # coarse: 8 mm out
+        out.append(_Live(0.6, align(D0 + 0.008), "filter: line it up"))
+    out += fine("filter: line it up closely")  # the bore's entry 1.5 mm short of the nipple's end
+    out.append(_Live(1.6, onto, "filter: onto the nipple"))
+
     def miss():  # not on the nipple (the base plate met the nipple's end); once on it, never again (latched)
         if fmodel().on or fmodel().state != fk.FREE:
             st["was_on"] = True
@@ -667,9 +717,8 @@ def _hand_phase(st):
 
     for _ in range(2):  # at most two more tries
         out.append(_Live(0.8, off_nipple, "filter: missed the nipple, back off", miss))
-        out.append(_Live(0.7, align, "filter: line it up again", miss))
-        out.append(_Live(0.7, align, "filter: line it up again", miss))
-        out.append(_Live(1.2, onto, "filter: onto the nipple again", miss))
+        out += fine("filter: line it up again", miss)
+        out.append(_Live(1.6, onto, "filter: onto the nipple again", miss))
 
     def xg_now(extra=0.0):
         fm = fmodel()

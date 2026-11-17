@@ -26,8 +26,21 @@ def case(name, got, want):
 
 
 # -- the thread ------------------------------------------------------------------------------------------------------
-def start(tilt_deg=0.0, lat=0.0, out=None, turn_deg=60.0, step_deg=5.0):
-    """A filter pressed against the threads' crests (or `out` from the land) and turned `turn_deg` clockwise."""
+C = TH.clearance
+case("the fit (ISO 965, 6H/6g mid-band): 0.20 mm all round between the filter's crests and the nipple's end",
+     round(C * 1000, 2), 0.2)
+case("the cross-threading angle: half a pitch plus the flanks' play across the pitch diameter (degrees)",
+     round(math.degrees(TH.cross_tilt), 2), 2.62)
+case("the nipple stands 8.42 mm out of the land (its chamfered end 0.92 mm into the bore at the catch)",
+     round(TH.nip_len * 1000, 2), 8.42)
+case("the drawn and collider nipple is the real M20's root (18.13 mm), not a slimmer guide pin",
+     round(2 * m.NIP_ROOT_R * 1000, 3), 18.128)
+case("the filter's bore is its thread's crests (18.53 mm), not a looser hole", round(2 * m.BORE_R * 1000, 3), 18.526)
+
+
+def start(tilt_deg=0.0, lat=0.0, out=None, turn_deg=60.0, step_deg=5.0, axis_off=None):
+    """A filter pressed against the threads' crests (or `out` from the land) and turned `turn_deg` clockwise; `lat` m
+    off the axis at its gasket face (so its bore's entry is that far off the nipple's end)."""
     f = fk.FilterModel(0, TH)
     J = dict(f_up=lat, f_side=0.0, f_out=TH.d0 + 0.0003 if out is None else out, f_pitch=math.radians(tilt_deg),
              f_roll=0.0, filter=0.0)
@@ -36,26 +49,49 @@ def start(tilt_deg=0.0, lat=0.0, out=None, turn_deg=60.0, step_deg=5.0):
         cmd = f.step(J)
         if f.state == fk.ENGAGED:
             J["f_out"] = cmd["f_out"][0]
-            J["f_pitch"] = J["f_roll"] = J["f_up"] = J["f_side"] = 0.0
+            for n in ("f_up", "f_side", "f_pitch", "f_roll"):  # held within the engaged flanks' stops
+                if cmd[n][5] is not None:
+                    lo, hi = cmd[n][5]
+                    J[n] = min(max(J[n], lo), hi)
     return f, J
 
 
 f, _ = start(0.0)
-case("started square: the thread catches", f.state, fk.ENGAGED)
-f, _ = start(3.5)
-case("3.5 degrees off: still catches", f.state, fk.ENGAGED)
-f, _ = start(5.0)
-case("5 degrees off and turned: cross-threaded", f.state, fk.CROSSED)
+case("started square and centered: the thread catches", f.state, fk.ENGAGED)
+f, _ = start(2.4)
+case("2.4 degrees off: still catches", f.state, fk.ENGAGED)
+f, _ = start(3.0)
+case("3 degrees off and turned: cross-threaded", f.state, fk.CROSSED)
 f, _ = start(9.0)
-case("9 degrees off: not on the nipple, turning does nothing", f.state, fk.FREE)
-f, _ = start(0.0, lat=0.004)
-case("4 mm off the axis: the nipple's chamfer guides it on, the thread catches", f.state, fk.ENGAGED)
-f, _ = start(0.0, lat=0.008)
-case("8 mm off the axis: not on the nipple", f.state, fk.FREE)
+case("9 degrees off (the nipple's end not square in the bore): cross-threaded at the most, never caught square",
+     f.state != fk.ENGAGED, True)
+for mm, want in ((0.0, fk.ENGAGED), (0.1, fk.ENGAGED), (0.2, fk.ENGAGED), (0.5, fk.FREE), (1.0, fk.FREE),
+                 (2.0, fk.FREE), (6.0, fk.FREE)):
+    f, _ = start(0.0, lat=mm / 1000)
+    case(f"{mm} mm off the axis, pushed and turned: "
+         + ("within the bore's 0.2 mm clearance, the thread catches" if want == fk.ENGAGED
+            else "outside it the base plate sits on the nipple's end: nothing catches, nothing pulls it on"),
+         f.state, want)
+    case(f"  ({mm} mm off: the model reports it on the nipple only within the clearance)", f.on or
+         f.state == fk.ENGAGED, want == fk.ENGAGED)
+f, _ = start(0.0, lat=0.0006)
+case("0.6 mm off (three times the clearance): no stop applied, no catch; it stays where the colliders leave it",
+     (f.state, f.on), (fk.FREE, False))
 f, _ = start(0.0, out=TH.d0 + 0.006)
 case("held 6 mm short of the nipple and turned: nothing", f.state, fk.FREE)
 f, J = start(0.0, turn_deg=10.0)
 case("turned only 10 degrees against the crests: not caught yet", f.state, fk.FREE)
+f, J = start(1.5, lat=0.00015, turn_deg=30.0)
+case("caught 0.15 mm off and 1.5 degrees crooked: caught", f.state, fk.ENGAGED)
+cmd = f.step(J)
+case("  just caught: its side stop is where it caught, no closer (nothing draws it in)",
+     round(cmd["f_up"][5][1] * 1e6) >= round(0.00015 * 0.95 * 1e6), True)
+case("  and no drive on the side slides or tilts (stiffness 0)",
+     [cmd[n][1] for n in ("f_up", "f_side", "f_pitch", "f_roll")], [0.0] * 4)
+f, J = start(1.5, lat=0.00015, turn_deg=420.0)
+cmd = f.step(J)
+case("  a turn on, the flanks hold it within their play (0.10 mm, 0.36 degrees)",
+     (round(cmd["f_up"][5][1] * 1e6), round(math.degrees(cmd["f_pitch"][5][1]), 2)), (104, 0.36))
 f, J = start(0.0, turn_deg=3 * 360.0 + 60.0)
 case("three turns and 60 degrees on (the first 30 start the thread): 30 past contact", round(math.degrees(f.past), 3),
      30.0)
@@ -69,6 +105,32 @@ for _ in range(30):
     J["filter"] += math.radians(10.0)
     f.step(J)
 case("unscrewed past where it caught: loose again, flagged", (f.state, f.came_off), (fk.FREE, True))
+
+# cheats on the thread
+f = fk.FilterModel(0, TH)
+J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.0003, f_pitch=0.0, f_roll=0.0, filter=0.0)
+for out in np.linspace(TH.d0 + 0.0003, TH.d0 - 0.0004, 40):  # shoved on hard, never turned
+    J["f_out"] = float(out)
+    cmd = f.step(J)
+case("cheat: pushed on hard without turning: not threaded, the crests' stop holds it at d0",
+     (f.state, cmd["f_out"][5][0]), (fk.FREE, TH.d0))
+f = fk.FilterModel(0, TH)
+J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.0003, f_pitch=0.0, f_roll=0.0, filter=0.0)
+for _ in range(40):  # turned the wrong way (loosening) against the crests
+    J["filter"] += math.radians(5.0)
+    f.step(J)
+case("cheat: turned anticlockwise against the crests: never catches", f.state, fk.FREE)
+f = fk.FilterModel(0, TH)
+Js = dict(f_up=m.FILTER_START[0], f_side=m.FILTER_START[1], f_out=m.FILTER_START[2], f_pitch=m.FILTER_START[3],
+          f_roll=m.FILTER_START[4], filter=0.0)
+for _ in range(200):  # doing nothing: the filter left standing on the bench
+    f.step(Js)
+case("cheat: doing nothing (the filter standing on the bench): free, not on the nipple", (f.state, f.on),
+     (fk.FREE, False))
+for _ in range(80):  # spun where it stands on the bench
+    Js["filter"] -= math.radians(10.0)
+    f.step(Js)
+case("cheat: the filter spun on the bench, away from the nipple: nothing", f.state, fk.FREE)
 
 # -- the ratchet ------------------------------------------------------------------------------------------------------
 r = fk.RatchetModel(0)
@@ -197,5 +259,17 @@ case("never threaded (left on the bench): 0", finish(Trial(0.0, state=fk.FREE)),
 t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
 t.fm.came_off = True
 case("unscrewed off and back on at some point: 0", finish(t), 0.0)
+
+t = Trial(0.0, state=fk.FREE)
+t.step(tool_on=True, R=(GRIP, 0.2, 0.0))
+case("cheat: the wrench seated on the filter and held before the thread started: 0", t.sc, 0.0)
+case("  and taken off again: 0", finish(t), 0.0)
+t = Trial(0.0, state=fk.FREE)
+case("cheat: the start state (filter loose, wrench on the bench, hands home) already scores: no, 0", t.home(), 0.0)
+case("  the filter starts free, its thread not started", (t.fm.state, math.isinf(t.fm.past)), (fk.FREE, True))
+t = Trial(0.0, state=fk.FREE)
+for p in range(5, 300, 5):
+    t.step(L=(ON_CAN, W, float(p % 150)))  # the hand rolls the can but the thread never caught
+case("cheat: the filter twisted in the hand without the thread ever catching: 0", finish(t), 0.0)
 
 print("all pass" if not bad else f"{bad} FAILED")
