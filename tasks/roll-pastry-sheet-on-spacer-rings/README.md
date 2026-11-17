@@ -6,9 +6,9 @@ an even 1/8 inch (3.2 mm) thick, then set the rolling pin down off the dough." T
 set by rolling the dough between guide strips. The rings set the thickness only while both of them ride on the board,
 so the pin has to be kept level along its length: with one end lifted the barrel leaves a wedge, thick on that side. A
 light press springs back; passes past the dough's yield thin it a little each time, so it takes several. Category:
-Societal relatability. Rolling dough out flat with a rolling pin, for a pie crust, cookies or a pizza base, is a
-common home-baking job; the dough here is a store-bought refrigerated one (Pillsbury Original Crescent, an 8 oz can),
-and spacer rings that slip onto a rolling pin are sold by ordinary kitchen retailers for an even thickness.
+Societal relatability. Home cooks roll dough flat with a rolling pin for pie crusts, cookies, pizza bases and
+pastries; here it is a store-bought refrigerated dough (Pillsbury Original Crescent). Spacer rings that slip onto a
+rolling pin are sold by ordinary kitchen retailers for an even thickness.
 
 Run (from the repo root, Isaac Lab-Arena installed):
 
