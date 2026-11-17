@@ -18,6 +18,6 @@
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "Lay the board flat on the table to the right of the bit at its start pose (corners as in the setup), curve toward the bit, square to the table, 2.2 cm off the pin. Nothing is cut, so the boards are reused: after each real trial, read the blue trace, then wipe the paste off the edge with mineral spirits. Wipe and re-coat the bearing, tie the cord to the board's screw eye and set it snug with the board braced on the pin and its leading end on the bearing, so the cleat is seated there (README).",
   "fidelity": "The bit is a stand-in, in the sim as on the rig: its bearing on a fixed screw, no cutter, the cutter's circle painted. The cut's resistance is the rig's drag, 3.0 N at the board's trailing end toward a pulley while the cord is taut (2.9-3.3 N computed for this pass from Curti et al. 2021); it acts at the eye, not at the contact, and the cutter's 2 N pull toward the bit and the grab are not modeled (the grab is scored). Wood on wood table friction, mu 0.25. The guard is drawn as its rim.",
-  "scores": "Dream-1 run: PENDING; demo: 1.0 (@@STEPS@@ steps)",
+  "scores": "Dream-1 run: PENDING; demo: 1.0 (2,263 steps)",
   "media": "M-HDU48R"
 }
