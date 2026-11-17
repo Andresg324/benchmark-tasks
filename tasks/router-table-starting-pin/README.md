@@ -190,7 +190,7 @@ The sim applies the rig's drag, and the rig's drag is sized to the real cut:
   the board is fed along the bearing. A board brought in some other way meets the drag wherever it draws that much
   cord, in the sim and on the rig alike; a board that drew cord out first (carried away from the pulley, then back)
   meets a slack cord over the feed and traces nothing.
-- Direction: along the scripted feed the cord stays within 8.1 degrees of the feed direction at the bearing, so
+- Direction: along the scripted feed the cord stays within 7.6 degrees of the feed direction at the bearing, so
   2.97-3.00 N acts against the feed. Its share across the feed is between 0.2 N onto and 0.4 N off the bearing (the
   cord's own geometry, the same on the rig as in the sim); the hands' plan pushes 1-3.5 N onto the bearing. The cord
   runs from the eye in the board's trailing end to the pulley, and the hands' plan balances the turn its line puts on
@@ -338,7 +338,7 @@ lasts a trial and the band records the stretch the bearing passed over.
 | Bearing axis | the bit's axis (x 33, y 6 cm) | 1 mm | shoulder screw in a hole drilled there |
 | Drag at the board | 3.0 N toward the pulley while the cord is taut, 0 once it runs back past the catch | 0.05 N, set on the hanging scale | task.py `CORD_N`, `drag_load`; 0.300 kg weight; the model's mean cutting force against the feed for this pass: 3.0-3.1 N at the demo's 0.3 m/min feed (Curti et al. 2021, cutting_force.py) |
 | Cleat catch | the cams grip as the cord starts back | task.py `CATCH`, steel rule on a pencil mark | task.py `CATCH` |
-| Pulley | x 36, y -40 cm, sheave groove level with the screw eye | 1 cm | task.py `PULLEY`; the cord within 8.1 degrees of the feed along it |
+| Pulley | x 36, y -40 cm, sheave groove level with the screw eye | 1 cm | task.py `PULLEY`; the cord within 7.6 degrees of the feed along it |
 | Second pulley | x 56, y -66 cm, at the cord's height, overhanging the bench's right edge | 2 cm | the cord runs on from the first pulley to the weight; the pull's direction at the board is set by the first |
 | Screw eye | trailing end face, mid-thickness, 1 cm in from the curve | 2 mm | task.py `EYE` |
 | Cord set snug | braced on the pin, curve's leading end on the bearing | as set by hand | task.py `SNUG` |
@@ -350,3 +350,11 @@ lasts a trial and the band records the stretch the bearing passed over.
 | Room | 20-24 degrees C | boards kept in the room a day before | indoor shop conditions, so the boards stay near the 12% moisture their density is given at |
 
 Build time: about 2 hours, plus cutting the boards.
+
+## Sources and licenses
+
+- The forearm and wrist shapes the scorer checks (task.py `LINK_BOXES`) are boxes taken from I2RT's YAM visual meshes
+  of those links, as the yam_arena package ships them (I2RT Robotics, MIT License; a copy is in `LICENSE.i2rt`).
+- The gripper shapes (palm, fingers, pads, tips) come from the shared `guardkit.py`.
+- The cutting-force model: Curti et al. (2021), Eur. J. Wood Prod. 79:667-678, doi:10.1007/s00107-021-01667-5
+  (`cutting_force.py`). Cherry's density: AHEC. Wood-on-wood friction: Engineering ToolBox.

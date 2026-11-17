@@ -43,10 +43,10 @@ _EPISODE = {"count": 0, "last": None}  # trials seen, and the env's step count w
 _PROPS: set[str] = set()
 ARM_LINKS = ("link3", "link4", "link5")  # local addition (router task): the forearm and wrist links whose poses are
 #                                          given as objects "<side>_<link>" (e.g. "left_link4"), for contact checks
-STEP_HOOKS: list = []
-BUILD_HOOKS: list = []  # local addition (router task): hook(env.unwrapped) once the env is built, e.g. to create the
-#                         drawing and draw the scene's start state before the first frame  # local addition (router task): hook(env.unwrapped, objects) after the states of every control
+STEP_HOOKS: list = []  # local addition (router task): hook(env.unwrapped, objects) after the states of every control
 #                        step are read (before success() and score() see them); a task appends its own
+BUILD_HOOKS: list = []  # local addition (router task): hook(env.unwrapped) once the env is built, e.g. to create the
+#                         drawing and draw the scene's start state before the first frame
 
 
 # -- shapes ----------------------------------------------------------------------------------
