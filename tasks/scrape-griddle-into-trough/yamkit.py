@@ -38,6 +38,8 @@ from yam_arena.task_file import Box, ObjectState
 
 GRIPPERS = {"left_gripper": "left_robot", "right_gripper": "right_robot"}
 TIP_LINKS = ("tip_left", "tip_right")
+ARM_BODIES = ("link2", "link3", "link4", "link5", "gripper")  # objects[gripper + ARM_SUFFIX]: their origins (N, 3)
+ARM_SUFFIX = "_arm"
 _OPENING: dict[str, float] = {}
 _EPISODE = {"count": 0, "last": None}  # trials seen, and the env's step count within the current one
 _PROPS: set[str] = set()
@@ -774,6 +776,9 @@ def _patch(scene) -> None:
             _OPENING[key] = float(abs(art.data.joint_pos.torch[0, j].item()) / abs(FINGER_OPEN))
             out[key] = ObjectState(pos=tcp, quat_xyzw=np.array([x, y, z, w]), lin_vel=np.zeros(3),
                                    ang_vel=np.zeros(3), low=np.minimum(tcp, tips), high=np.maximum(tcp, tips))
+            # the arm's joints (link frames' origins), elbow to wrist, for scorers that check the arm's body
+            out[key + ARM_SUFFIX] = np.stack([art.data.body_pos_w.torch[0, art.body_names.index(b)].detach().cpu().numpy()
+                                              .astype(np.float64) - origin for b in ARM_BODIES])
         return out
 
     scene.task_object, scene.object_states = task_object, object_states

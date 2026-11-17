@@ -59,6 +59,8 @@ class Physics:
     solver_position_iterations: int = 16
     solver_velocity_iterations: int = 2
     max_depenetration_velocity: float = 0.3  # m/s: a chip pinched into a collider is pushed out no faster
+    linear_damping: float = 0.0  # 1/s
+    angular_damping: float = 0.0  # 1/s
     break_scale: float = 1.0  # the break force/torque written to PhysX = the chip's bond x this (calibration: see task)
 
 
@@ -149,7 +151,8 @@ def _objects(scene) -> list:
             rigid_props=scene.PhysxRigidBodyPropertiesCfg(
                 solver_position_iteration_count=ph.solver_position_iterations,
                 solver_velocity_iteration_count=ph.solver_velocity_iterations,
-                max_depenetration_velocity=ph.max_depenetration_velocity),
+                max_depenetration_velocity=ph.max_depenetration_velocity,
+                linear_damping=ph.linear_damping, angular_damping=ph.angular_damping),
             mass_props=su.MassPropertiesCfg(mass=float(c.mass)),
             collision_props=scene.PhysxCollisionPropertiesCfg(contact_offset=ph.contact_offset,
                                                               rest_offset=ph.rest_offset),

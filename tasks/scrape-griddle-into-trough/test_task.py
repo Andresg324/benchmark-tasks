@@ -160,6 +160,63 @@ def with_debris(d, states):
     DEBRIS[0] = M.START_DEBRIS
     return out
 
+SPOT_POS = np.array([M.SPOT_XY[0], M.SPOT_XY[1], M.SCRAPER_START[2]])
+P40 = M.pitch_for(M.SCRAPE_DEG)
+R40 = M.scraper_rot(P40)
+
+
+def tray_place(i):
+    """A resting place on the tray's floor for piece i (pieces spread across the tray)."""
+    return (0.090 + 0.035 * (i % 2), M.PLATE_Y0 + 0.015 + 0.013 * i, M.PLATE_Z - M.TRAY_DEPTH + M.PIECE_T / 2)
+
+
+def rz(a):
+    c, s = math.cos(a), math.sin(a)
+    return np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
+
+
+def pusher_state(d, how, x_back, y, hand="right_gripper"):
+    """One step with piece(s) in d and the pusher's front at x_back (the pushed piece's +x face), centered on y.
+    how: "blade" (held scraper, edge on the plate at 40 degrees), "loose" (the same pose, nobody holding it),
+    "handle" (held, turned round: the handle's end pushes), "hand" (a gripper's fingertips on the piece, the scraper
+    lying where it started), "none" (nothing touches: the arm's body, a tipped griddle, a moved tray)."""
+    if how in ("blade", "loose"):
+        o, op = objs(at_edge((x_back + 0.0005, y, M.PLATE_Z - 0.001), R40), R40, how == "blade", P40, debris=d)
+    elif how == "handle":
+        r = rz(math.pi) @ M.R_REST
+        org = np.array([x_back + 0.0005 + M.HANDLE[0][0] + M.HANDLE[1][0] / 2, y, M.PLATE_Z + 0.013])
+        o, op = objs(org, r, True, 0.0, debris=d)
+    else:
+        o, op = objs(REST_POS, M.R_REST, False, debris=d)
+        if how == "hand":
+            o[hand] = st((x_back - M.PIECE_W / 2, y, M.PLATE_Z + M.PIECE_T + 0.006), grip_rotation(0.0))
+            op = dict(op, **{hand: 0.0})
+    return o, op
+
+
+def scrape(ids, how="blade", d0=None, step=0.008):
+    """Each piece in turn pushed along the plate by `how` from where it lies over the lip, then resting in the tray.
+    Returns (states, the debris at the end)."""
+    d = (M.START_DEBRIS if d0 is None else d0).copy()
+    out = []
+    for i in ids:
+        x0, y = float(d[i, 0]), float(d[i, 1])
+        xs = list(np.arange(x0, M.LIP_X - 0.012, -step)) + [M.LIP_X - 0.012]
+        for x in xs:
+            d[i, :3] = (x, y, M.PLATE_Z + M.PIECE_T / 2 + M.CHIP_LIFT)
+            out.append(pusher_state(d.copy(), how, x + M.PIECE_W / 2, y))
+        d[i, :3] = tray_place(i)
+        out.append(pusher_state(d.copy(), how, M.LIP_X - 0.012 + M.PIECE_W / 2, y))
+    return out, d
+
+
+def run(states, d_end, down):
+    return feed(states + with_debris(d_end, down))
+
+
+ALL = list(range(22))
+JOB, FULL = scrape(ALL)
+
 
 def main():
     import itertools
@@ -183,13 +240,14 @@ def main():
     T = M.TOTAL_MASS
     check(abs(T * 1000 - 55.0) < 1e-6 and all(abs(m - 0.0025) < 1e-12 for m in M.CHIP_MASS),
           f"debris {T * 1000:.2f} g: 22 pieces of 2.50 g")
-    # the bonds: every piece stuck to the plate on its own; it holds the real nudge (40 g) and comes free under the blade
+    # the bonds: every piece stuck to the plate on its own; it comes free under the blade
     check(all(c.bond is not None for c in C), "every piece is bonded to the plate")
     check(all(c.bond == (M.BOND_FORCE, M.BOND_FORCE * M.BOND_PEEL_ARM) for c in C),
-          "break force 0.8 N, break torque 0.8 N x 2.5 mm")
-    nudge = 0.040 * 9.81
-    check(0.9 * M.BOND_FORCE >= 1.8 * nudge, f"a piece holds the 40 g nudge ({nudge:.2f} N) with margin (frees at "
-                                             f"{0.9 * M.BOND_FORCE:.2f} N or more)")
+          "break force 0.8 N, break torque 0.8 N x 9.5 mm (the piece's half-width)")
+    check(M.CHIP_LIFT == 0.0, "every piece lies on the plate (no gap under it)")
+    check(M.PLATE_FRICTION == (0.70, 0.60) and M.dk._SPEC["physics"].static_friction == 0.70
+          and M.dk._SPEC["physics"].dynamic_friction == 0.60, "clean dry steel: 0.7 static, 0.6 sliding, for the "
+                                                              "blade and for a freed piece")
     check(min(c.bond[0] / (c.mass * 9.81) for c in C) >= 20, "every bond holds at least 20 times its piece's weight")
     check(M.dk._SPEC["anchor"] == (M.PLATE.name, M.PLATE.pos) and M.PLATE.mass is None,
           "the bonds anchor on the plate, a fixed body")
@@ -209,104 +267,239 @@ def main():
     check(probe(0.05, 0.0, M.TOP + 0.001) == [False, False, True], "on the bench in front of the tray: off")
     del d
 
-    # -- nothing, hand, tiers -----------------------------------------------------------------------------------------
+    # -- nothing, the scraper's start, fixed griddle -------------------------------------------------------------------
     fresh()
     check(feed(set_down(60)) == 0.0, "doing nothing: 0")
     fresh()
-    check(feed(held_at_rest(60)) == 0.0, "picking the scraper up and holding it: 0")
-    for frac, want in ((0.24, 0.0), (0.28, 0.25), (0.595, 0.25), (0.64, 0.5), (0.93, 0.5)):
-        fresh()
-        s = feed(with_debris(moved(frac), set_down(40)))
-        tr, res, _ = M.shares(moved(frac))
-        check(s == want, f"{tr:.1%} in the tray, the rest on the plate ({res:.1%}): {want} ({s})")
-    # -- the full job, the hold, the hand -----------------------------------------------------------------------------
-    full = moved(1.0)
-    fresh()
-    s = feed(with_debris(full, set_down(40)))
-    check(s == 1.0, "everything in the tray, scraper set down 2 s: 1.0")
-    one = moved(1.0)
-    one[0] = M.START_DEBRIS[0]
-    fresh()
-    s = feed(with_debris(one, set_down(40)))
-    check(s == 0.75, f"a single piece ({M.CHIP_MASS[0] / T:.1%}) left stuck on the plate, the rest in the tray, "
-                     f"scraper set down: 0.75, below 1.0 ({s})")
-    loose = moved(1.0)
-    loose[0, :3] = (0.30, 0.0, M.PLATE_Z + M.PIECE_T / 2)
-    fresh()
-    s = feed(with_debris(loose, set_down(40)))
-    check(s == 0.75, f"a piece freed but left loose on the plate: 0.75 ({s})")
-    corner = moved(1.0)
-    corner[0, :3] = (M.LIP_X + 0.010, M.PLATE_Y0 + 0.010, M.PLATE_Z + M.PIECE_T / 2)
-    fresh()
-    s = feed(with_debris(corner, set_down(40)))
-    check(s == 0.75, f"a piece pushed into the corner by the lip and a guard, not over it: 0.75 ({s})")
-    two = moved(1.0)
-    two[:2] = M.START_DEBRIS[:2]
-    fresh()
-    s = feed(with_debris(two, set_down(40)))
-    check(s == 0.5, f"two pieces ({M.CHIP_MASS[:2].sum() / T:.1%}) left on the plate: 0.5 ({s})")
-    flung = moved(1.0)
-    flung[0, :3] = (0.40, -0.26, M.TOP + M.PIECE_T / 2)
-    fresh()
-    s = feed(with_debris(flung, set_down(40)))
-    check(s == 0.75, f"the rest in the tray and one piece ({M.CHIP_MASS[0] / T:.1%}) flung off the griddle (within the "
-                     f"5 % cap), nothing left on it: 0.75, not 1.0 (under 98 % in the tray) ({s})")
-    # pieces still on the scraper's blade: over the griddle they are left on it; at the set-down they are off it
-    blade = (REST_POS + M.R_REST @ M.EDGE_LOCAL)[:2]
-    carried = moved(1.0)
-    carried[0, :3] = (blade[0] + 0.02, blade[1], M.TOP + 0.006)
-    fresh()
-    s = feed(with_debris(carried, set_down(40)))
-    check(s == 0.75 and M.shares(carried)[2] > 0, f"one piece carried off on the scraper's blade to the bench: off the "
-                                                  f"griddle, 0.75 ({s})")
-    carried[1, :3] = (blade[0] + 0.04, blade[1] + 0.02, M.TOP + 0.006)
-    fresh()
-    s = feed(with_debris(carried, set_down(40)))
-    check(s == 0.25, f"two pieces carried off on the blade (9.1 %): capped at 0.25 ({s})")
-    riding = moved(1.0)
-    riding[0, :3] = (0.11, -0.02, M.PLATE_Z + 0.015)
-    check(M.shares(riding)[1] > 0, "a piece on the blade held over the tray, above the plate's top: still on the griddle "
-                                   "(knocked off into the tray, it counts in the tray)")
-    fresh()
-    s = feed(with_debris(full, set_down(10)))
-    check(s == 0.75, "set down only 0.5 s: 0.75 (hold not met)")
-    fresh()
-    s = feed(with_debris(full, held_at_rest(40)))
-    check(s == 0.75, "scraper laid on the bench but still in hand: 0.75")
-    fresh()
-    s = feed(with_debris(full, set_down(40, wobble=True)))
-    check(s == 0.75, "scraper set down but still moving: 0.75")
-    fresh()
-    s = feed(with_debris(full, set_down(40, pos=np.array([0.40, 0.0, M.PLATE_Z + 0.012]), rot=np.eye(3))))
-    check(s == 0.75, "scraper left lying on the griddle: 0.75")
-    fresh()
-    s = feed(with_debris(full, set_down(40, pos=np.array([0.11, 0.0, M.PLATE_Z - M.TRAY_DEPTH + 0.006]),
-                                        rot=np.eye(3))))
-    check(s == 0.75, "scraper dropped into the grease tray: 0.75, not set down")
-    fresh()
-    s = feed(with_debris(full, set_down(40, pos=np.array([0.30, -0.24, M.TOP + 0.012]), rot=np.eye(3))))
-    check(s == 1.0, "scraper dropped flat elsewhere on the bench: set down, 1.0")
+    check(feed(held_at_rest(60)) == 0.0 and not M._L.lifted, "taking hold of the scraper where it lies: 0, not lifted")
+    check(not M.in_spot(M.SCRAPER_START) and math.dist(M.SCRAPER_START[:2], M.SPOT_XY) >= 0.10,
+          "the scraper's start is outside the taped square, its origin 10 cm or more from the square's center")
+    check(max(abs(M.SCRAPER_XY[0] - M.SPOT_XY[0]), abs(M.SCRAPER_XY[1] - M.SPOT_XY[1])) - M.SPOT_SIDE / 2 >= 0.08,
+          "the start origin lies 8 cm or more outside the tape's outer edge (a 3 cm placement error stays outside)")
+    lo = REST_POS + M.R_REST @ np.array([-(M.BLADE_L + M.NECK_L), -M.BLADE_W / 2, 0.0])
+    check(lo[1] - (M.SPOT_XY[1] + M.SPOT_SIDE / 2) >= 0.02, "the scraper at its start lies clear of the tape (2 cm)")
+    check(all(o.mass is None for o in (M.PLATE, M.TRAY, M.TRAY_WALL, M.GUARD_R, M.GUARD_L, M.GUARD_B, *M.TAPE)),
+          "plate, tray, tray wall, guards and tape are fixed bodies: the griddle cannot be tipped nor the tray moved")
 
-    # -- caps ---------------------------------------------------------------------------------------------------------
+    # -- tiers, every piece put in the tray by the held blade ---------------------------------------------------------
+    for k, want in ((5, 0.0), (6, 0.25), (13, 0.25), (14, 0.5), (20, 0.5), (21, 0.75)):
+        fresh()
+        sts, d = scrape(ALL[:k])
+        s = run(sts, d, set_down(40, pos=SPOT_POS))
+        tr, res, _ = M._L.shares()
+        check(s == want, f"{k} pieces scraped into the tray ({tr:.1%}), the rest on the plate ({res:.1%}): {want} ({s})")
     fresh()
-    s = feed(with_debris(moved(0.90, 0.10), set_down(40)))
-    off = M.shares(moved(0.90, 0.10))[2]
-    check(s == 0.25 and off > 0.05, f"{off:.1%} of the debris (two pieces) pushed off the griddle onto the bench: capped "
-                                    f"at 0.25 ({s})")
+    s = run(JOB, FULL, set_down(40, pos=SPOT_POS))
+    check(s == 1.0 and M._L.credit.all(), "every piece scraped over the lip by the held blade, scraper picked up and "
+                                         "set down in the taped square for 2 s: 1.0")
     fresh()
-    s = feed(with_debris(moved(0.70, 0.10), set_down(40)))
-    check(s == 0.25, "70 % in the tray but over 5 % off the griddle: 0.25")
+    sts, d = scrape(ALL[1:])
+    loose = d.copy()
+    loose[0, :3] = (0.30, 0.0, M.PLATE_Z + M.PIECE_T / 2)
+    s = run(sts, loose, set_down(40, pos=SPOT_POS))
+    check(s == 0.75, f"a piece freed but left loose on the plate: 0.75 ({s})")
     fresh()
-    s = feed(stroke(0.0, theta=78.0) + with_debris(full, set_down(40)))
-    check(s == 0.5 and M._L.s.gouged, "a stroke at 78 degrees, then everything in the tray: gouge cap 0.5")
+    sts, d = scrape(ALL[2:])
+    s = run(sts, d, set_down(40, pos=SPOT_POS))
+    check(s == 0.5, f"two pieces left on the plate: 0.5 ({s})")
     fresh()
-    s = feed(stroke(0.0, roll=math.radians(15)) + with_debris(full, set_down(40)))
+    sts, d = scrape(ALL[1:])
+    flung = d.copy()
+    flung[0, :3] = (0.40, -0.26, M.TOP + M.PIECE_T / 2)
+    s = run(sts, flung, set_down(40, pos=SPOT_POS))
+    check(s == 0.75, f"one piece flung off the griddle, the rest scraped in: 0.75, not 1.0 ({s})")
+    fresh()
+    sts, d = scrape(ALL[2:])
+    two = d.copy()
+    two[0, :3] = (0.40, -0.26, M.TOP + M.PIECE_T / 2)
+    two[1, :3] = (0.05, 0.0, M.TOP + M.PIECE_T / 2)
+    s = run(sts, two, set_down(40, pos=SPOT_POS))
+    check(s == 0.25, f"two pieces (9.1 %) off the griddle, the rest scraped in: capped at 0.25 ({s})")
+    blade = (SPOT_POS + M.R_REST @ M.EDGE_LOCAL)[:2]
+    fresh()
+    sts, d = scrape(ALL[1:])
+    carried = d.copy()
+    carried[0, :3] = (blade[0] + 0.02, blade[1], M.TOP + 0.006)
+    s = run(sts, carried, set_down(40, pos=SPOT_POS))
+    check(s == 0.75 and M._L.shares()[2] > 0, f"one piece carried off on the blade to the bench: off, 0.75 ({s})")
+    riding = FULL.copy()
+    riding[0, :3] = (0.11, -0.02, M.PLATE_Z + 0.015)
+    check(M.shares(riding)[1] > 0, "a piece on the blade held over the tray, above the plate's top: still on the griddle")
+
+    # -- the set-down --------------------------------------------------------------------------------------------------
+    for what, down, want in (
+            ("set down only 0.5 s", set_down(10, pos=SPOT_POS), 0.75),
+            ("laid in the square but still in hand", [objs(SPOT_POS, M.R_REST, True)] * 40, 0.75),
+            ("set down in the square but still moving", set_down(40, pos=SPOT_POS, wobble=True), 0.75),
+            ("put back where it started (outside the square)", set_down(40), 0.75),
+            ("left lying on the griddle", set_down(40, pos=np.array([0.40, 0.0, M.PLATE_Z + 0.012]), rot=np.eye(3)),
+             0.75),
+            ("dropped into the grease tray", set_down(40, pos=np.array([0.11, 0.0, M.PLATE_Z - M.TRAY_DEPTH + 0.006]),
+                                                       rot=np.eye(3)), 0.75),
+            ("dropped flat on the bench outside the square", set_down(40, pos=np.array([0.30, -0.24, M.TOP + 0.012]),
+                                                                      rot=np.eye(3)), 0.75),
+            ("dropped flat inside the square", set_down(40, pos=SPOT_POS + np.array([0.03, -0.02, 0.0]),
+                                                         rot=rz(0.3)), 1.0)):
+        fresh()
+        s = run(JOB, FULL, down)
+        check(s == want, f"everything scraped in, scraper {what}: {want} ({s})")
+    fresh()
+    drag = [objs(REST_POS + (SPOT_POS - REST_POS) * k / 30, M.R_REST, True) for k in range(31)]
+    s = feed(drag + set_down(40, pos=SPOT_POS))
+    check(s == 0.0 and not M._L.lifted, "the scraper dragged along the bench into the square, never lifted: not picked "
+                                        "up, 0")
+
+    # -- cheats: anything but the held blade putting debris in the tray ------------------------------------------------
+    for how, what in (("hand", "pinched and carried over the lip by a gripper"),
+                      ("none", "moved into the tray with no blade touching it (the arm's body, a tipped griddle or a "
+                               "moved tray)"),
+                      ("loose", "pushed by the scraper while nobody holds it (thrown or let go)"),
+                      ("handle", "pushed with the scraper's handle end (the blade not touching)")):
+        fresh()
+        sts, d = scrape(ALL, how=how)
+        s = run(sts, d, set_down(40, pos=SPOT_POS))
+        check(s == 0.0 and not M._L.credit.any(), f"every piece {what}: none credited, 0 ({s})")
+    fresh()
+    sts, d = scrape(ALL[:1], how="hand")
+    sts2, d = scrape(ALL[1:], d0=d)
+    s = run(sts + sts2, d, set_down(40, pos=SPOT_POS))
+    check(s == 0.0 and M._L.hands, f"one piece moved by a gripper, the other 21 scraped in: a hand on the debris, 0 ({s})")
+    fresh()
+    touch, _ = scrape(ALL[:1], how="hand")
+    sts, d = scrape(ALL)
+    s = run(touch[:2] + sts, d, set_down(40, pos=SPOT_POS))
+    check(s == 0.0 and M._L.hands, f"a gripper pressing one piece for 0.1 s (its bond broken by hand), then every piece "
+                                   f"scraped in: 0 ({s})")
+    fresh()
+    o, op = JOB[40]
+    o = dict(o)
+    dd = o["debris"].copy()
+    dd[21, 0] -= 0.003
+    o["debris"] = dd
+    o["left_gripper"] = st(dd[21, :3] + np.array([0.0, 0.0, M.PIECE_T / 2 + 0.006]), grip_rotation(0.0))
+    s = run(JOB[:40] + [(o, dict(op, left_gripper=0.0))] + JOB[41:], FULL, set_down(40, pos=SPOT_POS))
+    check(s == 0.0, f"the free hand moving one piece 3 mm once while the other hand scrapes: 0 ({s})")
+    fresh()
+    o, op = JOB[-1]
+    o = dict(o)
+    dd = o["debris"].copy()
+    dd[3, 2] += 0.010
+    o["debris"] = dd
+    o["left_gripper"] = st(dd[3, :3] + np.array([0.0, 0.0, M.PIECE_T / 2 + 0.006]), grip_rotation(0.0))
+    s = run(JOB + [(o, dict(op, left_gripper=0.0))], FULL, set_down(40, pos=SPOT_POS))
+    check(s == 0.0, f"a gripper lifting a piece already in the tray: 0 ({s})")
+    # pushed to the lip by the blade, left there, then over the lip 2 s later with nothing touching it
+    fresh()
+    sts, d = scrape(ALL[1:])
+    x0, y0 = float(d[0, 0]), float(d[0, 1])
+    up = []
+    for x in np.arange(x0, M.LIP_X + M.PIECE_W / 2 - 0.002, -0.008):
+        d[0, 0] = x
+        up.append(pusher_state(d.copy(), "blade", x + M.PIECE_W / 2, y0))
+    up += [pusher_state(d.copy(), "none", 0, 0)] * 40
+    d[0, 0] = M.LIP_X - 0.005
+    up.append(pusher_state(d.copy(), "none", 0, 0))
+    d[0, :3] = tray_place(0)
+    s = run(sts + up, d, set_down(40, pos=SPOT_POS))
+    check(s == 0.75 and not M._L.credit[0], f"a piece pushed to the lip by the blade, then over it 2 s later with "
+                                            f"nothing touching it: not credited, 0.75 ({s})")
+    # a pile: the blade pushes piece A along its lane into piece B (same lane, nearer the lip); A pushes B over the lip
+    fresh()
+    d = M.START_DEBRIS.copy()
+    a_, b_ = 11, 0  # row 3 (x 24.5) and row 1 (x 17.5), both at y -10.75
+    y = float(d[a_, 1])
+    xb0 = float(d[b_, 0])
+    pile = []
+    for x in np.arange(float(d[a_, 0]), M.LIP_X - 0.030, -0.008):
+        d[a_, :3] = (x, y, M.PLATE_Z + M.PIECE_T / 2)
+        xb = min(xb0, x - M.PIECE_W - 0.0003)
+        d[b_, :3] = (xb, y, M.PLATE_Z + M.PIECE_T / 2)
+        pile.append(pusher_state(d.copy(), "blade", x + M.PIECE_W / 2, y))
+    d[a_, :3], d[b_, :3] = tray_place(a_), tray_place(b_)
+    pile.append(pusher_state(d.copy(), "blade", M.LIP_X - 0.02, y))
+    feed(pile)
+    check(M._L.credit[a_] and M._L.credit[b_], "a piece pushed over the lip by another piece the blade pushes: both "
+                                               "credited (a pile in front of the blade)")
+
+    # the blade 2 mm above a piece (no contact) while something else carries it over the lip: not credited
+    fresh()
+    d = M.START_DEBRIS.copy()
+    hover = []
+    y = float(d[0, 1])
+    for x in np.arange(float(d[0, 0]), M.LIP_X - 0.012, -0.008):
+        d[0, :3] = (x, y, M.PLATE_Z + M.PIECE_T / 2)
+        o, op = objs(at_edge((x + M.PIECE_W / 2 + 0.0025, y, M.PLATE_Z - 0.001), R40), R40, True, P40, debris=d.copy())
+        hover.append((o, op))
+    feed(hover)
+    check(not M._L.credit[0] and not M._L.freed[0], "the blade 2 mm behind a piece that something else moves over the "
+                                                    "lip (not touching it): not freed by the blade, not credited")
+    # a piece first moved 3 mm by something other than the blade, then scraped in by the blade: not credited
+    fresh()
+    d = M.START_DEBRIS.copy()
+    d[0, 0] -= 0.003
+    nudged = [objs(REST_POS, M.R_REST, False, debris=d.copy())]
+    sts, d = scrape(ALL, d0=d)
+    s = run(nudged + sts, d, set_down(40, pos=SPOT_POS))
+    check(not M._L.freed[0] and not M._L.credit[0] and s == 0.75, f"a piece knocked loose by something other than the "
+                                                                  f"blade, then scraped in: not credited, 0.75 ({s})")
+    # near misses: a finger 2 mm above a still piece, or 2 mm off a piece the blade moves, is not a touch
+    fresh()
+    o, op = pusher_state(M.START_DEBRIS.copy(), "hand", 0, 0)
+    o = dict(o)
+    o["right_gripper"] = st(M.START_DEBRIS[0, :3] + np.array([0.0, 0.0, M.PIECE_T / 2 + 0.0128 + 0.002]),
+                            grip_rotation(0.0))
+    feed([(o, dict(op, right_gripper=0.0))] * 10)
+    check(not M._L.hands, "fingertips 2 mm above a piece (not touching): no hand on the debris")
+    fresh()
+    o2 = []
+    for o_, op_ in JOB[:60]:
+        o_ = dict(o_)
+        dd = o_["debris"]
+        o_["left_gripper"] = st(dd[0, :3] + np.array([0.0, 0.0, M.PIECE_T / 2 + 0.0128 + 0.002]), grip_rotation(0.0))
+        o2.append((o_, dict(op_, left_gripper=0.0)))
+    feed(o2)
+    check(not M._L.hands and M._L.credit[0], "a free hand following 2 mm above a piece the blade pushes in: no touch, "
+                                             "credited")
+    fresh()
+    still = M.START_DEBRIS.copy()
+    o, op = pusher_state(still, "hand", float(still[0, 0]) + M.PIECE_W / 2, float(still[0, 1]))
+    feed([(dict(o), op)] * 10)
+    check(not M._L.hands, "a fingertip resting on a bonded piece that does not move: not counted (nothing moved)")
+    # the arm's body: a forearm sweeping pieces over the lip, with the hand and the scraper clear of them
+    fresh()
+    d = M.START_DEBRIS.copy()
+    sweep = []
+    y = float(d[0, 1])
+    for x in list(np.arange(float(d[0, 0]), M.LIP_X - 0.012, -0.008)):
+        d[0, :3] = (x, y, M.PLATE_Z + M.PIECE_T / 2)
+        o, op = objs(REST_POS, M.R_REST, False, debris=d.copy())
+        o = dict(o)
+        c = np.array([x + M.PIECE_W / 2 + M.ARM_R, y, M.PLATE_Z + M.PIECE_T / 2])  # a link low across the plate
+        o["right_gripper" + kit.ARM_SUFFIX] = np.array([c + [0, -0.30, 0.10], c + [0, -0.12, 0.0], c + [0, 0.12, 0.0],
+                                                        c + [0, 0.20, 0.15], c + [0, 0.20, 0.25]])
+        sweep.append((o, op))
+    feed(sweep)
+    check(M._L.hands and not M._L.credit[0], "a forearm sweeping a piece over the lip: the robot on the debris, 0")
+    # a piece on the top of a splash guard is still on the griddle
+    check([bool(v[0]) for v in M.where(np.array([[0.30, M.PLATE_Y0 - 0.0015, M.PLATE_Z + M.GUARD_H + 0.003, 0, 0, 0,
+                                                  1]]))] == [False, True, False],
+          "a piece resting on a splash guard's top: left on the griddle")
+    # a press on a piece's edge has to reach the bond's full force to tip it free (no cheap peel)
+    check(abs(M.BOND_PEEL_ARM - M.PIECE_W / 2) < 1e-12, "break torque = bond x the piece's half-width: a press at its "
+                                                         "edge needs the full 0.8 N, like a sideways push")
+
+    # -- gouge cap ----------------------------------------------------------------------------------------------------
+    fresh()
+    s = run(stroke(0.0, theta=78.0) + JOB, FULL, set_down(40, pos=SPOT_POS))
+    check(s == 0.5 and M._L.s.gouged, "a stroke at 78 degrees, then everything scraped in: gouge cap 0.5")
+    fresh()
+    s = run(stroke(0.0, roll=math.radians(15)) + JOB, FULL, set_down(40, pos=SPOT_POS))
     check(s == 0.5 and M._L.s.gouged, "a stroke on the corner (edge tilted 15 degrees): 0.5")
     fresh()
-    s = feed(stroke(0.0, roll=math.radians(8)) + with_debris(full, set_down(40)))
+    s = run(stroke(0.0, roll=math.radians(8)) + JOB, FULL, set_down(40, pos=SPOT_POS))
     check(s == 1.0 and not M._L.s.gouged, "edge tilted 8 degrees is not a gouge: 1.0")
     fresh()
-    s = feed(job() + set_down(40))
+    s = feed(job() + set_down(40, pos=SPOT_POS))
     check(s == 0.0 and not M._L.s.gouged, "the demo's strokes with the debris not moving (nothing pushed): 0")
 
     # -- a new trial resets -------------------------------------------------------------------------------------------
@@ -320,8 +513,8 @@ def main():
     check(d["instruction"] == M.INSTRUCTION, "task.json instruction == task.INSTRUCTION")
     text = " ".join(str(d[k]) for k in ("setup", "scoring", "fidelity", "context")) + readme
     for frag in ("25 %", "60 %", "90 %", "98 %", "5 %", "70 degrees", "10 degrees", "1 cm", "1 s", "55.0 g", "22 ",
-                 "2.50 g", "1.9 cm", "4.8 mm", "measuring cup", "40 g", "capped at 0.5", "caps the score at 0.25", "136 g",
-                 "10.2 cm", "5.0 cm", "0.6 mm", "0.15 to 0.2", "0.4 to 0.5", "x 17.5, 21.0, 24.5 and 28.0",
+                 "2.50 g", "1.9 cm", "4.8 mm", "measuring cup", "water bottle", "taped square", "white nitrile", "capped at 0.5", "caps the score at 0.25", "136 g",
+                 "10.2 cm", "5.0 cm", "0.6 mm", "0.7", "0.6", "0.5 mm", "1 mm", "0.5 s", "0.9 to 1.8", "x 17.5, 21.0, 24.5 and 28.0",
                  "-10.75 to 6.75", "-9.0 to 5.0", "Play-Doh", "177AOGT1227", "P94850", "BOMATA", "0.40 g",
                  "tray's rim", "3 minutes", "5 minutes"):
         check(frag in text or frag.replace(" %", "%") in text, f"text states {frag!r}")

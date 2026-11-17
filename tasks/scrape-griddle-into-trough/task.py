@@ -10,8 +10,11 @@ griddle.
 Each piece is a rigid body (debriskit) bonded to the plate by a breakable joint that the physics solver breaks when the
 blade pushes it harder than its bond; a freed piece is a free body on the plate with real friction. The scraper's blade
 has to meet the pieces, break them free and push them; they fall into the tray under gravity when pushed over the lip.
-The score reads where they really are, by mass: in the tray, still on the griddle, or off it. Every threshold below
-appears once, with the same value in task.json and the README.
+The score reads where they really are, by mass: in the tray, still on the griddle, or off it. A piece counts in the
+tray only if the scraper put it there: it went over the lip while the held scraper's blade was pushing it (or pushing
+pieces that pushed it), and no gripper ever touched it. A gripper touching any piece at any time scores the trial 0.
+The scraper starts in one place and has to be lifted, used and set down in a taped square elsewhere on the bench.
+Every threshold below appears once, with the same value in task.json and the README.
 """
 from __future__ import annotations
 
@@ -86,20 +89,22 @@ ROWS_X = (0.175, 0.210, 0.245, 0.280)  # row centers: the near row 2.5 cm from t
 ROW_COUNTS = (6, 5, 6, 5)
 PATTERN_YC = -0.020  # the pattern's centerline (the plate's): pieces from y -11.70 to 7.70 cm
 DOUGH_COLORS = ((0.05, 0.05, 0.06), (0.08, 0.07, 0.08), (0.11, 0.10, 0.10))
-CHIP_LIFT = 0.0002  # m: spawned this far above the plate (the bond holds it there; contact offset 2 mm)
+CHIP_LIFT = 0.0  # m: each piece lies on the plate, its underside on the steel
 # Each piece is stuck to the plate (and only to the plate) by a breakable bond at the middle of its underside (a PhysX
 # fixed joint that the solver breaks for good the first time holding the piece takes more than its break force or
-# torque). The bond is set, not measured (there is no published value for modeling compound on steel), from the real
-# nudge check every piece passes before a trial: pushed sideways at its side by a fingertip with a 40 g push (0.39 N,
-# the push learned by pressing the fingertip on the balance), it stays put; the scraper's edge, driven under it at a low
-# angle, breaks it free. BOND_FORCE is about twice the nudge, so a nudge does not move a piece, and the held scraper
-# breaks it free. Break torque = BOND_FORCE x BOND_PEEL_ARM: an edge that gets under a piece peels it off with less push
-# than a flat shove.
+# torque). There is no published bond strength for modeling compound on steel; 0.8 N is the value chosen: about 33
+# times a piece's weight, so a piece does not slide or tip on its own, and less than the push of the held scraper's
+# edge, so the blade breaks every piece free. In a real trial the press sets the bond: each piece is pressed with a
+# 1 L water bottle (1 kg) standing on a measuring cup for 3 s, the same every trial, and the qualification checks that
+# the scraper frees each piece in one stroke. Break torque = BOND_FORCE x BOND_PEEL_ARM, with the arm the piece's
+# half-width (9.5 mm): pressing down on a piece's edge or corner (a heel, a fingertip, the flat of the blade) has to
+# reach the full 0.8 N at that edge to tip it free, as much as a sideways push; the blade's sideways push at the
+# piece's side (0 to 4.8 mm up) frees it by shear.
 BOND_FORCE = 0.8  # N per piece
-BOND_PEEL_ARM = 0.0025  # m
+BOND_PEEL_ARM = 0.0095  # m: the piece's half-width
 # PhysX tests a joint's break force against its own internal measure of the joint's load, not the push on the piece,
 # so the value written is the bond x BREAK_CAL. Pushed with a slowly rising force in the simulator, bonded bodies came
-# free at 0.9 to 1.8 times their bond, so a piece holds well above the 0.39 N nudge.
+# free at 0.9 to 1.8 times their bond (0.7 to 1.4 N for these pieces).
 BREAK_CAL = 32.0
 
 
@@ -172,6 +177,25 @@ SCRAPER = kit.Prop(
     meshes=(kit.box(*HANDLE, WHITE), kit.box(*BLADE_BOX, BLADE_LOOK), kit.box(*NECK_BOX, BLADE_LOOK)),
     colliders=(kit.Collider(*HANDLE), kit.Collider(*BLADE_BOX), kit.Collider(*NECK_BOX)))
 HANDLE_PARTS = (gk.Block(*HANDLE),)  # what a hand holds
+PUSH_PARTS = (gk.Block(*BLADE_BOX), gk.Block(*NECK_BOX))  # what scrapes: the blade and its neck (not the handle)
+SCRAPER_PARTS = (gk.Block(*HANDLE), gk.Block(*BLADE_BOX), gk.Block(*NECK_BOX))
+
+# -- where the scraper goes when the job is done: a square of blue painter's tape on the bench, right of where the
+# scraper starts (the start does not satisfy it: the scraper's origin starts 8.5 cm outside it, so the scraper has to be
+# picked up, used and put down there). Set down means its origin (where the neck meets the handle) inside the tape's
+# outer edge.
+SPOT_XY = (0.250, -0.400)  # the square's center
+SPOT_SIDE = 0.120  # outer edge, 12 cm square
+TAPE_W = 0.019  # 3/4 in. tape
+TAPE_T = 0.0003  # m: the tape's thickness on the bench
+TAPE_BLUE = (0.25, 0.55, 0.85)
+_sx, _sy, _h = SPOT_XY[0], SPOT_XY[1], SPOT_SIDE / 2
+TAPE = tuple(Box(f"tape_{k}", pos=(px, py, TOP + TAPE_T / 2), size=(lx, ly, TAPE_T), color=TAPE_BLUE)
+             for k, px, py, lx, ly in (("near", _sx - _h + TAPE_W / 2, _sy, TAPE_W, SPOT_SIDE),
+                                       ("far", _sx + _h - TAPE_W / 2, _sy, TAPE_W, SPOT_SIDE),
+                                       ("right", _sx, _sy - _h + TAPE_W / 2, SPOT_SIDE - 2 * TAPE_W, TAPE_W),
+                                       ("left", _sx, _sy + _h - TAPE_W / 2, SPOT_SIDE - 2 * TAPE_W, TAPE_W)))
+LIFT_MIN = 0.050  # m: picked up: the held scraper's origin rose 5 cm above where it lay (not dragged along the bench)
 
 
 # -- the gouge check (scrapekit's blade-angle rule, no soil) and thresholds (each with its reason in the README) --------
@@ -186,22 +210,24 @@ RESIDUE_MAX = 0.05  # 0.75 also needs at most 5 % of the debris left on the grid
 FULL_TROUGH = 0.98  # 1.0 needs at least 98 % in the tray (in the simulator every piece: one piece is 4.5 %) ...
 FULL_RESIDUE = 0.0  # ... and nothing left on the griddle (no piece: the plate clean), plus the scraper set down
 
-# The plate's surface: bare steel, wiped with a damp cloth between trials and left with a light film where the pieces
-# were pressed (modeling compound is oily and salty), slippery to a steel blade (greased or filmed steel on steel, about
-# 0.15 to 0.2). Set, not measured. The simulator's default contact friction (1.2) would let the edge stick and chatter.
-PLATE_FRICTION = (0.20, 0.15)  # static, dynamic
+# The plate's surface: clean, dry, bare 430 stainless, as in a real trial. Dry steel on steel (the scraper's blade on
+# the plate) is about 0.7 static and 0.6 sliding (common engineering tables give 0.5 to 0.8 for clean dry steel); a freed
+# piece of dough on the dry plate takes the same 0.7 and 0.6 (the dough's own value, combine "min").
+PLATE_FRICTION = (0.70, 0.60)  # static, sliding
 _PLATE_SIZE = (PLATE_LX, PLATE_W, PLATE_Z - TOP)
 PLATE = kit.Prop("plate", pos=(LIP_X + PLATE_LX / 2, PLATE_YC, (TOP + PLATE_Z) / 2), size=_PLATE_SIZE,
                  meshes=(kit.box((0.0, 0.0, 0.0), _PLATE_SIZE, kit.Look(STEEL, 0.4, metallic=0.8)),),
                  colliders=(kit.Collider((0.0, 0.0, 0.0), _PLATE_SIZE),),
                  friction=PLATE_FRICTION)  # plate on its frame, one fixed block
 
-# A piece on steel: 0.5 static, 0.4 sliding (estimated); on the plate the plate's lower friction applies (combine "min").
-# Every piece is bonded to the plate (the anchor) until the blade breaks it free.
-dk.setup(CHIPS, dk.Physics(static_friction=0.5, dynamic_friction=0.4, break_scale=BREAK_CAL),
+# A piece of dough on steel: 0.7 static, 0.6 sliding. Every piece is bonded to the plate (the anchor) until the blade
+# breaks it free. Linear and angular damping (1 per s) take the solver's stored push out of a piece the moment its bond
+# lets go, so a freed piece does not spring away (real dough does not); it hardly slows a piece being pushed.
+dk.setup(CHIPS, dk.Physics(static_friction=0.7, dynamic_friction=0.6, break_scale=BREAK_CAL, linear_damping=1.0,
+                           angular_damping=1.0),
          anchor=(PLATE.name, PLATE.pos))
 
-OBJECTS = [PLATE, TRAY, TRAY_WALL, GUARD_R, GUARD_L, GUARD_B, SCRAPER]
+OBJECTS = [PLATE, TRAY, TRAY_WALL, GUARD_R, GUARD_L, GUARD_B, *TAPE, SCRAPER]
 
 SPILL_CAP_SHARE = 0.05  # more than 5 % of the debris (more than one piece) off the griddle caps the score at 0.25
 SPILL_CAP = 0.25
@@ -211,6 +237,14 @@ STILL_STEP = 0.0005  # m per control step (1 cm/s) ...
 STILL_TURN = math.radians(0.5)  # ... and under 0.5 degree a step
 HOLD_STEPS = round(SUCCESS_HOLD_S / DT)  # 20 steps = 1 s
 GRIPPERS = ("left_gripper", "right_gripper")
+HANDS_CAP = 0.0  # the robot touching any piece (fingers, palm or arm) at any time: the trial scores 0
+TOUCH_BLADE = 0.0005  # m: blade on a piece, or piece on piece: within 0.5 mm (exact boxes; PhysX rests them at 0)
+TOUCH_HAND = 0.001  # m: the robot's shape on a piece: within 1 mm (the hand's boxes are fitted to its meshes)
+MOVE = 0.0005  # m: a piece counts as moved by a contact only if it moved 0.5 mm or more that step
+ARM_R = 0.035  # m: the arm's links as capsules of this radius between their joints (elbow to wrist)
+FREE_WINDOW = 2  # steps: a piece freed by the blade first leaves its place while the blade pushes it (within 0.1 s)
+PUSH_WINDOW = 10  # steps (0.5 s): a piece is credited when it goes over the lip within 0.5 s of being pushed by the blade
+PIECE_PART = gk.Block((0.0, 0.0, 0.0), (PIECE_W, PIECE_W, PIECE_T))
 
 
 def _pose(o):
@@ -224,10 +258,9 @@ def in_footprint(x, y) -> np.ndarray:
             & (y >= PLATE_Y0 - GUARD_T) & (y <= PLATE_Y0 + PLATE_W + GUARD_T))
 
 
-def off_griddle(p) -> bool:
-    """The scraper's origin outside the griddle's footprint (plate, tray and guards): on the bench, not in the grease
-    tray, whose floor (1.8 cm up) is below SET_DOWN_Z."""
-    return not bool(in_footprint(p[0], p[1]))
+def in_spot(p) -> bool:
+    """The scraper's origin inside the taped square's outer edge (in plan)."""
+    return abs(float(p[0]) - SPOT_XY[0]) <= SPOT_SIDE / 2 and abs(float(p[1]) - SPOT_XY[1]) <= SPOT_SIDE / 2
 
 
 def where(debris) -> tuple:
@@ -265,24 +298,149 @@ def scraper_touched(objects) -> bool:
 START_DEBRIS = np.array([[*c.pos, 0.0, 0.0, math.sin(c.yaw / 2), math.cos(c.yaw / 2)] for c in CHIPS])
 
 
+class _Pose:
+    """A piece's pose as guardkit reads an object (pos, quat_xyzw)."""
+
+    def __init__(self, row):
+        self.pos, self.quat_xyzw = np.asarray(row[:3], float), np.asarray(row[3:7], float)
+
+
+def robot_on(objects, debris, among) -> np.ndarray:
+    """Pieces (of those in `among`) the robot's own shape touches now, within TOUCH_HAND: either gripper's palm and both
+    fingers, opened as they are (guardkit's boxes), or an arm's links, elbow to wrist (capsules of ARM_R between the
+    joints), whichever hand, holding the scraper or not."""
+    out = np.zeros(len(debris), bool)
+    tcps = [np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects]
+    arms = [np.asarray(objects[g + kit.ARM_SUFFIX], float) for g in GRIPPERS if g + kit.ARM_SUFFIX in objects]
+    for i in np.nonzero(among)[0]:
+        row = debris[i]
+        rp = sk.rotm(row[3:7])
+        for joints in arms:
+            for a, b in zip(joints[:-1], joints[1:]):
+                seg = gk.Seg(tuple(a), tuple(b), ARM_R)
+                if gk._dist_local(seg, row[:3]) > 0.02:
+                    continue
+                if _gap(row[:3], rp, PIECE_PART, np.zeros(3), np.eye(3), seg) <= TOUCH_HAND:
+                    out[i] = True
+        if out[i] or all(np.linalg.norm(t - row[:3]) > 0.20 for t in tcps):  # a hand reaches 16 cm from its tool point
+            continue
+        o = dict(objects)
+        o["_piece"] = _Pose(row)
+        out[i] = bool(gk.touching(o, "_piece", PIECE_PART, tol=TOUCH_HAND, grippers=GRIPPERS))
+    return out
+
+
+def _gap(pa, ra, part_a, pb, rb, part_b) -> float:
+    """Gap (m, 0 if they overlap) between box part_a of a body at (pa, ra) and convex part_b of a body at (pb, rb)."""
+    return gk._box_gap(pa, ra, part_a, pb, rb, part_b)
+
+
+def blade_on(scraper, debris, among) -> np.ndarray:
+    """Pieces (of those in `among`) the scraper's blade or neck touches now (within TOUCH_BLADE). The handle does not
+    scrape."""
+    sp, sr = np.asarray(scraper.pos, float), sk.rotm(scraper.quat_xyzw)
+    out = np.zeros(len(debris), bool)
+    for i in np.nonzero(among)[0]:
+        row = debris[i]
+        if np.linalg.norm(row[:3] - sp) > 0.16:
+            continue
+        rp = sk.rotm(row[3:7])
+        out[i] = any(_gap(sp, sr, part, row[:3], rp, PIECE_PART) <= TOUCH_BLADE for part in PUSH_PARTS)
+    return out
+
+
+def chain(seed, debris, among) -> np.ndarray:
+    """The pieces (of those in `among`) touching a seed piece, directly or through other such pieces (a pile pushed in
+    front of the blade moves as one)."""
+    seed = np.asarray(seed, bool).copy()
+    if not seed.any():
+        return seed
+    rot = {}
+    todo = list(np.nonzero(seed)[0])
+    cand = list(np.nonzero(among)[0])
+    while todo:
+        i = todo.pop()
+        for j in cand:
+            if seed[j] or np.linalg.norm(debris[i, :3] - debris[j, :3]) > 0.035:
+                continue
+            ri = rot.setdefault(i, sk.rotm(debris[i, 3:7]))
+            rj = rot.setdefault(j, sk.rotm(debris[j, 3:7]))
+            if _gap(debris[i, :3], ri, PIECE_PART, debris[j, :3], rj, PIECE_PART) <= TOUCH_BLADE:
+                seed[j] = True
+                todo.append(j)
+    return seed
+
+
+def over_plate(debris) -> np.ndarray:
+    d = np.asarray(debris, float).reshape(-1, 7)
+    return (d[:, 0] >= LIP_X) & (d[:, 1] >= PLATE_Y0) & (d[:, 1] <= PLATE_Y0 + PLATE_W)
+
+
 class Ledger:
     """One trial's history, advanced once per control step (success() and score() share it): the debris as last read,
-    the gouge latch (scrapekit's blade-angle rule on the scraper's pose; no soil), and the set-down hold."""
+    which pieces the robot has touched (fingers, palm or arm), when each piece was last pushed by the held scraper's
+    blade, whether its bond let go under the blade, whether it went over the lip under the blade (credited), the gouge latch (scrapekit's blade-angle rule on the scraper's pose;
+    no soil), whether the scraper has been picked up, and the set-down hold."""
 
     def __init__(self):
         self.episode = kit.episode()
         self.key = None
         self.objs = None
+        self.n = 0
         self.s = sk.Scrape(GRID, BLADE, LAW, ())
         self.debris = START_DEBRIS.copy()
+        n = len(CHIPS)
+        self.hand = np.zeros(n, bool)  # a gripper has touched this piece (latched)
+        self.pushed_at = np.full(n, -10 ** 9)  # last step the held blade pushed it (directly or through a pile)
+        self.departed = np.zeros(n, bool)  # it has left its place (its bond let go)
+        self.freed = np.zeros(n, bool)  # ... while the held blade was pushing it
+        self.credit = np.zeros(n, bool)  # freed by the blade, and its last trip over the lip was under the blade
+        self.lifted = False  # the scraper has been held with its origin LIFT_MIN above where it lay
         self.last = None
         self.good = 0  # consecutive steps with the plate clean (the full shares) and the scraper set down and released
 
+    def advance(self, objects, held: bool) -> None:
+        """Contacts, releases and lip crossings for this step's debris. Only pieces that moved 0.5 mm or more this
+        step are checked: a contact that moves nothing (a hand hovering, a blade resting on a piece) does not count."""
+        self.n += 1
+        prev = self.debris
+        if dk.KEY in objects:
+            self.debris = np.asarray(objects[dk.KEY], float).reshape(-1, 7)
+        d = self.debris
+        moved = np.linalg.norm(d[:, :3] - prev[:, :3], axis=1) >= MOVE
+        if not moved.any():
+            return
+        self.hand |= robot_on(objects, d, moved)
+        if held:
+            pushed = chain(blade_on(objects["scraper"], d, moved), d, moved)
+            self.pushed_at[pushed] = self.n
+        left = ~self.departed & (np.linalg.norm(d[:, :3] - START_DEBRIS[:, :3], axis=1) >= MOVE)
+        for i in np.nonzero(left)[0]:  # the first time a piece leaves its place: its bond let go
+            self.departed[i] = True
+            self.freed[i] = self.n - self.pushed_at[i] <= FREE_WINDOW
+        went = over_plate(prev) & (d[:, 0] < LIP_X)  # over the lip this step
+        for i in np.nonzero(went)[0]:
+            self.credit[i] = self.freed[i] and self.n - self.pushed_at[i] <= PUSH_WINDOW
+        self.credit &= ~self.hand
+
+    @property
+    def hands(self) -> bool:
+        return bool(self.hand.any())
+
     def shares(self):
-        return shares(self.debris)
+        """(credited in the tray, left on the griddle, off the griddle): a piece in the tray that the blade did not put
+        there, or that a hand touched, is in none of them."""
+        tray, left, off = where(self.debris)
+        ok = tray & self.credit & ~self.hand
+        return (float(CHIP_MASS[ok].sum()) / TOTAL_MASS, float(CHIP_MASS[left].sum()) / TOTAL_MASS,
+                float(CHIP_MASS[off].sum()) / TOTAL_MASS)
+
+    def uncredited(self) -> int:
+        tray, _, _ = where(self.debris)
+        return int((tray & ~(self.credit & ~self.hand)).sum())
 
     def tier(self) -> float:
-        """The ladder by debris in the tray (and left on the griddle for 0.75), then the caps."""
+        """The ladder by credited debris in the tray (and left on the griddle for 0.75), then the caps."""
         tr, res, sp = self.shares()
         t = 0.0
         if tr >= TIER_TROUGH[0] - 1e-12:
@@ -295,13 +453,15 @@ class Ledger:
             t = min(t, GOUGE_CAP)
         if sp > SPILL_CAP_SHARE + 1e-12:
             t = min(t, SPILL_CAP)
+        if self.hands:
+            t = min(t, HANDS_CAP)
         return t
 
     def clean(self) -> bool:
-        """The full state: at least 98 % in the tray, nothing left on the griddle, and no cap."""
+        """The full state: at least 98 % credited in the tray, nothing left on the griddle, and no cap."""
         tr, res, sp = self.shares()
         return (tr >= FULL_TROUGH - 1e-12 and res <= FULL_RESIDUE + 1e-12 and not self.s.gouged
-                and sp <= SPILL_CAP_SHARE + 1e-12)
+                and sp <= SPILL_CAP_SHARE + 1e-12 and not self.hands)
 
 
 _L = Ledger()
@@ -316,10 +476,11 @@ def _update(objects):
     if (key is not None and key == _L.key) or (key is None and objects is _L.objs):
         return
     _L.key, _L.objs = key, objects
-    if dk.KEY in objects:
-        _L.debris = np.asarray(objects[dk.KEY], float).reshape(-1, 7)
     held = scraper_held(objects)
+    _L.advance(objects, held)
     sp, sq = _pose(objects["scraper"])
+    if held and float(sp[2]) >= SCRAPER_START[2] + LIFT_MIN:
+        _L.lifted = True
     _L.s.step(sp, sq, held)
     r = sk.rotm(sq)
     still = False
@@ -328,25 +489,27 @@ def _update(objects):
         dr = math.acos(max(-1.0, min(1.0, (float(np.trace(_L.last[1].T @ r)) - 1) / 2)))
         still = dp <= STILL_STEP and dr <= STILL_TURN
     _L.last = (sp, r)
-    down = (not scraper_touched(objects) and still and float(sp[2]) <= SET_DOWN_Z and off_griddle(sp)
+    down = (_L.lifted and not scraper_touched(objects) and still and float(sp[2]) <= SET_DOWN_Z and in_spot(sp)
             and not _L.s.touching)
     _L.good = _L.good + 1 if (_L.clean() and down) else 0
 
 
 def success(objects):
-    """At least 98 % of the debris (by mass) in the tray, nothing left on the griddle, nothing gouged, at most 5 %
-    off the griddle, and the scraper set down on the bench, released and still: this step counts toward the 1 s
-    hold."""
+    """At least 98 % of the debris (by mass) put in the tray by the scraper, nothing left on the griddle, no hand on
+    the debris, nothing gouged, at most 5 % off the griddle, and the scraper (picked up) set down in the taped square,
+    released and still: this step counts toward the 1 s hold."""
     _update(objects)
     return _L.good >= 1
 
 
 def score(objects):
-    """By mass of the debris, from where the pieces really are: 0.25 with at least 25 % in the grease tray; 0.5 with at
-    least 60 %; 0.75 with at least 90 % in the tray and at most 5 % (one piece) left on the griddle; 1.0 with at least 98 % in the
-    tray, nothing left on the griddle and the scraper set down on the bench (off the griddle), released and still
-    for 1 s. Caps: a gouge (blade over 70 degrees, or the edge tilted over 10 degrees onto a corner, slid 1 cm) caps
-    at 0.5; more than 5 % of the debris (more than one piece) off the griddle caps at 0.25. Doing nothing scores 0."""
+    """By mass of the debris the scraper put in the grease tray (pushed over the lip by the held blade, directly or
+    through a pile, within 1 s; never touched by a gripper): 0.25 with at least 25 %; 0.5 with at least 60 %; 0.75
+    with at least 90 % and at most 5 % (one piece) left on the griddle; 1.0 with at least 98 %, nothing left on the
+    griddle and the scraper, after being picked up, set down in the taped square, released and still for 1 s. Caps: a
+    gripper touching any piece at any time scores 0; a gouge (blade over 70 degrees, or the edge tilted over 10 degrees
+    onto a corner, slid 1 cm) caps at 0.5; more than 5 % of the debris (more than one piece) off the griddle caps at
+    0.25. Doing nothing scores 0."""
     _update(objects)
     s = _L.tier()
     if _L.good >= HOLD_STEPS:
@@ -362,7 +525,7 @@ def score(objects):
 # back. Three lanes 5 cm apart (each stroke overlaps the last by half the blade), three times over, then a cleanup stroke
 # along each splash guard, so the plate ends clean (nothing left). The scraper crosses the splash guard only while level
 # and high (tilted, its edge would hang below the guard's top), so it is tilted over the plate and levelled over the
-# tray. Then it goes back to where it lay, level, and is let go.
+# tray. Then it is carried, level, to the taped square right of where it lay, laid down there and let go.
 SCRAPE_DEG = 40.0  # blade-to-plate angle of the demo's strokes (inside the 20-60 degree band)
 PRESS = 0.010  # m: the edge is aimed this far into the plate (the collider stops it). Holding the scraper, the hand
 # sits 3.5-6.5 mm above its command along the stroke (more toward the robot; measured in the simulator), so a shallower
@@ -425,7 +588,8 @@ def _stroke(plan, y, label, x0=X_START, approach=1.5):
 
 
 def demo():
-    """Right hand: take the scraper, scrape three overlapping lanes three times over into the tray, lay the scraper back down."""
+    """Right hand: take the scraper, scrape three overlapping lanes three times over into the tray, lay the scraper down
+    in the taped square."""
     g0 = np.asarray(SCRAPER_START) + R_REST @ GRIP_LOCAL
     gx, gy, gz = (float(v) for v in g0)
     gz += GRIP_DZ
@@ -443,10 +607,12 @@ def demo():
     for y, side in zip(EDGE_LANES_Y, ("right", "left")):  # 3 s to cross to each guard (20 cm across, joints slow)
         _stroke(plan, y, f"cleanup along the {side} guard", x0=FINAL_X_START, approach=3.0)
     e = tcp_for_edge((X_END, LANES_Y[-1], PLATE_Z + LIFT), p)  # levelled where the arm reaches CARRY_Z easily
+    hx, hy = gx + SPOT_XY[0] - SCRAPER_XY[0], gy + SPOT_XY[1] - SCRAPER_XY[1]  # the same grasp over the taped square
     plan += [Waypoint(1.5, (e[0], e[1], CARRY_Z), FINGER_CLOSED, "level it over the tray", GRIP_YAW),
              Waypoint(2.0, (gx, gy, CARRY_Z), FINGER_CLOSED, "back over the bench", GRIP_YAW),
-             Waypoint(1.5, (gx, gy, gz + 0.002), FINGER_CLOSED, "lay it down", GRIP_YAW),
-             Waypoint(0.8, (gx, gy, gz + 0.002), FINGER_OPEN, "let go", GRIP_YAW),
-             Waypoint(1.2, (gx, gy, gz + 0.08), FINGER_OPEN, "lift clear", GRIP_YAW),
-             Waypoint(2.0, (gx, gy, gz + 0.08), FINGER_OPEN, "wait", GRIP_YAW)]
+             Waypoint(1.5, (hx, hy, CARRY_Z), FINGER_CLOSED, "over the taped square", GRIP_YAW),
+             Waypoint(1.5, (hx, hy, gz + 0.002), FINGER_CLOSED, "lay it down", GRIP_YAW),
+             Waypoint(0.8, (hx, hy, gz + 0.002), FINGER_OPEN, "let go", GRIP_YAW),
+             Waypoint(1.2, (hx, hy, gz + 0.08), FINGER_OPEN, "lift clear", GRIP_YAW),
+             Waypoint(2.0, (hx, hy, gz + 0.08), FINGER_OPEN, "wait", GRIP_YAW)]
     return {"right": plan}
