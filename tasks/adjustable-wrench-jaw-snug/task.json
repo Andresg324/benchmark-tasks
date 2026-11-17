@@ -21,6 +21,6 @@
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "Thread a fresh nylon M5 nut on the stud, run it down finger-tight onto the washer, then turn it a further quarter turn (90 degrees) with the wrench against a pencil mark on the washer. A nut that strips or spins is replaced. Photograph its flats from above. Set the wrench on it with its flats square in the jaws and the handle toward 60 degrees, and open the jaw to 9.0 mm with a caliper (1 mm of play).",
   "fidelity": "The wrench rides hidden joints (lift, turn about the nut, two slides): it can be lifted off and laid flat but not tipped. The nut turns on its stud through a modeled thread that breaks loose at 0.76 N*m (the maker's recommended torque; 5.8 N at 13 cm). The faults are wrench-use rules read from angles (play while turning, clockwise turn). The real start is set by angle (finger-tight plus a marked quarter turn); scores are the same for breakaways from 0.10 to 0.93 N*m, the nut's ultimate torque.",
-  "scores": "Dream-1 run: PENDING; demo: 1.0 (1,082 steps)",
-  "media": "M-S2FYFY"
+  "scores": "Dream-1 run: 0 (2,400 steps); demo: 1.0 (1,082 steps). Both on task.py f2101b4151bf.",
+  "media": "M-ZJAVGH"
 }
