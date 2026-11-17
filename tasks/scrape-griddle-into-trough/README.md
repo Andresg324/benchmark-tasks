@@ -62,7 +62,7 @@ fractions weighed on a 0.01 g scale: see Real-world evaluation). The definitions
 
 Every real trial starts from the same measured state and is scored on the same shares as the simulator, read by
 weighing. The protocol fixes four things: the debris (22 weighed pieces of black Play-Doh from a freshly opened can,
-pressed onto the bare plate through a fixed template, each checked by mass and by a nudge), the positions (stops and
+pressed onto the bare plate through a fixed template, each checked by mass and by eye), the positions (stops and
 marks on the bench, the template on the plate), the outcome measurement (three weighed fractions plus photos) and the
 reset. The tolerances are collected in the table at the end; the equipment, with its makers' or retailers' pages, is
 under Real-world build.
@@ -77,14 +77,14 @@ every trial starts at the same temperature.
 **The debris: a standard substitute, made in about 5 minutes.** Each trial uses 22 pieces of black Play-Doh (Hasbro)
 from a freshly opened, sealed 4 oz (113 g) can, each piece weighed to 2.50 g and pressed onto the clean, dry steel
 through a template, so every piece has the same mass, size and place every trial.
-- Why it works as stuck-on food: Play-Doh pressed onto clean, dry, bare steel sticks to the steel where it was pressed
-  and holds against a light push, so each piece has to be broken free by the scraper's edge driven under it at a low
+- Why it works as stuck-on food: Play-Doh pressed onto clean, dry, bare steel sticks to the steel where it was pressed,
+  so each piece has to be broken free by the scraper's edge driven under it at a low
   angle, as burnt-on food does. It sticks only where it was pressed on, so a blade sliding under a piece pushes the
   freed piece along the plate and over the lip. The pieces are separate (1.6 cm apart), so each
   is freed on its own and strokes have to overlap to collect them all.
 - Why it is repeatable: one named product made to one formula, from a sealed can opened for that trial (the can's
-  printed code is recorded), at room temperature; each piece's mass is set by weighing, its outline and thickness by
-  the template's hole, its contact by a fixed press, and its hold by the nudge check below. Nothing is mixed, heated,
+  printed lot code is recorded), at room temperature; each piece's mass is set by weighing, its outline and thickness by
+  the template's hole, its contact by a firm press, checked by eye below. Nothing is mixed, heated,
   cooked or cooled. The dough left in the can is thrown away, so every trial starts from fresh dough.
 - Black: the pieces stand out against the steel on the overhead photos, so what is left is easy to see and count.
 
@@ -118,7 +118,7 @@ to 6.75 (6-piece rows) and -9.0 to 5.0 (5-piece rows), as in the simulator.
 
 **Qualification (once, before the first trial).** From one can, make the debris as below on a clean plate and check by
 hand: each 2.50 g ball pressed in its hole fills it level with the template's top (about 4.8 mm thick); each piece
-holds the 40 g nudge; and the trial's scraper, held at about 30 degrees with its edge on the plate and pushed toward
+lies flat and fully in contact with the plate, with no lifted edges; and the trial's scraper, held at about 30 degrees with its edge on the plate and pushed toward
 the lip, breaks each piece free in one stroke and carries it over the lip, the piece leaving the blade as it drops
 into the tray. The result and photos are kept in the trial log.
 
@@ -127,28 +127,27 @@ arms are stopped at their ready pose while the debris is made; the operator wear
 1. Plate clean, dry and at room temperature (the Reset below), bare type 430 stainless, not oiled or seasoned. The
    tray is empty, dry, weighed (0.01 g) and seated.
 2. Lay the template on the plate, its near edge along the lip and its right edge against the right splash guard.
-3. Open a fresh, sealed 4 oz can of black Play-Doh and record the code printed on it.
+3. Open a fresh, sealed 4 oz can of black Play-Doh and record the lot code printed on it.
 4. Weigh the pieces: on the scale, tared on a weighing boat, pinch off dough and roll it into a ball between the
    gloved palms, adding or pinching off until it reads 2.50 g within 0.05 g; set it aside on a sheet of Reynolds
    parchment paper. 22 balls, about 6 s each. Then weigh all 22 together on the boat: 55.00 g within 0.30 g (the
    total mass check). The total is the trial's debris mass, D.
-5. Press the pieces: drop one ball into each hole, lay a square of parchment paper over it, and press it down with
-   the flat face of a 6 in. offcut of pine 2 x 4 lumber, firmly, until the block rests on the template, and hold for
-   5 s. The block's stop on the template sets each piece's thickness, and the parchment lets the block lift clean.
+5. Press the pieces: drop one ball into each hole, lay a square of parchment paper over it, and press each piece flat
+   with the base of a measuring cup, firmly, for 3 seconds. The cup's base is wider than the hole and stops on the
+   template, which sets each piece's thickness, and the parchment lets the cup lift clean.
 6. Lift the template straight up and set it aside. The pieces stay on the steel where they were pressed; a piece that
    lifts with the template or tears is removed, its spot wiped dry, and a new 2.50 g ball pressed through the template
    laid back in place.
-7. Nudge check, every piece: first learn the push by pressing a gloved fingertip straight down on the tared scale
-   pan until it reads 40 g (0.39 N), three times. Then push each piece with the same fingertip, sideways toward the lip,
-   low against its side, for 1 s. The piece stays put (no gap opens at its far side). A piece that slides is removed,
-   its spot wiped dry, and a new piece pressed in its place through the template.
+7. Contact check, every piece, by eye: each piece is flat and fully in contact with the plate, with no lifted edges.
+   A piece that is not is removed, its spot wiped dry, and a new piece pressed in its place through the template.
 8. Photograph the plate from the overhead stand with the raking light on: 22 pieces, each in its place. This is the
    trial's before photo.
 9. Fit fresh covers on the robot's fingers (Protecting the robot's hands, below) and lay the scraper in its outline.
    Start the trial within 10 minutes of pressing the last piece.
 
-**Batch checks, every trial.** The can's printed code (one fresh can a trial); each piece 2.50 g within 0.05 g; the 22
-together 55.00 g within 0.30 g; every piece holds the 40 g nudge; the before photo shows all 22 in place. They are
+**Batch checks, every trial.** The can's printed lot code (one fresh can a trial); each piece 2.50 g within 0.05 g; the
+22 together 55.00 g within 0.30 g; a visual check that every piece is flat and fully in contact with the plate, with
+no lifted edges; the before photo shows all 22 in place. They are
 written in the trial log with the room temperature.
 
 **Protecting the robot's hands.** Play-Doh is non-toxic and water-based, but it is salty, and crumbs pressed into a
@@ -217,11 +216,11 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
 | Template | near edge along the lip, right edge against the right guard; squares 1.9 cm | squares 0.5 mm, centers 1 mm | simulator's piece layout; 6 in. steel rule |
 | Room | 20 to 24 degrees C | | the trial runs at room temperature; thermometer |
 | Plate before pressing | bare 430 stainless, clean, dry, unoiled | no particle 1 mm, no smear on the photo | Play-Doh sticks to clean, dry steel |
-| Dough | black Play-Doh, a fresh sealed 4 oz can each trial | can code recorded | one product, fresh each trial |
+| Dough | black Play-Doh, a fresh sealed 4 oz can each trial | can lot code recorded | one product, fresh each trial |
 | Each piece | 2.50 g, 1.9 cm square, about 4.8 mm thick | 0.05 g | simulator's piece; 0.01 g scale |
 | All 22 pieces | 55.00 g | 0.30 g | simulator's debris mass |
-| Press | 2 x 4 block down on the template, 5 s | | the template's thickness sets the piece's |
-| Nudge check | 40 g fingertip push at each piece's side, 1 s: it stays put | every piece | simulator's bond (0.8 N) is twice the nudge |
+| Press | base of a measuring cup, firmly, 3 s, down to the template | | the template's thickness sets the piece's |
+| Contact check | by eye: every piece flat and fully in contact with the plate, no lifted edges | every piece | a lifted piece is remade |
 | Start | within 10 minutes of the last piece pressed | | fresh dough |
 | Finger covers | a fresh nitrile glove on each finger of the scraper hand | every trial | Protecting the robot's hands |
 | Nothing left (1.0) | L under 0.40 g and no piece 1 mm or larger; a thin smear not counted | | a sixth of a 2.50 g piece; steel rule and 1 cm grid photo |
@@ -242,13 +241,10 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
   for good, the first time holding the piece takes more than its break force; from then on the piece is free.
   Nothing is drawn or moved by a script: the blade's collider has to meet a piece and push it hard enough to free it,
   and a piece falls into the tray only when it is pushed past the lip. The score reads only the pieces' poses.
-- **Bond strength: set from the real check.** The bond is set from the check every piece passes: a 40 g fingertip nudge (0.39 N) at its side does not move it, and
-  the scraper's edge breaks it free. Break force 0.8 N a piece, about twice the nudge and 33 times the piece's
-  weight; break torque = break force x 2.5 mm (an edge that gets under a piece peels it off with less push than a
-  flat shove).
-- **Calibration.** PhysX tests a joint's break force against its own measure of the joint's load, not the push on the
-  piece, so the task writes 32 times the bond (`BREAK_CAL`). Pushed in the simulator with a slowly rising force,
-  bonded bodies came free at 0.9 to 1.8 times their bond: 0.72 N or more here, above the 0.39 N nudge. A broken bond
+- **Bond strength.** Each piece is bonded to the plate on its own and breaks free under the scraper's edge; an edge
+  that gets under a piece peels it off with less push than a flat shove.
+- **Break force in PhysX.** PhysX tests a joint's break force against its own measure of the joint's load, not the push on the
+  piece, so the task scales the bond it writes (`BREAK_CAL`). A broken bond
   is not restored by the scene's reset (one trial per run).
 - **Rigid pieces.** Real Play-Doh is soft: under the blade a piece may squash a little or leave a thin smear. The
   score is by mass and the smear threshold (under 0.40 g) is the same in both, so this does not change it.
@@ -310,10 +306,10 @@ specifications.
 - Debris: use black Play-Doh modeling compound (Hasbro), sealed 4 oz (113 g) cans, one opened for each trial.
 - Template: use Elmer's 3/16 in. white foam board, one US Letter sheet printed at 100 %, an Elmer's glue stick, and an
   X-ACTO #1 knife to cut the squares.
-- Press: use a 6 in. offcut of pine 2 x 4 lumber (planed face down) and Reynolds Kitchen parchment paper.
+- Press: use a measuring cup (its flat base) and Reynolds Kitchen parchment paper.
 - Scale: use a BOMATA 0.01 g / 1 kg compact digital scale (model BS2000-001B as listed; 1,000 g by 0.01 g, stainless
   platform, tare, USB rechargeable), a common low-cost 0.01 g scale whose capacity covers the tray with its contents.
-  It weighs the pieces, the tray and the fractions, and gives the nudge check its 40 g. At the start of each session
+  It weighs the pieces, the tray and the fractions. At the start of each session
   it is checked, after a 10-minute warm-up and away from drafts, against a 100 g calibration weight (100.00 g within
   0.03 g), and recalibrated by its manual if it reads outside that.
 - Finger covers: use AMMEX Gloveworks GPNB black nitrile disposable gloves, industrial grade, 5 mil palm, powder free, size
