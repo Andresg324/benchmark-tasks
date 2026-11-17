@@ -29,7 +29,7 @@ Results on this task.py (sha256 a8f7b3ef9491...): the scripted demo scores **1.0
   thick**, folded in thirds (puffpastry.com FAQ, Pepperidge Farm's puff pastry site). America's Test Kitchen measured
   the sheets at 9.5 x 9 inches (24 x 23 cm) in its taste test of store-bought puff pastry. The other US products are
   less typical: Trader Joe's All Butter Puff Pastry (two 12.5 x 10 inch sheets, 18 oz) is seasonal, sold only in late
-  fall and early winter; Dufour Classic (one 14 x 9 inch sheet, 14 oz, about $12) is mostly in specialty stores (both
+  fall and early winter; Dufour Classic (one 14 x 9 inch sheet, 14 oz) is mostly in specialty stores (both
   from the same ATK test). Block formats (Jus-Rol 500 g in the UK, Tenderflake in Canada) are not what a US shopper
   finds, so the task no longer starts from a block.
 - **The start.** One sheet as the box directs: thawed until it unfolds easily, still cold, unfolded on a lightly floured
@@ -105,7 +105,7 @@ continuous ratings: per arm about 18 N of the 52 N down and 3 N of the 11 N alon
 outcome, the sheet, so this force sets how hard the sim's arms work.
 
 **Scale check of the first pass (once per rig, by whoever builds the rig).** The rig's one kitchen scale, a Greater
-Goods 0471 high-capacity kitchen scale (10 kg x 1 g, about $25), is set on the table and the bare board centered on it
+Goods 0471 high-capacity kitchen scale (10 kg x 1 g), is set on the table and the bare board centered on it
 (before the board is taped into its marks), a sheet prepared as for a trial (thaw, flour, cut) laid on the board, and the scale tared with the pin lifted off. The pin is set on its rings behind the sheet and rolled once
 across it by hand at the demo's pace (4 cm/s, about 3 s across the 11.5 cm piece), pressed just enough to keep both rings
 on the board, while a phone films the display. The peak reading added over the tare is the first pass's downward
@@ -234,15 +234,15 @@ and gauge are used for every trial.
   inches across). 1/8 inch is 3.18 mm; the sim uses 3.2 mm.
 - Pastry and flour: Pepperidge Farm Puff Pastry Sheets (17.3 oz box, two sheets); all-purpose flour and a small
   fine-mesh sieve; a pizza wheel.
-- Ruler: the Johnson 40-0564 24 inch aluminum inch/metric straightedge (2 mm graduations, about $14). It guides the
+- Ruler: the Johnson 40-0564 24 inch aluminum inch/metric straightedge (2 mm graduations). It guides the
   cut, whose tolerance is 3 mm an edge.
 - Flour measure: a standard US measuring teaspoon (for example from an OXO Good Grips stainless steel measuring spoon
   set), spooned full and leveled with a knife.
 - Calipers, also the thickness gauge: the Neiko 01407A digital caliper (0 to 150 mm, 0.01 mm display, accuracy
-  +-0.02 mm per the maker; about $25), a common budget caliper with a depth rod. The rod slides out of the end of its
+  +-0.02 mm per the maker), a common low-cost caliper with a depth rod. The rod slides out of the end of its
   beam; the beam's end face (a few millimeters thick; measured once and recorded) is the foot that rests on the pastry
-  around a point. Check leaves: a 20-leaf metric feeler gauge set, 0.05 to 1.00 mm (for example Draper 51701, a few
-  dollars), stacked to about 3.00 mm (1.00 + 0.95 + 0.90 + 0.15); the stack is read once with the caliper on a bench
+  around a point. Check leaves: a 20-leaf metric feeler gauge set, 0.05 to 1.00 mm (the Draper 51701 set, or any metric set
+  with these leaves), stacked to about 3.00 mm (1.00 + 0.95 + 0.90 + 0.15); the stack is read once with the caliper on a bench
   and that value recorded as its reference.
 - Gripper pad covers: Glad Press'n Seal food wrap, a food-safe wrap that seals to itself under finger pressure.
 - Scale (one, used once per rig for the force check and the teaspoon check): Greater Goods 0471 high-capacity
@@ -252,18 +252,9 @@ and gauge are used for every trial.
 - Also: a steel tape; masking tape; double-sided carpet tape; a timer; a phone with a level app and a camera on an
   overhead phone stand.
 
-Rough cost of the rig, at common US retail prices: board about $45, pin about $40, rings about $12, caliper about
-$25, feeler set about $10, kitchen scale about $25, room thermometer about $10, straightedge about $14, measuring
-spoons about $5, sieve, pizza wheel, tapes, wrap and phone stand about $40: about $226 in all, plus about $7 of pastry
-a box (two trials).
-
-**Budget build.** The board, pin, rings and caliper stay as named (the sim models the board and pin; the Neiko is
-already a budget caliper, +-0.02 mm, checked on a feeler stack within 0.03 mm, for a 0.3 mm band). Three items can go:
-any metric feeler set of 0.05 to 1.00 mm leaves (about $5, an estimate; its stack is read once on the caliper anyway),
-the room thermometer if the room already has a thermostat or thermometer that reads in degrees, and the measuring
-spoons if a standard US set is at hand: about $206. A builder who already owns a kitchen scale of 10 kg x 1 g (5 kg is
-too small, above) skips the scale too: about $181. Totals: primary about $226, budget about $206 (about $181 with a
-scale at hand).
+The rig uses common low-cost products throughout (the board, pin, rings, caliper, feeler set, kitchen scale, room
+thermometer, straightedge and measuring spoons named above, plus a sieve, a pizza wheel, tapes, wrap and a phone
+stand): about $225 in all, plus the pastry (one box gives two trials).
 
 ## Real-world evaluation (reproducible protocol)
 
@@ -452,7 +443,7 @@ grows.
   rolling pin cylinders up to 2.5-inches in diameter"
   (vermontkitchensupply.com/products/silicone-rolling-pin-rings-8pc-set; also target.com/p/-/A-1006725924).
 - Ruler: Johnson 40-0564 24 inch aluminum inch/metric straightedge, graduations in 1/8 inch, 1/16 inch and 2 mm
-  (johnsonlevel.com/P/2096/24AluminumInchMetricStraightEdge; about $14, hausoftools.com).
+  (johnsonlevel.com/P/2096/24AluminumInchMetricStraightEdge).
 - Flour per teaspoon: King Arthur Baking, Ingredient Weight Chart, all-purpose flour 1 cup = 120 g
   (kingarthurbaking.com/learn/ingredient-weight-chart); a cup is 48 teaspoons, so 2.5 g a level teaspoon.
 - Gripper pad covers: Glad Press'n Seal food plastic wrap (target.com/p/-/A-14771700).
@@ -461,12 +452,11 @@ grows.
 - Check leaves: Draper 51701 20-blade metric feeler gauge set, 0.05 to 1.0 mm
   (drapertools.com/product/51701/20-blade-metric-feeler-gauge-set).
 - Kitchen scale: Greater Goods high-capacity kitchen scale, model 0471, 22 lb (10 kg) x 1 g, stainless platform
-  (retail listings, about $25).
+  (retail listings).
 - Board weight: 4 lb for the J.K. Adams WLS-1612 (chefsupplies.ca listing above).
 - Roll-in fat yield stress, 4000 to 5000 Pa (LAOS): B. Macias-Rodriguez and A. G. Marangoni, "The fat in a perfect
   croissant", Physics Today 71(1), 2018 (physicstoday.aip.org/quick-study/the-fat-in-a-perfect-croissant).
-- Room thermometer: ThermoPro (TempPro) TP50, -50 to 70 degrees C, +-0.5 degrees C (temppro.com, TP50; about $10
-  at US retail).
+- Room thermometer: ThermoPro (TempPro) TP50, -50 to 70 degrees C, +-0.5 degrees C (temppro.com, TP50).
 
 ## Files
 
