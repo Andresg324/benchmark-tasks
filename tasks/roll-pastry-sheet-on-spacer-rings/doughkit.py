@@ -1,9 +1,9 @@
-"""doughkit: a piece of pastry rolled out under a rolling pin with spacer rings (Nov 11; Nov 15: a sheet, read on a
+"""doughkit: a piece of dough rolled out under a rolling pin with spacer rings (Nov 11; Nov 15: a sheet, read on a
 2 cm grid). Import after yamkit:
     import doughkit as dk
 
-The pastry is modeled, not simulated: it has no collider, so the pin rides on its rings on the board and the kit works
-out what the barrel does to the pastry under it. The sheet is a row of strips along y (one per `cell` of width); each
+The dough is modeled, not simulated: it has no collider, so the pin rides on its rings on the board and the kit works
+out what the barrel does to the dough under it. The sheet is a row of strips along y (one per `cell` of width); each
 strip is a chain of thin slices along x, each with a fixed volume (per unit width) and a thickness, so its length is
 volume / thickness and the total volume never changes.
 
@@ -11,30 +11,40 @@ Each control step, for each strip, the kit finds where the barrel's lowest line 
 it is above the board there (the gap: the rings' clearance, plus however far that end of the pin is lifted, so a
 tilted pin leaves a wedge). A slice whose center the line rolls across, with the gap below the slice's thickness, is
 pressed as the barrel's face reaches it (its lowest line still sqrt(2 R (t - gap)) short of the slice's center,
-the contact patch of a round barrel on thick pastry): t <- gap + (t - gap) * RATIO (the pastry springs back by RATIO of the excess, so it takes several passes to
-come down to the gap). A pressed slice lengthens; the slices on its far side from the strip's anchor (the piece's
+the contact patch of a round barrel on thick dough).
+
+Press law (Nov 17: force-gated, elastic then rigid-plastic): the dough is elastic up to a yield strain YIELD_STRAIN
+(5 %, an estimate) and then flows at its flow stress `stress`. A press squeezing h = t - gap off a slice t thick
+loads that slice's strip (one `cell` wide) with F = p w a: a = sqrt(2 R h) the barrel's contact length, w the cell,
+and p = stress x min(1, h / (YIELD_STRAIN t)) the contact pressure (elastic below the yield squeeze, the flow stress
+above it). Below the yield load F_y = stress w sqrt(2 R YIELD_STRAIN t) the strain is elastic and the slice springs
+fully back: no permanent thinning, however many passes. Above it the slice thins by
+    dt = (1 - RATIO) (h - YIELD_STRAIN t),   h = F^2 / (2 R stress^2 w^2)
+(RATIO of the plastic squeeze springs back, so it takes several passes). The thinning per pass is set by the load the
+barrel puts on the strip: in the simulator the barrel's height is where the pin settles under the arms' push, its
+weight, the rings on the board and this push back, so a pin that is not pushed down stays high and presses less. A
+sheet rolled level with the rings on the board settles at gap / (1 - YIELD_STRAIN), 3.37 mm for the 3.2 mm rings. A pressed slice lengthens; the slices on its far side from the strip's anchor (the piece's
 middle, held by the bulk of the dough) move outward to make room. A slice is pressed again only once the line has
 gone back REARM behind where the barrel's face meets it (one press per crossing, however the arm jitters). Rolling
 past a strip's end presses the end slice like any other: the rings hold the barrel at the gap there too.
 
-Hands (the task's `gate(objects) -> bool`): presses count only while it is True (e.g. the pin driven by both handles).
-
-Resistance (Nov 16): the pastry pushes back on the pin. For each strip the barrel is in contact
-with (pastry thicker than the gap within the barrel's contact reach of its lowest line), with h the largest excess
-there and a = sqrt(2 R h) the contact length: an upward force STRESS x cell x a (the pastry's flow stress over the
-contact's footprint) and, while the line moves, a force against the motion STRESS x cell x h (the work of squeezing h
-off a cell-wide strip, per meter rolled). They act at the contact, so a pin pressed harder at one end feels the thicker
+Resistance (Nov 16; Nov 17 elastic below yield): the dough pushes back on the pin. For each strip the barrel is in
+contact with (dough thicker than the gap within the barrel's contact reach of its lowest line), with h the largest
+excess there, t that slice's thickness and a = sqrt(2 R h) the contact length: an upward force p x cell x a (p as in
+the press law: elastic below the yield squeeze, the flow stress above it) and, while the line moves, a force against
+the motion STRESS x cell x (h - YIELD_STRAIN t) (the plastic work of squeezing the dough down, per meter rolled; none
+while it is only elastic). They act at the contact, so a pin pressed harder at one end feels the thicker
 side push back harder, and they are worked out from the pin's pose and applied to it as an external force and torque
 before every physics step (the press itself still happens once per control step).
 `stress` is set by the task (Pin.stress, Pa; 0 turns it off).
 
     dk.setup(dk.Sheet(...), dk.Pin(...))    once, at import time of task.py
     dk.update(objects)                       each control step (the hook calls it; offline tests call it)
-    dk.grid() -> t                           thickness (m, 0 = no pastry) at the grid's cell centers
+    dk.grid() -> t                           thickness (m, 0 = no dough) at the grid's cell centers
     dk.lengths() -> per-strip lengths (m); dk.volume() total volume (m^3); dk.ends() per-strip (x_min, x_max)
 All of it resets when kit.episode() changes.
 
-Visuals: one abutting slab per covered grid cell, as thick as the pastry there, all one pastry color (Isaac Lab
+Visuals: one abutting slab per covered grid cell, as thick as the dough there, all one dough color (Isaac Lab
 VisualizationMarkers, no physics), so the top camera shows the sheet growing.
 """
 
@@ -46,13 +56,15 @@ import numpy as np
 
 import yamkit as kit
 
-RATIO = 0.5  # fraction of the excess over the gap left after one press (springback)
+RATIO = 0.5  # fraction of the plastic squeeze (beyond the yield strain) that springs back after one press
+YIELD_STRAIN = 0.05  # the dough's elastic limit in compression (an estimate): a squeeze under 5 % of the thickness
+#                      springs back fully
 REARM = 0.01  # m: the line must go this far back past a slice before it can press it again
 
 
 @dataclass(frozen=True)
 class Sheet:
-    """The pastry: a piece `size` = (length along x, width along y, thickness) centered at (cx, cy) on a board whose top
+    """The dough: a piece `size` = (length along x, width along y, thickness) centered at (cx, cy) on a board whose top
     is at world z `board_z`; displayed and scored on `cell` cells over x in `x_range` (world m)."""
 
     center: tuple
@@ -72,7 +84,7 @@ class Pin:
     radius: float
     length: float
     axis: tuple = (0.0, 1.0, 0.0)
-    stress: float = 0.0  # Pa: the pastry's flow stress against the barrel (0: no resistance)
+    stress: float = 0.0  # Pa: the dough's flow stress against the barrel (0: no resistance)
 
 
 _CFG = {}
@@ -94,15 +106,15 @@ class _State:
         self.anchor_x = float(sh.center[0])
         self.line = None  # per strip: (x, gap) of the barrel's lowest line last step, or None
         self.step = 0
-        self.presses = 0  # presses that counted (both handles held)
-        self.wrench = (np.zeros(3), np.zeros(3))  # the pastry's force and torque on the pin (world, about its center)
+        self.presses = 0  # control steps in which some slice thinned
+        self.wrench = (np.zeros(3), np.zeros(3))  # the dough's force and torque on the pin (world, about its center)
         self.peak = np.zeros(3)  # largest |Fx|, |Fy|, Fz seen this trial (N)
 
 
-def setup(sheet: Sheet, pin: Pin, gate=None) -> None:
-    """`gate(objects) -> bool`: presses count only while it is True (None: always)."""
+def setup(sheet: Sheet, pin: Pin, before=None) -> None:
+    """`before(base)`: called in the simulator each control step before the dough step (e.g. to read link poses)."""
     global _S
-    _CFG.update(sheet=sheet, pin=pin, gate=gate)
+    _CFG.update(sheet=sheet, pin=pin, before=before)
     _S = None
 
 
@@ -158,46 +170,68 @@ def update(objects) -> None:
         S.line = lines
         _rearm(S, lines)
         return
-    held = bool(_CFG["gate"](objects)) if _CFG.get("gate") else True
-    t0, armed0 = S.t.copy(), S.armed.copy()
+    t0 = S.t.copy()
     S.wrench = _reaction(S, objects, lines, S.line)
     S.peak = np.maximum(S.peak, np.abs(S.wrench[0]))
+    R = _CFG["pin"].radius
     for j, (now, before) in enumerate(zip(lines, S.line)):
         if now is None or before is None:
             continue
         x0, g0 = before
         x1, g1 = now
-        if x1 == x0:
-            continue
-        d = 1 if x1 > x0 else -1
-        k = 0 if d > 0 else 1
+        g = max(g0, g1)  # the squeeze held through both control steps (a one-step spike, a drop, does not count)
         n = S.t.shape[1]
-        order = range(n) if d > 0 else range(n - 1, -1, -1)
         e = _edges(S, j)  # recomputed only after a press moves them
-        for i in order:
-            if not S.armed[k, j, i]:
-                continue
-            c = 0.5 * (e[i] + e[i + 1])
-            g = min(g0, g1)
-            hit = c - d * _reach(S.t[j, i], g)  # where the line is when the barrel's face meets the slice's top
-            if not (min(x0, x1) < hit <= max(x0, x1)):
-                continue
-            f = (hit - x0) / (x1 - x0)
-            g = g0 + f * (g1 - g0)  # the gap there
-            if g < S.t[j, i]:
-                S.t[j, i] = g + (S.t[j, i] - g) * RATIO
+        if x1 != x0:  # rolling: each slice is pressed as the barrel's face reaches it
+            d = 1 if x1 > x0 else -1
+            k = 0 if d > 0 else 1
+            for i in (range(n) if d > 0 else range(n - 1, -1, -1)):
+                if not S.armed[k, j, i] or g >= S.t[j, i]:
+                    continue
+                c = 0.5 * (e[i] + e[i + 1])
+                hit = c - d * _reach(S.t[j, i], g)  # where the line is when the barrel's face meets the slice's top
+                if not (min(x0, x1) < hit <= max(x0, x1)):
+                    continue
                 S.armed[k, j, i] = False
-                e = _edges(S, j)
-    if not held:  # the pin moved without the gate's hold does not count
-        S.t, S.armed = t0, armed0
-    elif not np.array_equal(S.t, t0):
+                dt = thinning(S.t[j, i], S.t[j, i] - g)
+                if dt > 0.0:
+                    S.t[j, i] -= dt
+                    e = _edges(S, j)
+        # pressing down in place: a slice under the barrel's face that no crossing has pressed since the barrel last
+        # came to it is squeezed by the face's depth over it (less off the lowest line: t - g - s^2 / 2R at s)
+        c = 0.5 * (e[:-1] + e[1:])
+        h = S.t[j] - g - (c - x1) ** 2 / (2 * R)
+        for i in np.flatnonzero((h > 0) & S.armed[0, j] & S.armed[1, j]):
+            S.armed[:, j, i] = False
+            S.t[j, i] -= thinning(S.t[j, i], float(h[i]))
+    if not np.array_equal(S.t, t0):
         S.presses += 1
     S.line = lines
     _rearm(S, lines)
 
 
+def thinning(t: float, h: float) -> float:
+    """Permanent thinning (m) of a slice `t` thick squeezed by `h` (see the press law): none up to the yield strain."""
+    return (1.0 - RATIO) * max(0.0, h - YIELD_STRAIN * t)
+
+
+def pressure(t: float, h: float, stress: float) -> float:
+    """The contact pressure (Pa) under the barrel squeezing `h` off dough `t` thick: elastic, rising to the flow stress
+    at the yield strain, then the flow stress."""
+    if h <= 0.0:
+        return 0.0
+    return stress * min(1.0, h / (YIELD_STRAIN * t))
+
+
+def yield_load(t: float, stress: float = None) -> float:
+    """The load (N) on one cell-wide strip `t` thick at which the dough under the barrel starts to yield."""
+    p, sh = _CFG["pin"], _CFG["sheet"]
+    s = p.stress if stress is None else stress
+    return s * sh.cell * math.sqrt(2 * p.radius * YIELD_STRAIN * t)
+
+
 def _reaction(S, objects, lines, before):
-    """The pastry's force and torque on the pin this step (world frame, torque about the pin's center), from the
+    """The dough's force and torque on the pin this step (world frame, torque about the pin's center), from the
     thickness before this step's presses (see Resistance in the module docstring)."""
     p, sh = _CFG["pin"], _CFG["sheet"]
     F, T = np.zeros(3), np.zeros(3)
@@ -216,12 +250,14 @@ def _reaction(S, objects, lines, before):
         touch = (ex > 0) & (np.abs(c - x) <= r + 0.5 * (e[1:] - e[:-1]))
         if not touch.any():
             continue
-        h = float(ex[touch].max())
+        i = int(np.flatnonzero(touch)[np.argmax(ex[touch])])
+        h, t = float(ex[i]), float(S.t[j, i])
         a = math.sqrt(max(0.0, 2 * p.radius * h - h * h))
         d = 0.0
         if before is not None and before[j] is not None and now[0] != before[j][0]:
             d = 1.0 if now[0] > before[j][0] else -1.0
-        f = np.array([-d * p.stress * sh.cell * h, 0.0, p.stress * sh.cell * a])
+        plastic = max(0.0, h - YIELD_STRAIN * t)
+        f = np.array([-d * p.stress * sh.cell * plastic, 0.0, pressure(t, h, p.stress) * sh.cell * a])
         at = np.array([x + d * 0.5 * a, float(S.ys[j]), sh.board_z + g])  # the middle of the contact, ahead of the line
         F += f
         T += np.cross(at - center, f)
@@ -229,17 +265,17 @@ def _reaction(S, objects, lines, before):
 
 
 def wrench():
-    """The pastry's (force, torque) on the pin from the last control step (N, N m; world frame, about its center)."""
+    """The dough's (force, torque) on the pin from the last control step (N, N m; world frame, about its center)."""
     return _state().wrench
 
 
 def peak():
-    """The largest |Fx|, |Fy| and upward Fz the pastry put on the pin this trial (N)."""
+    """The largest |Fx|, |Fy| and upward Fz the dough put on the pin this trial (N)."""
     return _state().peak.copy()
 
 
 def _reach(t: float, g: float) -> float:
-    """How far ahead of its lowest line the barrel's face first touches pastry `t` thick with the line at gap `g`."""
+    """How far ahead of its lowest line the barrel's face first touches dough `t` thick with the line at gap `g`."""
     h = t - g
     if h <= 0:
         return 0.0
@@ -249,8 +285,10 @@ def _reach(t: float, g: float) -> float:
 
 def _rearm(S, lines) -> None:
     for j, ln in enumerate(lines):
-        if ln is None:
+        if ln is None:  # the pin off this strip: the next time it comes down is a new press
+            S.armed[:, j] = True
             continue
+        S.armed[:, j] |= ln[1] >= S.t[j]  # the barrel lifted clear of a slice: likewise
         e = _edges(S, j)
         c = 0.5 * (e[:-1] + e[1:])
         r = np.array([_reach(t, ln[1]) for t in S.t[j]])  # back behind where the barrel's face meets each slice
@@ -259,13 +297,13 @@ def _rearm(S, lines) -> None:
 
 
 def volume() -> float:
-    """Total pastry volume (m^3)."""
+    """Total dough volume (m^3)."""
     S = _state()
     return float(S.vol.sum() * _CFG["sheet"].cell)
 
 
 def ends() -> np.ndarray:
-    """Per strip, (x_min, x_max) of the pastry (world m)."""
+    """Per strip, (x_min, x_max) of the dough (world m)."""
     S = _state()
     return np.array([[_edges(S, j)[0], _edges(S, j)[-1]] for j in range(S.t.shape[0])])
 
@@ -283,7 +321,7 @@ def strips():
 
 def grid():
     """Thickness on the `cell` grid: rows = strips (y), columns = cells along x over Sheet.x_range; t is the thickness
-    (m) of the slice under the cell's center, 0 where there is no pastry."""
+    (m) of the slice under the cell's center, 0 where there is no dough."""
     sh = _CFG["sheet"]
     S = _state()
     nx = int(round((sh.x_range[1] - sh.x_range[0]) / sh.cell))
@@ -318,7 +356,7 @@ def band(t_m: float) -> int:
     return len(BANDS) - 1
 
 
-PASTRY_BAND = 2  # one pastry color for every slice: the video shows the sheet, not a thickness map
+DOUGH_BAND = 2  # one dough color for every slice: the video shows the sheet, not a thickness map
 
 
 def _markers():
@@ -353,7 +391,7 @@ def _draw(origin) -> None:
                 tr.append((0.0, 0.0, -10.0)), sc.append((1e-5,) * 3), ids.append(0)
                 continue
             tr.append((xc[i] + origin[0], S.ys[j] + origin[1], sh.board_z + t[j, i] / 2 + origin[2]))
-            sc.append((sh.cell * 1.002, sh.cell * 1.002, t[j, i])), ids.append(PASTRY_BAND)
+            sc.append((sh.cell * 1.002, sh.cell * 1.002, t[j, i])), ids.append(DOUGH_BAND)
     m.visualize(translations=np.array(tr, float), orientations=np.tile([0.0, 0.0, 0.0, 1.0], (len(tr), 1)),
                 scales=np.array(sc, float), marker_indices=np.array(ids, int))
 
@@ -362,8 +400,8 @@ def _draw(origin) -> None:
 
 
 def _patch_embodiment() -> None:
-    """Draw the pastry as it starts the trial right after each scene reset, before the first frame is taken (the
-    step hook only runs from the first control step on, so the pastry would pop in). Wraps the embodiment's
+    """Draw the dough as it starts the trial right after each scene reset, before the first frame is taken (the
+    step hook only runs from the first control step on, so the dough would pop in). Wraps the embodiment's
     observation at t = 0 (the task file is loaded inside the first reset, so its reset can't be wrapped in time)."""
     ie = sys.modules.get("yam_arena.inspect_embodiment")
     cls = getattr(ie, "YamArenaEmbodiment", None)
@@ -376,7 +414,7 @@ def _patch_embodiment() -> None:
         global _S
         if getattr(self, "_t", None) == 0.0 and getattr(self, "_base", None) is not None:
             try:
-                _S = None  # fresh pastry for the new trial
+                _S = None  # fresh dough for the new trial
                 _draw(self._base.scene.env_origins[0].detach().cpu().numpy())
                 self._env.step(self._ready)  # one more settle step at the ready pose, so the cameras update
                 for _ in range(getattr(ie, "RESET_RENDERS", 4)):
@@ -403,6 +441,13 @@ def _patch(scene) -> None:
         key = (kit.episode(), int(buf[0].item()) if buf is not None else None)
         if key[1] is None or key != last["key"]:  # once per control step
             last["key"] = key
+            if _CFG.get("before"):
+                try:
+                    _CFG["before"](base)
+                except Exception as e:  # noqa: BLE001  (reported; the task's checks fall back to their offline form)
+                    if not _VIS.get("before_failed"):
+                        print(f"doughkit: before-step hook failed ({e!r})", file=sys.stderr, flush=True)
+                    _VIS["before_failed"] = True
             update(out)
             _apply(base)
             try:
@@ -425,7 +470,7 @@ class _Pose:
 
 
 def _apply(base) -> None:
-    """Once: hook the scene's write to the simulator, so the pastry's push on the pin is worked out from the pin's
+    """Once: hook the scene's write to the simulator, so the dough's push on the pin is worked out from the pin's
     pose and put on it before every physics step (a push held for a whole control step makes the pin bounce)."""
     if not _CFG["pin"].stress or _APPLY["failed"] or _APPLY["base"] is base:
         return
@@ -437,7 +482,7 @@ def _apply(base) -> None:
             _physics_step(base)
         except Exception as error:  # noqa: BLE001  (never let the push break a run)
             _APPLY["failed"] = True
-            print(f"doughkit: pastry push off ({error!r})", file=sys.stderr, flush=True)
+            print(f"doughkit: dough push off ({error!r})", file=sys.stderr, flush=True)
         return write(*a, **k)
 
     base.scene.write_data_to_sim = write_data_to_sim
@@ -477,7 +522,7 @@ def _physics_step(base) -> None:
             return
         except Exception as error:  # noqa: BLE001  (try the next API)
             print(f"doughkit: {name} failed ({error!r})", file=sys.stderr, flush=True)
-    raise RuntimeError("no way to put the pastry's push on the pin")
+    raise RuntimeError("no way to put the dough's push on the pin")
 
 
 class _Hook(kit._Hook):

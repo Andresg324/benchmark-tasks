@@ -1,4 +1,4 @@
-"""Offline checks of the pastry-rolling model and scorer: step-by-step pin and gripper histories at 20 Hz, no simulator.
+"""Offline checks of the dough-rolling model and scorer: step-by-step pin and gripper histories at 20 Hz, no simulator.
 
     python test_task.py        (with the yam_arena package, or the offline stub, importable)
 """
@@ -11,13 +11,13 @@ import numpy as np
 from yam_arena.task_file import ObjectState
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location("pastry_task", os.path.join(HERE, "task.py"))
+_spec = importlib.util.spec_from_file_location("dough_task", os.path.join(HERE, "task.py"))
 m = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(m)
 kit, dk = m.kit, m.dk
 
 PARK = {"left_gripper": (0.20, 0.30, m.TOP + 0.20), "right_gripper": (0.20, -0.30, m.TOP + 0.20)}
-GRIPPED = 0.27  # finger opening on the 2.5 cm handle
+GRIPPED = 0.26  # finger opening closed on the 2.5 cm handle (the pads pressed 0.3 mm into it, as the grip does)
 
 
 def st(pos, quat=(0, 0, 0, 1.0)):
@@ -32,7 +32,7 @@ def qx(deg):
 
 
 class Trial:
-    """A fresh trial: the pin lying on the board behind the pastry, arms at PARK. step() runs one control step as the hook
+    """A fresh trial: the pin lying on the board behind the dough, arms at PARK. step() runs one control step as the hook
     does: the kit's update, then success() and score()."""
 
     def __init__(self):
@@ -101,18 +101,20 @@ class Trial:
             self.roll(e, **kw)
 
 
-def demo_rolling(t, **kw):
+def demo_rolling(t, put_away=True, **kw):
     t.lift_to(m.CENTER_X)
     t.strokes(m.STROKES, **kw)
+    if put_away:
+        t.lift_to(m.PIN_X)  # back where it lay, off the dough
 
 
 # -- the model --------------------------------------------------------------------------------------------------------
 
 def test_start_matches_product():
-    """Half a Pepperidge Farm sheet (24 x 23 cm, 3/16 inch): 11.5 x 24 cm at 4.8 mm, 132.5 mL; on the 4 cm grid of
-    points it covers 18 (24 once rolled)."""
+    """The start sheet (rolled between 3/16 inch guide strips, trimmed): 11.5 x 24 cm at 4.8 mm, 132.5 mL; on the 4 cm
+    grid of points it covers 18 (24 once rolled)."""
     t = Trial()
-    assert m.PASTRY_SIZE == (0.115, 0.24, 0.0048)
+    assert m.DOUGH_SIZE == (0.115, 0.24, 0.0048)
     assert abs(dk.volume() - 0.115 * 0.24 * 0.0048) < 1e-12
     pts = m.points()
     assert pts.shape[0] == 6 and (pts > 0).sum() == 18 and abs(pts[pts > 0] - 0.0048).max() < 1e-12
@@ -148,7 +150,7 @@ def test_tilted_pin_wedge():
     tt = dk.grid()
     lo_side = tt[0][tt[0] > 0].mean()  # -y band
     hi_side = tt[-1][tt[-1] > 0].mean()
-    assert abs(hi_side - lo_side) > 0.001, (lo_side, hi_side)  # the high side never pressed (4.8 mm)
+    assert hi_side > 0.0047 and hi_side - lo_side > 0.0008, (lo_side, hi_side)  # the high side never pressed
     assert t.let_go()[0] == 0.0
 
 
@@ -164,12 +166,13 @@ def test_edge_over_roll_not_sealed():
 
 def test_lifted_pin_does_nothing():
     t = Trial()
-    t.lift_to(m.CENTER_X)
+    t.lift_to(m.CENTER_X)  # set down at the middle: that press dents it
     t.put(m.CENTER_X, lift=0.02)
     t.step()
+    before = dk.grid().copy()
     for e in m.STROKES:
         t.roll(e, lift=0.02)
-    assert abs(dk.lengths().min() - m.PASTRY_SIZE[0]) < 1e-9
+    assert np.array_equal(dk.grid(), before)
 
 
 # -- the scorer -------------------------------------------------------------------------------------------------------
@@ -194,6 +197,7 @@ def test_demo_with_lag_at_turns_full():
     for e in m.STROKES:
         x0 = float(t.pin[0])
         t.roll(e - 0.02 if e > x0 else e + 0.02)
+    t.lift_to(m.PIN_X)
     assert t.let_go()[0] == 1.0
 
 
@@ -212,52 +216,54 @@ def test_still_held_capped():
         t.open[g] = 1.0
     assert t.step(25)[0] == 1.0  # opened wide around the handles, touching nothing: let go
     t.g["left_gripper"] = PARK["left_gripper"]
-    t.g["right_gripper"] = (m.CENTER_X, -0.10, m.AXIS_Z + 0.02)  # a hand resting on the barrel, not the handle
+    t.g["right_gripper"] = (m.PIN_X, -0.10, m.AXIS_Z + 0.02)  # a hand resting on the barrel, not the handle
     t.open["right_gripper"] = 0.0
     assert t.step(25)[0] == 0.5
 
 
 def test_release_is_contact_not_nearness():
-    """Let go is judged by contact (the gripper's own shape within 2 mm of the pin), not a distance zone."""
+    """Let go is judged by contact (the shapes overlapping), not a distance zone: offline the gripper boxes."""
     t = Trial()
     demo_rolling(t)
+    t.lift_to(m.PIN_X)
     t.g = dict(PARK)
     for g in t.g:
         t.open[g] = 0.0
-    top = m.AXIS_Z + m.R_BARREL + 0.0128  # closed fingertips (12.8 mm past the tool point) just on the barrel's top
-    t.g["right_gripper"] = (m.CENTER_X, -0.05, top + 0.005)
+    top = m.PIN_X, m.AXIS_Z + m.R_BARREL + 0.0128  # closed fingertips (12.8 mm past the tool point) just on the top
+    t.g["right_gripper"] = (top[0], -0.05, top[1] + 0.005)
     assert t.step(25)[0] == 1.0  # closed fingertips 5 mm over the barrel, not touching
-    t.g["right_gripper"] = (m.CENTER_X, -0.05, top + 0.001)
-    assert t.step(25)[0] == 0.5  # 1 mm over it: within the 2 mm contact tolerance, a hand on the pin
-    t.g["right_gripper"] = (m.CENTER_X, -(m.HANDLE_IN + m.HANDLE_OUT) / 2, m.AXIS_Z + m.R_HANDLE + 0.0128)
+    t.g["right_gripper"] = (top[0], -0.05, top[1] + 0.0003)
+    assert t.step(25)[0] == 1.0  # 0.3 mm over it: a near miss, not contact
+    t.g["right_gripper"] = (top[0], -0.05, top[1] - 0.0002)
+    assert t.step(25)[0] == 0.5  # pressed 0.2 mm into it: a hand on the pin
+    t.g["right_gripper"] = (top[0], -(m.HANDLE_IN + m.HANDLE_OUT) / 2, m.AXIS_Z + m.R_HANDLE + 0.0128 - 0.0002)
     assert t.step(25)[0] == 0.5  # fingertips resting on the right handle
 
 
-def test_hover_over_handles_not_held():
-    """Fingers set to the handle's width but hovering 9 mm over each handle while the pin moves through the demo's
-    strokes: not touching the handles, so nothing counts."""
+def test_release_on_real_meshes():
+    """In the sim, let go uses the arms' real collision meshes (yam_links.npz, posed from the simulator's link poses):
+    a real fingertip 1.0 or 0.3 mm over the barrel has let go; one 0.2 mm into it has not; a wrist (link5) resting on
+    the handle has not either."""
     t = Trial()
-    t.lift_to(m.CENTER_X)
-    base = t.put
-    hover = 0.28  # each finger's inner face 13.1 mm from the tool point, just wider than the 12.5 mm handle
-
-    def put(x, lift=0.0, tilt=0.0, hands=None):
-        base(x, lift, tilt)
-        for g in t.g:
-            p = t.g[g]
-            t.g[g] = (p[0], p[1], p[2] + m.R_HANDLE + 0.009)
-            t.open[g] = hover
-
-    t.put = put
-    t.put(m.CENTER_X)
-    objs = t.objects()
-    kit._OPENING.update(t.open)
-    assert not m.gk.touching(objs, "pin", m.PIN_SHAPE) and not m._gate(objs)
-    before = dk.lengths().min()
-    for e in m.STROKES:
-        t.roll(e)
-    assert abs(dk.lengths().min() - before) < 1e-9
-
+    demo_rolling(t)
+    t.lift_to(m.PIN_X)
+    t.let_go()
+    pin = np.array(t.pin)
+    pts, _, _ = m.mesh("tip_left")
+    low = pts[np.argmin(pts[:, 2])]
+    try:
+        for gap, free in ((0.001, True), (0.0003, True), (-0.0002, False)):
+            m.LINK_POSES.clear()
+            m.LINK_POSES["right_robot/tip_left"] = (pin + np.array([0, -0.05, m.R_BARREL + gap]) - low, np.eye(3))
+            assert m.released(t.objects()) == free, gap
+            assert t.step(3)[0] == (1.0 if free else 0.5), gap
+        pts, _, _ = m.mesh("link5")
+        low = pts[np.argmin(pts[:, 2])]
+        m.LINK_POSES.clear()
+        m.LINK_POSES["left_robot/link5"] = (pin + np.array([0, 0.2, m.R_HANDLE - 0.0002]) - low, np.eye(3))
+        assert not m.released(t.objects())
+    finally:
+        m.LINK_POSES.clear()
 
 def test_pin_held_up_capped():
     t = Trial()
@@ -291,14 +297,15 @@ def test_one_pass_quarter():
 
 
 def test_slight_wedge_half():
-    """One end of the pin kept 0.5 mm up through eight passes: at most 3.7 mm everywhere, but the bands differ by
-    0.36 mm and a third of the points are over 3.5 mm: 0.5 (nearly done, not even)."""
+    """One end of the pin kept 0.3 mm up through ten passes: at most 3.7 mm everywhere and the bands within 0.3 mm
+    (0.23 mm), but the high side settles at 3.5 to 3.7 mm (half the points off spec): 0.5 (nearly done)."""
     t = Trial()
     t.lift_to(m.CENTER_X)
-    tilt = math.degrees(math.atan2(0.0005, 2 * m.RING_OUT))
-    t.strokes(m.STROKES * 2, lift=0.00025, tilt=tilt)
+    tilt = math.degrees(math.atan2(0.0003, 2 * m.RING_OUT))
+    t.strokes(m.STROKES * 2, lift=0.00015, tilt=tilt)
+    t.lift_to(m.PIN_X)
     on, half, _, _ = m.sheet()
-    assert half >= m.SPEC_SHARE and m.wedge() > m.WEDGE_MAX, (on, half, m.wedge())
+    assert half >= m.SPEC_SHARE and on < m.SPEC_SHARE and 0.0001 < m.wedge() <= m.WEDGE_MAX, (on, half, m.wedge())
     assert t.let_go()[0] == 0.5
 
 
@@ -310,13 +317,19 @@ def test_uniform_3_6_mm_half():
     assert t.let_go()[0] == 0.5
 
 
-def test_two_passes_full():
-    """Two level passes reach 3.3 to 3.4 mm, inside 2.9 to 3.5 mm: 1.0 (the demo makes four)."""
+def test_two_passes_half_three_full():
+    """Two level passes leave the ends at 3.5 to 3.6 mm (a quarter of the points off spec): 0.5; three reach 3.4 to
+    3.5 mm everywhere, inside 2.9 to 3.5 mm: 1.0 (the demo makes five)."""
     t = Trial()
     t.lift_to(m.CENTER_X)
     t.strokes(m.STROKES[:8])
-    assert m.sheet()[0] >= m.SPEC_SHARE
-    assert t.let_go()[0] == 1.0
+    t.lift_to(m.PIN_X)
+    assert m.sheet()[0] < m.SPEC_SHARE and t.let_go()[0] == 0.5
+    t = Trial()
+    t.lift_to(m.CENTER_X)
+    t.strokes(m.STROKES[:12])
+    t.lift_to(m.PIN_X)
+    assert m.sheet()[0] >= m.SPEC_SHARE and t.let_go()[0] == 1.0
 
 
 def test_one_arm_tilt_zero():
@@ -377,6 +390,7 @@ def test_roll_over_edges_scored_on_the_sheet():
     t.strokes((0.36, 0.13, 0.36, 0.13, 0.36, 0.13, 0.36, 0.13, 0.24))
     on, half, quarter, thin = m.sheet()
     assert thin >= m.TARGET_T - 1e-9 and m.on_board(), (on, thin)
+    t.lift_to(m.PIN_X)
     assert t.let_go()[0] == 1.0
 
 
@@ -386,34 +400,30 @@ def test_flick_past_end_no_penalty():
     end = dk.ends()[:, 1].max()
     t.roll(end + 0.012, speed=0.1)  # a quick 1.2 cm overshoot (0.12 s) ...
     t.roll(m.CENTER_X, speed=0.1)  # ... straight back
+    t.lift_to(m.PIN_X)
     assert t.let_go()[0] == 1.0
 
 
-def test_hand_off_the_pin_pauses_counting():
-    """A stroke with one hand lifted off the pin does not press; once both hands are back on it, rolling counts again
-    and the sheet is scored as it ends."""
+def test_one_hand_rolling_full():
+    """Review TK-LAJNZX: one hand may roll. The right hand alone on its handle, the pin kept level: the strokes press,
+    1.0. (In the sim the pin presses only as hard as the hand holds it down: the dough's push lifts a pin that is not.)"""
     t = Trial()
     t.lift_to(m.CENTER_X)
-    t.strokes(m.STROKES[:4])
     base = t.put
 
     def put(x, lift=0.0, tilt=0.0, hands=None):
         base(x, lift, tilt, hands=("right_gripper",))
-        t.g["left_gripper"] = (x, 0.10, m.AXIS_Z + 0.07)  # lifted clear of the barrel
-        t.open["left_gripper"] = 0.53
+        t.g["left_gripper"] = PARK["left_gripper"]
+        t.open["left_gripper"] = 1.0
 
     t.put = put
-    before = dk.grid().copy()
-    t.roll(0.32)
-    t.roll(m.CENTER_X)
-    assert np.array_equal(dk.grid(), before)  # nothing pressed while a hand was off the pin
+    demo_rolling(t)
+    t.lift_to(m.PIN_X)
     t.put = base
-    t.strokes(m.STROKES)
     assert t.let_go()[0] == 1.0
 
-
-def test_one_arm_center_grip_zero():
-    """QC attack: one gripper closed on the barrel's middle, the pin level by symmetry: nothing counts."""
+def test_one_arm_center_grip_counts():
+    """One gripper closed on the barrel's middle, the pin level: one-handed rolling counts like any other."""
     t = Trial()
 
     def put1(x, lift=0.0, tilt=0.0, hands=None):
@@ -424,9 +434,8 @@ def test_one_arm_center_grip_zero():
 
     t.put = put1
     demo_rolling(t)
-    assert abs(dk.lengths().min() - m.PASTRY_SIZE[0]) < 1e-9  # nothing counts
-    t.pin = np.array(m.PIN_START, float)
-    assert t.let_go()[0] == 0.0
+    t.lift_to(m.PIN_X)
+    assert t.let_go()[0] == 1.0
 
 
 def test_one_handle_one_barrel_counts():
@@ -445,6 +454,7 @@ def test_one_handle_one_barrel_counts():
     for e in m.STROKES:
         t.roll(e)
     t.put = base
+    t.lift_to(m.PIN_X)
     assert t.let_go()[0] == 1.0
 
 
@@ -454,7 +464,7 @@ def test_palms_on_barrel_count():
     t = Trial()
     t.lift_to(m.CENTER_X)
     base = t.put
-    top = m.R_BARREL + 0.0128 + 0.001  # closed fingertips 1 mm over the barrel's top: within the 2 mm contact
+    top = m.R_BARREL + 0.0128 - 0.0002  # closed fingertips pressed on the barrel's top
 
     def put(x, lift=0.0, tilt=0.0, hands=None):
         base(x, lift, tilt)
@@ -467,55 +477,22 @@ def test_palms_on_barrel_count():
         t.roll(e)
     assert m.sheet()[0] >= m.SPEC_SHARE
     t.put = base
+    t.lift_to(m.PIN_X)
     assert t.let_go()[0] == 1.0
-
-
-def test_one_hand_on_handle_other_hovering_no_press():
-    """One hand on its handle, the other hovering 5 mm over the barrel (not touching): one hand on the pin, no
-    press."""
-    t = Trial()
-    t.lift_to(m.CENTER_X)
-    base = t.put
-    top = m.R_BARREL + 0.0128 + 0.005
-
-    def put(x, lift=0.0, tilt=0.0, hands=None):
-        base(x, lift, tilt, hands=("right_gripper",))
-        t.g["left_gripper"] = (x, 0.06, m.AXIS_Z + lift + top)
-        t.open["left_gripper"] = 0.0
-
-    t.put = put
-    for e in m.STROKES:
-        t.roll(e)
-    assert abs(dk.lengths().min() - m.PASTRY_SIZE[0]) < 1e-9
-
-
-def test_open_hands_pushing_handles_no_press():
-    """Both hands open wide around the handles, touching nothing while the pin moves: not on the pin, nothing
-    presses."""
-    t = Trial()
-    t.lift_to(m.CENTER_X)
-    for e in m.STROKES:
-        x0 = float(t.pin[0])
-        n = max(1, int(round(abs(e - x0) / (m.SPEED * 0.05))))
-        for k in range(1, n + 1):
-            t.put(x0 + (e - x0) * k / n)
-            for g in t.open:
-                t.open[g] = 1.0
-            t.step()
-    assert abs(dk.lengths().min() - m.PASTRY_SIZE[0]) < 1e-9
 
 
 def test_fast_correct_rolling_full():
     t = Trial()
     t.lift_to(m.CENTER_X)
     t.strokes(m.STROKES, speed=0.4)  # 2 cm per control step
+    t.lift_to(m.PIN_X)
     assert t.let_go()[0] == 1.0
 
 
 def test_pin_back_where_it_lay_full():
     t = Trial()
     demo_rolling(t)
-    t.lift_to(m.PIN_X)  # back where it started (it lifts clear of the pastry)
+    t.lift_to(m.PIN_X)  # back where it started (it lifts clear of the dough)
     assert t.let_go()[0] == 1.0
 
 
@@ -541,27 +518,27 @@ def test_pin_tilted_on_something_capped():
 
 
 def test_unrolled_end_caught_by_end_points():
-    """Review check, Nov 16: strokes that stop short of the near end (x 19.5 cm) leave its last 3 cm at the 4.8 mm start
-    while every row point (every 4 cm along x) is on spec; the end points, 1 cm inside each band's rolled ends, read
-    the unrolled end, so the sheet no longer scores 1.0."""
+    """Review check, Nov 16: strokes that stop short of the near end (x 19 cm) leave its last 2 to 3 cm at 4.1 mm (one
+    press as the pin was first set down) while every row point (every 4 cm along x) is on spec; the end points, 1 cm
+    inside each band's rolled ends, read the unrolled end, so the sheet no longer scores 1.0."""
     t = Trial()
     t.lift_to(m.CENTER_X)
     for _ in range(4):
-        t.strokes([0.32, 0.24, 0.195, 0.24])
+        t.strokes([0.33, 0.24, 0.19, 0.24])
     t.lift_to(m.PIN_X)
     rows = dk.grid()[list(m.ROWS)][:, m.COLS]
     assert (np.abs(rows[rows > 0] - m.TARGET_T) <= m.TOL_T + 1e-9).all()  # the row points alone see a finished sheet
-    assert dk.grid().max() > 0.0047  # the near end is still at the start's thickness
+    assert dk.grid().max() > 0.004  # the near end is still far over
     p = m.points()
-    assert (p[:, -2] > 0.0047).all()  # every band's near end point reads it
+    assert (p[:, -2] > 0.004).all()  # every band's near end point reads it
     assert t.let_go()[0] < 1.0
 
 
-def test_pastry_pushes_back_within_the_arms():
-    """Review, Nov 16: the pastry resists the pin. Over the demo's strokes the pastry pushes the pin up (about 35 N on
+def test_dough_pushes_back_within_the_arms():
+    """Review, Nov 16: the dough resists the pin. Over the demo's strokes the dough pushes the pin up (about 35 N on
     the first pass over the 4.8 mm sheet) and back against its motion (about 6 N), both inside what the two arms can
     hold from their servo ratings (52 N down and 11 N along the board, continuous, per arm). A pin lifted off the
-    pastry, or resting behind it, feels nothing."""
+    dough, or resting behind it, feels nothing."""
     t = Trial()
     assert np.allclose(dk.wrench()[0], 0.0)
     t.lift_to(m.CENTER_X)
@@ -574,18 +551,137 @@ def test_pastry_pushes_back_within_the_arms():
     assert np.allclose(dk.wrench()[0], 0.0)
 
 
+# -- the force gate (Nov 17 red team): the dough yields only under a load past its elastic limit -------------------------
+
+def test_press_law():
+    """Elastic up to a 5 % squeeze, then half the excess beyond it springs back; a level pin on its rings settles the
+    sheet at 3.2 mm / 0.95 = 3.37 mm, on spec; the contact pressure reaches the flow stress at the yield squeeze."""
+    e = dk.YIELD_STRAIN
+    assert e == 0.05 and dk.RATIO == 0.5
+    assert dk.thinning(0.0048, 0.0048 * e) == 0.0 and dk.thinning(0.0048, 0.0001) == 0.0
+    assert abs(dk.thinning(0.0048, 0.0016) - 0.5 * (0.0016 - 0.00024)) < 1e-12
+    t = 0.0048
+    for _ in range(40):
+        t -= dk.thinning(t, t - m.RING_GAP)
+    assert abs(t - m.RING_GAP / (1 - e)) < 1e-6 and abs(t - m.TARGET_T) <= m.TOL_T
+    assert abs(dk.pressure(0.0048, 0.00012, m.DOUGH_STRESS) - 0.5 * m.DOUGH_STRESS) < 1e-6
+    assert dk.pressure(0.0048, 0.0016, m.DOUGH_STRESS) == m.DOUGH_STRESS
+
+
+def test_stress_from_hand_check():
+    """13 kPa sits in the 12.4 to 14.5 kPa the hand check's 29 to 34 N peak gives on the first pass (24 cm wide, 1.6 mm
+    off the 4.8 mm sheet); the first pass then pushes the pin up about 30 N."""
+    a = math.sqrt(2 * m.R_BARREL * 0.0016 - 0.0016 ** 2)
+    lo, hi = 29.0 / (0.24 * a), 34.0 / (0.24 * a)
+    assert 12.3e3 < lo < m.DOUGH_STRESS < hi < 14.6e3, (lo, hi)
+    t = Trial()
+    t.lift_to(m.CENTER_X)
+    t.strokes(m.STROKES[:2])
+    assert 28.0 < dk.peak()[2] < 33.0, dk.peak()
+
+
+def test_pin_weight_alone_stays_elastic():
+    """The pin's own weight (7.2 N) is under the dough's yield load across the 24 cm sheet (twelve 2 cm strips) at every
+    thickness from the start to the rings' gap, so a pin resting on the dough, or rolled with no push, does not thin it."""
+    w = m.PIN_MASS * 9.81
+    for t in np.linspace(m.RING_GAP, m.DOUGH_SIZE[2], 9):
+        assert 12 * dk.yield_load(float(t)) > 1.3 * w, (t, 12 * dk.yield_load(float(t)), w)
+
+
+def _skim(t, depth, crossings=40):
+    """Strokes end to end with the barrel's line held `depth` below the sheet's thickest point (the rings off the
+    board), as a light pin that never pushes harder."""
+    t.put(0.15, lift=m.LIFT)
+    t.step()
+    for _ in range(crossings // 2):
+        top = m.points()[m.points() > 0].max()
+        t.strokes((0.33, 0.15), speed=0.2, lift=max(0.0, top - depth - m.RING_GAP))
+
+
+def test_light_skims_never_thin():
+    """Red team (Nov 17): the pin held 0.1 mm, or 0.2 mm, into the sheet's top, end to end: under the yield
+    squeeze (0.24 mm at 4.8 mm), so the dough springs back: after 40 crossings the sheet is exactly as it started,
+    and the model has no state that a further crossing could change, so no number of passes thins it; 0."""
+    for depth in (0.0001, 0.0002):
+        t = Trial()
+        _skim(t, depth)
+        assert abs(dk.grid().max() - 0.0048) < 1e-12 and abs(dk.grid()[dk.grid() > 0].min() - 0.0048) < 1e-12, depth
+        t.lift_to(m.PIN_X)
+        assert t.let_go()[0] == 0.0
+
+
+def test_drop_or_bang_does_not_press():
+    """The pin dropped onto the sheet (down on its rings for one control step, then bounced back up), five times at
+    each spot: a load held for under two control steps does not press."""
+    t = Trial()
+    for x in (0.19, 0.22, 0.25, 0.28):
+        t.put(x, lift=0.01)
+        t.step(3)
+        for _ in range(5):
+            t.put(x, lift=0.01)
+            t.step()
+            t.put(x)
+            t.step()
+            t.put(x, lift=0.01)
+            t.step()
+    t.put(x, lift=m.LIFT)
+    t.step()
+    assert abs(dk.grid()[dk.grid() > 0].min() - 0.0048) < 1e-12
+
+
+def test_press_in_place_thins():
+    """Pressing straight down (rings on the board, no rolling) thins the dough under the barrel, as a real press does:
+    the slices under the line come down most, those under the barrel's sides less; holding it there does not press
+    again, lifting it off and setting it down again does."""
+    t = Trial()
+    t.lift_to(m.CENTER_X)  # set down at the middle (lift_to holds it there 5 steps)
+    S = dk._state()
+    j = 6
+    e = dk._edges(S, j)
+    c = 0.5 * (e[:-1] + e[1:])
+    under = np.abs(c - m.CENTER_X) < 0.002
+    assert S.t[j][under].max() < 0.0042 and S.t[j][np.abs(c - m.CENTER_X) > 0.012].min() == 0.0048
+    once = S.t[j].copy()
+    t.step(20)
+    assert np.array_equal(S.t[j], once)
+    t.put(m.CENTER_X, lift=0.01)
+    t.step(2)
+    t.put(m.CENTER_X)
+    t.step(2)
+    assert S.t[j][under].max() < once[under].min()
+
+
+def test_pin_left_on_the_dough_capped():
+    """A finished sheet with the pin let go lying on its rings on the dough (not put away): 0.5, not 1.0."""
+    t = Trial()
+    demo_rolling(t, put_away=False)
+    t.put(m.CENTER_X)
+    t.step(5)
+    assert t.let_go()[0] == 0.5
+    assert not m.clear_of_dough(t.objects())
+    t = Trial()
+    demo_rolling(t, put_away=False)
+    end = dk.ends()[:, 1].max()
+    t.lift_to(end + 0.005)  # just past the sheet's far end, the barrel's face against its edge
+    assert t.let_go()[0] == 0.5
+    t.lift_to(end + 0.015)  # 1.5 cm clear
+    assert t.let_go()[0] == 1.0
+
+
+
 def test_numbers_in_text():
     doc = " ".join(m.score.__doc__.split())
     for s in ("2 cm", "3.2 mm", "1/8 inch", "0.3 mm", "90 %", "3.7 mm", "4.2 mm", "4.8 mm", "3 degrees", "5 mm",
-              "0.25", "on the board"):
+              "0.25", "on the board", "1 cm clear", "One or two hands", "overlap"):
         assert s in doc, s
     assert m.TARGET_T == 0.0032 and m.RING_GAP == m.TARGET_T and m.TOL_T == 0.0003 and m.SPEC_SHARE == 0.90
     assert m.HALF_T == 0.0037 and m.QUARTER_T == 0.0042 and m.WEDGE_MAX == 0.0003 and m.LEVEL_DEG == 3.0
-    assert m.PASTRY_SIZE[2] == 0.0048 and m.CELL == 0.02
-    assert "2 mm" in doc and m.PIN_DOWN == 0.005 and m.gk.CONTACT == 0.002
-    assert "both hands are on the pin" in doc and "sealed" not in doc and "torn" not in doc
-    assert "long" not in m.INSTRUCTION and not hasattr(m, "MIN_LEN")  # no length rule
-    assert not hasattr(m, "REST_X") and not hasattr(m, "TOUCH") and not hasattr(m, "CLEAR")
+    assert m.DOUGH_SIZE[2] == 0.0048 and m.CELL == 0.02 and m.PUT_CLEAR == 0.01
+    assert m.PIN_DOWN == 0.005 and m.TOUCH == 0.0 and m.DOUGH_STRESS == 13e3 and m.BOARD_FRICTION == (0.25, 0.20)
+    assert "sealed" not in doc and "torn" not in doc and "puff" not in doc.lower()
+    assert "dough" in m.INSTRUCTION and "off the dough" in m.INSTRUCTION
+    assert not hasattr(m, "_gate") and "gate" not in dk._CFG  # no hand gate: the load decides
+    assert not hasattr(m, "REST_X") and not hasattr(m, "CLEAR")
 
 
 if __name__ == "__main__":
