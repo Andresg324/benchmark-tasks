@@ -409,3 +409,7 @@ springs back, so it takes several passes and the ends move out as it grows. Then
 - `guardkit.py` and `yamkit.py`: the task's helper modules (gripper contact shapes for the offline tests, scene and arm
   helpers).
 - `test_task.py`: offline model and scorer checks; run `python tasks/roll-pastry-sheet-on-spacer-rings/test_task.py`.
+
+## Sources and licenses
+
+- Arm collision geometry: the I2RT Robotics YAM model ([i2rt-robotics/i2rt](https://github.com/i2rt-robotics/i2rt)), MIT License, Copyright (c) I2RT Robotics; the copy used here is vendored in yam-isaac-lab-arena (commit 120c3c8). `yam_links.npz` holds surface points sampled from its link collision meshes; the MIT license text is in `LICENSE.i2rt` in this folder.
