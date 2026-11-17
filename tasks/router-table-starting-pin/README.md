@@ -26,7 +26,7 @@ Scripted demo (both arms): both hands press on the square-set board and carry it
 
 ### Forces in the demo
 
-Measured from the arms' deflection times the servo stiffness on the development run of this demo: the left hand pushed 3.9 N on average (at most 4.2 N) under a 9.4 N press; the right 5.0 N on average under 8.3 N, with 5.2-6.0 N in the first stretch. The pivot hand pushed 3.7-3.8 N under 6.3 N. These are well within the YAM. Its shoulder and elbow joints are Damiao DM-J4340 servos (9 N*m rated, 27 N*m peak) and its wrist joints DM-J4310 (3 N*m rated, 7 N*m peak), the same limits the sim's arm model uses. Worked through the arm's Jacobian from its URDF in each feed pose, with the torque that holds the arm up included, the planned load (up to 5.7 N of push plus the 8 N press per hand) takes at most 84% of the rated, continuous joint torque and 28% of the peak; the same pose would sustain about twice that load at rated torque. The 6 N peak is inside that margin. The shipped demo moves 1 N of the right hand's share to the left in the first stretch to even the split; the feed-force check before the trials records what the real board takes.
+Measured from the arms' deflection times the servo stiffness on the development run of this demo: the left hand pushed 3.9 N on average (at most 4.2 N) under a 9.4 N press; the right 5.0 N on average under 8.3 N, with 5.2-6.0 N in the first stretch. The pivot hand pushed 3.7-3.8 N under 6.3 N. These are well within the YAM. Its shoulder and elbow joints are Damiao DM-J4340 servos (9 N*m rated, 27 N*m peak) and its wrist joints DM-J4310 (3 N*m rated, 7 N*m peak), the same limits the sim's arm model uses. Worked through the arm's Jacobian from its URDF in each feed pose, with the torque that holds the arm up included, the planned load (up to 5.7 N of push plus the 8 N press per hand) takes at most 84% of the rated, continuous joint torque and 28% of the peak; the same pose would sustain about twice that load at rated torque. The 6 N peak is inside that margin. The shipped demo moves 1 N of the right hand's share to the left in the first stretch to even the split. In the real trials the drag that stands in for the cutter is set to the same model value (Real-world build).
 Offline scorer tests: `python test_task.py` (prints "all pass"). Runtime per trial: 2,400 steps at most (2 minutes at
 20 Hz); seed 0, object jitter 0, one fixed layout.
 
@@ -51,7 +51,7 @@ grippers' palm and finger shapes used by the touching-the-board check):
   and the hands' press bear on the table top through a contact with Coulomb friction, mu 0.25 sliding and 0.3 at rest
   (local yamkit addition `Collider.friction`: a per-collider PhysX material with "min" combining, so the board's own
   material doesn't raise it). 0.25 is the low end of clean, dry wood on wood (0.25-0.5, Engineering ToolBox); no
-  published value for planed hardwood on phenolic was found, and the real trial's feed-force check measures it.
+  published value for planed hardwood on phenolic was found, and the real trial's tilt test measures it.
   Pressing down therefore costs push: each newton of press adds about 0.25 N of friction to feed against.
 - The board starts square to the table, as it is set down, 2.2 cm from the pin and 3.4 cm from the bit's axis. The
   robot has to carry and turn it onto the pin itself.
@@ -91,8 +91,8 @@ Why these numbers, and how a real trial reads each one (the router setup and fil
   while braced on the pin, the only motion there being the turn about it. A first contact off the pin is scored as a
   grab: router-table manuals warn that an unsupported first bite can grab the board and throw it or pull the hand in.
   The sim applies the cutter's push (see Cutting force) but scores the first unbraced bite at once, without waiting
-  for a throw. Real trial: the top video shows whether the board touched the pin before its edge reached the cutter,
-  and a board that jumps off the pin or is thrown is a grab.
+  for a throw. Real trial: the top video shows whether the board touched the pin before its edge crossed the cutter
+  circle painted round the stand-in bearing, and a board that jumps off the pin is a grab.
 - 1.5 mm braced and on the bearing: the play of a hand-held board against a 0.25 in pin or a 0.5 in bearing; the
   colliders keep the board from coming closer, so within 1.5 mm is touching. Real trial: touching or not, read from
   the top video.
@@ -100,10 +100,10 @@ Why these numbers, and how a real trial reads each one (the router setup and fil
   scorer counts the curve in 2 mm pieces and excuses only the piece at each very end, where the bearing rolls off
   the corner. Braced on this pin, the board can be set so the bearing meets the curve right at its leading end (the
   pin then touches the curve 5 cm further back), so one braced feed routes it all; a board started further in can
-  be pulled clear, braced on the pin again at the leading end and fed through a second time. Real trial: the edge's
-  centimeter pencil marks that passed the bearing, read from the video.
+  be pulled clear, braced on the pin again at the leading end and fed through a second time. Real trial: the blue
+  trace the stand-in bearing leaves on the edge, read in the same 2 mm pieces (Real-world build, Reading the trace).
 - 18 cm (70% of the 25.8 cm curve) for 0.75: most of the edge, as from a braced start a few cm in from the leading
-  end. 9 cm, half of that, is real progress round the bearing for 0.5. Real trial: the same pencil marks.
+  end. 9 cm, half of that, is real progress round the bearing for 0.5. Real trial: the same blue-trace reading.
 - 5 mm clear, trailing end past the bit: the board fed on through and off the bit, not left touching the cutter.
   Real trial: a ruler on the top photo at the end, from the painted cutter circle to the board.
 - 7.6 cm: router-table manuals' three-inch rule for hands near a bit. It is a hazard zone, not a stand-in for
@@ -118,15 +118,16 @@ Why these numbers, and how a real trial reads each one (the router setup and fil
   plus the boxes' fit to the meshes, so a hand resting on the board counts and one hovering above it does not.
   Real trial: the side view at the end shows whether any gripper is on the board.
 
-A real trial: the router running at 22,000 rpm with the bit 1/8 in high, filmed from above; the
-board's edge pencil-marked every centimeter; check from the video that the board touched the pin before it reached
-the cutter and stayed on it until the edge met the bearing (a board that jumps off the pin or is thrown is a grab),
-then read off the marks along the cut rabbet, checking its full 3/8 in width with a combination square.
+A real trial: the router unplugged and locked out, the bit replaced by a smooth stand-in bearing coated in blue
+spotting paste, a one-way hanging-weight drag on the board set to the modeled cutting force, filmed from above and
+from the side; the board's edge pencil-marked every centimeter; check from the video that the board touched the pin
+before it crossed the painted cutter circle and stayed on it until the edge met the bearing (a board that jumps off
+the pin is a grab), then read the routed length off the blue trace on the edge (Real-world build).
 
 ## Cutting force
 
-The previous version modeled no cutting force. The cutter's push on the board is now applied at the cut, every
-control step, from a published wood-milling force model:
+The cutter's push on the board is applied at the cut, every control step, from a published wood-milling force
+model:
 
 - Model: Curti, Marcon, Denaud, Togni, Furferi and Goli (2021), "Generalized cutting force model for peripheral milling
   of wood, based on the effect of density and fibre orientation", European Journal of Wood and Wood Products
@@ -150,7 +151,7 @@ control step, from a published wood-milling force model:
   1/4 in rabbet is this same pass done twice with the bit raised between them.
 - How it acts: the force is applied where the cutter takes fresh wood, along the cutting edge's motion there and
   toward the bit's axis (which the bearing takes). In a right-to-left feed it pushes back against the feed; a board
-  pushed straight into the bit off the pin is pushed to the right, which is the grab, now with a real force behind it.
+  pushed straight into the bit off the pin is pushed to the right, which is the grab, with a real force behind it.
   The 733 tooth pulses a second are averaged over 0.1 s, as a hand feels them.
 - Limits, stated plainly: the model was fitted on chips of 40-100 um; this slow robot feed gives thinner chips (about
   5 um at the demo's 0.25 m/min, 20 um at 1 m/min), so it is used below its fitted range, where its chip-independent
@@ -162,29 +163,122 @@ control step, from a published wood-milling force model:
   by Round Shape Machining", Materials 11:2575, Table 4). Scaled to cherry's density and applied to this cut (3.2 mm
   high, 9.5 mm deep, 5-20 um chips, the edge cut along the grain within the curve's 25 degrees either side), they give
   9-17 N per tooth and 3.2-6.4 N mean along the cutting edge. The model's about 10 N and 3.8 N sit in the low half of
-  that range, so a real cut may take up to about 1.7 times the modeled push; the feed-force check before the trials
-  (Real-world build) measures it on the real board.
+  that range, so a real cut may take up to about 1.7 times the modeled push. The sim and the real trials' drag both
+  use the model's value.
 
 ## Real-world build
 
-A bench-top router table (or 19 mm laminated MDF with a 9.25 x 11.75 in phenolic insert plate) with a 2.25 hp router
-set to 22,000 rpm, the plate's 0.25 in steel starting pin and its clear overhead pin guard, a 3/8 in rabbeting bit with
-a 0.5 in bearing (1.25 in cutter, e.g. Freud 32-104) set 1/8 in above the table, and 0.5 in cherry boards 25 x 15 cm
-band-sawn to a 30 cm radius on one long side from one template, a fresh one each trial.
+A bench-top router table (or 19 mm laminated MDF with a 9.25 x 11.75 in phenolic insert plate) with a fixed-base
+router whose collet takes a 1/4 in shank, the plate's 0.25 in steel starting pin 5 cm right of the bit's axis, a
+clear overhead pin guard set 1-1/2 in above the table (Bench Dog ProGuard, as in the sim), and 0.5 in cherry boards
+25 x 15 cm band-sawn to a 30 cm radius on one long side from one template, a fresh one each trial. Everything named
+below is catalog or hardware-store stock; the whole rig comes to about $700, robot and cameras aside.
 
-Safety. Three safeguards are in place before the router is switched on:
+The robot trials use a protected, force-equivalent stand-in for the cutter and read the cut from an independent
+trace, in three parts.
 
-- Guard: the plate's clear overhead pin guard stays over the bit for every trial, and a polycarbonate screen stands
-  between the table and the operator.
-- Stop switch: the operator holds a switch that cuts the router's power and halts both arms at once, and uses it at
-  any sign of a grab, a jam or a hand heading for the bit. The bit coasts to a stop in a few seconds, under the
-  guard; the arms stay halted until it has stopped.
-- Out of reach: the operator and anyone else stay outside the arms' reach whenever the arms are powered or the router
-  runs; boards are changed only with the router off and the arms stopped.
+### 1. Protected: nothing sharp, nothing powered
 
-Dust collection runs, and anyone in the room wears eye and hearing protection. The scorer's 3 in rule keeps the
-grippers out of the bit's zone, and a gripper that crosses the 3 in circle low stops the trial. The cutting force is
-about 3 N; with the table's friction under the hands' press the two hands share about 9 N of push (see Forces in the
-demo). Before the robot trials, one test board is pulled through the cut by a push-pull gauge at about 0.3 m/min
-while pressed down as the hands press (about 8-9 N each), and that force is recorded with the trial reports. An unbraced entry can throw the board, which is the hazard the task scores;
-the guard and the screen contain a thrown board.
+- Lockout, for the whole robot session: the router's switch off, its plug pulled and closed in a Master Lock 487
+  plug lockout, shut with a Master Lock 410RED Zenex safety padlock. The operator keeps the only key.
+- The bit is out of the router. In its place the collet holds a smooth stand-in: a 1/4 in x 2 in hardened steel
+  dowel pin as the arbor, and on it an R188-2Z shielded ball bearing (1/4 in bore, 1/2 in across, 3/16 in tall), the
+  same 1/2 in diameter and 4.8 mm height as the rabbeting bit's own bearing, which the board rides in the sim.
+- Height: a Climax C-025 set-screw collar (1/4 in bore) on the arbor below the table's surface, a 1/4 in ID x 3/8 in
+  OD nylon spacer on it, then the bearing. The collar is slid until the bearing's underside sits 1/8 in up, gauged by
+  the shank of a 1/8 in drill bit laid on the table: the bearing then spans 3.2 to 8.0 mm, the sim's 3.4 to 8.2 mm
+  within 0.2 mm. A 1/4 in long nylon spacer and a second C-025 collar above hold it down, the collar's underside
+  14.3 mm up, above the board's 12.7 mm top. The spacers are 3/8 in across, inside the bearing, so the edge touches
+  only the bearing.
+- Below the bearing, where the cutter was, only the 1/4 in arbor stands, as in the sim, where the cutter has no
+  collider: the board's edge passes into the cutter's circle and rides the bearing, the same motion and the same
+  stopping point as the sim's. The 1-1/4 in cutter circle is painted on the plate round the arbor for scoring.
+- So a gripper or a board that reaches the bit's place in any run, a failed one included, meets a smooth steel
+  bearing and round collars at rest, unpowered. The arms' own stop button stays in the operator's hand, the operator
+  and anyone else stay outside the arms' reach while they are powered, and boards are changed with the arms stopped.
+
+### 2. Force-equivalent: the sim's cutting force as a one-way drag
+
+The sim's push against the feed comes from `cutting_force` in task.py (Curti et al. 2021, see Cutting force) at this
+cut: cherry at 561 kg/m3, 9.5 mm deep, 3.2 mm high, a two-flute 1.25 in cutter at 22,000 rpm. Over the curve's grain
+angles (0 to 24.6 degrees) it gives 2.92-3.04 N at the demo's 0.25 m/min feed and 2.88-3.24 N anywhere from 0 to
+1 m/min: at these slow feeds its chip-independent term carries it, so it is close to constant. The sim applies it
+only while the cutter meets fresh wood, so it resists a right-to-left feed and leaves a board at rest free. The
+real drag copies that law:
+
+- A hanging weight: slotted masses on a hanger (e.g. an Eisco slotted mass set) making 0.300 kg, so
+  0.300 x 9.81 = 2.94 N.
+- It hangs from 1/8 in (3 mm) braided cord that runs over an Everbilt 1-1/2 in single fixed pulley and, below it, through a
+  Harken 150 Micro Cam-Matic cam cleat, set so the cord runs freely as the weight rises and grips as soon as it would
+  drop. The pulley and cleat are screwed to a 2x4 offcut clamped to the table's right end, the sheave's top level
+  with the cord's attachment, at x 30, y -40 cm (13 cm past the table's edge). The cord's other end is tied to a
+  small screw eye in the board's trailing end face, at mid-thickness, 1 cm in from the curve.
+- Setting it: a digital luggage scale (10 g steps) hooked to the cord's board end and drawn slowly away from the
+  pulley reads the weight plus the pulley's and the cleat's drag. Masses are added or taken off in 10 g steps until
+  it reads 0.30-0.31 kg, which is 3.0 +/- 0.1 N at the board: the sim's 2.92-3.04 N at the demo's feed.
+- Direction: placed there, the cord's line stays within 9 degrees of the feed direction at the cut along the
+  scripted feed's path, so its component against the feed is 2.97-3.00 N for a 3.0 N pull (cos 8.6 degrees = 0.989),
+  inside the sim's 2.92-3.04 N. Its line passes within 5 cm of the cut over all but the first 8 cm of the curve
+  (within 1.5 cm over the last 11 cm), so it turns the board by at most 0.33 N*m at the start and under 0.15 N*m from
+  8 cm on, against the sim's force applied at the cut itself. The sim's 1.9 N pull toward the bit's axis is taken by
+  the bearing there; the cord's sideways share is between 0.15 N toward and 0.45 N away from the bearing, so the
+  hands keep the curve on the bearing with their own push (0.5 N in the demo's plan).
+- One way, as in the sim: feeding right to left draws cord through the cleat and lifts the weight; when the board
+  stops, the cleat holds the weight and the board is free; a board drawn back toward the pulley meets no drag (and
+  the scorer counts nothing routed that way, real or sim).
+- Where it starts: before each trial the board is set braced on the pin and turned by hand until its curve's leading
+  end just reaches the painted cutter circle, the cord is drawn snug through the cleat there, and the board is set
+  back to its start pose. The cord is then slack by the distance the board must move, so the drag takes hold where
+  the sim's cut begins.
+- Table friction: the sim's mu 0.25 sliding and 0.30 at rest is checked with a protractor by tilting a test board
+  on an offcut of the same plate until it slides (0.25 is 14 degrees, 0.30 is 16.7).
+
+### 3. Independent cut validation: the blue trace
+
+Before each trial the stand-in bearing's rim gets a thin film of Dykem Hi-Spot Blue spotting paste, which stays wet
+and transfers where it touches. Wherever the board's edge rode the bearing it carries a blue band 3.2-8.0 mm up the
+edge, so the edge itself records the stretch the bearing passed over, which is what the sim's scorer counts (the
+curve within 1.5 mm of the bearing; the paste needs contact, the stricter reading).
+
+Reading the trace, after the trial, by this rule:
+
+- A paper strip ruled in 2 mm pieces is laid along the curved edge from its leading end, the same 129 pieces the
+  scorer uses, and each piece is checked for blue between 3.2 and 8.0 mm up the edge (a combination square set to
+  those heights).
+- A piece counts as routed when the blue band crosses it and the top video shows that stretch was fed right to left
+  in a pass begun braced on the pin. Blue left by a climb or by a pass begun off the pin does not count; a pass begun
+  off the pin has scored 0 already.
+- Whole curve: every piece but the one at each very end counts, so the band runs unbroken from within 2 mm of the
+  leading end to within 2 mm of the trailing end. Otherwise the counted pieces times 2 mm give the routed length for
+  the 18 cm and 9 cm tiers, and the pencil marks every centimeter cross-check the count on the video.
+- The other readings are the sim's: the pin start from the top video, no gripper below the 5 cm block inside the
+  3 in circle drawn round the arbor, no gripper on the board in the side view at the end, and the board's gap to the
+  painted cutter circle measured with a ruler on the end photo.
+
+Trace check against a real cut, once before the robot trials, with the arms switched off and the operator alone at
+the table: a 3/8 in rabbeting bit with a 1/2 in bearing and 1-1/4 in cutter (e.g. Freud 32-104) goes in 1/8 in high,
+the lockout comes off, and with the overhead guard in place the operator routes three test boards by hand from the
+pin, the bit's bearing coated in the same blue. Two are fed the whole curve; on the third the operator stops at the
+15 cm mark, swings the board off, braces it on the pin again and feeds the rest without re-coating the bearing. On
+each board the blue band and the cut rabbet must start and end within one 2 mm piece of each other, and the band
+must be unbroken over the full 25.8 cm of a pass and over the second pass, which shows one coat lasts a trial and
+the band reads the length a real cut routes. Then the router is unplugged and locked out again, the bit comes out
+and the stand-in goes in; one more test board fed by hand past the stand-in must show its blue band at the same
+height on the edge as the bit's bearing left, within 0.5 mm. Dust collection, eye and hearing protection are used
+for this check.
+
+Conditions and tolerances:
+
+| Quantity | Value | Tolerance | Source |
+|---|---|---|---|
+| Stand-in bearing | 12.7 mm across, 4.8 mm tall | catalog size | R188-2Z (1/4 x 1/2 x 3/16 in); the bit's bearing is 1/2 in across |
+| Bearing height above the table | 3.2 to 8.0 mm | 0.2 mm below the sim's 3.4 to 8.2 mm | collar set with a 1/8 in drill-bit shank as a gauge |
+| Bearing axis | the bit's axis | on the router's own collet | same spindle as the bit |
+| Drag against the feed | 3.0 N, only while the board moves right to left | 0.1 N, set on the luggage scale | task.py `cutting_force`: 2.92-3.04 N at 0.25 m/min, 2.88-3.24 N at 0-1 m/min |
+| Drag direction | along the feed at the cut | within 9 degrees | pulley at x 30, y -40 cm |
+| Table friction | mu 0.25 sliding, 0.30 at rest | tilt angle 14-17 degrees | Engineering ToolBox, wood on wood 0.25-0.5 (low end); the sim's values |
+| Board | cherry, 25 x 15 x 1.27 cm, 250 g | 1 mm; mass to 10% | one band-saw template; black cherry 561 kg/m3 at 12% moisture (AHEC) |
+| Curve | 30 cm radius, 25.8 cm long | within 1 mm of the template | band-sawn to the template line |
+| Starting pin | 0.25 in steel, 5 cm right of the bit's axis | the plate's pin hole | the insert plate |
+| Pin guard | underside 1-1/2 in above the table | as set by the maker | Bench Dog ProGuard |
+| Room | 20-24 degrees C | boards kept in the room a day before | indoor shop conditions, so the boards stay near the 12% moisture their density is given at |
