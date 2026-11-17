@@ -625,6 +625,7 @@ SPIN_FROM, SPIN_TO, SPIN_STEP = -60.0, 90.0, 15.0  # each stroke rolls the wrist
 HAND_STALL = 8.0  # a stroke past contact that turns it less than this: hand-tight
 SPIN_MAX = 12
 CARRY_X = 0.38  # the filter is carried across here, clear of the crankcase, the cross tube and the wrench
+PHASE_ROLL = 30.0  # the wrist's roll when it takes the can again to set the flutes
 PRESS = 0.0015  # the hand aims 1.5 mm past where the threads' crests meet (the arm's give presses it on)
 OUT_NEAR = NIP_L - BORE_Z0 + 0.0015  # lining up closely: the bore's entry 1.5 mm short of the nipple's end
 FINE_MM, FINE_DEG = 0.06, 0.4  # lined up: within 0.06 mm of the axis (the bore's clearance is 0.2) and 0.4 degrees
@@ -806,6 +807,33 @@ def _hand_phase(st):
             out.append(_Live(0.06, lambda k=k: (_tcp_for_gasket(xg_now(), st["fix"]) + (-0.003, 0, 0),
                                                 st["rfix"] @ _horiz(SPIN_TO - SPIN_STEP * k), FINGER_OPEN),
                              "spin it on: roll back", lambda i=i: st["stop"] is None or st["stop"] > i))
+
+    # Hand-tight, a few degrees back so that the wrench's cap will go on with its handle where the right arm reaches
+    # it: its teeth in the gaps between the filter's flutes (read off the wrench where it lies; the cap only turns
+    # on its ratchet once it is picked up)
+    def phase():
+        if st["stop"] is None:
+            return 0.0
+        if "phase" not in st:
+            st["phase"] = _phase_back()
+        return st["phase"]
+
+    def phasing():
+        return phase() > 1.5
+
+    def at(roll, dx, finger):
+        return lambda: (_tcp_for_gasket(xg_now(), st["fix"]) + (dx, 0, 0), st["rfix"] @ _horiz(roll), finger)
+    out.append(_Live(1.0, at(PHASE_ROLL, -0.03, FINGER_OPEN), "set the flutes: over the can", phasing))
+    out.append(_Live(0.8, at(PHASE_ROLL, 0.0, FINGER_OPEN), "set the flutes: around it", phasing))
+    out.append(_Live(0.5, at(PHASE_ROLL, 0.0, F_CAN), "set the flutes: grip", phasing))
+    out.append(_Live(1.0, lambda: (_tcp_for_gasket(xg_now(), st["fix"]), st["rfix"] @ _horiz(PHASE_ROLL - phase()),
+                                   F_CAN), "set the flutes: turn it back", phasing))
+    out.append(_Live(0.4, lambda: (_tcp_for_gasket(xg_now(), st["fix"]) + (-0.003, 0, 0),
+                                   st["rfix"] @ _horiz(PHASE_ROLL - phase()), FINGER_OPEN),
+                     "set the flutes: let go", phasing))
+    out.append(_Live(0.8, lambda: (_tcp_for_gasket(xg_now(), st["fix"]) + (-0.07, 0, 0.02),
+                                   st["rfix"] @ _horiz(PHASE_ROLL - phase()), FINGER_OPEN),
+                     "set the flutes: back off", phasing))
     return out
 
 
@@ -857,6 +885,24 @@ def _tool_pose_on(angle_deg, out=0.0, fix=(0.0, 0.0, 0.0)):
     end = p + a * CAN_H
     r = _rot_x(-math.radians(angle_deg)) @ R_MOUNT  # raising the handle turns it the loosening way about +x
     return end + a * (out + 0.0005) + np.asarray(fix, float), r
+
+
+def _phase_back():
+    """Degrees to turn the filter back (loosen) by hand so that one of the cap's handle angles that puts its teeth in
+    the gaps between the filter's flutes lands mid SEAT_BAND (0 if one is in the band already). Turning the filter
+    back by phi raises each of those angles by phi."""
+    _, rt, rc = _tool_now()
+    _, _, rf = _filter_now()
+    rel = rt.T @ rc
+    c = math.atan2(rel[1, 0], rel[0, 0])
+    m = rf.T @ R_MOUNT
+    g = math.atan2(m[1, 0], m[0, 0])
+    pitch = 360.0 / FLUTE_N
+    a0 = math.degrees(-g - c)
+    lo, hi = SEAT_BAND
+    if any(lo + 0.5 <= a0 + k * pitch <= hi - 0.5 for k in range(-8, 9)):
+        return 0.0
+    return (sum(SEAT_BAND) / 2 - a0) % pitch
 
 
 def _align_angle(st, near=STROKE_UP):
