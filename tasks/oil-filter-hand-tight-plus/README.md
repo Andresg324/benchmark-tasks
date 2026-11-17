@@ -130,7 +130,7 @@ In a real trial: before the trial, spin the filter on to gasket contact, draw a 
 boss, and take the filter off; tape a printed protractor ring (15-degree marks) round the boss. Afterwards read the
 line against the ring, counting whole turns from the video. Watch the video for a crooked start (the filter jams
 within a turn, or the can sits visibly askew; check the nipple's thread with the filter off), for a swipe, and for
-the hands letting go. Then put a low-range 3/8-inch-drive click torque wrench set to 18 N·m (13 ft·lb) on the cap
+the hands letting go. Then put the build's 3/8-inch-drive click torque wrench, set to 18 N·m (13 ft·lb), on the cap
 and turn it clockwise: it must click before the can moves; if the can moves first, the trial scores at most 0.5.
 
 ## Runtime and seeds
@@ -216,79 +216,109 @@ the witness line, then checks the torque directly.
 
 ## Real-world build
 
-The rig is a modeled engine front, not an engine. It reproduces the filter's installed position on the Teryx4 750 (on
-the crankcase's front face, its axis along the vehicle's FRONT arrow, low down, per Kawasaki's parts diagram E1710)
-and the access constraints round it, at the sim's dimensions. Positions are in cm from the midpoint between the arm
-bases (x forward, y to the robot's left, bench top at z 0), as in the sim.
+The rig is a mock engine front built at the sim's dimensions from plywood, a steel plate, conduit and PVC. It puts the
+filter where it sits on the Teryx4 750 (on the crankcase's front face, low down, its axis along the vehicle's FRONT
+arrow, per Kawasaki's parts diagram E1710) with the same access constraints round it. Positions are in cm from the
+midpoint between the arm bases (x forward, y to the robot's left, bench top at z 0), as in the sim.
 
-- Engine face: an upright 18 mm plywood panel, 34 cm wide and 24 cm tall, its front face at x 46.3, centered on y 5,
-  screwed to a plywood base board that is clamped to the bench with two C-clamps. A 6 mm steel plate, about 10 x
-  10 cm, is through-bolted to the panel's front with four M8 bolts, washers and nuts, its center at y 5, z 13.
-- Nipple: a Mishimoto MMSPA-M20 stainless steel adapter stud (sold to pass through an oil-filter sandwich
-  plate; M20 x 1.5 thread on both ends, the filter's thread: the K&N KN-204 listing gives M20 x 1.5 and K&N
-  cross-references it to Kawasaki 16097-0007). It passes through a 21 mm hole in the plate and the panel, level and
-  square to the plate, pointing at the robot (x toward the arms), its axis at y 5, z 13. A nut behind the panel and
-  a thin M20 x 1.5 jam nut (under 8 mm) on the plate's face clamp it, with thread-locking compound; the two nuts set
-  its thread to stand 15.5 mm proud of the plate face. Round the jam nut, a 76 mm steel ring 8 mm thick, screwed to
-  the plate, is the gasket land (the sim's boss): the thread stands 7.5 mm past it, as in the sim, and the filter's
-  gasket seats 0.8 cm in front of the plate. The through-bolted plate, the two nuts and the clamped base take the
-  18 N·m (and the 29 N·m of an over-tightened filter) without turning; check it once with the torque wrench at 30 N·m before the first trial.
-- Frame cross tube: a length of 1-inch Schedule 40 steel pipe (33.4 mm across, the sim's 32 mm within 2 mm) running
-  across under the filter at x 41.8 from y -12 to 20, its top 4.5 cm under the filter's can (z 5.2), held at both
-  ends on wooden blocks with pipe straps.
-- Intake duct: a 26 cm length of 2-inch Schedule 40 PVC pipe (60.3 mm across, the sim's 60 mm), painted black,
-  standing on the cross tube's level at x 42.8, y -4.3: 3 cm of air between it and the filter's can on its right. A
-  pipe strap to the panel holds it upright.
-- Drip tray: a plain black plastic oil drip tray about 61 x 91 cm and 3.8 cm deep (for example a Lisle 19722), from
-  x 40 to 101 under the panel, as in the sim.
-- Filter: a genuine Kawasaki 16097-0007 (kawasaki.com lists it for the 2012-2013 Teryx4 750 4x4, EPS and EPS LE),
-  its gasket lightly oiled, a paint-pen index stripe and three black quarter-turn ticks. It stands on its gasket on
-  the bench at x 30, y 30, on a tape mark.
-- Wrench, as modeled: a 65 mm, 14-flute, 3/8-inch-drive cap-type filter wrench (Parts Unlimited 3801-0295; 65 mm /
+Parts:
+
+- Engine face: 18 mm (3/4-inch) plywood, one 34 x 24 cm panel and one base board about 34 x 20 cm.
+- Mounting plate: 6 mm steel plate, about 10 x 10 cm, with four M8 bolts, washers and nuts.
+- Nipple: a Mishimoto MMSPA-M20 stainless steel adapter stud, M20 x 1.5 on both ends (the filter's thread: the K&N
+  KN-204 listing gives M20 x 1.5, and K&N cross-references it to Kawasaki 16097-0007), with one M20 x 1.5 nut, one
+  thin M20 x 1.5 jam nut (under 8 mm), two spare M20 x 1.5 nuts for the mount check, and blue thread-locking compound (Loctite 243).
+- Gasket land: a 76 mm steel ring 8 mm thick (a 76 mm steel washer or a slice of 3-inch round bar, bored to clear
+  the jam nut), with three wood screws or M4 screws.
+- Frame cross tube: 32 cm of 1-inch rigid steel conduit (33.4 mm across, the sim's 32 mm within 2 mm), sprayed black,
+  with two wooden blocks and two 1-inch pipe straps.
+- Intake duct: 26 cm of 2-inch Schedule 40 PVC pipe (60.3 mm across, the sim's 60 mm), sprayed black, with one 2-inch
+  pipe strap.
+- Drip tray: a black plastic oil drip tray about 61 x 91 cm and 3.8 cm deep (Lisle 19722).
+- Filter: a genuine Kawasaki 16097-0007 (kawasaki.com lists it for the 2012-2013 Teryx4 750 4x4, EPS and EPS LE).
+- Wrench, as modeled: a 65 mm, 14-flute, 3/8-inch-drive cap-type filter wrench (Parts Unlimited 3801-0295; 65 mm and
   14 flutes is the size listed for the Hiflo HF204 / K&N KN-204 class, the cross-reference of this filter) on a
-  GearWrench 81364XP 24-inch, 1/2-inch-drive ratchet through a GearWrench 81354 adapter (1/2-inch female to 3/8-inch
-  male). The sim models these parts' published sizes and mass, and the 24-inch handle is what lets one arm reach
-  18 N·m, so a shorter ratchet would be a different task. It lies flat on the bench, cup down, its cup centered at x
-  30, y 14, the handle toward the robot's right, on a tape outline.
-- Torque check after each trial: a low-range 3/8-inch-drive click torque wrench such as a Neiko NEI03708B
-  (40-250 in·lb), set to 18 N·m (13 ft·lb, 156 in·lb, mid-range), in the cap's square drive.
-- Protecting the shared grippers from gasket oil: each gripper finger wears a disposable nitrile glove as a cover
-  (GloveWorks HD GWON48100, Ammex, 8 mil, diamond-textured, size XL): the finger goes into the glove's palm, the
-  glove's fingers folded back along the outside of the robot's finger, the cuff taped above the pad. Fresh covers
-  each trial; used ones and the wiping towel go in an oily-waste bag. The textured cover keeps a rubber-like face
-  on the grip, as the sim's contact. Before each session the covered gripper lifts the filter and spins it a quarter
-  turn on the nipple without a slip.
-- Room 20-24 degrees C.
-- Torque spec source: Kawasaki Teryx4 750 owner's manual, torque table (p. 101): "Oil Filter 18 N·m (1.8 kgf·m,
-  13 ft·lb)", the gasket lightly oiled.
-- Small items: plywood, wood screws, M8 bolts, nuts and washers, an M20 x 1.5 nut and thin jam nut, thread-locking compound, pipe straps, wooden blocks,
-  C-clamps, black spray paint, paint pen, tape, shop towels, oily-waste bag.
+  GearWrench 81364XP 24-inch, 1/2-inch-drive ratchet through a GearWrench 81354 adapter (1/2-inch female to
+  3/8-inch male). The sim models these parts' published sizes and mass, and the 24-inch handle is what lets one arm
+  reach 18 N·m.
+- Gripper covers: disposable nitrile gloves (GloveWorks HD GWON48100, Ammex, 8 mil, diamond-textured, size XL).
+- Small items: wood screws, two C-clamps, black spray paint, a white paint pen, masking tape, a printed protractor
+  ring (15-degree marks), motor oil for the gasket, shop towels, an oily-waste bag.
 
-The robot meets the same clearances in the rig as in the sim, each within the tolerance below (measured with a steel
-rule and a level when the rig is built, and checked before each session):
+Tools: use a drill with an 8.5 mm bit and a step drill bit that reaches 21 mm, a 30 mm wrench and a 30 mm 3/8-inch-drive socket for the M20
+nuts, a 3/8-inch-drive click torque wrench that covers 18 and 30 N·m (Tekton 24335, 10-80 ft·lb), a steel rule, a tape
+measure and a spirit level.
+
+Build steps:
+
+1. Screw the plywood panel upright onto the base board. Set it on the bench with its front face at x 46.3, centered
+   on y 5, and clamp the base board to the bench with the two C-clamps. Spray the panel's front black.
+2. Mark the nipple's axis on the panel at y 5, z 13. Center the steel plate on that mark, drill four 8.5 mm holes
+   through the plate and the panel at its corners, and bolt the plate on with the M8 bolts, washers and nuts.
+3. Drill a 21 mm hole through the plate and the panel on the axis mark.
+4. Run the M20 nut onto the stud's back end. Put the stud through the hole from the front, run the jam nut onto it
+   against the plate's face, and set the nuts so the stud's thread stands 15.5 mm proud of the plate face, level and
+   square to the plate (check with the spirit level and the steel rule). Add thread-locking compound and tighten both
+   nuts with the 30 mm wrench.
+5. Screw the 76 mm steel ring to the plate round the jam nut, centered on the stud. This is the gasket land (the sim's
+   boss): the thread now stands 7.5 mm past it, and the filter's gasket seats 0.8 cm in front of the plate.
+6. Check the mount once, before the first trial: jam two spare M20 x 1.5 nuts together on the stud's end, set the
+   torque wrench to 30 N·m (22 ft·lb), and turn the outer nut clockwise with the 30 mm socket until the wrench
+   clicks. The stud, its nuts and the plate stay put, which covers the 18 N·m of a good trial and the 29 N·m of an
+   over-tightened filter. Take the spare nuts off.
+7. Screw a wooden block to the base board at each end of the cross tube's span. Strap the black conduit across the
+   blocks at x 41.8 from y -12 to 20, its top at z 5.2 (4.5 cm under the filter's can).
+8. Stand the black PVC duct on the cross tube's level at x 42.8, y -4.3 (3 cm of air between it and the filter's can,
+   on its right) and strap it to the panel.
+9. Set the drip tray under the panel from x 40 to 101.
+10. Spin the filter on to gasket contact by hand, draw a white index stripe across the can and the land and three
+    black quarter-turn ticks on the can, tape the protractor ring round the land, and take the filter off.
+11. Tape a mark on the bench for the filter at x 30, y 30, and a tape outline for the wrench lying flat, cup down,
+    its cup centered at x 30, y 14, the handle toward the robot's right.
+12. Measure every clearance in the table below with the steel rule and the spirit level.
+
+The robot meets the same clearances in the rig as in the sim, each within the tolerance below (checked when the rig
+is built and before each session):
 
 | What the robot meets | Sim | Rig | Tolerance | Source |
 |---|---|---|---|---|
-| Nipple's axis | level, at x 45.5 (land), y 5, z 13, pointing at the robot | nipple through the plate, set with a level | ±5 mm, ±2 degrees | parts diagram E1710 (direction); position set for the robot |
+| Nipple's axis | level, at x 45.5 (land), y 5, z 13, pointing at the robot | stud through the plate, set with a level | ±5 mm, ±2 degrees | parts diagram E1710 (direction); position set for the robot |
 | Engine face behind the land | 8 mm | 8 mm steel ring | ±1 mm | estimated |
 | Gasket land | 76 mm across | 76 mm steel ring | ±2 mm | estimated |
 | Nipple past the land | 7.5 mm, M20 x 1.5 | MMSPA-M20 stud, 15.5 mm proud of the plate, set by the nuts | ±1 mm | thread: K&N KN-204 listing (M20 x 1.5) |
 | Engine face | 34 x 24 cm | plywood panel | ±1 cm | estimated |
-| Frame cross tube | 32 mm, top 45 mm under the can, x 41.8 | 1-inch Sch 40 pipe, 33.4 mm | ±2 mm across, ±5 mm position | estimated (owner reports; no drawing) |
+| Frame cross tube | 32 mm, top 45 mm under the can, x 41.8 | 1-inch rigid steel conduit, 33.4 mm | ±2 mm across, ±5 mm position | estimated (owner reports; no drawing) |
 | Intake duct | 60 mm, 30 mm right of the can, x 42.8 | 2-inch Sch 40 PVC, 60.3 mm | ±5 mm | estimated |
-| Drip tray rim | 3.8 cm tall, from x 40 | tray | ±1 cm | Lisle 19722 listing |
+| Drip tray rim | 3.8 cm tall, from x 40 | Lisle 19722 | ±1 cm | Lisle 19722 listing |
 | Filter's start | standing at x 30, y 30 | tape mark | ±5 mm | set for the robot |
 | Wrench's start | flat, cup at x 30, y 14, handle to y -45 | tape outline | ±5 mm, ±2 degrees | set for the robot |
 | Filter | 66 x 71 mm, 250 g | genuine 16097-0007 | as bought | KN-204/HF204 cross-reference listings |
 | Gasket's torque | 18 N·m at 270 degrees past contact | the click check after each trial | the wrench clicks before the can moves | owner's manual p. 101 |
 
-Build time: about 2 hours (cut and paint the panel, drill and bolt the plate, fit the stud and land ring, set
-the tube and duct, mark the start positions). Reset per trial: about 2 minutes: unscrew the filter, wipe the nipple,
-the land and the gasket, re-oil the gasket, stand the filter back on its mark, lay the wrench on its outline, fit
-fresh glove covers.
+Torque spec source: Kawasaki Teryx4 750 owner's manual, torque table (p. 101): "Oil Filter 18 N·m (1.8 kgf·m,
+13 ft·lb)", the gasket lightly oiled. Room 20-24 degrees C.
 
-Approximate total for the rig, filter, wrench, adapter, ratchet, torque wrench, drip tray and gloves: about $360
-(about $170 if the lab already has the ratchet and the torque wrench).
+Before each session:
+
+1. Fit glove covers on the gripper fingers: each finger goes into a glove's palm, the glove's fingers folded back along
+   the outside of the robot's finger, the cuff taped above the pad. The textured cover gives the grip a rubber-like
+   face, as the sim's contact.
+2. Have the covered gripper lift the filter and spin it a quarter turn on the stud: it turns without a slip.
+3. Check the clearances in the table.
+
+After each trial, read the outcome (see Scoring), then put the torque wrench, set to 18 N·m (13 ft·lb), in the cap's
+square drive and turn it clockwise: it must click before the can moves.
+
+Reset per trial (about 2 minutes):
+
+1. Unscrew the filter. Wipe the stud, the land and the gasket, and re-oil the gasket lightly.
+2. Stand the filter on its gasket on its tape mark.
+3. Lay the wrench flat on its tape outline, cup down.
+4. Fit fresh glove covers; the used ones and the towel go in the oily-waste bag.
+5. Replace the filter if it went past a full turn or cross-threaded, and chase the stud's thread with an M20 x 1.5 die
+   if it cross-threaded.
+
+Build time: about 2 hours.
 
 ## Licenses
 
