@@ -799,8 +799,9 @@ def score(objects):
     curve's stretch the bearing passed over touching it (TOUCH, DEEP), the board flat and the cord taut, in passes
     each begun on the pin, fed right to left. 1.0 with the whole curve traced (all but two of its 129 2 mm
     stretches) and the board 5 mm clear of the cutter circle with its trailing end past the bit; 0.75 with the whole
-    curve but the board left on or before the bit, or with 18 cm traced; 0.5 with 9 cm traced; 0.25 with the curve brought onto the bearing from the pin; 0 otherwise. Where the
-    arms end is not scored. Possible scores: 0, 0.25, 0.5, 0.75, 1."""
+    curve but the board left on or before the bit, or with 18 cm traced; 0.5 with 9 cm traced; 0.25 with the curve
+    brought onto the bearing from the pin; 0 otherwise. Where the arms end is not scored. Possible scores: 0, 0.25,
+    0.5, 0.75, 1."""
     return _score(objects)
 
 
@@ -884,7 +885,6 @@ def _feed_slides(phi, into=0.0005, turn=0.0):
 
 PHI0 = math.atan2(*(BIT - PIN - C_L)[::-1])  # where the bearing meets the curve in the braced pose at turn 0
 LEAD = PHI0 - ALPHA  # the turn whose braced pose puts the bearing right at the curve's leading end (-7.8 deg)
-BRACED_LEAD = _rot(-LEAD) @ C_L - C_L  # the slides of that pose: the board 4.1 cm further along the pin
 
 # The pivot. Nothing but friction and the hand holds the board on the pin. The pads press 13 cm from the pin toward
 # the trailing end, 85 deg in from the edge's tangent there, and push almost straight at the pin (a push through the
@@ -1134,11 +1134,12 @@ DT = 0.05  # s: one control step at 20 Hz
 def demo():
     """Both hands press near the board's ends and carry it from where it lies, square, to the starting pin, turned 14
     deg, at the spot where pivoting it about the pin brings the curve's leading end onto the bearing. The left hand
-    moves its pads behind the pin and, pushing the board onto the pin and along it, swings it about the pin until the
-    curve rides the bearing, and holds it there. The right hand takes the board near its trailing end before the left
-    lets go; the left presses near the leading end; and together they turn the board round the bearing over the whole
-    curve (changing places once, one hand at a time, with the board at rest), off the pin, and carry it on past the
-    bit; lift off and go home."""
+    moves its pads behind the pin and, pushing the board onto the pin and along it, swings it about the pin into the
+    bit; the right hand takes the board near its trailing end before the left lets go, and the two hands bring the
+    curve onto the bearing, still against the pin; the left presses near the leading end; and together they turn the
+    board round the bearing over the whole curve (changing places once, one hand at a time, with the board at rest),
+    off the pin, and carry it on past the bit; lift off and go home. The pivot and the change of places are re-planned
+    from the board's pose as they begin (_Watch)."""
     _set_pivot(PIVOT_POSE_PLAN)
     plan = _build()
     _WATCH.arm(plan)
@@ -1189,8 +1190,8 @@ class _Watch:
                 if self.starts[arm][i] >= t + DT and isinstance(w, Waypoint):
                     w.pos, w.yaw, w.finger = v.pos, v.yaw, v.finger
         if os.environ.get("ROUTER_DEBUG"):
-            sys.stderr.write(f"router watch {what} at t {t:.2f}: turn {math.degrees(PIVOT_POSE[0]):.2f} deg, contact "
-                             f"{(ALPHA - PHI_START) * R * 1000:.2f} mm in\n")
+            sys.stderr.write(f"router watch {what} at t {t:.2f}: braced turn {math.degrees(PIVOT_POSE[0]):.2f} deg, "
+                             f"first contact planned {(ALPHA - PHI_START) * R * 1000:.2f} mm in\n")
 
 
 _WATCH = _Watch()
@@ -1266,11 +1267,11 @@ def _build(split_pose=None):
                              "pivot about the pin into the bit"))
     on_b = pv_aim(th1, push * PIVOT_F + f_turn * cw + f_along(th1))
     left.append(Waypoint(1.0, on_b, C, "on the bearing"))
-    # The board is passed from hand to hand, never let go: lifted, the left hand left the board free to roll between
-    # pin and bearing under the cord's pull, off the curve's leading end. The right presses near the trailing end,
-    # 9 cm in from its feed spot (at its feed spot its wrist came within 8.5 cm of the left's), and pushes its share of
-    # the feed's start (_hand_forces), which alone holds that roll; the left lifts, crosses high over the bit and
-    # presses near the leading end with its share, which also alone holds it; then the right steps back to its spot.
+    # The board is passed from hand to hand, never let go, so it is never free to roll between pin and bearing under
+    # the cord's pull. The right presses near the trailing end, 9 cm in from its feed spot (clear of the left hand's
+    # wrist), and pushes its share of the feed's start (_hand_forces), which alone holds that roll; the left lifts,
+    # crosses high over the bit and presses near the leading end with its share, which also alone holds it; then the
+    # right steps back to its spot.
     th_s, s_s, _ = _feed_pose(PHI_START)
     wl, wr = _board_world(th_s, s_s, PAD_L), _board_world(th_s, s_s, PAD_R)
     wh = _board_world(th_s, s_s, CARRY_R + np.array([0.09, 0.0]))  # the right hand's hold during the hand-over
