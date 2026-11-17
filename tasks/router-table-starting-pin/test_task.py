@@ -340,27 +340,41 @@ def test_cord_touch():
 
 
 def test_demo_plan_offline():
-    """The demo's waypoints (the board assumed to follow the pads exactly): no grab, no hands near the bit, the whole
-    curve traced, past the bit: 1.0. The sim decides whether the board really follows; this checks the plan."""
-    plan = m.demo()["left"]
+    """The demo's plan from the real start (the board assumed to follow the pads exactly): carried square from where it
+    lies onto the pin (carry_path), pivoted about the pin from that braced pose until the curve meets the bearing (the
+    plan's PIVOT_END), fed round the bearing along the plan's path from PHI_START, then carried on past the bit and let
+    go: no grab, no hands near the bit, 128 or more of the 129 pieces traced, 1.0. The sim decides whether the board
+    really follows; this checks the plan."""
+    m.demo()
+    path = m.carry_path()
     t = Trial()
     t.rest(2)
-    s_pin = None
-    for w in plan:
-        lab = getattr(w, "label", "")
-        if lab in ("brace it against the starting pin", "settle on the pin"):
-            s_pin = m.BRACED_LEAD
-        if lab == "brace it against the starting pin":
-            t.move(6, board_turn=TH0, board_x=float(m.BRACED_LEAD[0]), board=float(m.BRACED_LEAD[1]))
-        elif lab == "pivot about the pin into the bit":
-            t.move(3, board_turn=max(m.LEAD, t.j["board_turn"] - (TH0 - m.LEAD) / 14))
-    assert s_pin is not None
-    feed_at(t, m.LEAD, m.ALPHA, -m.ALPHA - math.radians(4.0), n=400)  # the sim feeds ~0.6 mm a step
-    sc, ok = finish_at(t, m.LEAD)
-    check(sc, 1.0, f"demo plan through the scorer (traced {m.traced_cm():.1f} cm)")
-    check(float(m.bit_dist({"board_turn": TH0, "board_x": float(m.BRACED_LEAD[0]), "board": float(m.BRACED_LEAD[1])})
-                > m.RC), 1.0, "braced at the start turn, before the pivot, the board is clear of the cutter circle")
-    check(float(abs(m.LEAD - LEAD) < 1e-12), 1.0, "task and test agree on the leading-end turn")
+    for th, sl in path[:-1]:
+        t.step(board_turn=th, board_x=float(sl[0]), board=float(sl[1]))
+    th_b, sl = path[-1]
+    s_b = sl - 0.003 * m.PIN_OUT  # the plan aims 3 mm into the pin; its collider stops the board at contact
+    t.step(board_turn=th_b, board_x=float(s_b[0]), board=float(s_b[1]))
+    t.rest(3)
+    m._set_pivot((th_b, s_b))
+    th_end = m.PIVOT_END[0]
+    for k in range(1, 61):  # pivot about the pin to where the curve meets the bearing
+        t.step(left=t.press(), board_turn=th_b + (th_end - th_b) * k / 60)
+    check(float(m._H.entered and not m._H.grab), 1.0, "pivoted about the pin into the cutter circle: a braced entry")
+    for phi in np.linspace(m.PHI_START, m.PHI_END, 900):
+        th, sl, _ = m._feed_pose(phi)
+        t.step(left=t.press(), board_turn=th, board_x=float(sl[0]), board=float(sl[1]))
+    th, sl, _ = m._feed_pose(m.PHI_END)
+    for k in range(1, 11):  # on past the bit, as the plan's END_SHIFT carries it
+        s2 = sl + m._rot(-th) @ (m.END_SHIFT * k / 10)
+        t.step(left=t.press(), board_x=float(s2[0]), board=float(s2[1]))
+    p = t.press()
+    t.step(left=(p[0], p[1], p[2] + 0.10))
+    sc, ok = t.rest(25)
+    bins = int(m._H.traced.sum())
+    check(float(sc == 1.0 and bins >= m.N_BINS - 1 and not m._H.grab and not m._H.hands), 1.0,
+          f"demo plan from the real start through the scorer: {sc}, {bins} of {m.N_BINS} pieces "
+          f"({m.traced_cm():.1f} cm)")
+    m._set_pivot(m.PIVOT_POSE_PLAN)
 
 
 def test_old_demo_start_is_not_whole():
