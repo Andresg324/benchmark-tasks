@@ -18,6 +18,7 @@ own weight stays under the yield load. A real trial checks the sheet's evenness 
 the sim reads).
 """
 
+import dataclasses
 import math
 import os
 import sys
@@ -310,10 +311,6 @@ def _job(objects):
     return s
 
 
-_DEBUG = int(os.environ.get("ROLL_DEBUG", "0") or 0)  # print the state every this many scoring calls (0: never)
-_DBG = {"n": 0}
-
-
 _MEMO = {"key": None, "out": None}
 
 
@@ -333,24 +330,7 @@ def _score(objects):
     key = _key(objects)
     if key != _MEMO["key"]:
         _MEMO["key"], _MEMO["out"] = key, _job(objects)
-    out = _MEMO["out"]
-    if _DEBUG:
-        _DBG["n"] += 1
-        if _DBG["n"] % _DEBUG == 0:
-            p = points(objects)
-            gaps = {k: round(link_gap(objects, k) * 1e3, 2) for k in LINK_POSES if "tip" in k or "gripper" in k}
-            print(f"roll dbg {_DBG['n']} score {out} sheet {np.round(sheet(objects), 3).tolist()} "
-                  f"wedge {wedge(objects) * 1e3:.2f}mm max {p.max() * 1e3:.2f} min {p[p > 0].min() * 1e3:.2f} "
-                  f"pin {np.round(np.asarray(objects['pin'].pos) * 1e3, 1).tolist()} rel {released(objects)} "
-                  f"down {pin_down(objects)} clear {clear_of_dough(objects)} peak {np.round(dk.peak(), 1).tolist()} "
-                  f"gaps_mm {gaps}", flush=True)
-            a = _rotm(objects["pin"].quat_xyzw) @ np.array([0.0, 1.0, 0.0])
-            lines = [dk.pin_line(objects, y) for y in (-0.11, 0.0, 0.11)]
-            print(f"roll dbg2 tilt {math.degrees(math.asin(np.clip(a[2], -1, 1))):.2f}deg yaw "
-                  f"{math.degrees(math.atan2(-a[0], a[1])):.2f}deg gaps {[round(l[1] * 1e3, 2) if l else None for l in lines]} "
-                  f"bands {[round(float(r[r > 0].mean()) * 1e3, 2) for r in p if (r > 0).any()]} "
-                  f"wrench {np.round(dk.wrench()[0], 1).tolist()}", flush=True)
-    return out
+    return _MEMO["out"]
 
 
 def success(objects):
@@ -395,9 +375,14 @@ STROKES = (0.305, 0.24, 0.175, 0.24, 0.32, 0.24, 0.16, 0.24, 0.33, 0.24, 0.15, 0
            0.33, 0.24, 0.15, 0.24)
 
 
-def _arm(y):
+RIGHT_TRIM = -0.009  # m along x for the right arm's targets once it holds the pin: in the simulator the loaded right
+#                     arm tracks about 9 mm ahead of the left (both commanded alike, the pin turned 1.5 degrees)
+
+
+def _arm(y, dx=0.0):
     half = FINGER_OPEN
-    out = [Waypoint(2.5, (PIN_X, y, AXIS_Z + LIFT), half, "over the handle", yaw=YAW),
+    out = [Waypoint(2.0, (PIN_X, y, AXIS_Z + 3 * LIFT), half, "high over the handle", yaw=YAW),
+           Waypoint(1.0, (PIN_X, y, AXIS_Z + LIFT), half, "over the handle", yaw=YAW),
            Waypoint(1.2, (PIN_X, y, AXIS_Z), half, "around the handle", yaw=YAW),
            Waypoint(0.6, (PIN_X, y, AXIS_Z), FINGER_CLOSED, "grip", yaw=YAW),
            Waypoint(1.0, (PIN_X, y, AXIS_Z + LIFT), FINGER_CLOSED, "lift the pin", yaw=YAW),
@@ -414,11 +399,13 @@ def _arm(y):
             Waypoint(1.2, (PIN_X, y, AXIS_Z), FINGER_CLOSED, "down on its rings", yaw=YAW),
             Waypoint(0.6, (PIN_X, y, AXIS_Z), FINGER_OPEN, "let go", yaw=YAW),
             Waypoint(1.0, (PIN_X, y, AXIS_Z + LIFT), FINGER_OPEN, "clear of the pin", yaw=YAW)]
+    if dx:  # from the grip on, shift this arm's targets along x (an arm that tracks ahead or behind)
+        out = out[:4] + [dataclasses.replace(w, pos=(w.pos[0] + dx, *w.pos[1:])) for w in out[4:]]
     return out
 
 
 def demo():
     """Both arms on the pin's handles; strokes from the middle out to each end and back; let go; home."""
-    left, right = _arm(GRIP_Y), _arm(-GRIP_Y)
+    left, right = _arm(GRIP_Y), _arm(-GRIP_Y, RIGHT_TRIM)
     tail = [kit.Home(2.0), kit.Home(SUCCESS_HOLD_S + 1.0, label="hold home")]
     return {"left": left + tail, "right": right + list(tail)}
