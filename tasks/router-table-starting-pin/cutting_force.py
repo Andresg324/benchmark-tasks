@@ -1,6 +1,6 @@
 """Where the drag's 3 N comes from: the mean cutting force against the feed of the pass this rig stands in for.
 
-    python cutting_force.py        (standard library only; prints the pass's mean force against the feed)
+    python cutting_force.py        (standard library only; prints the mean force against the feed at the demo's feed)
 
 Curti, Marcon, Denaud, Togni, Furferi and Goli (2021), "Generalized cutting force model for peripheral milling of
 wood, based on the effect of density, uncut chip cross section, grain orientation and tool helix angle", European
@@ -13,8 +13,7 @@ phi_e = acos(1 - 2 ae / D), with chip thickness h = fz sin(phi), the mean force 
 The pass: black cherry (561 kg/m3 at 12% moisture, AHEC), a 1.25 in two-flute rabbeting bit with a 0.5 in bearing
 (9.55 mm of radial engagement), 1/8 in (3.2 mm) high, at 18,000 rpm (Freud's maximum speed for 1-1/4 in bits). Over
 the 66 deg of engagement the mean chip position lies about 33 deg round from the edge, and the curved edge meets the
-board's grain at 0-25 deg, so the grain angle at the mean chip position is 10-60 deg. The model was fitted on mean
-chips of 40-100 um; this pass's mean chip is printed alongside.
+board's grain at 0-25 deg, so the grain angle at the mean chip position is 10-60 deg.
 """
 
 import math
@@ -38,12 +37,6 @@ def feed_per_tooth(vf):
     return 1000.0 * max(vf, 0.0) / (RPM / 60.0 * FLUTES)
 
 
-def mean_chip(ae, vf):
-    """The mean chip thickness (mm) over the engagement: fz (1 - cos phi_e) / phi_e."""
-    pe = engagement(ae)
-    return feed_per_tooth(vf) * (1.0 - math.cos(pe)) / pe
-
-
 def force_against_feed(ae, ap, vf, ga_deg):
     """The mean cutting force against the feed (N), for a radial depth ae (m), cut height ap (m), feed speed vf
     (m/s) and grain angle ga_deg (deg) at the mean chip position."""
@@ -59,10 +52,7 @@ def force_against_feed(ae, ap, vf, ga_deg):
 
 
 if __name__ == "__main__":
-    ae = RC - RB
-    print("feed m/min   mean chip um   against the feed N (grain angle 10 / 35 / 60 deg)")
-    for vf_min in (DEMO_FEED, 1.0, 2.0, 3.0):
-        vf = vf_min / 60.0
-        fx = [force_against_feed(ae, CUT_H, vf, ga) for ga in (10.0, 35.0, 60.0)]
-        tag = "  (the demo's feed)" if vf_min == DEMO_FEED else ""
-        print(f"{vf_min:10.2f}   {1000 * mean_chip(ae, vf):12.1f}   {fx[0]:5.2f} / {fx[1]:5.2f} / {fx[2]:5.2f}{tag}")
+    vf = DEMO_FEED / 60.0
+    print(f"at the demo's feed ({DEMO_FEED:.2f} m/min), mean cutting force against the feed:")
+    for ga in (10.0, 35.0, 60.0):
+        print(f"  grain angle {ga:4.0f} deg: {force_against_feed(RC - RB, CUT_H, vf, ga):.2f} N")
