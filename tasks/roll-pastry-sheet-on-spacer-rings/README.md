@@ -222,39 +222,60 @@ the reset, is in "Real-world evaluation" below.
 
 ## Real-world build
 
-Everything is bought off the shelf; nothing is made, printed or drilled for the task. The same board, pin, rings, ruler
-and gauge are used for every trial.
+The rig is common kitchen stock at the sim's sizes. The same board, pin, rings, ruler and gauge are used for every
+trial. Where a product is named, any equivalent that meets the stated sizes serves.
 
-- Board: the J.K. Adams Williston Large maple cutting board with juice groove, 16 x 12 x 3/4 inch (WLS-1612; 40.6 x
-  30.5 x 1.9 cm), laid juice-groove side down so the plain face is up. The sim's board is 40 x 30 x 1.9 cm (its plan
-  rounded by 3 to 6 mm). It is held to the table with double-sided carpet tape.
-- Pin: the Frieling Classic Rolling Pin with Handles (12 inch barrel, 2.4 inch across, 21 inch overall, 1.6 lb; the
-  barrel turns on nylon bushings). Spacer rings: the 1/8 inch pair from Mrs. Anderson's Baking silicone rolling pin
-  rings (an 8-piece set, two rings each in four thicknesses from 0.0625 to 0.375 inch, sold for pins up to about 2.5
-  inches across). 1/8 inch is 3.18 mm; the sim uses 3.2 mm.
-- Pastry and flour: Pepperidge Farm Puff Pastry Sheets (17.3 oz box, two sheets); all-purpose flour and a small
-  fine-mesh sieve; a pizza wheel.
-- Ruler: the Johnson 40-0564 24 inch aluminum inch/metric straightedge (2 mm graduations). It guides the
-  cut, whose tolerance is 3 mm an edge.
-- Flour measure: a standard US measuring teaspoon (for example from an OXO Good Grips stainless steel measuring spoon
-  set), spooned full and leveled with a knife.
-- Calipers, also the thickness gauge: the Neiko 01407A digital caliper (0 to 150 mm, 0.01 mm display, accuracy
-  +-0.02 mm per the maker), a common low-cost caliper with a depth rod. The rod slides out of the end of its
-  beam; the beam's end face (a few millimeters thick; measured once and recorded) is the foot that rests on the pastry
-  around a point. Check leaves: a 20-leaf metric feeler gauge set, 0.05 to 1.00 mm (the Draper 51701 set, or any metric set
-  with these leaves), stacked to about 3.00 mm (1.00 + 0.95 + 0.90 + 0.15); the stack is read once with the caliper on a bench
-  and that value recorded as its reference.
+Parts:
+
+- Board: a flat wooden cutting board, 40 x 30 cm (16 x 12 inch) in plan and 1.9 cm (3/4 inch) thick, with a plain
+  face. Any board 40 to 41 cm across, 30 to 31 cm deep and 1.6 to 2.2 cm thick serves; the sim's board is
+  40 x 30 x 1.9 cm. Example: the J.K. Adams Williston Large cutting board (WLS-1612; 40.6 x 30.5 x 1.9 cm), laid
+  juice-groove side down so the plain face is up.
+- Pin: a handled rolling pin whose barrel turns on its axle, the barrel 30.5 cm (12 inch) long and 6.1 cm
+  (2.4 inch) across, handles about 2.5 cm across and 11 cm long, about 53 cm (21 inch) overall and 0.73 kg (1.6 lb),
+  as in the sim. Any pin with a barrel 30 to 31 cm long and 5.8 to 6.4 cm across (inside the spacer rings' rated
+  size), handles 2 to 3 cm across and at least 9 cm long, and a mass of 0.6 to 0.9 kg serves. Example: the Frieling
+  Classic Rolling Pin with Handles (12 inch barrel, 2.4 inch across, 21 inch overall, 1.6 lb; the barrel turns on
+  nylon bushings).
+- Spacer rings: the 1/8 inch pair from Mrs. Anderson's Baking silicone rolling pin rings (an 8-piece set, two rings
+  each in four thicknesses from 0.0625 to 0.375 inch, sold for pins up to about 2.5 inches across). 1/8 inch is
+  3.18 mm; the sim uses 3.2 mm.
+- Pastry and flour: Pepperidge Farm Puff Pastry Sheets (17.3 oz box, two sheets; one box gives two trials);
+  all-purpose flour.
+- Ruler: the Johnson 40-0564 24 inch aluminum inch/metric straightedge (2 mm graduations). It guides the cut, whose
+  tolerance is 3 mm an edge.
+- Check leaves: a 20-leaf metric feeler gauge set, 0.05 to 1.00 mm (the Draper 51701 set, or any metric set with
+  these leaves), stacked to about 3.00 mm (1.00 + 0.95 + 0.90 + 0.15).
 - Gripper pad covers: Glad Press'n Seal food wrap, a food-safe wrap that seals to itself under finger pressure.
-- Scale (one, used once per rig for the force check and the teaspoon check): Greater Goods 0471 high-capacity
-  kitchen scale (10 kg x 1 g). No scale is used during trials.
-- Thermometer: one ThermoPro TP50 digital room thermometer (+-0.5 degrees C) at the bench, for the room only. The
-  pastry's own temperature is not checked: the thaw is timed (below), and the freezer is the household one.
-- Also: a steel tape; masking tape; double-sided carpet tape; a timer; a phone with a level app and a camera on an
-  overhead phone stand.
+- Also: masking tape, double-sided carpet tape, a dry cloth, a bench scraper and a dry pastry brush.
 
-The rig uses common low-cost products throughout (the board, pin, rings, caliper, feeler set, kitchen scale, room
-thermometer, straightedge and measuring spoons named above, plus a sieve, a pizza wheel, tapes, wrap and a phone
-stand): about $225 in all, plus the pastry (one box gives two trials).
+Tools:
+
+- Use a digital caliper with a depth rod as the thickness gauge: the Neiko 01407A (0 to 150 mm, 0.01 mm display,
+  accuracy +-0.02 mm per the maker). The rod slides out of the end of its beam; the beam's end face (a few
+  millimeters thick; measured once and recorded) is the foot that rests on the pastry around a point.
+- Use a 10 kg kitchen scale (1 g steps), the Greater Goods 0471, once per rig for the force check and the teaspoon
+  check (the board, sheet and peak come to about 5.5 kg). No scale is used during trials.
+- Use a digital room thermometer, the ThermoPro TP50 (+-0.5 degrees C), at the bench, for the room only. The
+  pastry's own temperature is not checked: the thaw is timed (below), and the freezer is the household one.
+- Use a standard US measuring teaspoon (for example from an OXO Good Grips stainless steel measuring spoon set),
+  spooned full and leveled with a knife, a small fine-mesh sieve, a pizza wheel, a steel tape, a timer, and a phone
+  with a level app and a camera on an overhead phone stand.
+
+Build steps (details and tolerances in the protocol below):
+
+1. Read the feeler stack once with the caliper on a bench and record that value as its reference.
+2. Do the teaspoon check and the force check on the kitchen scale (Marks, below).
+3. Lay masking-tape L marks on the table for the board's corners (front edge at x 10.0, center line at y 0), and tape
+   the board down inside them with double-sided carpet tape, plain face up. Check it level with the phone's level app.
+4. Put the tape ticks on the board's edge faces for the pastry's edges, the pin's axis, the bands and the rows of
+   measuring points (Marks, below).
+5. Slide a 1/8 inch spacer ring onto each end of the pin's barrel, flush with the barrel's ends, and check each ring
+   with the caliper (3.2 mm within 0.1 mm).
+6. Set the phone on its overhead stand about 60 cm above the board, the whole board in frame.
+7. Put the room thermometer at the bench and a box of pastry in the freezer.
+
+Build time: about 1 hour.
 
 ## Real-world evaluation (reproducible protocol)
 
