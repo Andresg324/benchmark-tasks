@@ -690,8 +690,8 @@ def test_drag():
     """The drag, the same law in the sim as on the rig: the cord from the screw eye in the board's trailing end to the
     pulley pulls 3.0 N toward the pulley while it is taut, and 0 once the board has let it run back past the cam
     cleat's catch (the cleat holds the weight): slack at the start and through the carry and pivot to the snug pose,
-    3.0 N along the feed (2.97-3.00 N against it) and while the board is held there, 0 once it runs back 0.5 mm, back
-    on only near the most cord drawn."""
+    3.0 N along the feed (2.97-3.00 N against it) and while the board is held there, 0 once it runs back past the
+    catch (3 mm), back on only once it draws out past where the cams gripped."""
     check(float(abs(m.CORD_N - 3.0) < 1e-12 and abs(0.300 * m.G - 2.94) < 0.005), 1.0,
           "0.300 kg hanging weight (2.94 N), trimmed with the pulley's and cleat's drag to 3.0 N at the board")
     kit._EPISODE["count"] += 1
@@ -728,14 +728,29 @@ def test_drag():
     last = (th, sl)
     check(float(abs(np.linalg.norm(drag_at((last[0], last[1] + np.array([0.0, 2e-6])))) - 3.0) < 1e-9), 1.0,
           "board held at rest, the cord taut: 3.0 N (the hands hold the weight up)")
-    back = [float(np.linalg.norm(drag_at(m._feed_pose(p)[:2]))) for p in phis[::-1][1:200]]
-    check(float(max(back) == 0.0), 1.0, "drawn back toward the pulley: slack, 0 N")
+    top = m._D.drawn
+    back, slipping = [], 0
+    for p in phis[::-1][1:200]:
+        q = m._feed_pose(p)[:2]
+        back.append(float(np.linalg.norm(drag_at(q))))
+        if m.cord_length(dict(zip(("board_turn", "board_x", "board"), (q[0], *q[1])))) >= top - m.CATCH and \
+                slipping == len(back) - 1:
+            slipping += 1
+    check(float(all(abs(v - 3.0) < 1e-9 for v in back[:slipping]) and max(back[slipping:]) == 0.0
+                and slipping < 10), 1.0,
+          f"drawn back toward the pulley: 3.0 N over the first {slipping} steps (the cams slip up to 3 mm), then "
+          f"slack, 0 N")
     more = phis[-1] + (phis[1] - phis[0]) * np.arange(1, 11)  # on past where the first feed stopped
     fwd = [float(np.linalg.norm(drag_at(m._feed_pose(p)[:2]))) for p in np.concatenate([phis[200:], more])]
     first = next(i for i, v in enumerate(fwd) if v > 0)
-    check(float(195 <= first <= 200 and max(fwd[:first]) == 0.0 and min(fwd[first:]) > 3.0 - 1e-9), 1.0,
-          f"fed again: no pull until the board is back within 0.5 mm of the most cord drawn (step {first} of "
-          f"{len(fwd)})")
+    runs = [m.cord_length(dict(zip(("board_turn", "board_x", "board"), (q[0], *q[1])))) for q in
+            (m._feed_pose(p)[:2] for p in np.concatenate([phis[200:], more]))]
+    seat = max(m.cord_length(dict(zip(("board_turn", "board_x", "board"), (q[0], *q[1])))) for q in
+               (m._feed_pose(p)[:2] for p in phis)) - m.CATCH
+    want = next(i for i, r in enumerate(runs) if r >= seat)
+    check(float(first == want and max(fwd[:first]) == 0.0 and min(fwd[first:]) > 3.0 - 1e-9), 1.0,
+          f"fed again: no pull until the board draws out past where the cams gripped, 3 mm short of the most cord "
+          f"drawn (step {first} of {len(fwd)})")
     # near miss: just under the cord drawn per step that counts as moving
     kit._EPISODE["count"] += 1
     base = (LEAD, slides_at(m.ALPHA - 0.02, LEAD))
@@ -744,13 +759,13 @@ def test_drag():
     u = m.to_world(j, m.EYE) - m.PULLEY
     u = m._rot(-LEAD) @ (u / np.linalg.norm(u))  # away from the pulley, in the board's frame
     run0 = m.cord_length(j)
-    for step, want in ((-0.0004, 3.0), (-0.0006, 0.0), (0.0, 3.0), (0.0001, 3.0)):
+    for step, want in ((-0.0029, 3.0), (-0.0031, 0.0), (0.0, 3.0), (0.0001, 3.0)):
         kit._EPISODE["count"] += 1
         drag_at(base)
-        m._D.drawn = run0  # the cord drawn out to here
+        m._D.drawn, m._D.seated = run0, False  # the cord drawn out to here
         got = float(np.linalg.norm(drag_at((LEAD, base[1] + step * u))))
         check(float(abs(got - want) < 1e-9), 1.0, f"eye {step * 1e3:+.1f} mm from the most cord drawn: {got:.1f} N "
-              f"(the cleat catches after 0.5 mm of run-back)")
+              f"(the cleat catches after 3 mm of run-back)")
     # the trap: a board fed straight in off the pin meets the same drag (and scores 0 as a grab)
     kit._EPISODE["count"] += 1
     t = Trial()

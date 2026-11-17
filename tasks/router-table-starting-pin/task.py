@@ -207,8 +207,8 @@ COM = _centroid(OUTLINE)[1] - np.array(CENTRE)  # the board's center of mass fro
 # drawn back, the board lets the cord run back until the cleat's cams grip (CATCH), and the cord goes slack: no pull, so a
 # board left at rest is free. The cord is set snug with the board braced on the pin and its curve's leading end on the
 # bearing, where a whole-curve feed starts, so the drag takes hold as the board is fed along the bearing; after a
-# run-back it takes hold again only where the board has drawn out as much cord as before (the cleat keeps what was
-# drawn).
+# run-back it takes hold again only where the board draws out past where the cams gripped (the cleat keeps what was
+# drawn, less the up to 3 mm the cams slip before they grip).
 # Where 3 N comes from: Curti, Marcon, Denaud, Togni, Furferi and Goli (2021), "Generalized cutting force model for
 # peripheral milling of wood", Eur. J. Wood Prod. 79:667-678, puts the real pass (cherry, a 1.25 in two-flute rabbeting
 # bit at 22,000 rpm, 9.5 mm wide and 1/8 in high) at 2.9-3.3 N against the feed at 0.25-1 m/min.
@@ -218,7 +218,8 @@ PULLEY = np.array([0.360, -0.400])  # m: the pulley's sheave, 13 cm past the tab
 _X_IN = float(C_L[0] + R * math.cos(ALPHA))  # where the curve meets the ends (board frame x)
 EYE = np.array([_X_IN - 0.010, ENDS[0]])  # the screw eye: in the trailing end face, at mid-thickness, 1 cm in from
 #                                            the curve (board frame)
-CATCH = 0.0005  # m: how far the cord runs back before the cam cleat grips it (checked on the rig, README build)
+CATCH = 0.003  # m: how far the cord may run back before the cam cleat grips it: spring cams slip 1-3 mm at 3 N;
+#                the rig check (README build) passes a cleat that holds within 3 mm, so the sim takes the most
 _LEAD_TURN = math.atan2(*(BIT - PIN - C_L)[::-1]) - ALPHA  # braced on pin and bearing, the bearing at the leading end
 SNUG = float(np.linalg.norm(PIN + _rot(_LEAD_TURN) @ (EYE + _rot(-_LEAD_TURN) @ C_L - C_L) - PULLEY))  # cord set
 
@@ -233,7 +234,8 @@ class _Drag:
 
     def __init__(self):
         self.episode = kit.episode()
-        self.drawn = SNUG
+        self.drawn = SNUG  # the most cord drawn since the cleat last seated, or where it is seated
+        self.seated = True  # the cleat's cams hold the cord (set snug at SNUG to start)
         self.key = None
         self.force = np.zeros(2)  # N, world (x, y)
         self.at = PULLEY.copy()  # where it acts (world): the screw eye
@@ -245,8 +247,9 @@ _D = _Drag()
 
 def drag_load(J):
     """The cord's pull on the board, as (its moment about the pin, its components along the board's x and y), and its
-    bookkeeping; _push_board puts it on the board's body. CORD_N toward the pulley at the eye while the cord is taut
-    (the eye within CATCH of the most cord drawn), else 0. It computes once per control step (the same pose returns
+    bookkeeping; _push_board puts it on the board's body. CORD_N toward the pulley at the eye while the cord is taut,
+    else 0: taut while the board draws cord out, and while it lets the cord back up to CATCH from the most drawn (the
+    cams slipping); then the cams grip there and the cord is slack until the board draws out past that again. It computes once per control step (the same pose returns
     the same load)."""
     global _D
     if _D.episode != kit.episode():
@@ -257,11 +260,16 @@ def drag_load(J):
     _D.key = key
     eye = to_world(J, EYE)
     run = float(np.linalg.norm(eye - PULLEY))
-    _D.drawn = max(_D.drawn, run)  # cord drawn out through the cleat: the weight rises
-    if run >= _D.drawn - CATCH:  # taut: the board carries the weight
-        _D.force = CORD_N * (PULLEY - eye) / run
-    else:  # run back past the catch: the cleat holds the weight, the cord is slack
-        _D.force = np.zeros(2)
+    if run >= _D.drawn:  # drawing cord out through the cleat: the weight rises
+        _D.drawn, _D.seated = run, False
+        taut = True
+    elif not _D.seated and run >= _D.drawn - CATCH:  # let back: the weight sinks, the cord slips back through the cams
+        taut = True
+    else:  # the cams have gripped (at most CATCH back from the most drawn): the cleat holds the weight
+        if not _D.seated:
+            _D.drawn, _D.seated = _D.drawn - CATCH, True
+        taut = run >= _D.drawn
+    _D.force = CORD_N * (PULLEY - eye) / run if taut else np.zeros(2)
     _D.at = eye
     f, th = _D.force, J["board_turn"]
     tau = float((eye - PIN)[0] * f[1] - (eye - PIN)[1] * f[0])
