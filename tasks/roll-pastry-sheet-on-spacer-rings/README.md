@@ -104,12 +104,13 @@ barrel (h = 1.6 mm, a = sqrt(2 x 30.5 x 1.6) = 9.9 mm), it gives 15 kPa x 24 cm 
 continuous ratings: per arm about 18 N of the 52 N down and 3 N of the 11 N along the board. The real trial scores the
 outcome, the sheet, so this force sets how hard the sim's arms work.
 
-**Scale check of the first pass (once per rig).** An Escali Arti XL 2210IB glass kitchen scale (10 kg x 1 g, about
-$30) is set on the table and the bare board centered on it (before the board is taped into its marks), a sheet prepared as for a trial (thaw, flour, cut) laid on
-the board, and the scale tared with the pin lifted off. The pin is set on its rings behind the sheet and rolled once
+**Scale check of the first pass (once per rig, by whoever builds the rig).** The rig's one kitchen scale, a Greater
+Goods 0471 high-capacity kitchen scale (10 kg x 1 g, about $25), is set on the table and the bare board centered on it
+(before the board is taped into its marks), a sheet prepared as for a trial (thaw, flour, cut) laid on the board, and the scale tared with the pin lifted off. The pin is set on its rings behind the sheet and rolled once
 across it by hand at the demo's pace (4 cm/s, about 3 s across the 11.5 cm piece), pressed just enough to keep both rings
 on the board, while a phone films the display. The peak reading added over the tare is the first pass's downward
-force, pin weight included: the force the pastry pushes back with. It is recorded in the rig's log beside the sim's
+force, pin weight included: the force the pastry pushes back with. The scale carries the board (about 1.8 kg; 4 lb
+listed), the sheet and that peak, about 5.5 kg in all, so a 5 kg scale is too small and a 10 kg one is named. It is recorded in the rig's log beside the sim's
 3.6 kg (35.6 N, from task.py's 15 kPa above), with the lot code and room temperature. The demo's hands are commanded 1 cm below the pin's axis while rolling, so the arms
 hold the rings down on the board against the push instead of letting the pin ride up on the pastry.
 
@@ -233,8 +234,10 @@ and gauge are used for every trial.
   inches across). 1/8 inch is 3.18 mm; the sim uses 3.2 mm.
 - Pastry and flour: Pepperidge Farm Puff Pastry Sheets (17.3 oz box, two sheets); all-purpose flour and a small
   fine-mesh sieve; a pizza wheel.
-- Ruler: the Prym Omnigrid Universal Ruler, cm scale, 15 x 60 cm (article 611308), a clear quilting ruler with a
-  metric grid. It guides the cut.
+- Ruler: the Johnson 40-0564 24 inch aluminum inch/metric straightedge (2 mm graduations, about $14). It guides the
+  cut, whose tolerance is 3 mm an edge.
+- Flour measure: a standard US measuring teaspoon (for example from an OXO Good Grips stainless steel measuring spoon
+  set), spooned full and leveled with a knife.
 - Calipers, also the thickness gauge: the Neiko 01407A digital caliper (0 to 150 mm, 0.01 mm display, accuracy
   +-0.02 mm per the maker; about $25), a common budget caliper with a depth rod. The rod slides out of the end of its
   beam; the beam's end face (a few millimeters thick; measured once and recorded) is the foot that rests on the pastry
@@ -242,29 +245,31 @@ and gauge are used for every trial.
   dollars), stacked to about 3.00 mm (1.00 + 0.95 + 0.90 + 0.15); the stack is read once with the caliper on a bench
   and that value recorded as its reference.
 - Gripper pad covers: Glad Press'n Seal food wrap, a food-safe wrap that seals to itself under finger pressure.
-- Scale: American Weigh Scales Fast Weigh MS-500-BLK pocket scale (500 g x 0.1 g), for the flour.
-- Kitchen scale for the force check (once per rig): Escali Arti XL 2210IB glass kitchen scale (10 kg x 1 g).
-- Thermometers: a ThermoPro TP50 digital room thermometer (+-0.5 degrees C) at the bench; a Taylor 5924 dial
-  refrigerator/freezer thermometer (-29 to 27 degrees C, -20 to 80 degrees F) in the freezer.
+- Scale (one, used once per rig for the force check and the teaspoon check): Greater Goods 0471 high-capacity
+  kitchen scale (10 kg x 1 g). No scale is used during trials.
+- Thermometer: one ThermoPro TP50 digital room thermometer (+-0.5 degrees C) at the bench, for the room only. The
+  pastry's own temperature is not checked: the thaw is timed (below), and the freezer is the household one.
 - Also: a steel tape; masking tape; double-sided carpet tape; a timer; a phone with a level app and a camera on an
   overhead phone stand.
 
 Rough cost of the rig, at common US retail prices: board about $45, pin about $40, rings about $12, caliper about
-$25, feeler set about $10, scale about $20, kitchen scale about $30, the two thermometers about $20, ruler about $40, sieve, pizza wheel, tapes,
-wrap and phone stand about $40: about $280 in all, plus about $7 of pastry a box (two trials).
+$25, feeler set about $10, kitchen scale about $25, room thermometer about $10, straightedge about $14, measuring
+spoons about $5, sieve, pizza wheel, tapes, wrap and phone stand about $40: about $226 in all, plus about $7 of pastry
+a box (two trials).
 
-**Budget build.** Two items have cheaper equivalents that still meet the protocol's tolerances. The cut only needs a
-straight edge with 2 mm marks for its 3 mm tolerance, so a Johnson 40-0564 24 inch aluminum inch/metric straightedge
-(about $14) can replace the Omnigrid ruler. The flour is weighed to 5.0 +- 0.5 g, so any 500 g x 0.1 g pocket scale
-(about $10 to $12, an estimate) can replace the AWS scale. The thickness tools are already budget items (the Neiko
-caliper, +-0.02 mm, checked on a feeler stack within 0.03 mm, for a 0.3 mm band). The board and pin stay as named,
-because the sim models their sizes. Totals: primary about $280, budget about $245.
+**Budget build.** The board, pin, rings and caliper stay as named (the sim models the board and pin; the Neiko is
+already a budget caliper, +-0.02 mm, checked on a feeler stack within 0.03 mm, for a 0.3 mm band). Three items can go:
+any metric feeler set of 0.05 to 1.00 mm leaves (about $5, an estimate; its stack is read once on the caliper anyway),
+the room thermometer if the room already has a thermostat or thermometer that reads in degrees, and the measuring
+spoons if a standard US set is at hand: about $206. A builder who already owns a kitchen scale of 10 kg x 1 g (5 kg is
+too small, above) skips the scale too: about $181. Totals: primary about $226, budget about $206 (about $181 with a
+scale at hand).
 
 ## Real-world evaluation (reproducible protocol)
 
 Every real trial starts from the same measured state and is scored on the same points as the simulator (30 on the demo's
 sheet), read with a caliper's depth rod. The protocol fixes the pastry (one product, one lot, the box's thaw, a measured
-cut), the room (20 to 24 degrees C), the positions (tape marks on the table and board), the flour (weighed), the
+cut), the room (20 to 24 degrees C), the positions (tape marks on the table and board), the flour (a leveled spoon measure), the
 measurement (the points located with a steel tape, a checked caliper, all points read within 5 minutes, plus the pin
 check and photos), the grippers' covers and cleanup, and the reset. Where a step comes from the maker's directions it is quoted;
 every other tolerance is the protocol's own setting, chosen to be well inside the scoring bands. They are collected in
@@ -275,8 +280,11 @@ measured with the steel tape.
 the room thermometer at the bench at the start of each trial and recorded. Trials run only within that range.
 
 **Marks (once).**
-- Force check: before the board is taped down, the first pass is rolled with the board on a kitchen scale and
-  its peak recorded beside the sim's 3.6 kg ("Scale check of the first pass", above).
+- Force check: before the board is taped down, whoever builds the rig rolls the first pass with the board on the
+  kitchen scale and records its peak beside the sim's 3.6 kg ("Scale check of the first pass", above).
+- Teaspoon check: ten level teaspoons of the series' flour, each spooned in and leveled, weigh 25 g within 2.5 g on
+  the kitchen scale (2.5 g a level teaspoon, from King Arthur's 120 g a cup, spooned and leveled, over 48 teaspoons a
+  cup); the reading is recorded. Two level teaspoons are then 5.0 g within 0.5 g.
 - Board: masking-tape L marks on the table at the board's four corners put its front edge at x 10.0 and its center
   line at y 0 within 2 mm, square to the robot within 0.5 degree. The board is taped down inside them with
   double-sided carpet tape. The table and board are level within 0.5 degree (the phone's level app on the bare board,
@@ -298,7 +306,7 @@ row points and 2 end points a band); a longer sheet adds row points, a shorter o
 **The pastry: product and lot (every series).** One product, Pepperidge Farm Puff Pastry Sheets, 17.3 oz, two sheets
 per box. A series of trials uses boxes of one lot (the code and best-by date printed on the box, recorded for each
 trial), bought together, inside their best-by date, and kept frozen ("Keep frozen until ready to thaw", the package)
-at -18 degrees C or colder (the freezer thermometer). A sheet is thawed once. If a series needs
+in a household freezer. A sheet is thawed once. If a series needs
 more boxes than one lot provides, the lot change is recorded and the next trial is flagged as the first of a new lot.
 Each trial uses one sheet, cut to half its size on the board.
 
@@ -314,8 +322,8 @@ and the maker's recipes at pepperidgefarm.com, e.g. Neapolitan Napoleons).
    own labeled kitchen timer, so a thawed sheet is ready as each trial's turn comes. A trial cycle then takes about 15
    minutes: about 3 minutes of prep for the trial itself (steps 2 to 8: flour, pin, unfold, check, cut, caliper, pad
    covers, photo), at most 2 minutes of rolling, at most 5 minutes of measuring and about 3 minutes of reset (below).
-2. Board: clean and dry, inside its marks. Weigh 5.0 g of all-purpose flour (within 0.5 g) and sift it evenly over the
-   board: the box's "lightly floured surface", by weight. Lay the pin on its rings with its axis over the x 35 ticks
+2. Board: clean and dry, inside its marks. Measure 2 level teaspoons of all-purpose flour (about 5.0 g; the teaspoon check above) and
+   sift it evenly over the board: the box's "lightly floured surface", by a fixed measure. Lay the pin on its rings with its axis over the x 35 ticks
    on both side faces (within 5 mm) and the rings' outer faces 5 cm in from the board's sides (within 5 mm each), so
    the pin is centered and square. Check the rings first: both pushed fully onto the barrel's ends (outer face flush
    with the barrel's end within 1 mm).
@@ -379,7 +387,7 @@ rest.
    pin only: the hands and the sheet's length are free.
 
 **Reset (every trial, about 3 minutes).** Throw the rolled sheet away: each trial rolls a fresh sheet once. Scrape the
-board with a bench scraper, wipe it with a dry cloth and let it dry; it is re-floured with weighed flour at the next
+board with a bench scraper, wipe it with a dry cloth and let it dry; it is re-floured with 2 level teaspoons of flour at the next
 set-up. Brush flour and pastry off the pin's barrel and rings and off the ruler with a dry pastry brush. Check each ring
 with the calipers at three places around it: half the difference between the ring's diameter and the barrel's beside it
 is 3.2 mm within 0.1 mm (1/8 inch is 3.18 mm); a ring outside that, torn or stretched loose is replaced as a pair. Check
@@ -391,7 +399,7 @@ the board is still inside its marks and the camera stand unmoved.
 |---|---|---|---|---|
 | Room | room temperature | 20 to 24 degrees C (68 to 75 degrees F) | room thermometer at the bench | protocol |
 | Product | Pepperidge Farm Puff Pastry Sheets, 17.3 oz | one lot per series, inside best-by | box label recorded | protocol |
-| Storage | frozen | -18 degrees C or colder; thawed once | freezer thermometer | package ("keep frozen"); temperature protocol |
+| Storage | frozen | household freezer; thawed once | box label | package ("keep frozen"); thawed once protocol |
 | Thaw | unwrapped, at room temperature, 35 min | thaw plus set-up at most 40 min ("no more than 40 minutes") | timer | package limit; 35 min protocol |
 | Seams and cracks | pressed together | cracks sprinkled with water and pressed to seal | by eye | package |
 | Sheet thickness | 4.8 mm (3/16 inch) | average 4.3 to 5.3 mm | calipers, 4 edges | maker's size; tolerance protocol |
@@ -400,7 +408,7 @@ the board is still inside its marks and the camera stand unmoved.
 | Thaw schedule | one sheet out of the freezer every 15 min | each on its own labeled timer | timers | protocol |
 | Per-trial prep | about 3 min (flour, pin, unfold, check, cut, caliper check, pad covers, photo) | at most 5 min from the end of the thaw | timer | protocol |
 | Reset | about 3 min (sheet out, board scraped and dried, pin brushed, rings checked) | before the next trial's prep | timer | protocol |
-| Flour on the board | 5.0 g | 0.5 g | scale, sieve | package ("lightly floured"); weight protocol |
+| Flour on the board | 2 level teaspoons (about 5.0 g) | spooned and leveled; ten teaspoons 25 g within 2.5 g, once per rig | measuring teaspoon, sieve; kitchen scale once | package ("lightly floured"); measure protocol; 2.5 g a teaspoon from King Arthur |
 | Board | front edge x 10.0, center y 0 | 2 mm; square and level within 0.5 degree | tape marks, steel tape, level app | protocol |
 | Pin start | axis at x 35, centered | 5 mm; rings flush on the barrel's ends within 1 mm | ticks, steel tape | protocol |
 | Ring height | 3.2 mm (1/8 inch = 3.18 mm) | 0.1 mm | calipers, 3 places per ring, every trial | protocol |
@@ -408,7 +416,7 @@ the board is still inside its marks and the camera stand unmoved.
 | Caliper check | about 3.00 mm stack of feeler leaves | its recorded value within 0.03 mm, five times | feeler gauge set | caliper's stated accuracy; tolerance protocol |
 | Gripper covers | one layer of Glad Press'n Seal over each finger's pad and tip and each palm face | fresh every trial, no folds on the pad face; pads and palms wiped and inspected after every trial | by eye | protocol |
 | Grip through the wrap | pin held by its handles, lifted 10 cm and shaken 5 s | no slip | by eye, once per series | protocol |
-| First-pass force | the sim's 3.6 kg (35.6 N, 15 kPa) | peak recorded beside it | kitchen scale under the board, once per rig | protocol |
+| First-pass force | the sim's 3.6 kg (35.6 N, 15 kPa) | peak recorded beside it | kitchen scale (10 kg) under the board, once per rig, by the rig's builder | protocol |
 | Reading window | all points, about 6 s each plus 10 s a band (30 on the demo's sheet) | within 5 min of the pin's set-down | timer | protocol setting |
 | Repeat readings | three points re-read in their holes | within 0.05 mm | caliper | protocol |
 | Pin down (scored) | level, on its rings | within 3 degrees; rings within 5 mm of the surface | level app, steel tape | scoring |
@@ -443,19 +451,22 @@ grows.
 - Rings: Mrs. Anderson's Baking silicone rolling pin rings, 8-piece set, 0.0625, 0.125, 0.25 and 0.375 inch, "fits
   rolling pin cylinders up to 2.5-inches in diameter"
   (vermontkitchensupply.com/products/silicone-rolling-pin-rings-8pc-set; also target.com/p/-/A-1006725924).
-- Ruler: Prym Omnigrid Universal ruler, cm scale, 15 x 60 cm, article 611308
-  (prym.com/en/universal-ruler-15x60cm-16113080).
+- Ruler: Johnson 40-0564 24 inch aluminum inch/metric straightedge, graduations in 1/8 inch, 1/16 inch and 2 mm
+  (johnsonlevel.com/P/2096/24AluminumInchMetricStraightEdge; about $14, hausoftools.com).
+- Flour per teaspoon: King Arthur Baking, Ingredient Weight Chart, all-purpose flour 1 cup = 120 g
+  (kingarthurbaking.com/learn/ingredient-weight-chart); a cup is 48 teaspoons, so 2.5 g a level teaspoon.
 - Gripper pad covers: Glad Press'n Seal food plastic wrap (target.com/p/-/A-14771700).
 - Calipers: Neiko 01407A electronic digital caliper, 0-6 in / 0-150 mm, 0.01 mm resolution, +-0.02 mm accuracy,
   with depth rod (zoro.com, item G321697191; machinistguides.com, Neiko 01407A review).
 - Check leaves: Draper 51701 20-blade metric feeler gauge set, 0.05 to 1.0 mm
   (drapertools.com/product/51701/20-blade-metric-feeler-gauge-set).
-- Scale: American Weigh Scales Fast Weigh MS-500-BLK, 500 g x 0.1 g (homebrewfinds.com review listing).
-- Kitchen scale: Escali Arti XL 2210IB glass digital kitchen scale, 22 lb (10 kg) x 1 g (walmart.com/ip/322204062).
+- Kitchen scale: Greater Goods high-capacity kitchen scale, model 0471, 22 lb (10 kg) x 1 g, stainless platform
+  (retail listings, about $25).
+- Board weight: 4 lb for the J.K. Adams WLS-1612 (chefsupplies.ca listing above).
 - Roll-in fat yield stress, 4000 to 5000 Pa (LAOS): B. Macias-Rodriguez and A. G. Marangoni, "The fat in a perfect
   croissant", Physics Today 71(1), 2018 (physicstoday.aip.org/quick-study/the-fat-in-a-perfect-croissant).
-- Room thermometer: ThermoPro (TempPro) TP50, -50 to 70 degrees C, +-0.5 degrees C (temppro.com, TP50).
-- Freezer thermometer: Taylor 5924 refrigerator/freezer dial thermometer, -20 to 80 degrees F (katom.com, 383-5924).
+- Room thermometer: ThermoPro (TempPro) TP50, -50 to 70 degrees C, +-0.5 degrees C (temppro.com, TP50; about $10
+  at US retail).
 
 ## Files
 
