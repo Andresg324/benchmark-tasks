@@ -796,8 +796,8 @@ def score(objects):
     0.75 while a gripper, forearm or wrist touches the board (within 2 mm of it). Otherwise: traced length is the
     curve's stretch the bearing passed over touching it (TOUCH, DEEP), the board flat and the cord taut, in passes
     each begun on the pin, fed right to left. 1.0 with the whole curve traced (all but two of its 129 2 mm
-    stretches) and the board 5 mm clear of the cutter circle with its trailing end past the bit; 0.75 with the whole curve
-    but the board left on or before the bit, or with 18 cm traced; 0.5 with 9 cm traced; 0.25 with the curve brought onto the bearing from the pin; 0 otherwise. Where the
+    stretches) and the board 5 mm clear of the cutter circle with its trailing end past the bit; 0.75 with the whole
+    curve but the board left on or before the bit, or with 18 cm traced; 0.5 with 9 cm traced; 0.25 with the curve brought onto the bearing from the pin; 0 otherwise. Where the
     arms end is not scored. Possible scores: 0, 0.25, 0.5, 0.75, 1."""
     return _score(objects)
 
@@ -899,15 +899,14 @@ PIVOT_ALONG = 1.5  # N
 # the cord's pull along the curve drives that roll toward the trailing end, which runs the curve's leading end off
 # the bearing. The pads' push along the pin (the turning push, which here points along the pin, plus PIVOT_ALONG,
 # 3.5 N together) holds it there, with the pin's and the table's friction; it is kept through the hold on the bearing
-# (dropped there, the board rolled off at once).
+# (dropped there, the board rolled off at once). The whole push is 5.1 N, under a 6 N press.
 # The pivot is planned from the braced pose the two-hand carry leaves the board in, in the sim: turned 15 deg (1 deg
 # past the plan), 2 mm on along the pin, where a pivot brings the bearing onto the curve 5 mm in from its leading end.
 PIVOT_POSE = (math.radians(15.0), np.array([0.0068, -0.0355]))
-# The hand swings on 3 deg past the turn that puts the curve on the bearing and holds there, so the curve is on the
-# bearing before the pads lift (at 1.5 deg the board stopped 0.9 mm short of it, and first touched it 4.4 mm in from
-# its leading end when the other hand took it). Free on the pin, the board can still roll between pin and bearing: a
-# larger overshoot (6.8 deg, 1.8 cm of the hand's give) wound up enough push to roll the leading end off the bearing.
-PIVOT_OVER = math.radians(3.0)
+# The hand swings on 1.5 deg past the turn that puts the curve on the bearing and holds there, so the curve is on the
+# bearing before the pads lift. Free on the pin, the board can still roll between pin and bearing: a larger overshoot
+# (6.8 deg, 1.8 cm of the hand's give) wound up enough push to roll the curve's leading end off the bearing.
+PIVOT_OVER = math.radians(1.5)
 HIGH = TOP + 0.09  # pad tips 6.5 cm above the table: well clear of the 5 cm hand rule
 
 
