@@ -2,8 +2,8 @@
 
 Files for the `yam_arena` embodiment (Isaac Lab-Arena, bimanual YAM, `station` scene). A range-top add-on griddle
 stands on the bench with its grease tray toward the robot. Near the lip, four silver-dollar pancakes were left on the
-heat and burnt onto the steel (in real trials, a standard substitute made in minutes: black paraffin wax poured into
-the same rings on the cold plate). The robot takes a 4 in. griddle scraper from the bench, breaks the pancakes up and
+heat and burnt onto the steel (in real trials, a fixed-recipe substitute made in minutes: black paraffin wax poured
+into the same rings on the plate). The robot takes a 4 in. griddle scraper from the bench, breaks the pancakes up and
 pushes them over the lip into the tray, and sets the scraper down. The setup, scoring and fidelity notes are in
 `task.json`.
 
@@ -49,17 +49,17 @@ see Real-world evaluation).
   of the plate's top, about the simulator's resting gap; 1.0 mm once a stroke has begun), with the blade steeper than
   70 degrees to the plate, or its edge tilted more than 10 degrees out of the plate's plane so only one corner touches,
   sliding 1 cm or more in a stroke, the score is capped at 0.5 for the rest of the trial (`scrapekit.py`, with no soil
-  in it: only its blade-angle rule is used). The simulation has no seasoning or scratches; this stands in for the
-  chatter marks and scored lines a steep or cornered blade leaves in a griddle's seasoning. In a real trial the cap
-  is judged on the plate itself: a new scratch 1 cm or longer, against a photo taken before the trial under a
+  in it: only its blade-angle rule is used). The simulation has no scratches; this stands in for the chatter marks
+  and scored lines a steep or cornered blade leaves in a griddle's surface. In a real trial the cap is judged on the
+  bare steel plate itself: a new scratch in the steel 1 cm or longer, against a photo taken before the trial under a
   raking light.
 - Doing nothing scores 0. Possible scores: 0, 0.25, 0.5, 0.75, 1.0.
 
 ## Real-world evaluation (reproducible protocol)
 
 Every real trial starts from the same measured state and is scored on the same shares as the simulator, read by
-weighing. The protocol fixes four things: the debris (a standard substitute made in minutes: one named wax, poured by
-weight into one named mold on the cold plate, checked disc by disc), the positions (stops and marks on the bench and
+weighing. The protocol fixes four things: the debris (a fixed-recipe substitute made in minutes: one named wax,
+poured by weight at a set temperature into one named mold on a warmed plate, checked disc by disc for area and hold), the positions (stops and marks on the bench and
 the plate), the outcome measurement (three weighed fractions plus photos) and the reset. The tolerances, each with its
 source, are collected in the table at the end; the equipment, with its makers' or retailers' pages, is under
 Real-world build.
@@ -71,11 +71,17 @@ then over the lip (WebstaurantStore's griddle-cleaning guide: scrape debris into
 https://www.webstaurantstore.com/article/142/how-to-clean-a-griddle.html). The trial runs cold: the robot and the
 operator work next to a plate at room temperature, and every trial starts at the same temperature.
 
-**The debris: a standard substitute for burnt pancakes.** Real burnt pancakes take about 2 hours a batch to cook,
-burn and cool. Each trial instead uses four discs of black-dyed paraffin wax, poured into the same four cavities of the
-same mold on the cold plate. Molten wax that meets the cold steel freezes onto it within seconds and sticks, so each
-disc is a dark, flat, 7 cm deposit stuck to the plate that has to be scraped off, like the burnt pancake, and that is
-made the same way every time in about 5 minutes for the four:
+**The debris: a fixed-recipe substitute for burnt pancakes.** Real burnt pancakes take about 2 hours a batch to
+cook, burn and cool. Each trial instead uses four discs of black-dyed paraffin wax, poured into the same four cavities
+of the same mold on the plate. The pour is set up so the wax wets the steel before it freezes: household and candle
+paraffins melt at about 54 to 58 degrees C (a household paraffin spec sheet gives 130 F, 54 degrees C; CandleScience's
+paraffin pillar wax MP-137 gives 135 F, 57.2 degrees C, https://candlescience.com/wax/paraffin-pillar-wax-mp-137), and
+candle makers pour paraffin well above its melt point (the same CandleScience page: pour at 180 F, 82.2 degrees C).
+Here the wax is poured at 75 to 85 degrees C onto spots of the plate warmed to 40 to 45 degrees C, below the melt
+point, so the wax spreads and wets the steel for a moment, then freezes onto it in place; the disc then cools to room
+temperature. Each disc is a dark, flat, 7 cm deposit bonded to the plate that has to be scraped off, like the burnt
+pancake, and each one is checked to hold a weighed proof load before the trial. The four are made the same way every
+time in about 15 minutes, most of it waiting while they cool:
 - Wax: Gulf Wax household paraffin (food-grade paraffin sold for sealing jams and for candles; melted over boiling
   water, as in a double boiler, as its directions say). Paraffin is inert at room temperature, does not take up
   water, and weighs cleanly: what is scraped off is solid pieces, not a paste.
@@ -89,7 +95,7 @@ made the same way every time in about 5 minutes for the four:
   but smears and rolls under a blade, sticks to the blade itself, never breaks up, and gains grease and grit each
   reuse, so its mass drifts; isomalt or hard caramel sets as fast and breaks up well but is poured at about 160
   degrees C (a burn hazard) and takes up water from the air, so its bond changes with the humidity. Paraffin pours at
-  about 80 degrees C from a double boiler, which cannot overheat it.
+  75 to 85 degrees C from a double boiler, which cannot overheat it.
 
 **Fixed marks (once).** Positions are measured from the midpoint between the arm bases with a steel tape.
 - Griddle: two wooden stop blocks screwed to the bench, one against the frame's near (tray) side and one against its
@@ -97,7 +103,7 @@ made the same way every time in about 5 minutes for the four:
   within 2 mm and the lip square to the robot within 0.5 degree. The plate's top is 5.0 cm above the bench within
   2 mm at all four corners (the griddle's plate height adjusts; shim the frame's feet if needed) and level within
   0.5 degree (the torpedo level). Two C-clamps on the frame. The griddle stays clamped for every trial: it is never
-  heated.
+  heated on a burner.
 - Scraper: its outline traced on masking tape on the bench, blade edge toward the robot, centered at x 25.0, y -25.5.
   It is laid in the outline within 5 mm and 3 degrees.
 - Camera and light: the phone on the overhead stand, 60 cm above the plate, looking straight down (all of the plate
@@ -112,7 +118,7 @@ open-bottomed cavities, a 9.5 x 9 in. footprint and built-in handles, heat safe 
 bakedeco.com listings). The cavities sit one in the middle and six around it, 8.0 cm center to center (inferred from
 the footprint: seven 7 cm cavities in 24 x 23 cm; confirmed on the mold before the first trial, and the marks below
 follow it). Four cavities make the trial's discs: the middle one and the three next to it toward the lip and to the
-left, so two discs sit side by side near the lip and two behind them, offset by half a cavity. On the cold plate the
+left, so two discs sit side by side near the lip and two behind them, offset by half a cavity. On the plate the
 mold is set handles up, square to the lip, with its two near cavities' edges 1.0 cm from the lip and the near right
 cavity's edge 6.55 cm from the right splash guard, each measured with the 6 in. steel rule within 2 mm (two strips of
 masking tape on the plate's guards mark where the mold's corners go, so it is set in seconds). Then the discs' centers
@@ -125,49 +131,83 @@ session; topped up with wax and dye in the same ratio. One pound makes about sev
 
 **Qualification (once, before the first trial).** Make the debris three times as below and photograph each set. The
 median black area of each disc is the reference for its cavity. The same three sets fix the dark gray level used for
-the area (below).
+the area (below). Then the bond is qualified on three spare discs, poured exactly as below into the mold's three
+spare cavities: each is loaded with the proof-load rig (below) and water is added to the cup from a squeeze bottle,
+about 5 g at a time with 5 s between additions, until the disc moves; the cup with its water is then weighed. The
+three release masses and their median are recorded in the trial log beside the simulator's whole-disc value, 320 to
+415 g (the sum of each disc's 22 bonds in `task.py`: 3.13 to 4.07 N, divided by 9.81 m/s2). Each spare disc must
+hold at least the 86 g proof load; if one releases below it, the plate is cleaned (Reset) and the qualification is
+repeated.
 
-**Making the debris (every trial, about 5 minutes).**
-1. Plate clean, dry and at room temperature (under 30 degrees C on the masking-tape marks beside the cavities: tape
+**Making the debris (every trial, about 15 minutes).** The room is at 20 to 24 degrees C. The arms are stopped
+while wax is poured, and molten wax never goes on the robot or the scraper.
+1. Plate clean, dry and at room temperature (20 to 24 degrees C on the masking-tape marks beside the cavities: tape
    reads true on an infrared thermometer, bare steel does not), the tray empty, dry, weighed (0.01 g) and seated.
-   The plate is not oiled: an oil film would weaken the wax's hold and make it vary.
+   The plate is bare type 430 stainless, not oiled or seasoned: an oil film would weaken the wax's hold and make it
+   vary.
 2. Set the mold at its marks (the tape strips; check one near edge with the steel rule).
-3. Pour: the pitcher of melt, on a cork trivet on the balance, tared; pour into one cavity until the balance reads
-   -14.00 g (within 0.20 g; the reading is recorded); repeat for the other three cavities, near ones first. About 1
-   minute. The four readings' sum is the trial's debris mass, D.
-4. Set: 3 minutes (within 15 s), until every disc's top reads under 30 degrees C on the infrared thermometer and its
-   gloss has gone matte. Lift the mold straight up by its handles and set it aside (silicone releases from wax).
-5. Disc check. Photograph the plate from the overhead stand with the raking light on. Each disc passes when (a) it
-   is stuck down all round: no lifted edge (no shadow line under the edge in the raking light) and it does not move
-   when pushed at its edge with a fingertip (it comes off only under a blade), and (b) its black area, the part of
-   its outline darker than the gray level fixed at qualification measured against the 1 cm grid, is within 10 % of
-   its cavity's reference. A disc that fails is lifted with the razor scraper, its spot cleaned (Reset), and its
-   cavity poured again with the mold set back at its marks. This photo is also the trial's before photo.
-6. Lay the scraper in its outline. Start the trial within 30 minutes of the pour (the wax does not change at room
+3. Warm: the Wagner HT1000 heat gun on its low setting, held about 15 cm above the plate and kept moving over one
+   cavity's open bottom (never held on the silicone), until the tape mark beside that cavity reads 40 to 45 degrees C
+   on the infrared thermometer, about 30 s a cavity.
+4. Pour: the melt at 75 to 85 degrees C (the infrared thermometer on its surface); the pitcher, on a cork trivet on
+   the balance, tared; pour into the warmed cavity until the balance reads -14.00 g (within 0.20 g; the reading is
+   recorded). Warm and pour each of the four cavities in turn, near ones first, each pour within 30 s of its cavity
+   reading 40 to 45 degrees C. About 3 minutes. The four readings' sum is the trial's debris mass, D.
+5. Set and cool: after 3 minutes (within 15 s) every disc's gloss has gone matte; lift the mold straight up by its
+   handles and set it aside (silicone releases from wax). Leave the discs to cool for 10 minutes from the last pour,
+   and longer if needed, until every disc's top and every tape mark reads 20 to 24 degrees C.
+6. Disc check. Photograph the plate from the overhead stand with the raking light on. Each disc passes when (a) it
+   is bonded all round: no lifted edge (no shadow line under the edge in the raking light); (b) its black area, the
+   part of its outline darker than the gray level fixed at qualification measured against the 1 cm grid, is within
+   10 % of its cavity's reference; and (c) it holds the proof load (below) for 10 s without moving. A disc that fails
+   is lifted with the razor scraper, its spot cleaned (Reset), and its cavity warmed and poured again with the mold
+   set back at its marks. The photo, taken before the proof load, is also the trial's before photo.
+7. Lay the scraper in its outline. Start the trial within 30 minutes of the pour (the wax does not change at room
    temperature, so the start does not have to be immediate).
+
+**Proof load (every disc, every trial; mass only).** The load is the simulator's bond for one full row of a disc met
+at once by the blade: 12 N per m (`BOND_EDGE` in `task.py`) x 7.0 cm (the disc's width) = 0.84 N, and 0.84 N / 9.81
+m/s2 = 0.0856 kg, so 86 g. (The middle rows in `task.py` sum to 0.86 to 1.14 N, as each disc's cracks are turned a
+little to the stroke; 86 g is the nominal 7 cm row.) A 1 in. nylon pulley on a small spring clamp is clipped to the
+lip in line with the disc, its groove level with the plate's top. A 7.0 cm piece of wooden paint stirrer stands on edge
+on the plate against the disc's far edge, square to the lip. A string tied to the middle of the stick runs along the
+plate toward the lip, over the pulley, and down to a 9 oz plastic cup filled with water to 86 g (cup, water and string
+loop weighed together on the balance, within 1 g). The cup is lowered onto the string by hand and let go; the disc
+passes when it does not move for 10 s (the stick does not advance past a pencil mark on a strip of masking tape beside
+it). The same rig, with water added until the disc moves, gives the release mass at qualification (above).
 
 **Measuring the outcome (every trial).** After the trial, take the after photo (same camera and light), then collect
 three fractions, each into its own weighing boat weighed beforehand, on the 0.01 g balance:
 - in the tray (T): lift the tray out and weigh it (it sits across the balance's pan, centered); T is its gain;
-- left on the griddle (L): everything still on the plate (stuck or loose), against the guards, or on the blade while
-  it is over the griddle, lifted with the razor scraper and the brush;
+- left on the griddle (L): every piece still on the plate (stuck or loose), against the guards, or on the blade while
+  it is over the griddle, lifted with the razor scraper and the brush. A thin film of wax smeared on the steel (a
+  dull patch with no raised edge that the brush and a single razor pass do not lift as a piece) is not a piece: it is
+  not counted in L and is removed at the reset;
 - off the griddle (O): everything on the catch sheets, the bench, the floor and the scraper, brushed up.
 The total M = T + L + O. The shares are T / M, L / M and O / M, scored with the simulator's thresholds (the tiers, the
 2 % off-griddle cap) and the set-down judged from the trial's video (the scraper lying on the bench off the griddle,
 released and still for 1 s). M must be within 5 % of D (the poured mass); otherwise something was lost or mis-weighed
 and the trial is repeated. The two photos are overlaid with the 1 cm grid registered to the plate's corners: the
 cells holding a dark particle 1 mm or larger are counted and kept as the record of where residue was left, and a line
-visible after but not before, 1 cm or longer, is a new scratch: the gouge cap (0.5). The photos and weights are kept
-with each trial, so anyone can recount.
+visible after but not before, 1 cm or longer, is a new scratch in the steel: the gouge cap (0.5). The photos and
+weights are kept with each trial, so anyone can recount.
+
+**Nothing left on the griddle (the 1.0 condition, real trials).** In the simulator, nothing left means no fragment on
+the griddle (`FULL_RESIDUE` = 0 in `task.py`), and the smallest fragment weighs 0.42 g, so any fragment left is at
+least 0.42 g. In a real trial, nothing left means both: (a) L under 0.40 g, less than the smallest simulated fragment
+(0.7 % of 55.5 g, well inside the 2 % allowed for 0.75), read on the 0.01 g balance; and (b) no piece 1 mm or larger
+on the plate, guards or blade, checked by eye under the raking light without wiping, any doubtful piece measured
+against the 6 in. steel rule, and confirmed on the after photo with the 1 cm grid. A thin film (above) does not count.
+The other thresholds are the simulator's, applied to the weighed shares.
 
 **Reset (between trials, about 5 minutes).** Weigh the tray's gain (above), then empty it into the waste bin, wipe it
 with a paper towel and seat it. Scrape anything left on the plate with the razor scraper, wipe the four cavity spots
 with a paper towel wetted with odorless mineral spirits (paraffin is a hydrocarbon and dissolves in it), then with
 a dry towel; the plate is clean when the raking-light photo shows no dark particle 1 mm or larger and no wax film
-(no dull patch) on the four spots. Wait until the spots read under 30 degrees C and dry (the spirits flash off in a
-minute or two). Lay the scraper in its outline. The same griddle, mold and scraper are used throughout; the scraper is
+(no dull patch) on the four spots. Wait until the spirits have flashed off and the spots are dry (a minute or
+two). Lay the scraper in its outline. The same griddle, mold and scraper are used throughout; the scraper is
 replaced if its edge has a nick 0.5 mm or deeper. Then make the next debris (above). A trial, its reset and the next
-pour take about 15 minutes, with the wax kept melted all session.
+debris take about 25 minutes, with the wax kept melted all session.
 
 | Item | Target | Tolerance | Source |
 |---|---|---|---|
@@ -175,11 +215,16 @@ pour take about 15 minutes, with the wax kept melted all session.
 | Plate's top above the bench | 5.0 cm, level | 2 mm at each corner; 0.5 degree | simulator's layout; torpedo level |
 | Scraper | in its outline at x 25.0, y -25.5 | 5 mm, 3 degrees | simulator's start pose |
 | Mold | near cavities' edges 1.0 cm from the lip; near right edge 6.55 cm from the right guard | 2 mm | simulator's disc centers; 6 in. steel rule |
-| Plate before the pour | clean, dry, unoiled; under 30 degrees C | no particle 1 mm, no film on the photo | wax sticks to clean steel only; infrared thermometer on the tape marks |
-| Melt | Gulf Wax, 12 drops of dye per lb, 75 to 85 degrees C | double boiler (at most 100 degrees C) | Gulf Wax directions (melt over boiling water); CandleScience dye rate |
+| Room | 20 to 24 degrees C | | the trial runs at room temperature |
+| Plate before the pour | bare 430 stainless, clean, dry, unoiled; 20 to 24 degrees C | no particle 1 mm, no film on the photo | wax bonds to clean steel; infrared thermometer on the tape marks |
+| Plate spot at the pour | 40 to 45 degrees C (heat gun, low) | pour within 30 s | below paraffin's 54 to 58 degrees C melt point, so the wax wets the steel then freezes; infrared thermometer on the tape mark |
+| Melt (pour temperature) | Gulf Wax, 12 drops of dye per lb, 75 to 85 degrees C | double boiler (at most 100 degrees C) | Gulf Wax directions (melt over boiling water); CandleScience pour guidance (180 F, 82 degrees C, for paraffin); CandleScience dye rate |
 | Wax per disc | 14.0 g (simulator 13.9 g) | 0.20 g | simulator's disc mass; 0.01 g balance (repeatability 0.02 g) |
-| Set | 3 minutes; disc tops under 30 degrees C, matte | 15 s | infrared thermometer (wax reads true at emissivity 0.95) |
-| Disc check | stuck all round; black area vs the cavity's reference | no lifted edge, no move under a fingertip; 10 % | qualification's three sets |
+| Disc thickness | real 4.0 mm over the whole 7 cm cavity; simulator 5 mm at about 80 % coverage | mass matched, not thickness | real: 14.0 g / 0.9 g per cubic cm / 38.5 square cm; simulator: `CAKE_T` in `task.py` |
+| Set and cool | mold off at 3 minutes (matte); 10 minutes from the last pour; disc tops 20 to 24 degrees C | 15 s on the mold | infrared thermometer (wax reads true at emissivity 0.95) |
+| Disc check | bonded all round; black area vs the cavity's reference; proof load | no lifted edge; 10 %; 86 g held 10 s | qualification's three sets; `BOND_EDGE` x 7 cm / 9.81 m/s2 |
+| Bond qualification | release mass of 3 spare discs, beside the simulator's 320 to 415 g a disc | each at least 86 g | sum of each disc's bonds in `task.py` |
+| Nothing left (1.0) | L under 0.40 g and no piece 1 mm or larger; a thin film not counted | | smallest simulated fragment 0.42 g; steel rule and 1 cm grid photo |
 | Start | within 30 minutes of the pour | | wax is stable at room temperature |
 | Mass balance | M = T + L + O vs D, the poured mass | 5 %, else repeat | four weighed pours |
 | Weighing | U.S. Solid USS-DBS66-20, 0.01 g | 0.01 g (1 % of the debris is about 0.55 g) | maker's specifications |
@@ -206,15 +251,19 @@ pour take about 15 minutes, with the wax kept melted all session.
   square m). Millimanipulation measurements of baked food soils on stainless steel span about 0.3 to 80 J per square m
   (baked tomato paste 1 to 20; Ali et al., Food and Bioproducts Processing, 2015); 12 sits in that range. A full
   pancake row met at once is under 1 N, within what the held scraper delivers (about 1.2 N of bonds at once before
-  the edge rides up, measured in the simulator on an earlier layout).
+  the edge rides up, measured in the simulator).
 - **Calibration.** PhysX tests a joint's break force against its own measure of the joint's load, not the push on the
   fragment, so the task writes 32 times the bond (`BREAK_CAL`). Pushed in the simulator with a slowly rising force,
   fragments came free at 0.18 to 0.22 N (0.9 to 1.8 times their bond). A broken bond is not restored by the
   scene's reset (one trial per run).
-- **Real-trial bond.** The real debris is wax discs frozen onto the clean plate (see Real-world evaluation); the bond
-  above is how the simulator represents them. The real bond comes from the fixed wax, pour mass, plate state and set
-  time, and every disc is checked to be stuck all round before the trial. Its force has not been measured: if the real
-  discs come off much harder or easier than 12 N per m, the real task is harder or easier than the simulated one.
+- **Real-trial bond.** The real debris is wax discs poured onto plate spots warmed to 40 to 45 degrees C and cooled
+  to room temperature (see Real-world evaluation); the bond above is how the simulator represents them. The real bond
+  comes from the fixed wax, pour temperature and mass, plate temperature and cooling time. Every disc is checked to
+  hold 86 g pulled across the plate (the simulator's bond for one 7 cm row, 0.84 N) for 10 s, and the release mass of
+  three spare discs is recorded at qualification beside the simulator's 320 to 415 g a disc (3.13 to 4.07 N).
+- **Thickness.** The simulator's discs are 5 mm thick at about 80 % coverage; the real pours are 4.0 mm thick over the
+  whole cavity. The mass (13.9 g and 14.0 g) and the outline are matched; the edge the blade meets is 1 mm lower in a
+  real trial.
 - **Contact settings.** Fragments are 5 mm thick (the blade is 1.5 mm, moving 4 cm/s: 0.2 mm per 240 Hz physics step,
   so nothing passes through); contacts start 2 mm out and rest at zero gap; 16 position iterations; a fragment pinched
   into a collider is pushed out no faster than 0.3 m/s.
@@ -239,8 +288,7 @@ pour take about 15 minutes, with the wax kept melted all session.
 - Demo: a 110 s plan (2,190 control steps), run with `--max-steps 2400`. The recorded run scored 1.0 at step 2,139
   (the trial ends once the set-down has held for 1 s, before the plan's final wait): at least 98 % in the tray and no
   fragment left on the griddle; the last frame shows the plate clean and the pancakes' fragments in the tray.
-- Model run limit: 2,400 steps (2 minutes at 20 Hz). Dream-1: to be run again on this task.py (it scored 0 at 2,400
-  steps on the previous one, whose debris was lighter).
+- Model run limit: 2,400 steps (2 minutes at 20 Hz). Dream-1: pending on this task.py.
 - The demo: the right hand takes the scraper by the handle from above, fingers closing across the handle (yaw 0: along
   world y), lifts it level and carries it over the right splash guard (tilted, its edge would hang below the guard's
   top), then tilts it over the plate so the blade meets the plate at 40 degrees with the edge toward the robot. The
@@ -265,15 +313,15 @@ pour take about 15 minutes, with the wax kept melted all session.
 Everything is off the shelf and chosen to be cheap and widely sold; the pages below give each item's published
 specifications, and the prices are retail listings seen in November 2026 (rounded).
 
-**Rough rig cost: about $500** (griddle $105 to $150, balance $66, hot plate $75, the other items below about
-$150, and about $40 of tape, boats, sheets, clamps and blocks), not counting the robot and the phone. Consumables
+**Rough rig cost: about $530** (griddle $105 to $150, balance $66, hot plate $75, heat gun about $25, the other
+items below about $155, and about $40 of tape, boats, sheets, clamps and blocks), not counting the robot and the phone. Consumables
 are about $1 a trial (56 g of wax and a little dye and spirits).
 - Griddle: Assure Parts 177AOGT1227 add-on 2-burner griddle top, 27 x 12-1/4 x 4 in., 22-3/8 x 12-1/4 in. cooking
   surface of 7-gauge type 430 stainless, 1-1/2 in. rear and side edges, adjustable plate height, 3 x 12-1/4 x 1-1/4 in.
   grease tray across the open front, about $105 to $150
   (https://www.webstaurantstore.com/12-14-x-27-x-4-addon-2-burner-griddle-top/177AOGT1227.html). It stands on the
   bench on its frame with the plate's top 5.0 cm above the bench, clamped with two C-clamps on its frame. It is never
-  heated: the debris is poured onto it cold. Its grease tray (about 0.5 kg, estimated from its size in sheet steel;
+  heated on a burner: only the four cavity spots are warmed to 40 to 45 degrees C with the heat gun before the pour. Its grease tray (about 0.5 kg, estimated from its size in sheet steel;
   weighed at setup) with the debris is well under the balance's 2,000 g.
 - Scraper: Dexter-Russell Basics P94850 4 in. griddle scraper: 4 in. stiff stainless blade, 4-1/2 in. polypropylene
   handle, 8-1/2 in. overall, 4.8 oz (136 g), about $11 to $25
@@ -300,8 +348,12 @@ are about $1 a trial (56 g of wax and a little dye and spirits).
   128 x 157 mm stainless pan, external calibration, $65.79
   (https://ussolid.com/u-s-solid-2000g-x-0-01-g-precision-balance-ac-dc-power-supply.html). It weighs the pours, the
   tray and the fractions; it is calibrated with the weight its manual names at the start of each session, after a
-  30-minute warm-up, away from drafts. It replaces the Ohaus Scout STX2202 (2,200 g by 0.01 g, about $1,070 to
-  $2,600) at the same readability.
+  30-minute warm-up, away from drafts.
+- Heat gun: Wagner HT1000, two settings (750 F and 1,000 F; the low one is used), about $22 to $25
+  (https://www.wagnerspraytech.com/product/ht-heat-gun/ht1000-heat-gun/). It warms the four cavity spots to 40 to 45
+  degrees C before the pour.
+- Proof-load rig: a 1 in. nylon pulley and a small spring clamp (a few dollars at a hardware store), a wooden paint
+  stirrer cut to 7.0 cm, string, a 9 oz plastic cup and a squeeze bottle of water.
 - Infrared thermometer: Etekcity Lasergrip 774, -50 to 450 degrees C, adjustable emissivity (set to 0.95), $18.99
   (https://etekcity.com/products/lasergrip-774-upgrade). It is meant for high-emissivity surfaces and reads shiny
   metal low, so it is aimed at the wax, the melt and the masking-tape marks on the plate, never at bare steel.
@@ -331,11 +383,12 @@ the same jobs:
   weighed in a pre-weighed boat, so it stays under 100 g: T is the debris brushed out of the tray into a boat (the
   ~0.5 kg tray is over the scale's capacity), and each 14 g pour is weighed into a small pre-weighed paper cup, poured
   into the cavity and the emptied cup re-weighed. The 5 % check of M against D still catches anything lost in the
-  brushing.
+  brushing. The 86 g proof-load cup is under 100 g; at qualification the release cup's water is weighed in portions
+  under 100 g and summed.
 - Camera and light: a clamp-on overhead phone arm (about $12 to $15) in place of the NEEWER X6, and any clamp lamp the
   lab has in place of the TERTIAL; the camera only has to look straight down and the lamp only has to rake the plate.
 
-Primary rig about $500; budget build about $320 (excluding the robot and a phone).
+Primary rig about $530; budget build about $350 (excluding the robot and a phone).
 
 ## Files
 
