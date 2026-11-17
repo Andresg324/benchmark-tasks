@@ -136,5 +136,5 @@ the robot's front-left (60 degrees), the flats square in the jaws.
 Dream-1: the same with `--policy dream`. One trial takes about 2 minutes (2,400 steps at 20 Hz);
 object_jitter=0, so there is no seed dependence.
 
-Recorded runs on this task.py: the scripted demo scores 1.0 in DEMO_STEPS steps (DEMO_SECS seconds); Dream-1: PENDING. In the sim the nut turns on its stud through a modeled thread (breakaway at 0.76 N*m); the demo breaks
+Recorded runs on this task.py: the scripted demo scores 1.0 in 1,082 steps (54 seconds); Dream-1: PENDING. In the sim the nut turns on its stud through a modeled thread (breakaway at 0.76 N*m); the demo breaks
 it loose by pulling the wrench round in three strokes and then lifts the wrench off, and the nut is never lifted.
