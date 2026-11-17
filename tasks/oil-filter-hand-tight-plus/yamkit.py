@@ -152,6 +152,7 @@ class Collider:
     radius: float = 0.0
     height: float = 0.0
     axis: str = "Z"
+    quat_wxyz: tuple | None = None  # a box turned in the prop's frame (w, x, y, z); None = not turned
 
     def extent(self, k: int) -> float:
         """Half-size along axis k (0, 1, 2) of the prop's frame, from `center`."""
@@ -385,9 +386,16 @@ def _body_usda(name: str, translate, mass, meshes, colliders, looks, floating=Fa
         out.append(f'{i2}def {kind} "C{i}" (\n{i2}    prepend apiSchemas = ["PhysicsCollisionAPI"]\n{i2})\n{i2}{{\n'
                    f'{i2}    uniform token purpose = "guide"\n')
         if c.size is not None:
-            out.append(f"{i2}    double size = 1\n{i2}    double3 xformOp:translate = {_fmt(c.center)}\n"
-                       f"{i2}    float3 xformOp:scale = {_fmt(c.size)}\n"
-                       f'{i2}    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]\n')
+            if c.quat_wxyz is not None:
+                out.append(f"{i2}    double size = 1\n{i2}    double3 xformOp:translate = {_fmt(c.center)}\n"
+                           f"{i2}    quatf xformOp:orient = {_fmt(c.quat_wxyz)}\n"
+                           f"{i2}    float3 xformOp:scale = {_fmt(c.size)}\n"
+                           f'{i2}    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", '
+                           f'"xformOp:scale"]\n')
+            else:
+                out.append(f"{i2}    double size = 1\n{i2}    double3 xformOp:translate = {_fmt(c.center)}\n"
+                           f"{i2}    float3 xformOp:scale = {_fmt(c.size)}\n"
+                           f'{i2}    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]\n')
         else:
             out.append(f'{i2}    uniform token axis = "{c.axis.upper()}"\n{i2}    double radius = {c.radius}\n'
                        f"{i2}    double height = {c.height}\n{i2}    double3 xformOp:translate = {_fmt(c.center)}\n"
@@ -657,6 +665,20 @@ class Tilted:
 
 
 @dataclass
+class Posed:
+    """A demo waypoint like yam_arena's `Waypoint` whose grip has any rotation: `rot`, the tool point's 3x3 rotation
+    matrix in the world (approach axis = its third column, fingers closing along its first). Plays in the same plan
+    as plain waypoints."""
+
+    duration: float
+    pos: tuple
+    finger: float
+    label: str = ""
+    rot: object = None
+    yaw: float = 0.0
+
+
+@dataclass
 class Home:
     """A demo waypoint that takes the arm back to the pose it starts every trial in (yam_arena's READY), position and
     orientation, fingers open. Use it last, so the arms end where they began."""
@@ -692,6 +714,8 @@ def _patch_demo(demo) -> None:
                 goal, rot = np.asarray(w.pos, dtype=float), plain(w.yaw)
             if isinstance(w, Tilted) and (w.roll or w.pitch):
                 rot = _rot_xyz(w.roll, w.pitch) @ rot
+            if getattr(w, "rot", None) is not None:  # a waypoint giving the grip's whole rotation (Posed)
+                rot = np.asarray(w.rot, dtype=float)
             if w.duration <= 0.0:  # a step the plan skips (read above, so a closed-loop plan can decide): no time,
                 continue  # and the arm does not head for it
             if t < w.duration:
