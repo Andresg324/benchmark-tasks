@@ -167,96 +167,110 @@ model:
 
 ## Real-world build
 
-The sim's router table is, for the robot, a flat top with an insert plate, the bit's bearing, a starting pin and an
-overhead pin guard; there is no fence (a curved part is routed against the pin and the bearing), and the router body
-hangs under the table where the robot never reaches. Nothing in the sim needs the router itself, and since nothing
-cuts in the robot trials, the real rig has no router: the bearing stands on a fixed arbor in the top.
+For the robot, the sim's router table is a flat top with an insert plate, the bit's bearing, a starting pin and an
+overhead pin guard, with no fence (a curved part is routed against the pin and the bearing); the router body hangs
+under the table where the robot never reaches. The real rig is therefore a wooden slab at the sim's layout with a
+free-turning bearing on a fixed shoulder screw at the bit's axis: nothing on it is powered, sharp or spinning. The
+sim's cutting force is reproduced by a one-way hanging drag, and the cut is read from a blue trace the bearing leaves
+on the board's edge. Positions are in cm from the midpoint between the arm bases (x forward, y to the robot's left,
+table top at z 0), as in the sim.
 
-- Top: a 3/4 in melamine panel, 2 x 4 ft (hardware-store shelving stock), clamped to the bench, with the sim's 40 x
-  62 cm table area and the 23.5 x 30 cm insert plate's outline marked on it. The sim's plate is drawn but shares the
-  table's friction surface, so one flat melamine surface serves for both. Commercial bench-top router tables (Skil
-  RAS900, Bosch RA1181) have smaller tops and their own plate sizes, so the panel matches the sim's layout more
-  closely.
-- Starting pin: a 1/4 in x 1-1/2 in steel dowel pin pressed into a 1/4 in hole drilled 5 cm right of the bit's axis
-  (at the sim's x 33.75, y 1 cm), standing 3 cm tall.
-- Pin guard: a Bench Dog ProGuard screwed to the top, its shield 1-1/2 in above the table over the bit's axis, as in
-  the sim.
-- Boards: 0.5 in cherry, 25 x 15 cm, band-sawn to a 30 cm radius on one long side from one template, a fresh one each
-  trial.
+### Parts
 
-Everything named here is catalog or hardware-store stock; the whole rig comes to about $350, robot and cameras aside.
+- Top: a flat wooden slab with a smooth face, at least 40 x 62 cm (the sim's table) and 3/4 in (19 mm) thick.
+- Starting pin: a 1/4 in x 1-1/2 in steel dowel pin.
+- Bit stand-in: an R188-2Z shielded ball bearing (1/4 in bore, 1/2 in across, 3/16 in tall: the size of the
+  rabbeting bit's own bearing) on a 1/4 in shoulder x 1 in alloy steel shoulder screw (10-24 thread, McMaster-Carr
+  91259A series), with a 1/8 in long and a 1/4 in long nylon spacer (1/4 in ID, 3/8 in OD, McMaster-Carr 94639A
+  series), a washer and a 10-24 nylon-insert nut.
+- Pin guard: a Bench Dog ProGuard.
+- Drag: an Everbilt 1-1/2 in single fixed pulley, a Harken 150 Micro Cam-Matic cam cleat, 1/8 in (3 mm) braided
+  cord, a 2x4 offcut, a small screw eye per board, an S-hook and a quart zip-top bag filled with steel washers (or
+  sand) to 0.300 kg.
+- Trace: Dykem Hi-Spot Blue spotting paste.
+- Boards: planed hardwood boards, one per trial, each 25 x 15 cm and 0.5 in (12.7 mm) thick, about 250 g (the sim's
+  board at task.py's 561 kg/m3), one long side cut to a 30 cm radius (2.7 cm of bow, 25.8 cm of curve).
+- Small items: wood screws, a printed paper strip ruled in 2 mm pieces, a pencil, white paint for the cutter circle.
 
-The robot trials use a protected, force-equivalent stand-in for the cutter and read the cut from an independent
-trace, in three parts.
+### Tools
 
-### 1. Protected: nothing sharp, nothing powered
+Use a drill with a 1/4 in bit, two C-clamps, a band saw, a digital luggage scale (10 g steps), a kitchen scale, a protractor, a
+combination square, a steel rule and a 1/8 in drill bit as a height gauge.
 
-- No router and no bit: nothing on the table is powered, sharp or spinning, so there is nothing to lock out.
-- The stand-in: an R188-2Z shielded ball bearing (1/4 in bore, 1/2 in across, 3/16 in tall), the same 1/2 in
-  diameter and 4.8 mm height as the rabbeting bit's own bearing, which the board rides in the sim, on a 1/4 in
-  shoulder x 1 in alloy steel shoulder screw (10-24 thread, McMaster-Carr 91259A series) through a 1/4 in hole
-  drilled at the bit's axis (x 33, y 6 cm), with a washer and nylon-insert nut under the top.
-- Height: the stack on the screw is a 1/8 in long nylon spacer (1/4 in ID, 3/8 in OD, McMaster-Carr 94639A series)
-  on the table, the bearing, then a 1/4 in long spacer of the same kind under the screw's head. The bearing then spans
-  3.2 to 8.0 mm above the table, the sim's 3.4 to 8.2 mm within 0.2 mm, checked with the shank of a 1/8 in drill bit
-  laid on the table. The head's underside is 14.3 mm up, above the board's 12.7 mm top. The spacers and the 3/8 in
-  head are inside the bearing's 1/2 in, so the edge touches only the bearing, which turns freely on its clamped inner
-  ring.
-- Below the bearing, where the cutter would be, only the 3/8 in spacer stands, as in the sim, where the cutter has no
-  collider: the board's edge passes into the cutter's circle and rides the bearing, the same motion and the same
-  stopping point as the sim's. The 1-1/4 in cutter circle is painted on the top round the screw for scoring.
-- So a gripper or a board that reaches the bit's place in any run, a failed one included, meets a smooth steel
-  bearing on a fixed screw. The arms' own stop button stays in the operator's hand, the operator and anyone else
-  stay outside the arms' reach while they are powered, and boards are changed with the arms stopped.
+### Build steps
 
-### 2. Force-equivalent: the sim's cutting force as a one-way drag
+1. Clamp the wooden slab to the bench with the two C-clamps. Mark the sim's 40 x 62 cm table area (x 9 to 49,
+   y -27 to 35) and the 23.5 x 30 cm insert plate's outline on it. One flat surface serves for both, as the
+   sim's plate shares the table's friction surface.
+2. Drill a 1/4 in hole at the bit's axis (x 33, y 6). Stack the 1/8 in spacer on the table, then the bearing, then
+   the 1/4 in spacer under the screw's head, and fix the shoulder screw through the hole with the washer and the
+   nylon-insert nut under the top. The bearing now spans 3.2 to 8.0 mm above the table (the sim's 3.4 to 8.2 mm
+   within 0.2 mm): check it with the 1/8 in drill bit's shank laid on the table. The screw head's underside is
+   14.3 mm up, above the board's 12.7 mm top, and the spacers and the 3/8 in head sit inside the bearing's 1/2 in, so
+   the board's edge touches only the bearing, which turns freely on its clamped inner ring.
+3. Paint the bit's 1-1/4 in cutter circle on the top round the screw, and draw a 3 in circle round it for scoring.
+   Below the bearing only the 3/8 in spacer stands, as in the sim, where the cutter has no collider: the board's edge
+   passes into the cutter's circle and rides the bearing, the same motion and stopping point as in the sim.
+4. Drill a 1/4 in hole 5 cm right of the bit's axis (x 33.75, y 1) and press the dowel pin in, standing 3 cm tall.
+5. Screw the Bench Dog ProGuard to the top, its shield 1-1/2 in above the table over the bit's axis.
+6. Screw the pulley and, below it, the cam cleat to the 2x4 offcut, and clamp the offcut to the table's right end so
+   the sheave's top is level with the cord's attachment on the board, at x 30, y -40 (13 cm past the table's edge).
+   Set the cleat so the cord runs freely as the weight rises and grips as soon as it would drop.
+7. Fill the zip-top bag with washers to about 0.300 kg (0.300 x 9.81 = 2.94 N) and hang it on the S-hook from the
+   cord, which runs up through the cleat and over the pulley.
+8. Trim the drag: hook the luggage scale to the cord's board end and draw it slowly away from the pulley. It reads the
+   weight plus the pulley's and cleat's drag. Add or take out washers until it reads 0.30-0.31 kg, which is
+   3.0 +/- 0.1 N at the board: the sim's 2.92-3.04 N at the demo's feed.
+9. Cut the boards: band-saw each board to 25 x 15 cm and one long side to a 30 cm radius from one template, within
+   1 mm of the template line; weigh each on the kitchen scale (225-275 g). Pencil-mark the curved edge every centimeter, and turn a screw eye into the
+   board's trailing end face at mid-thickness, 1 cm in from the curve. Keep the boards in the room a day before use.
+10. Check the table friction: tilt a test board on an offcut of the same slab until it slides, reading the
+    angle with the protractor (mu 0.25 is 14 degrees, 0.30 is 16.7).
+11. Run the trace check below once, with the arms switched off.
+
+### Per trial
+
+1. With the arms stopped, coat the bearing's rim with a thin film of Dykem Hi-Spot Blue.
+2. Tie the cord to a fresh board's screw eye. Brace the board on the pin and turn it by hand until its curve's leading
+   end just reaches the painted cutter circle; draw the cord snug through the cleat there.
+3. Set the board back to its start pose (corners as in the setup), curve toward the bit, square to the table, 2.2 cm
+   off the pin. The cord is now slack by the distance the board must move, so the drag takes hold where the sim's cut
+   begins.
+4. Run the trial with the operator holding the arms' stop button and everyone outside the arms' reach.
+5. Afterwards, with the arms stopped, untie the board and read its trace (below). Reset time is about 2 minutes.
+
+### Force-equivalent drag
 
 The sim's push against the feed comes from `cutting_force` in task.py (Curti et al. 2021, see Cutting force) at this
-cut: cherry at 561 kg/m3, 9.5 mm deep, 3.2 mm high, a two-flute 1.25 in cutter at 22,000 rpm. Over the curve's grain
+cut: hardwood at task.py's 561 kg/m3, 9.5 mm deep, 3.2 mm high, a two-flute 1.25 in cutter at 22,000 rpm. Over the curve's grain
 angles (0 to 24.6 degrees) it gives 2.92-3.04 N at the demo's 0.25 m/min feed and 2.88-3.24 N anywhere from 0 to
 1 m/min: at these slow feeds its chip-independent term carries it, so it is close to constant. The sim applies it
 only while the cutter meets fresh wood, so it resists a right-to-left feed and leaves a board at rest free. The
-real drag copies that law:
+hanging drag follows the same law:
 
-- A hanging weight: slotted masses on a hanger (e.g. an Eisco slotted mass set) making 0.300 kg, so
-  0.300 x 9.81 = 2.94 N.
-- It hangs from 1/8 in (3 mm) braided cord that runs over an Everbilt 1-1/2 in single fixed pulley and, below it, through a
-  Harken 150 Micro Cam-Matic cam cleat, set so the cord runs freely as the weight rises and grips as soon as it would
-  drop. The pulley and cleat are screwed to a 2x4 offcut clamped to the table's right end, the sheave's top level
-  with the cord's attachment, at x 30, y -40 cm (13 cm past the table's edge). The cord's other end is tied to a
-  small screw eye in the board's trailing end face, at mid-thickness, 1 cm in from the curve.
-- Setting it: a digital luggage scale (10 g steps) hooked to the cord's board end and drawn slowly away from the
-  pulley reads the weight plus the pulley's and the cleat's drag. Masses are added or taken off in 10 g steps until
-  it reads 0.30-0.31 kg, which is 3.0 +/- 0.1 N at the board: the sim's 2.92-3.04 N at the demo's feed.
-- Direction: placed there, the cord's line stays within 9 degrees of the feed direction at the cut along the
-  scripted feed's path, so its component against the feed is 2.97-3.00 N for a 3.0 N pull (cos 8.6 degrees = 0.989),
-  inside the sim's 2.92-3.04 N. Its line passes within 5 cm of the cut over all but the first 8 cm of the curve
-  (within 1.5 cm over the last 11 cm), so it turns the board by at most 0.33 N*m at the start and under 0.15 N*m from
-  8 cm on, against the sim's force applied at the cut itself. The sim's 1.9 N pull toward the bit's axis is taken by
-  the bearing there; the cord's sideways share is between 0.15 N toward and 0.45 N away from the bearing, so the
-  hands keep the curve on the bearing with their own push (0.5 N in the demo's plan).
+- Direction: from the pulley at x 30, y -40, the cord's line stays within 9 degrees of the feed direction at the cut
+  along the scripted feed's path, so its component against the feed is 2.97-3.00 N for a 3.0 N pull
+  (cos 8.6 degrees = 0.989), inside the sim's 2.92-3.04 N. Its line passes within 5 cm of the cut over all but the
+  first 8 cm of the curve (within 1.5 cm over the last 11 cm), so it turns the board by at most 0.33 N*m at the start
+  and under 0.15 N*m from 8 cm on, against the sim's force applied at the cut itself. The sim's 1.9 N pull toward the
+  bit's axis is taken by the bearing there; the cord's sideways share is between 0.15 N toward and 0.45 N away from
+  the bearing, so the hands keep the curve on the bearing with their own push (0.5 N in the demo's plan).
 - One way, as in the sim: feeding right to left draws cord through the cleat and lifts the weight; when the board
   stops, the cleat holds the weight and the board is free; a board drawn back toward the pulley meets no drag (and
   the scorer counts nothing routed that way, real or sim).
-- Where it starts: before each trial the board is set braced on the pin and turned by hand until its curve's leading
-  end just reaches the painted cutter circle, the cord is drawn snug through the cleat there, and the board is set
-  back to its start pose. The cord is then slack by the distance the board must move, so the drag takes hold where
-  the sim's cut begins.
-- Table friction: the sim's mu 0.25 sliding and 0.30 at rest is checked with a protractor by tilting a test board
-  on an offcut of the same melamine panel until it slides (0.25 is 14 degrees, 0.30 is 16.7).
 
-### 3. Independent cut validation: the blue trace
+### The blue trace
 
-Before each trial the stand-in bearing's rim gets a thin film of Dykem Hi-Spot Blue spotting paste, which stays wet
-and transfers where it touches. Wherever the board's edge rode the bearing it carries a blue band 3.2-8.0 mm up the
-edge, so the edge itself records the stretch the bearing passed over, which is what the sim's scorer counts (the
-curve within 1.5 mm of the bearing; the paste needs contact, the stricter reading).
+The paste on the bearing's rim stays wet and transfers where it touches. Wherever the board's edge rode the bearing
+it carries a blue band 3.2-8.0 mm up the edge, so the edge itself records the stretch the bearing passed over, which
+is what the sim's scorer counts (the curve within 1.5 mm of the bearing; the paste needs contact, the stricter
+reading).
 
-Reading the trace, after the trial, by this rule:
+Reading the trace, after the trial:
 
-- A paper strip ruled in 2 mm pieces is laid along the curved edge from its leading end, the same 129 pieces the
-  scorer uses, and each piece is checked for blue between 3.2 and 8.0 mm up the edge (a combination square set to
-  those heights).
+- Lay the paper strip ruled in 2 mm pieces along the curved edge from its leading end (the same 129 pieces the
+  scorer uses) and check each piece for blue between 3.2 and 8.0 mm up the edge (the combination square set to those
+  heights).
 - A piece counts as routed when the blue band crosses it and the top video shows that stretch was fed right to left
   in a pass begun braced on the pin. Blue left by a climb or by a pass begun off the pin does not count; a pass begun
   off the pin has scored 0 already.
@@ -264,19 +278,19 @@ Reading the trace, after the trial, by this rule:
   leading end to within 2 mm of the trailing end. Otherwise the counted pieces times 2 mm give the routed length for
   the 18 cm and 9 cm tiers, and the pencil marks every centimeter cross-check the count on the video.
 - The other readings are the sim's: the pin start from the top video, no gripper below the 5 cm block inside the
-  3 in circle drawn round the arbor, no gripper on the board in the side view at the end, and the board's gap to the
-  painted cutter circle measured with a ruler on the end photo.
+  3 in circle drawn round the bit's axis, no gripper on the board in the side view at the end, and the board's gap to
+  the painted cutter circle measured with the steel rule on the end photo.
 
-Trace check, once before the robot trials, with the arms switched off: the operator feeds three test boards by
-hand past the coated stand-in, braced on the pin at the start, with the board's edge pencil-marked every centimeter
-and the top camera running. Two are fed the whole curve without re-coating; on the third the operator stops at the
-15 cm mark, swings the board off, braces it on the pin again and feeds the rest. On each board the blue band must
-start and end within one 2 mm piece of where the video shows the edge first met and last left the bearing, the
-third board's band must show its 15 cm stop, and the band must be unbroken over the full 25.8 cm and over the
-second pass. That shows one coat lasts a trial and that the band records exactly the stretch the bearing passed
-over, which is the stretch a bearing-guided rabbeting bit cuts and the stretch the sim's scorer counts.
+Trace check, once before the robot trials, with the arms switched off: the operator feeds three test boards by hand
+past the coated bearing, braced on the pin at the start, with the top camera running. Two are fed the whole curve
+without re-coating; on the third the operator stops at the 15 cm mark, swings the board off, braces it on the pin
+again and feeds the rest. On each board the blue band starts and ends within one 2 mm piece of where the video shows
+the edge first met and last left the bearing, the third board's band shows its 15 cm stop, and the band is unbroken
+over the full 25.8 cm and over the second pass. That shows one coat lasts a trial and that the band records exactly
+the stretch the bearing passed over, which is the stretch a bearing-guided rabbeting bit cuts and the stretch the
+sim's scorer counts.
 
-Conditions and tolerances:
+### Conditions and tolerances
 
 | Quantity | Value | Tolerance | Source |
 |---|---|---|---|
@@ -286,8 +300,10 @@ Conditions and tolerances:
 | Drag against the feed | 3.0 N, only while the board moves right to left | 0.1 N, set on the luggage scale | task.py `cutting_force`: 2.92-3.04 N at 0.25 m/min, 2.88-3.24 N at 0-1 m/min |
 | Drag direction | along the feed at the cut | within 9 degrees | pulley at x 30, y -40 cm |
 | Table friction | mu 0.25 sliding, 0.30 at rest | tilt angle 14-17 degrees | Engineering ToolBox, wood on wood 0.25-0.5 (low end); the sim's values |
-| Board | cherry, 25 x 15 x 1.27 cm, 250 g | 1 mm; mass to 10% | one band-saw template; black cherry 561 kg/m3 at 12% moisture (AHEC) |
+| Board | planed hardwood, 25 x 15 x 1.27 cm, 250 g | 1 mm; mass to 10% | one band-saw template; task.py's density, 561 kg/m3 at 12% moisture |
 | Curve | 30 cm radius, 25.8 cm long | within 1 mm of the template | band-sawn to the template line |
 | Starting pin | 0.25 in steel, 5 cm right of the bit's axis, 3 cm tall | 1 mm | dowel pin pressed into a drilled hole |
 | Pin guard | underside 1-1/2 in above the table | as set by the maker | Bench Dog ProGuard |
 | Room | 20-24 degrees C | boards kept in the room a day before | indoor shop conditions, so the boards stay near the 12% moisture their density is given at |
+
+Build time: about 2 hours, plus cutting the boards.
