@@ -157,16 +157,6 @@ right pocket before the second pull (0); dipped in a pocket before the reading (
 (1.0); the right pocket without a wipe (0); always guessing one pocket averages about 0.33; the levels spread evenly under
 seeded jitter; the demo aims for the pocket of the level it is given; the drawn band follows the level.
 
-## How it differs from nearby tasks
-
-- Checking a pressure gauge before opening a filter housing, or a fire extinguisher's pin and gauge, reads an
-  instrument once and then chooses an action. Here the reading is valid only after a procedure: a two-pull reading in
-  which the first must be discarded, and the report is scored on the second.
-- Hand-pumping to a dial's pressure is a repeated stroke against a gauge, with no wipe or reseat.
-- Cleaning a fiber connector's end face and plugging it in is a single wipe-then-insert. Here the wipe sits between two
-  pulls and is followed by a full reseat, a second pull held still, and a closing seat.
-- Our kettle task (fill between the MIN and MAX lines) scores a level set by pouring; here the level is only read.
-
 ## Files
 
 | File | What it is |
@@ -238,7 +228,9 @@ bend under the cap. The dipstick has its weight and slides on the tube's axis ev
 it cannot be laid down or tilted, and the sim never asks the robot to line the tip up with the bore on the way back
 in; a real trial uses the free dipstick, so it does test that. The dipstick's length and its marks are not published:
 the length is derived from the drawing and the marks are modeled. The real trials record whether the free dipstick
-goes back into the tube unaided (see Real-world build). The oil is drawn, not simulated: the smear, its
+goes back into the tube unaided (see Real-world build). Build B (the genuine dipstick and tube over a can, in a box
+cut to the housing's corners) matches the sim where the arms work, within the tolerances in the dimensions table, so
+the sim models the engine for both builds. The oil is drawn, not simulated: the smear, its
 removal by the rag and the trial's level are visuals driven by the scorer's state. The rag is a rigid pad.
 Clearances were checked offline along the demo at all three levels (forward kinematics of the demo's joint commands
 against the arms' meshes, the engine's visual shapes and colliders, the dipstick, rag, puck, card and table): apart
@@ -251,26 +243,58 @@ The rig needs a real dipstick in a real fill tube over a real oil reservoir, wit
 and corner. Either of two builds gives that; the robot's task, the instruction and the scoring are the same on both.
 Prices are as listed on November 16, 2026.
 
-**Build B, the affordable route, from new parts (under $30 in parts, plus plywood offcuts; the whole rig about $375 as
+**Build B, the affordable route, from new parts (about $25 in parts, plus plywood offcuts; the whole rig about $230 as
 listed, or about $125 with the budget build below).**
 
 | Part | What it is | Price, where | Note |
 |---|---|---|---|
 | Dipstick | Kohler 32 038 14-S, dipstick assembly | $7.99, Russo Power (special order) | listed for the KT715-KT745 (L&S Engineers; eReplacementParts' KT725 cross-reference) |
 | Fill tube | Kohler 32 123 14-S, tube assembly, oil fill | $6.10, Russo Power (special order) | on the KT725 crankcase parts lists (Rehlko engine parts, KT725-3037; Jack's Small Engines, KT725-3048) |
-| Oil reservoir | Uline S-7342, unlined tin-plated steel paint can, 1 gallon, 6.2 in lid | $156 a carton of 34 (about $4.60 a can), Uline | the tube goes down through a hole drilled in the lid to its outside diameter; the oil stays below the lid, so a plain hole serves |
-| Housing | 41 x 41 cm box of 12 mm plywood, 30 cm tall, painted black, on a 47 x 50 cm plate | plywood offcuts | stands where the blower housing is, with the tube at its front corner as in the sim |
+| Oil reservoir | One 1 quart unlined steel paint can with lid, about 10.8 cm across and 12.4 cm tall: Polar Tech HAZ1025 | $9.69, Zoro (any hardware-store empty quart paint can, about $3-9, serves) | the tube goes down through a hole drilled in the lid; the oil stays below the lid, so a plain hole serves |
+| Housing | 41 x 41 cm box of 12 mm plywood, 30 cm tall, open at the bottom, its corners cut (below), painted black, on a 47 x 50 cm plate | plywood offcuts | stands where the blower housing is, with the tube at its corner as in the sim |
 | Oil | 10W-30 or SAE 30 engine oil | one quart | grades from Kohler's manual, p.4 |
 
-The can stands inside the box on spacers, so the tube's mouth is 27.5 cm above the plate (the drawing's height) and
-the dipstick's tip, seated, is about 2 cm above the can's floor. The tube's lower end, with its O-ring, goes through
-the lid, and its tab is screwed to the box's corner with an M5 screw, as Kohler's manual (p.82) secures it to the
-engine's backing plate. The robot meets the same thing as on the engine: a T-handle over a cap at 28-29 cm above the bench, at
-the corner of a housing it has to work beside, the long blade drawn straight up, and an oil level that shows only
-after the wipe and reseat. Measure the genuine dipstick's length and mark positions on arrival and
-record them. The sim's stick (29 cm overall, marks 0.8 and 2.0 cm from the tip) is derived from the drawing and modeled;
-if the genuine blade differs from 24.5 cm by more than 1 cm, record the difference with the results. The real tube
-bends just under the cap; the sim's is straight.
+The reservoir is a quart can, not a gallon can: it stands under the tube, where a 19 cm tall gallon can would come up
+beside the left hand's path (see Build B against the sim).
+
+Assembly, once, about 30 minutes plus the paint's drying time. Tools: a drill with a step bit, a jigsaw, a
+screwdriver, a tape measure and a steel rule, black spray paint.
+
+1. Cut the box: four 30 cm sides and a top, 41 x 41 cm outside. Cut its near right corner (the robot's near right, where
+   the tube stands) off as two flat faces, each about 15 cm wide: from 20 cm along the front side to a point 6 cm in
+   from both the front and the right side, then to 20 cm along the right side. The two corner faces run from the top
+   down to 20 cm above the plate and are open below, as the sim's housing is (its rounded corner is a skirt over the
+   engine's lower parts). Cut the other three corners off at 45 degrees, 13 cm along each side (12 cm at the far right
+   corner), so the box stays inside the sim's rounded housing everywhere (a square corner would stand 5 cm out past
+   it, in the left arm's path home). Paint it black and screw it to the plate (sim: x 30.7 to 71.7, y -14.5 to 26.2).
+2. Drill a hole in the middle of the can's lid to the tube's outside diameter, measured with the steel rule.
+3. Stand the can on the plate under the tube's place (its middle at x 36, y -12), on a spacer if needed, so the seated
+   dipstick's tip is about 2-3 cm above the can's floor.
+4. Fit the tube's O-ring end down through the lid into the can and screw the tube's tab to the corner face (or a block
+   behind it) with an M5 screw, as Kohler's manual (p.82) secures it to the engine's backing plate, with the mouth 27.5
+   cm above the plate and the tube upright.
+5. Pour in oil to the trial's level (see Each trial) and seat the dipstick.
+
+The robot meets the same thing as on the engine: a T-handle over a cap at 28-29 cm above the bench, at the corner of a
+housing it has to work beside, the long blade drawn straight up, and an oil level that shows only after the wipe and
+reseat. Measure the genuine dipstick's length and mark positions on arrival and record them. The sim's stick (29 cm
+overall, marks 0.8 and 2.0 cm from the tip) is derived from the drawing and modeled; if the genuine blade differs from
+24.5 cm by more than 1 cm, record the difference with the results. The real tube bends just under the cap; the sim's
+is straight.
+
+**Build B against the sim.** The sim keeps the engine; Build B gives the robot the same work within the tolerances in
+the table below. The arms work round the top of the tube: the handle 28-33 cm above the table, the draw to 59 cm, the
+wipe and the reading at 31-38 cm beside the housing's corner, and the rag, the card and the puck on the bench in front
+of it. There Build B has the mouth's height and place, the housing's footprint and top, and its corners: the cut
+faces lie inside the sim's rounded corners, the two at the tube never more than 1.5 cm in from the sim's 20 cm radius,
+so the tube's axis is 3.4 cm from the housing against the sim's 2.8 cm. Below the corner the can's top is about 13 cm
+above the table, where the sim has its crankcase, oil pan, oil filter and the tube's boss. Checked along the demo
+(forward kinematics of its joint commands, the line through each arm's links and hand, against the
+box, the corner faces and the can, and against the sim's housing): each arm's nearest pass to Build B is as far as or
+farther than to the sim's housing (right hand pressing the cap down, the same; left hand during the wipe, 3.4 cm
+against 3.0 cm), and the nearest pass to the can is the left hand putting the rag back, 9.1 cm from it. The housing's
+other parts (the air cleaner, the valve covers, the starter) are not built; they are behind or under the housing, away
+from the arms' paths. So the robot's work is the same on Build B and the sim keeps the engine.
 
 **Build A, a used engine.** A used Kohler 7000 Series engine (KT715 to KT745, the KT725's series, which share its
 dipstick part) from eBay's Multi-Purpose Engines category (Kohler, vertical shaft) or a local lawn tractor parts seller. Kohler
@@ -287,24 +311,28 @@ as in the sim (fill tube at x 36, y -12). If its dipstick or tube is missing, fi
 | Fill tube mouth | height above the mounting surface | 27.5 cm | +-1 cm | Kohler service manual 32 690 03 Rev. H, p.5 drawing |
 | Fill tube | place | housing's front corner, x 36, y -12 | +-1 cm | drawing p.5 ("OIL FILL & DIPSTICK (YELLOW)") |
 | Blower housing | footprint, top height | 41 x 41 cm, 30 cm | +-2 cm | drawing p.5 |
+| Blower housing | corner at the tube | rounded, radius 20 cm, a skirt down to 20 cm above the plate | two flat faces inside it, within 1.5 cm; tube axis 2.8 cm (sim) or 3.4 cm (Build B) from the housing | drawing p.5 (top view) |
+| Oil reservoir (Build B) | top under the tube | the engine's crankcase and oil pan | quart can, top about 13 cm above the table | built |
 | Dipstick | overall length, blade | 29 cm, 24.5 cm | as measured, recorded | derived from the drawing (not published) |
 | Dipstick | ADD and FULL marks from the tip | 0.8 and 2.0 cm | as on the genuine stick, recorded | modeled |
 | Fill tube | outside diameter | 2.1 cm | as supplied | estimated |
 | Oil band | levels set | 0.4, 1.4, 2.7 cm from the tip | 3 mm or more from a mark, else reset | modeled, set by syringe |
 | Shop rag | folded pad | 4 x 4 x 2.5 cm | +-0.5 cm | estimated (folded shop towel) |
-| Check card | pockets | 4.4 cm square, 5 mm deep | +-1 mm | built (foam board) |
-| Puck | size | 3 cm across, 2 cm tall | +-2 mm | built (two checkers) |
+| Check card | pockets | 4.4 cm square, 5 mm deep | +-1 mm | built (3D print or foam board; no stock tray has these pockets) |
+| Puck | size | 3 cm across, 2 cm tall | +-2 mm | two 1-1/4 in wooden checkers, glued |
 | Room | temperature | oil drawn | 20-24 degrees C | set so the oil's thickness on the blade is the same every trial |
 
 **Keeping the oil off the robot.** The shared rig stays clean with these, fitted before each trial and replaced
 after it:
 
 - Each gripper finger wears a disposable nitrile glove as a cover: GloveWorks HD GWON48100 (Ammex), 8 mil, orange,
-  diamond-textured on both sides, size XL ($28.53 a box of 100, Fisheries Supply). The finger goes into the glove's
-  palm, the glove's own fingers are folded back along the outside of the robot's finger and the cuff is wrapped round
-  the finger's base with a turn of tape, so the pads, the tips and the inner faces are covered by one layer of nitrile
-  and the tape is away from the grip faces. Four gloves a trial; the used ones go in the oily-waste bag. (A glove fits
-  the YAM's pads, about 4 cm wide; finger cots, such as Uline S-15365, suit narrower fingers.)
+  diamond-textured on both sides, size XL ($28.53 a box of 100, Fisheries Supply). Pull it over the finger like a
+  sock, the finger in the glove's palm and the glove's own fingers folded back along its outside, and close the cuff
+  round the finger's base with one turn of tape, away from the grip faces. One layer of nitrile then covers the pad,
+  the tip and the inner face. Four gloves a trial; the used ones go in the oily-waste bag. A finger cot or a strip of
+  tape would be simpler but does not do the job: the YAM's finger is about 6.8 cm wide and 2.4 cm thick with a 4 cm
+  pad, too big for the largest nitrile finger cots (Uline S-15365, size XL, made for a human finger); tape over the
+  pads alone leaves the finger's sides bare to the oily rag; and PTFE tape would make the grip slip.
 - The engine (or the box and can) stands in a Lisle 19722 Catch-All Drip Pan, 24 x 36 x 1.5 in, polyethylene, 8 quart
   ($33.29, JB Tools), with a PIG Oil-Only Absorbent Mat Pad MAT403 (New Pig, 15 x 20 in, polypropylene, $105 a bag of
   100) in it under the fill tube, where a drop from the blade lands. Two more MAT403 pads cover the bench under the
@@ -318,14 +346,12 @@ after it:
 **Budget build.** The named items above stay as they are, and nothing changes for the sim or the scoring. These
 cheaper equivalents do the same jobs:
 
-- Oil reservoir: one empty 1 gallon unlined metal paint can from a hardware store (e.g. Leaktite), about $5, instead
-  of the $156 Uline carton of 34. Only one can is needed, and it is the same 1 gallon steel can under the tube.
 - Pads: a small pack of oil-only absorbent pads (about $15-20) or folded shop towels, instead of the $105 bag of 100
   MAT403. About three pads are used a session, and any oil-only pad catches the drips from the blade.
 - Drip pan: an oil drain or drip tray big enough for the 47 x 50 cm plate (about $15-20) instead of the $33 Lisle
   19722. It only has to catch drips under the plate.
 
-Primary rig (Build B) about $375; budget build about $125 (excluding the robot and a phone). Build A adds the used
+Primary rig (Build B) about $230; budget build about $125 (excluding the robot and a phone). Build A adds the used
 engine ($220-1,080) in place of the dipstick, tube, can and housing.
 
 **Free withdrawal and reinsertion.** The sim's dipstick slides on the tube's axis even when out; the real one is
@@ -338,10 +364,12 @@ sim stick and the free real one.
 **Each trial.** Trials run in blocks of three, one at each level, in an order shuffled by a die roll, so every level is
 tested equally often. Before each trial, set the oil with a syringe to just under the indicator's bottom, mid-range, or
 just over its top, check it with a pull and a wipe out of the camera's view, wipe the blade, smear oil on its lower 6
-cm and up the inside of the tube, and seat it. The check card is a tray of two layers of 5 mm foam board (or a 3D
-print), 6 x 16 cm, with three 4.4 cm square holes in the top layer, the floors painted amber, green and red, labeled
-ADD, OK and OVER and marked with the same white symbols as the sim, taped to the bench at x 20, y 13. The puck is a
-white checkers piece glued to a second one (3 cm across, about 2 cm tall). Score from the video as under Scoring: the
+cm and up the inside of the tube, and seat it. No stock tray has three 4.4 cm square pockets 5 mm
+deep (the nearest three-compartment trays have pockets about 10 cm across), so the check card is built: a 3D print of
+the sim's card, or two layers of 5 mm foam board, 6 x 16 cm, with three 4.4 cm square holes in the top layer; the
+floors painted amber, green and red, labeled ADD, OK and OVER and marked with the same white symbols as the sim; taped
+to the bench at x 20, y 13. The puck is two standard 1-1/4 in (3.2 cm) wooden checkers glued together and painted
+white (about 2 cm tall); no stock disc is 3 cm across and 2 cm tall. Score from the video as under Scoring: the
 dipstick handled only by its handle, the rag drawn along at least 5.4 cm of the blade's lower 6 cm in contact, the gap
 under the cap after each push (a 3 mm feeler strip), the second pull's 1 s hold (the video's timer), the frame the
 puck goes into a pocket and the pocket it ends in, and the rag back on the table.
