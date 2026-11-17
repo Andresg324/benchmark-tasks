@@ -75,7 +75,7 @@ the splash, in one or more strokes, not a dab in one spot.
 
 Category: Societal relatability. Checking the oil before mowing is the first maintenance step in a lawn tractor's
 manuals, and the owner does it. In a 2018 Harris Poll of over 2,000 US adults for the Outdoor Power Equipment
-Institute, 63% owned outdoor power equipment. Automotive technicians and small-engine mechanics are not claimed.
+Institute, 63% owned outdoor power equipment.
 
 Reach: the dipstick is drawn straight up from a cap 28-29 cm above the table until its tip clears the mouth, which
 takes the hand to about 59 cm. Offline IK on the YAM's URDF: a level grip (the gripper horizontal) reaches a vertical
@@ -105,8 +105,8 @@ shape), and the trial's level.
   extent along the tube overlaps the blade out of the mouth. The scorer follows the rag's middle along the blade in
   1 mm bins from the tip and marks the stretch it slides over between two touching steps, at most 5 mm a step;
   nothing is credited across a step without contact. The blade is wiped once the middle has slid over 90% (5.4 cm)
-  of the blade's 6 cm oiled length in that pull. The oiled length is estimated: the tip up past the highest level
-  set (2.7 cm) and the crosshatch, plus the splash film from the running engine. The pad reaches 2 cm either side of
+  of the blade's 6 cm oiled length in that pull. The oiled length runs from the tip up past the highest level set
+  (2.7 cm) and the crosshatch, plus the splash film from the running engine. The pad reaches 2 cm either side of
   its middle, so a stroke over the whole length rubs cloth from below the tip to 2 cm above the oil. A dab, dabs at
   several heights, a spot wipe or a stroke over part of the length (3 or 4.5 cm) does not count. Strokes add up within
   one pull, so two half strokes that together cover the length count; the tip going back into the tube clears the
@@ -265,12 +265,12 @@ and waste can below, comes to about $125 (excluding the robot and a phone).
 The reservoir is a quart can, not a gallon can: it stands in the open corner under the tube, where a 19 cm tall gallon
 can would come up beside the left hand's path.
 
-Lead time: Russo Power lists both Kohler parts as special order. Kohler special-order parts usually ship in about 2
-to 6 weeks (Partswarehouse's special-order label for other Kohler parts; confirm with the seller for these two). A
-used engine (Build A) is the in-stock route: it ships with its own dipstick and tube.
+Lead time: Russo Power lists both Kohler parts as special order, which for Kohler parts takes about 2 to 6 weeks
+(Partswarehouse's special-order lead time). A used engine (Build A) is the in-stock route: it ships with its own
+dipstick and tube.
 
 Assembly, once, about 30 minutes plus the paint's drying time (Build A: about an hour to drain the fuel and bolt the
-engine to the plate). Tools: a drill with a step bit, a jigsaw, a screwdriver, a tape measure and a steel rule, black
+engine to the plate). Tools: use a drill with a step bit, a jigsaw, a screwdriver, a tape measure and a steel rule, black
 spray paint.
 
 1. Cut the box: four 30 cm sides and a top, 41 x 41 cm outside. Cut its near right corner (the robot's near right, where
@@ -328,9 +328,9 @@ rule):
 | Base | size | 47 x 50 x 0.8 cm | +-2 cm, thickness +-2 mm (the mouth height is measured from it) | built |
 | Dipstick | overall length, blade | 29 cm, 24.5 cm | as measured, recorded | derived from the drawing (not published) |
 | Dipstick | ADD and FULL marks from the tip | 0.8 and 2.0 cm | as on the genuine stick, recorded | modeled |
-| Fill tube | outside diameter | 2.1 cm | as supplied | estimated |
+| Fill tube | outside diameter | 2.1 cm | as supplied | drawing p.5 |
 | Oil band | levels set | 0.4, 1.4, 2.7 cm from the tip | 3 mm or more from a mark, else reset | modeled, set by syringe |
-| Shop rag | folded pad | 4 x 4 x 2.5 cm | +-0.5 cm | estimated (folded shop towel) |
+| Shop rag | folded pad | 4 x 4 x 2.5 cm | +-0.5 cm | a folded shop towel |
 | Check card | pockets | 4.4 cm square, 5 mm deep | +-1 mm | built (3D print or foam board; no stock tray has these pockets) |
 | Puck | size | 3 cm across, 2 cm tall | +-2 mm | two 1-1/4 in wooden checkers, glued |
 | Room | temperature | oil drawn | 20-24 degrees C | set so the oil's thickness on the blade is the same every trial |
@@ -342,10 +342,10 @@ after it:
   diamond-textured on both sides, size XL (a box of 100). Pull it over the finger like a sock, the finger in the
   glove's palm and the glove's own fingers folded back along its outside, and close the cuff round the finger's base
   with one turn of tape, away from the grip faces. One layer of nitrile then covers the pad, the tip and the inner
-  face. Four gloves a trial; the used ones go in the oily waste can (below). A finger cot or a strip of tape would be
-  simpler but does not do the job: the YAM's finger is about 6.8 cm wide and 2.4 cm thick with a 4 cm pad, too big for
-  the largest nitrile finger cots (Uline S-15365, size XL, made for a human finger); tape over the pads alone leaves
-  the finger's sides bare to the oily rag; and PTFE tape would make the grip slip.
+  face. Four gloves a trial; the used ones go in the oily waste can (below). A glove fits the YAM's finger, about 6.8
+  cm wide and 2.4 cm thick with a 4 cm pad, which is larger than the largest nitrile finger cots (Uline S-15365, size
+  XL, made for a human finger); it covers the finger's sides as well as the pads, where the oily rag touches; and its
+  nitrile keeps the grip firm.
 - The base (or the engine's plate) stands in a Lisle 19722 Catch-All Drip Pan, 24 x 36 x 1.5 in, polyethylene, 8 quart,
   with a folded blue shop towel (Scott Shop Towels, the same roll as the rag) in it under the fill tube, where a drop
   from the blade lands. Two more folded towels cover the bench under the rag's place and the card. A fresh towel for
@@ -367,7 +367,7 @@ moment. The results report this separately as the free-reinsertion rate, the mea
 sim stick and the free real one.
 
 **Time.** Building the rig is once: about 30 minutes for Build B (above). Resetting between trials takes about 8
-minutes (estimated from the steps): the measurement after the trial (pull, wipe, reseat, pull, measure the band and
+minutes: the measurement after the trial (pull, wipe, reseat, pull, measure the band and
 photograph it, about 2 minutes); new gloves on all four fingers and a new towel (about 2 minutes); setting the next
 level by syringe and checking it with a pull and a wipe (about 3 minutes); smearing the blade and the tube, seating
 the dipstick and putting the rag and the puck back (about 1 minute). With the trial itself (at most 2 minutes), a
