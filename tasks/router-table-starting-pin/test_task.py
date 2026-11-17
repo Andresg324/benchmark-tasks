@@ -163,7 +163,7 @@ def finish(t, home=True, past=True):
 def test_geometry():
     j = {"board_turn": TH0, "board_x": 0.0, "board": 0.0}
     check(float(m.braced(j)), 1.0, "braced pose at the start turn is on the pin")
-    check(float(m.bit_dist(j) > m.RC), 1.0, "braced pose at the start turn is clear of the cutter")
+    check(float(m.bit_dist(j) > m.RC), 1.0, "braced pose at the start turn is clear of the cutter circle")
     j0 = {"board_turn": 0.0, "board_x": 0.0, "board": 0.0}
     check(float(m.on_bearing(j0) and not m.braced(j0)), 1.0, "turned to 0 the curve rides the bearing, off the pin")
     js = {"board_turn": m.START[2], "board_x": m.START[0], "board": m.START[1]}
@@ -179,7 +179,7 @@ def test_do_nothing():
 
 def test_demo_plan_offline():
     """The demo's waypoints (the board assumed to follow the pads exactly): no grab, no hands near the bit, the whole
-    curve routed, past the bit: 1.0. The sim decides whether the board really follows; this checks the plan."""
+    curve traced, past the bit: 1.0. The sim decides whether the board really follows; this checks the plan."""
     plan = m.demo()["left"]
     t = Trial()
     t.rest(2)
@@ -195,28 +195,28 @@ def test_demo_plan_offline():
     assert s_pin is not None
     feed_at(t, m.LEAD, m.ALPHA, -m.ALPHA - math.radians(4.0), n=400)  # the sim feeds ~0.6 mm a step
     sc, ok = finish_at(t, m.LEAD)
-    check(sc, 1.0, f"demo plan through the scorer (routed {m.routed_cm():.1f} cm)")
+    check(sc, 1.0, f"demo plan through the scorer (traced {m.traced_cm():.1f} cm)")
     check(float(m.bit_dist({"board_turn": TH0, "board_x": float(m.BRACED_LEAD[0]), "board": float(m.BRACED_LEAD[1])})
-                > m.RC), 1.0, "braced at the start turn, before the pivot, the board is clear of the cutter")
+                > m.RC), 1.0, "braced at the start turn, before the pivot, the board is clear of the cutter circle")
     check(float(abs(m.LEAD - LEAD) < 1e-12), 1.0, "task and test agree on the leading-end turn")
 
 
 def test_old_demo_start_is_not_whole():
-    """review, Nov 12: the old demo's start (bearing on 4.1 cm in from the leading end) leaves that stretch unrouted."""
+    """review, Nov 12: the old demo's start (bearing on 4.1 cm in from the leading end) leaves that stretch untraced."""
     t = Trial()
     brace(t)
     pivot(t)
     feed(t)
     sc, ok = finish(t)
-    check(sc, 0.75, f"braced, pivoted, fed round and past, but {m.ARC * 100 - m.routed_cm():.1f} cm unrouted at the "
-                    f"leading end (routed {m.routed_cm():.1f} cm)")
+    check(sc, 0.75, f"braced, pivoted, fed round and past, but {m.ARC * 100 - m.traced_cm():.1f} cm untraced at the "
+                    f"leading end (traced {m.traced_cm():.1f} cm)")
     check(float(ok), 0.0, "no success")
 
 
 def test_whole_curve_one_pass():
     t, (sc, ok) = whole_one_pass()
-    check(sc, 1.0, f"braced so the bearing meets the leading end, pivoted, fed round and past (routed "
-                   f"{m.routed_cm():.1f} of {m.ARC * 100:.1f} cm)")
+    check(sc, 1.0, f"braced so the bearing meets the leading end, pivoted, fed round and past (traced "
+                   f"{m.traced_cm():.1f} of {m.ARC * 100:.1f} cm)")
     check(float(ok), 1.0, "success() agrees")
     check(float(m._H.hands or m._H.grab), 0.0, "no hands near the bit, no grab")
 
@@ -227,7 +227,7 @@ def test_whole_curve_two_passes():
     t = Trial()
     brace(t), pivot(t), feed(t)
     finish(t)
-    first = m.routed_cm()
+    first = m.traced_cm()
     back = t.slides_for((-0.06, 0.0))  # pulled 6 cm straight back toward the robot, off the bit
     t.move(8, board_x=float(back[0]), board=float(back[1]))
     s = braced_slides(LEAD)
@@ -260,7 +260,7 @@ def test_whole_curve_left_on_bit():
     feed_at(t, LEAD, m.ALPHA, -m.ALPHA + 0.003)
     p = t.press()
     t.step(left=(p[0], p[1], p[2] + 0.10))
-    check(t.rest(25)[0], 0.75, f"routed {m.routed_cm():.1f} cm, board left on the bit")
+    check(t.rest(25)[0], 0.75, f"traced {m.traced_cm():.1f} cm, board left on the bit")
 
 
 def test_not_home():
@@ -275,7 +275,7 @@ def test_still_pressing():
     brace(t), pivot(t), feed(t)
     s = m._feed_slides(-m.ALPHA - math.radians(4.0), into=-0.004) + np.array([0.0, 0.03])
     t.move(10, board_x=float(s[0]), board=float(s[1]))
-    check(t.rest(25, left=t.press())[0], 0.75, "board routed and past but still pressed at the end: 0.75")
+    check(t.rest(25, left=t.press())[0], 0.75, "board traced and past but still pressed at the end: 0.75")
     p = t.press()
     p = (p[0], p[1], p[2] + (m.TOP + m.GAP + m.T + m.TIP - 0.004) - m.PZ)  # the pad tips 4 mm below the board's top
     away = t.rest(25, left=(p[0], p[1], p[2] + 0.10))[0]  # what the board earns with the hand lifted away
@@ -345,10 +345,10 @@ def test_brace_no_pivot():
     check(t.rest(25)[0], 0.0, "braced on the pin only")
     t2 = Trial()
     brace(t2)
-    pivot(t2, to=math.radians(4.0))  # in the cutter but not yet on the bearing
+    pivot(t2, to=math.radians(4.0))  # inside the cutter circle but not yet on the bearing
     p = t2.press()
     t2.step(left=(p[0], p[1], p[2] + 0.10))
-    check(t2.rest(25)[0], 0.0, "pivoted into the cutter but short of the bearing")
+    check(t2.rest(25)[0], 0.0, "pivoted into the cutter circle but short of the bearing")
 
 
 def test_pivot_away():
@@ -367,18 +367,18 @@ def test_halfway():
     p = t.press()
     t.step(left=(p[0], p[1], p[2] + 0.10))
     sc = t.rest(25)[0]
-    check(sc, 0.5, f"routed {m.routed_cm():.1f} cm then pulled back")
+    check(sc, 0.5, f"traced {m.traced_cm():.1f} cm then pulled back")
 
 
 def test_full_not_past():
     t = Trial()
     brace(t), pivot(t)
     feed(t, phi_end=-m.ALPHA + 0.01, n=60)
-    check(finish(t, past=False)[0], 0.75, f"routed {m.routed_cm():.1f} cm (over 18), board left on the bit")
+    check(finish(t, past=False)[0], 0.75, f"traced {m.traced_cm():.1f} cm (over 18), board left on the bit")
 
 
 def test_climb():
-    """Pivoted onto the bearing at the trailing end and fed the wrong way (left to right): routes nothing."""
+    """Pivoted onto the bearing at the trailing end and fed the wrong way (left to right): traces nothing."""
     t = Trial()
     brace(t), pivot(t)
     phi = PHI0
@@ -386,7 +386,7 @@ def test_climb():
         s = m._feed_slides(phi)
         t.j.update(board_turn=0.0, board_x=float(s[0]), board=float(s[1]))
         t.step(left=t.press())
-    check(float(m.routed_cm() <= 0.2), 1.0, f"climb feed routes nothing ({m.routed_cm():.1f} cm)")
+    check(float(m.traced_cm() <= 0.2), 1.0, f"climb feed traces nothing ({m.traced_cm():.1f} cm)")
 
 
 def test_reentry_off_pin():
@@ -396,7 +396,7 @@ def test_reentry_off_pin():
     feed(t, phi_end=PHI0 - 0.05 / m.R, n=20)
     s = m._feed_slides(PHI0 - 0.05 / m.R) - np.array([0.03, 0.0])
     t.move(8, board_x=float(s[0]), board=float(s[1]))
-    check(float(m._H.cutting), 0.0, "out of the cutter")
+    check(float(m._H.entered), 0.0, "out of the cutter circle")
     s2 = m._feed_slides(PHI0 - 0.07 / m.R)
     t.move(8, board_x=float(s2[0]), board=float(s2[1]))
     check(float(m._H.grab), 1.0, "pushed back into the bit off the pin: grab")
@@ -405,7 +405,7 @@ def test_reentry_off_pin():
 
 
 def test_shove_onto_pin_and_bit():
-    """Pin contact and cutter entry in the same step (a shove) is not a braced entry."""
+    """Pin contact and cutter-circle entry in the same step (a shove) is not a braced entry."""
     t = Trial()
     t.rest(2)
     t.move(1, board_x=0.0, board=0.0, board_turn=math.radians(2.0))
@@ -443,14 +443,14 @@ def test_reset():
     check(float(m._H.grab), 1.0, "grab in one trial")
     t2 = Trial()
     t2.rest(2)
-    check(float(m._H.grab or m._H.started or m._H.routed.any()), 0.0, "next trial starts clean (kit.episode())")
+    check(float(m._H.grab or m._H.started or m._H.traced.any()), 0.0, "next trial starts clean (kit.episode())")
     brace_at(t2, LEAD)
     feed_at(t2, LEAD, m.ALPHA, -m.ALPHA - math.radians(4.0))
     check(finish_at(t2, LEAD)[0], 1.0, "and can score 1.0")
 
 
 def test_carry_to_the_pin():
-    """The demo carries the board from where it lies (square) to the brace: clear of the pin and the cutter all the
+    """The demo carries the board from where it lies (square) to the brace: clear of the pin and the cutter circle all the
     way, braced only at the end, and never a grab."""
     path = m.carry_path()
     t = Trial()
@@ -505,45 +505,85 @@ def test_table_friction():
     check(float(np.allclose(hi - lo, tab.size[:2])), 1.0, "the friction surface is the whole table top")
 
 
-def test_cutting_force():
-    """The cutter's force (Curti et al. 2021): about 3 N against a slow feed for this 1/8 in pass, a pull toward the
-    bit the bearing takes, double for a 1/4 in pass; along a braced feed it opposes the right-to-left feed (-y) and
-    stays under 5 N; out of the cutter it is 0; a board shoved straight in off the pin is pushed to the right (the
-    cutter's grab)."""
-    fx, fy = m.cutting_force(m.RC - m.RB, m.CUT_H, 0.0125, 0.0)
-    check(float(2.7 < fx < 3.4 and 1.7 < fy < 2.4), 1.0, f"steady pass at 0.75 m/min: {fx:.2f} N against the feed, "
-          f"{fy:.2f} N toward the bit")
-    fx2, _ = m.cutting_force(m.RC - m.RB, 2 * m.CUT_H, 0.0125, 0.0)
-    check(float(abs(fx2 - 2 * fx) < 1e-9), 1.0, "a 1/4 in pass is twice the force")
-    check(float(m.cutting_force(0.0, m.CUT_H, 0.02, 0.0) == (0.0, 0.0)), 1.0, "no engagement, no force")
-    lead = PHI0 - m.ALPHA
-    peak, against = 0.0, []
+def drag_at(j):
+    """The cord's pull (world, N) after the board moves to joints-style pose j."""
+    m.drag_load({"board_turn": float(j[0]), "board_x": float(j[1][0]), "board": float(j[1][1])})
+    return m.drag_force_now()
+
+
+def test_drag():
+    """The drag, the same law in the sim as on the rig: the cord from the screw eye in the board's trailing end to the
+    pulley pulls 3.0 N toward the pulley while it is taut, and 0 once the board has let it run back past the cam
+    cleat's catch (the cleat holds the weight): slack at the start and through the carry and pivot to the snug pose,
+    3.0 N along the feed (2.97-3.00 N against it) and while the board is held there, 0 once it runs back 0.5 mm, back
+    on only near the most cord drawn."""
+    check(float(abs(m.CORD_N - 3.0) < 1e-12 and abs(0.300 * m.G - 2.94) < 0.005), 1.0,
+          "0.300 kg hanging weight (2.94 N), trimmed with the pulley's and cleat's drag to 3.0 N at the board")
+    kit._EPISODE["count"] += 1
+    check(float(np.linalg.norm(drag_at((m.START[2], np.array(m.START[:2])))) == 0.0), 1.0, "at the start: slack, 0 N")
+    carry = max(float(np.linalg.norm(drag_at(p))) for p in m.carry_path())
+    check(float(carry == 0.0), 1.0, "carried square to the brace on the pin: slack all the way")
+    s = braced_slides(LEAD)
+    piv = [float(np.linalg.norm(drag_at((LEAD + TH0 * (1 - k / 20), s)))) for k in range(21)]
+    check(float(max(piv[:-1]) == 0.0 and abs(piv[-1] - 3.0) < 1e-9), 1.0, "pivoted about the pin: slack until the "
+          "leading end meets the bearing, where the cord is set snug and takes hold")
+    against, angle, on, size = [], 0.0, 0, []
+    phis = np.linspace(m.ALPHA, -m.ALPHA - math.radians(4.0), 400)
+    for phi in phis:  # a feed round the bearing, the board turning about its curve's center (the demo's plan)
+        th, sl, beta = m._feed_pose(min(phi, m.PHI_START))
+        f = drag_at((th, sl))
+        if not f.any():
+            continue
+        on += 1
+        tau = np.array([-math.sin(beta), math.cos(beta)])  # the feed's direction at the bearing (right to left)
+        against.append(float(-f @ tau))
+        size.append(float(np.linalg.norm(f)))
+        angle = max(angle, math.degrees(math.acos(min(1.0, -f @ tau / np.linalg.norm(f)))))
+    check(float(on >= 0.95 * len(phis) and max(abs(v - 3.0) for v in size) < 1e-9 and min(against) >= 2.96
+                and angle < 9.0), 1.0,
+          f"fed round the bearing: 3.0 N on {on} of {len(phis)} steps, {min(against):.2f}-{max(against):.2f} N against "
+          f"the feed (the cord within {angle:.1f} deg of it)")
+    eye = m.to_world({"board_turn": th, "board_x": float(sl[0]), "board": float(sl[1])}, m.EYE)
+    f = m.drag_force_now()
+    check(float(np.allclose(m._D.at, eye) and np.allclose(f / 3.0, (m.PULLEY - eye) / np.linalg.norm(m.PULLEY - eye))),
+          1.0, "it acts at the screw eye, toward the pulley")
+    tau_pin = (eye - m.PIN)[0] * f[1] - (eye - m.PIN)[1] * f[0]
+    check(float(abs(m._D.load[0] - tau_pin) < 1e-12), 1.0, "its moment is the cord's line's, about the eye")
+    # stationary and backward: none
+    last = (th, sl)
+    check(float(abs(np.linalg.norm(drag_at((last[0], last[1] + np.array([0.0, 2e-6])))) - 3.0) < 1e-9), 1.0,
+          "board held at rest, the cord taut: 3.0 N (the hands hold the weight up)")
+    back = [float(np.linalg.norm(drag_at(m._feed_pose(p)[:2]))) for p in phis[::-1][1:200]]
+    check(float(max(back) == 0.0), 1.0, "drawn back toward the pulley: slack, 0 N")
+    more = phis[-1] + (phis[1] - phis[0]) * np.arange(1, 11)  # on past where the first feed stopped
+    fwd = [float(np.linalg.norm(drag_at(m._feed_pose(p)[:2]))) for p in np.concatenate([phis[200:], more])]
+    first = next(i for i, v in enumerate(fwd) if v > 0)
+    check(float(195 <= first <= 200 and max(fwd[:first]) == 0.0 and min(fwd[first:]) > 3.0 - 1e-9), 1.0,
+          f"fed again: no pull until the board is back within 0.5 mm of the most cord drawn (step {first} of "
+          f"{len(fwd)})")
+    # near miss: just under the cord drawn per step that counts as moving
+    kit._EPISODE["count"] += 1
+    base = (LEAD, slides_at(m.ALPHA - 0.02, LEAD))
+    drag_at(base)
+    j = {"board_turn": LEAD, "board_x": float(base[1][0]), "board": float(base[1][1])}
+    u = m.to_world(j, m.EYE) - m.PULLEY
+    u = m._rot(-LEAD) @ (u / np.linalg.norm(u))  # away from the pulley, in the board's frame
+    run0 = m.cord_length(j)
+    for step, want in ((-0.0004, 3.0), (-0.0006, 0.0), (0.0, 3.0), (0.0001, 3.0)):
+        kit._EPISODE["count"] += 1
+        drag_at(base)
+        m._D.drawn = run0  # the cord drawn out to here
+        got = float(np.linalg.norm(drag_at((LEAD, base[1] + step * u))))
+        check(float(abs(got - want) < 1e-9), 1.0, f"eye {step * 1e3:+.1f} mm from the most cord drawn: {got:.1f} N "
+              f"(the cleat catches after 0.5 mm of run-back)")
+    # the trap: a board fed straight in off the pin meets the same drag (and scores 0 as a grab)
+    kit._EPISODE["count"] += 1
     t = Trial()
-    for k in range(6):
-        m.cut_load(dict(t.j))
-    check(float(np.linalg.norm(m.cut_force_now()) < 1e-6), 1.0, "at the start, clear of the cutter: 0 N")
-    s = braced_slides(lead)
-    for k in range(20):  # pivot about the pin onto the bearing, then feed
-        th = lead + TH0 * (1 - (k + 1) / 20)
-        m.cut_load({"board_turn": th, "board_x": float(s[0]), "board": float(s[1])})
-    for phi in np.linspace(m.ALPHA, -m.ALPHA, 400):
-        sl = slides_at(phi, lead)
-        m.cut_load({"board_turn": lead, "board_x": float(sl[0]), "board": float(sl[1])})
-        f = m.cut_force_now()
-        u = (m._C.at - m.BIT) / np.linalg.norm(m._C.at - m.BIT)
-        peak = max(peak, float(np.linalg.norm(f)))
-        against.append((float(f @ np.array([-u[1], u[0]])), float(-f @ u), float(f[1])))
-    mid = np.median(np.array(against[50:350]), axis=0)
-    check(float(2.7 < mid[0] < 3.6 and 1.7 < mid[1] < 2.5 and mid[2] < 0 and peak < 5.0), 1.0,
-          f"braced feed: {mid[0]:.2f} N along the cutting edge (against the feed), {mid[1]:.2f} N toward the bit, "
-          f"{mid[2]:.2f} N along y; peak {peak:.2f} N")
-    kit._EPISODE["count"] += 1  # a new trial: a board shoved straight in, off the pin
-    sx, sy = (float(v) for v in m._rot(-TH0) @ np.array([-0.015, -0.025]))  # 2.4 cm off the pin, to its right
-    right = 0.0
-    for k in range(30):
-        m.cut_load({"board_turn": TH0, "board_x": sx + 0.0025 * k, "board": sy})
-        right = min(right, float(m.cut_force_now()[1]))
-    check(float(right < -2.0), 1.0, f"shoved straight in: pushed up to {-right:.2f} N to the right (-y), the grab")
+    t.rest(2)
+    t.move(10, board_turn=0.0, board_x=-0.04, board=0.06)
+    for k in range(1, 11):
+        t.step(board_x=-0.04 + 0.0044 * k)
+    check(float(m._H.grab), 1.0, "a board pushed straight in off the pin is a grab, whatever the drag does")
 
 
 if __name__ == "__main__":

@@ -36,10 +36,11 @@ INSTRUCTION = ("Rout the rabbet along the board's curved edge on the router tabl
 # (+y), against it, and the starting pin sits on the infeed side, to the bit's right.
 BIT = np.array([0.330, 0.060])  # the bit's axis
 RB = 0.00635  # m: the bearing's radius (a 0.5 in ball bearing on the bit's tip)
-RC = 0.0159  # m: the cutter's radius (a 1.25 in rabbeting bit): the rabbet is RC - RB = 9.5 mm (3/8 in) wide
-CUT_H = 0.0032  # m: the cutter stands 1/8 in above the table: the first pass of a 1/4 in deep rabbet (the usual
-#                 "no more than 1/8 in per pass"; a second pass at full height finishes it, outside this task)
-BEAR_Z = (0.0034, 0.0082)  # m: the bearing's bottom and top above the table (3/16 in thick, on the bit's tip)
+RC = 0.0159  # m: the cutter's radius (a 1.25 in rabbeting bit), painted round the bearing as the cutter circle: the
+#               rabbet it stands for is RC - RB = 9.5 mm (3/8 in) wide, 1/8 in high (one pass)
+BEAR_Z = (0.0034, 0.0082)  # m: the bearing's bottom and top above the table (3/16 in thick, the bit's bearing's place)
+SCREW_R = 0.0048  # m: the shoulder screw's 3/8 in head and the nylon spacers (3/8 in across) above and below the bearing
+SCREW_TOP = 0.0193  # m: the screw head's top: a 1/4 in spacer over the bearing, then the 3/16 in tall head
 PIN = np.array([BIT[0] + 0.0075, BIT[1] - 0.050])  # the starting pin: 5 cm to the bit's right, in the insert plate
 RP = 0.0032  # m: the pin's radius (a 0.25 in steel pin)
 PIN_H = 0.030  # m: it stands 3 cm above the table
@@ -145,10 +146,10 @@ BRACE = 0.0015  # m: the board is on the pin within 1.5 mm of its surface (the p
 #                 1.5 mm is the play of a hand-held board against a 0.25 in pin)
 ON_BEARING = 0.0015  # m: the curve is on the bearing within 1.5 mm of its surface (the rabbet then within 1.5 mm of
 #                      full width; the bearing's collider keeps the curve from going deeper)
-CLEAR = 0.005  # m: at the end, no part of the board within 5 mm of the cutter
-BIN = 0.002  # m: the routed length is kept as 2 mm stretches of the curve (129 of them)
+CLEAR = 0.005  # m: at the end, no part of the board within 5 mm of the cutter circle
+BIN = 0.002  # m: the traced length is kept as 2 mm stretches of the curve (129 of them)
 N_BINS = int(round(ARC / BIN))
-WHOLE = N_BINS - 2  # full credit: the whole curve routed, every 2 mm stretch but the one at each very end (the
+WHOLE = N_BINS - 2  # full credit: the whole curve traced, every 2 mm stretch but the one at each very end (the
 #                    bearing rolls off the corner there); in one feed or in passes, each begun braced on the pin
 MOST = 0.180  # m: 18 cm, 70% of the 25.8 cm curve: most of it, as from a start a few cm in from the leading end
 HALFWAY = MOST / 2  # m: 9 cm: real progress round the bearing
@@ -188,108 +189,81 @@ def _centroid(poly):
 COM = _centroid(OUTLINE)[1] - np.array(CENTRE)  # the board's center of mass from its middle (toward the curve's bow)
 
 
-# --- The cutter's force on the board. Curti, Marcon, Denaud, Togni, Furferi and Goli (2021), "Generalized cutting
-# force model for peripheral milling of wood, based on the effect of density and fibre orientation", Eur. J. Wood
-# Prod. 79:667-678, Table 5 (up-milling, straight edge): per tooth Ft = (Ks*h + Int)*ap, with Ks and Int per unit of
-# wood density as functions of the grain angle GA (deg). Their model reproduces the router forces Goli et al. (2003)
-# measured. Averaged over a turn of a 2-flute cutter engaged over phi_e = acos(1 - 2 ae / D), with chip thickness
-# h = fz sin(phi): the mean force against the feed (along the cutting edge's motion at the contact) is
-#   Fx = z ap / (2 pi) * (Ks fz sin^2(phi_e) / 2 + Int sin(phi_e))
-# and the mean pull toward the bit's axis is
-#   Fy = z ap / (2 pi) * (Ks fz (phi_e / 2 - sin(2 phi_e) / 4) + Int (1 - cos(phi_e))).
-# For this pass (ae 9.5 mm, ap 3.2 mm, 22,000 rpm) that is about 3.0-3.3 N against the feed and 2.0-2.2 N toward the
-# bit at 0.75-1 m/min, rising to 3.6-5.0 N at 5 m/min; a full 1/4 in pass would double it. Feed rates here
-# (chip 10-60 um) are below the 40-100 um the model was fitted on, so the chip-independent term Int dominates.
-RHO = 561.0  # kg/m3: black cherry at 12% moisture (AHEC)
-RPM = 22000.0  # the router's speed
-FLUTES = 2
-DT = 0.05  # s: one control step at 20 Hz (the run's control rate)
-HOLD_STEPS = 4  # a cut's force is held up to 0.2 s while the cutter stays in the wood without 10 um of fresh depth
-_CUT_A = np.array([-ALPHA + (k + 0.5) * BIN / R for k in range(int(round(ARC / BIN)))])  # the curve's 2 mm bins
-_CUT_P = np.stack([C_L + R * np.array([math.cos(a), math.sin(a)]) for a in _CUT_A])  # their points (board frame)
+# --- The resistance: a one-way hanging-weight drag, the same in the sim as in the real trials (README, Resistance).
+# Nothing at the bit cuts or turns: it is a smooth ball bearing on a fixed shoulder screw (the bit's own bearing's size
+# and place), and the cutter's circle round it is only painted. The cut's resistance comes from a cord tied to a screw
+# eye in the board's trailing end, which runs to a pulley off the table's right end, through a cam cleat, and down to
+# a hanging weight. While the board moves away from the pulley (fed right to left) it draws cord and lifts the weight,
+# a steady CORD_N pull at the eye toward the pulley; held there by the hands, it still carries the weight. Let go or
+# drawn back, the board lets the cord run back until the cleat's cams grip (CATCH), and the cord goes slack: no pull, so a
+# board left at rest is free. The cord is set snug with the board braced on the pin and its curve's leading end on the
+# bearing, where a whole-curve feed starts, so the drag takes hold as the board is fed along the bearing; after a
+# run-back it takes hold again only where the board has drawn out as much cord as before (the cleat keeps what was
+# drawn).
+# Where 3 N comes from: Curti, Marcon, Denaud, Togni, Furferi and Goli (2021), "Generalized cutting force model for
+# peripheral milling of wood", Eur. J. Wood Prod. 79:667-678, puts the real pass (cherry, a 1.25 in two-flute rabbeting
+# bit at 22,000 rpm, 9.5 mm wide and 1/8 in high) at 2.9-3.3 N against the feed at 0.25-1 m/min.
+CORD_N = 3.0  # N: the cord's pull at the board: a 0.300 kg weight (2.94 N) trimmed with the pulley's and cleat's drag
+PULLEY = np.array([0.360, -0.400])  # m: the pulley's sheave, 13 cm past the table's right end, its top level with
+#                                     the eye (so the cord runs flat)
+_X_IN = float(C_L[0] + R * math.cos(ALPHA))  # where the curve meets the ends (board frame x)
+EYE = np.array([_X_IN - 0.010, ENDS[0]])  # the screw eye: in the trailing end face, at mid-thickness, 1 cm in from
+#                                            the curve (board frame)
+CATCH = 0.0005  # m: how far the cord runs back before the cam cleat grips it (checked on the rig, README build)
+_LEAD_TURN = math.atan2(*(BIT - PIN - C_L)[::-1]) - ALPHA  # braced on pin and bearing, the bearing at the leading end
+SNUG = float(np.linalg.norm(PIN + _rot(_LEAD_TURN) @ (EYE + _rot(-_LEAD_TURN) @ C_L - C_L) - PULLEY))  # cord set
 
 
-def cutting_force(ae, ap, vf, ga_deg):
-    """(Fx, Fy) in N: the mean force against the feed and the pull toward the bit's axis, for a radial depth ae (m),
-    cut height ap (m), feed speed vf (m/s) and grain angle ga_deg (deg), Curti et al. 2021 (see above)."""
-    if ae <= 0.0:
-        return 0.0, 0.0
-    ga = min(abs(ga_deg), 90.0)
-    ks = (-5e-6 * ga * ga + 1e-3 * ga + 26e-3) * RHO  # N/mm2
-    it = (-1e-7 * ga * ga + 1e-5 * ga + 55e-4) * RHO  # N/mm
-    fz = 1000.0 * max(vf, 0.0) / (RPM / 60.0 * FLUTES)  # mm per tooth
-    pe = math.acos(max(-1.0, 1.0 - 2.0 * ae / (2 * RC)))
-    k = FLUTES * 1000.0 * ap / (2 * math.pi)
-    fx = k * (ks * fz * math.sin(pe) ** 2 / 2 + it * math.sin(pe))
-    fy = k * (ks * fz * (pe / 2 - math.sin(2 * pe) / 4) + it * (1 - math.cos(pe)))
-    return fx, fy
+def cord_length(J):
+    """The cord's run (m) from the board's screw eye to the pulley."""
+    return float(np.linalg.norm(to_world(J, EYE) - PULLEY))
 
 
-class _Cut:
-    """Per trial: how deep (m, from the uncut curve) the cutter has reached at each 2 mm bin, the force now, and the
-    last pose (to tell the board's speed)."""
+class _Drag:
+    """Per trial: the cord drawn out so far (the cleat holds it), the pull now and where it acts."""
 
     def __init__(self):
         self.episode = kit.episode()
-        self.depth = np.zeros(len(_CUT_A))
+        self.drawn = SNUG
         self.key = None
-        self.prev = None  # the deepest-cutting bin's world point at the last step
-        self.force = np.zeros(2)  # N, world (x, y), smoothed
-        self.at = BIT.copy()  # where it acts (world)
+        self.force = np.zeros(2)  # N, world (x, y)
+        self.at = PULLEY.copy()  # where it acts (world): the screw eye
         self.load = (0.0, 0.0, 0.0)
-        self.target = np.zeros(2)  # N: the last fresh cut's force, held while the cutter stays in the wood
-        self.held = 0  # steps it has been held
 
 
-_C = _Cut()
+_D = _Drag()
 
 
-def cut_load(J):
-    """The cutter's force on the board, as (its moment about the pin, its components along the board's x and y), and
-    its bookkeeping; _push_board puts it on the board's body. The cutter removes the board's curve inside its radius; each bin's fresh depth this step is what
-    it cuts. The force acts at the deepest fresh bin along the cutting edge's motion there (the bit turns
-    counterclockwise seen from above), which is against a right-to-left feed and with a climb cut, plus a pull toward
-    the bit's axis that the bearing takes. It computes once per control step (the same pose returns the same load)."""
-    global _C
-    if _C.episode != kit.episode():
-        _C = _Cut()
+def drag_load(J):
+    """The cord's pull on the board, as (its moment about the pin, its components along the board's x and y), and its
+    bookkeeping; _push_board puts it on the board's body. CORD_N toward the pulley at the eye while the cord is taut
+    (the eye within CATCH of the most cord drawn), else 0. It computes once per control step (the same pose returns
+    the same load)."""
+    global _D
+    if _D.episode != kit.episode():
+        _D = _Drag()
     key = (round(J["board_turn"], 9), round(J["board_x"], 9), round(J["board"], 9))
-    if key == _C.key:
-        return _C.load
-    _C.key = key
-    w = np.array([to_world(J, p) for p in _CUT_P])
-    r = np.linalg.norm(w - BIT, axis=1)
-    reach = np.clip(RC - r, 0.0, RC - RB)  # how deep the cutter reaches into the curve at each bin now
-    fresh = reach > _C.depth + 1e-5
-    if fresh.any():
-        k = int(np.argmax(np.where(fresh, reach, -1.0)))
-        ae = float(reach[k])
-        vf = 0.0 if _C.prev is None else float(np.linalg.norm(w[k] - _C.prev)) / DT
-        fx, fy = cutting_force(ae, CUT_H, min(vf, 0.2), math.degrees(_CUT_A[k]))
-        u = (w[k] - BIT) / max(float(r[k]), 1e-6)  # out from the bit's axis to the contact
-        edge = np.array([-u[1], u[0]])  # the cutting edge's motion there (counterclockwise)
-        target = fx * edge - fy * u
-        _C.at, _C.prev = w[k], w[k]
-        _C.depth = np.maximum(_C.depth, reach)
-        _C.target, _C.held = target, 0
-    elif reach.max() > 0.0 and _C.held < HOLD_STEPS:
-        target = _C.target  # still in the wood, under 10 um fresh this step: the cut goes on at its last force
-        _C.held += 1
-    else:
-        target = np.zeros(2)
-        _C.target, _C.prev = np.zeros(2), None
-    _C.force = _C.force + 0.5 * (target - _C.force)  # a 0.1 s lag: the mean of the tooth pulses, not each pulse
-    f, c = _C.force, _C.at
-    th = J["board_turn"]
-    tau = float((c - PIN)[0] * f[1] - (c - PIN)[1] * f[0])
+    if key == _D.key:
+        return _D.load
+    _D.key = key
+    eye = to_world(J, EYE)
+    run = float(np.linalg.norm(eye - PULLEY))
+    _D.drawn = max(_D.drawn, run)  # cord drawn out through the cleat: the weight rises
+    if run >= _D.drawn - CATCH:  # taut: the board carries the weight
+        _D.force = CORD_N * (PULLEY - eye) / run
+    else:  # run back past the catch: the cleat holds the weight, the cord is slack
+        _D.force = np.zeros(2)
+    _D.at = eye
+    f, th = _D.force, J["board_turn"]
+    tau = float((eye - PIN)[0] * f[1] - (eye - PIN)[1] * f[0])
     ex, ey = _rot(th) @ np.array([1.0, 0.0]), _rot(th) @ np.array([0.0, 1.0])
-    _C.load = (tau, float(f @ ex), float(f @ ey))
-    return _C.load
+    _D.load = (tau, float(f @ ex), float(f @ ey))
+    return _D.load
 
 
-def cut_force_now():
-    """The cutter's force on the board at the last step, (x, y) in N (world), for logs and tests."""
-    return _C.force.copy()
+def drag_force_now():
+    """The cord's pull on the board at the last step, (x, y) in N (world), for logs and tests."""
+    return _D.force.copy()
 
 
 # Where the demo braces the board on the pin: turned 14 deg counterclockwise from square (its leading end swung back
@@ -309,11 +283,14 @@ START = (-0.015, -0.040, 0.0)  # (x slide, y slide, turn): 1.5 cm nearer the rob
 WOOD = kit.Look((0.56, 0.31, 0.19), 0.6)  # cherry, planed
 END_GRAIN = kit.Look((0.44, 0.23, 0.14), 0.7)
 SAWN = kit.Look((0.47, 0.26, 0.16), 0.8)  # the band-sawn curve, a little darker and rougher
-FRESH = kit.Look((0.93, 0.74, 0.55), 0.6)  # freshly routed cherry (the rabbet), drawn by markers
+TRACE = kit.Look((0.10, 0.30, 0.85), 0.5)  # the blue spotting paste the bearing leaves on the edge, drawn by markers
 LAMINATE = kit.Look((0.80, 0.81, 0.79), 0.4)
 PLATE = kit.Look((0.12, 0.12, 0.13), 0.4)  # phenolic insert plate
 STEEL = kit.Look((0.78, 0.79, 0.80), 0.25, metallic=0.8)
-CARBIDE = kit.Look((0.80, 0.18, 0.10), 0.35, metallic=0.4)  # the bit's coated body and carbide wings
+NYLON = kit.Look((0.92, 0.91, 0.87), 0.5)  # the nylon spacers
+PAINT = kit.Look((0.95, 0.95, 0.95), 0.6)  # the painted cutter circle and the drawn 3 in circle
+CORD = kit.Look((0.85, 0.35, 0.10), 0.8)  # the drag's braided cord
+PINE = kit.Look((0.80, 0.66, 0.45), 0.7)  # the 2x4 offcut the pulley and cleat are screwed to
 DARK = kit.Look((0.20, 0.20, 0.21), 0.5)
 POLYCARB = kit.Look((0.70, 0.84, 0.93), 0.05)  # the clear polycarbonate shield's edge (its face is clear: not drawn)
 ALUMINUM = kit.Look((0.74, 0.75, 0.77), 0.35, metallic=0.8)  # its anodized aluminum body
@@ -322,7 +299,7 @@ ALUMINUM = kit.Look((0.74, 0.75, 0.77), 0.35, metallic=0.8)  # its anodized alum
 # guard): a clear 10 cm shield centered over the bit, its underside 1-1/2 in (38 mm) above the table, held by an
 # aluminum arm from a post bolted to the plate's far side (away from the robot). The board passes under it; the 3 in
 # rule already keeps the hands' low parts out from under it.
-GUARD_R = 0.051  # m: the shield's radius (a 4 in disc; the diameter is assumed, the height is the maker's)
+GUARD_R = 0.051  # m: the shield's radius (a 4 in disc; its height is the maker's)
 GUARD_Z = (0.0381, 0.0445)  # m: the shield's underside and top above the table (1/4 in polycarbonate)
 GUARD_POST_X = 0.100  # m: the post's center, from the bit's axis, on the far side (+x)
 
@@ -389,15 +366,30 @@ def _table():
                     meshes=tuple(meshes), colliders=tuple(cols))
 
 
+def _ring(r, w, z, look):
+    """A flat painted line round the bit's axis: radius r (its outer edge), w wide, its top at z."""
+    return [_prism([(rr * math.cos(a), rr * math.sin(a)) for rr, a in ((r - w, a0), (r, a0), (r, a0 + math.pi / 36),
+                                                                      (r - w, a0 + math.pi / 36))],
+                   z - 0.0001, z, look) for a0 in (k * math.pi / 36 for k in range(72))]
+
+
 def _bit():
-    """The insert plate with the bit and the starting pin (fixed; its own prop, so the board touches them)."""
+    """The insert plate with the bit's stand-in and the starting pin (fixed; its own prop, so the board touches them).
+    No cutter: at the bit's axis a ball bearing of the bit's bearing's size turns on a fixed shoulder screw, between
+    nylon spacers, and the cutter's circle is painted round it (README, Real-world build)."""
     px, py = PIN - BIT
-    meshes = [kit.box((0.0, 0.0, 0.0008), (0.235, 0.300, 0.0010), PLATE),  # a 9.25 x 11.75 in phenolic plate
-              kit.cylinder((0.0, 0.0, 0.00135), 0.024, 0.0001, DARK),  # the insert ring's opening round the bit
-              kit.cylinder((0.0, 0.0, CUT_H / 2), RC, CUT_H, CARBIDE, n=40),  # the cutter's swept cylinder
-              kit.cylinder((0.0, 0.0, CUT_H + 0.0001), 0.0065, 0.0002, STEEL),
+    spacer = BEAR_Z[0] - 0.0001
+    meshes = [kit.box((0.0, 0.0, 0.0008), (0.235, 0.300, 0.0010), PLATE),  # the plate's outline, 9.25 x 11.75 in
+              *_ring(RC, 0.0015, 0.0014, PAINT),  # the cutter circle, painted
+              *_ring(HANDS, 0.0010, 0.0014, PAINT),  # the 3 in circle, drawn
+              kit.cylinder((0.0, 0.0, spacer / 2 + 0.0001), SCREW_R, spacer, NYLON),  # 1/8 in spacer under it
               kit.cylinder((0.0, 0.0, sum(BEAR_Z) / 2), RB, BEAR_Z[1] - BEAR_Z[0], STEEL),  # the bearing
-              kit.cylinder((0.0, 0.0, BEAR_Z[1] + 0.0008), 0.0035, 0.0016, DARK),  # its retaining screw
+              kit.cylinder((0.0, 0.0, (BEAR_Z[1] + SCREW_TOP - 0.0048) / 2), SCREW_R, SCREW_TOP - 0.0048 - BEAR_Z[1],
+                           NYLON),  # 1/4 in spacer over it
+              kit.cylinder((0.0, 0.0, SCREW_TOP - 0.0024), SCREW_R, 0.0048, DARK),  # the shoulder screw's head
+              # the drag's 2x4 offcut, clamped off the table's right end with the pulley's sheave at the cord's height
+              kit.box((PULLEY[0] - BIT[0], PULLEY[1] - BIT[1] - 0.019, -0.030), (0.089, 0.038, 0.090), PINE),
+              kit.box((PULLEY[0] - BIT[0], PULLEY[1] - BIT[1] + 0.003, Z_MID - 0.019), (0.006, 0.008, 0.038), STEEL),
               kit.cylinder((px, py, PIN_H / 2), RP, PIN_H, STEEL, n=20),  # the starting pin
               kit.cylinder((px, py, 0.0014), 0.0060, 0.0002, DARK),  # its threaded hole's rim
               # the overhead guard: shield, arm and post (see GUARD_R)
@@ -412,6 +404,7 @@ def _bit():
               kit.box((GUARD_POST_X, 0.0, (GUARD_Z[1] + 0.008) / 2), (0.025, 0.040, GUARD_Z[1] + 0.008), ALUMINUM)]
     tx, ty = 0.29 - BIT[0], 0.04 - BIT[1]  # the table top's middle, from the bit
     cols = [kit.Collider((0.0, 0.0, sum(BEAR_Z) / 2), radius=RB, height=BEAR_Z[1] - BEAR_Z[0], slick=True),  # it rolls
+            kit.Collider((0.0, 0.0, (BEAR_Z[1] + SCREW_TOP) / 2), radius=SCREW_R, height=SCREW_TOP - BEAR_Z[1]),
             kit.Collider((px, py, PIN_H / 2), radius=RP, height=PIN_H),
             # the guard is solid: a thrown board or a hand meets it
             kit.Collider((0.0, 0.0, sum(GUARD_Z) / 2), radius=GUARD_R, height=GUARD_Z[1] - GUARD_Z[0]),
@@ -433,13 +426,14 @@ OBJECTS = [_table(), _bit(), _board()]
 class _History:
     def __init__(self):
         self.episode = kit.episode()
-        self.grab = False  # irreversible: the board met the cutter while not braced on the pin and turning about it
+        self.grab = False  # irreversible: the board crossed the cutter circle while not braced on the pin and turning
+        #                    about it
         self.hands = False  # irreversible: a gripper's shape touched the 3 in zone round the bit
-        self.cutting = False  # the board is in the cutter after an entry made braced on the pin
+        self.entered = False  # the board is inside the cutter circle after an entry made braced on the pin
         self.braced_prev = False  # braced at the last step
-        self.started = False  # the curve reached the bearing in a cut begun on the pin
+        self.started = False  # the curve reached the bearing in a pass begun on the pin
         self.angle = None  # the bearing's contact angle on the curve at the last step (None: not on the bearing)
-        self.routed = np.zeros(N_BINS, bool)  # the curve's 2 mm stretches routed to full width
+        self.traced = np.zeros(N_BINS, bool)  # the curve's 2 mm stretches the bearing has traced
 
 
 _H = _History()
@@ -463,15 +457,15 @@ def board_rest(objects):
 
 
 def _push_board(base, objects):
-    """Each control step (a yamkit step hook): the cutter's force (cut_load) put on the board's body, at its center
-    of mass as a force and a turning moment, held until the next step."""
+    """Each control step (a yamkit step hook): the cord's pull (drag_load) put on the board's body, at its center of
+    mass as a force and a turning moment about it from the screw eye, held until the next step."""
     if "board" not in objects:
         return
     import torch
 
     J = _joints(objects)
-    cut_load(J)
-    f, c = _C.force, _C.at
+    drag_load(J)
+    f, c = _D.force, _D.at
     th = J["board_turn"]
     com = np.asarray(objects["board"].pos, float)[:2] + _rot(th) @ COM
     tz = float((c - com)[0] * f[1] - (c - com)[1] * f[0])
@@ -498,7 +492,7 @@ _DBG = {"n": 0}
 
 
 def _dbg(J, ang, objects=None):
-    """ROUTER_DEBUG=1: print the board's pose, the bearing contact, the routed length and the cutter's force every 20
+    """ROUTER_DEBUG=1: print the board's pose, the bearing contact, the traced length and the cord's pull every 20
     steps, and every step the tool points (to measure the hands' forces from the arms' give afterwards)."""
     if not os.environ.get("ROUTER_DEBUG"):
         return
@@ -506,15 +500,15 @@ def _dbg(J, ang, objects=None):
     if objects is not None:
         tp = [np.asarray(objects[g].pos, float) for g in GRIPPERS if g in objects]
         if len(tp) == 2:
-            f = cut_force_now()
+            f = drag_force_now()
             print(f"router tcp {_DBG['n']} " + " ".join(f"{v:.5f}" for v in (*tp[0], *tp[1])) +
-                  f" turn {J['board_turn']:.5f} sl {J['board_x']:.5f} {J['board']:.5f} cut {f[0]:.3f} {f[1]:.3f}",
+                  f" turn {J['board_turn']:.5f} sl {J['board_x']:.5f} {J['board']:.5f} drag {f[0]:.3f} {f[1]:.3f}",
                   file=sys.stderr, flush=True)
     if _DBG["n"] % 20 == 0:
-        f = cut_force_now()
+        f = drag_force_now()
         print(f"router dbg {_DBG['n']}: turn {math.degrees(J['board_turn']):.1f} slides {J['board_x']*100:.2f} "
               f"{J['board']*100:.2f} cm; pin gap {pin_gap(J)*1000:.1f} mm; bit dist {bit_dist(J)*1000:.1f} mm; "
-              f"on bearing {ang is not None}; routed {routed_cm():.1f} cm; force ({f[0]:.2f}, {f[1]:.2f}) N; "
+              f"on bearing {ang is not None}; traced {traced_cm():.1f} cm; drag ({f[0]:.2f}, {f[1]:.2f}) N; "
               f"grab {_H.grab} hands {_H.hands}; up {_LIFT['z']:.2f} mm, tipped {_LIFT['tilt']:.2f} deg", file=sys.stderr, flush=True)
 
 
@@ -532,24 +526,24 @@ def _update(objects):
     J = _joints(objects)
     now_braced = braced(J)
     in_cutter = bit_dist(J) < RC
-    if in_cutter and not _H.cutting:
+    if in_cutter and not _H.entered:
         if now_braced and _H.braced_prev:
-            _H.cutting = True  # entered braced on the pin: the only motion there is turning about it
+            _H.entered = True  # entered braced on the pin: the only motion there is turning about it
         else:
-            _H.grab = True  # the cutter's first bite on an unbraced board: the proxy for a grab and throw
+            _H.grab = True  # across the cutter circle unbraced, the cutter's first bite: scored as a grab and throw
     if not in_cutter:
-        _H.cutting = False  # out of the cutter: a new entry needs the pin again
+        _H.entered = False  # out of the cutter circle: a new entry needs the pin again
     _H.braced_prev = now_braced
     c = curve_point(to_board(J, BIT))
-    ang = c[1] if (c is not None and c[0] <= RB + ON_BEARING and _H.cutting) else None
+    ang = c[1] if (c is not None and c[0] <= RB + ON_BEARING and _H.entered) else None
     if ang is not None:
         _H.started = True
-        # routed: the curve's stretches the bearing passed over feeding right to left, the contact moving from the
-        # leading end toward the trailing end (the angle falling); feeding the other way (a climb cut) routes nothing
+        # traced: the curve's stretches the bearing passed over feeding right to left, the contact moving from the
+        # leading end toward the trailing end (the angle falling); feeding the other way (a climb cut) counts nothing
         if _H.angle is not None and ang < _H.angle:
-            _H.routed[_bin(ang):_bin(_H.angle) + 1] = True
+            _H.traced[_bin(ang):_bin(_H.angle) + 1] = True
         elif _H.angle is None:
-            _H.routed[_bin(ang)] = True
+            _H.traced[_bin(ang)] = True
     _H.angle = ang
     _dbg(J, ang, objects)
     if in_zone(objects):  # hands near the bit
@@ -570,15 +564,14 @@ def in_zone(objects):
     return gk.touching({**objects, "bit_zone": _ZONE_AT}, "bit_zone", ZONE, tol=0.0)
 
 
-def routed_cm():
-    return 100.0 * BIN * int(_H.routed.sum())
+def traced_cm():
+    return 100.0 * BIN * int(_H.traced.sum())
 
 
 # A hand on the board (gk.touching): a gripper's own shape (palm and both fingers, boxes fitted to the YAM's collision
 # meshes, at their present opening) within gk.CONTACT (2 mm: the solver's resting gap plus the box fit) of the board.
 # The board, in its own frame (z at mid-thickness): the body behind the curve as one box, and the curved cap as 2.5 mm
 # strips, each out to the curve at the strip's middle (within 0.6 mm of the true curve).
-_X_IN = float(C_L[0] + R * math.cos(ALPHA))  # where the curve meets the ends
 _STRIP = 0.0025
 BOARD_SHAPE = (gk.Block(((BACK + _X_IN) / 2, float(C_L[1]), 0.0), (_X_IN - BACK, 2 * HALF, T)),) + tuple(
     gk.Block(((_X_IN + xc) / 2, float(y), 0.0), (xc - _X_IN, _STRIP, T))
@@ -612,7 +605,7 @@ def _released(objects):
 
 
 def _past(J):
-    """The board clear of the cutter by 5 mm and pushed past the bit: its trailing end on the outfeed (left) side."""
+    """The board clear of the cutter circle by 5 mm and pushed past the bit: its trailing end on the outfeed (left) side."""
     trail = [to_world(J, OUTLINE[0])[1], to_world(J, OUTLINE[-1])[1]]  # the trailing end's two corners
     return bit_dist(J) >= RC + CLEAR and min(trail) > BIT[1]
 
@@ -621,15 +614,15 @@ def _job(objects):
     J = _joints(objects)
     if _H.grab or _H.hands:
         return 0.0  # a first bite off the pin (the proxy for a grab), or a hand went near the bit
-    bins = int(_H.routed.sum())
+    bins = int(_H.traced.sum())
     if not _released(objects):
-        return min(_routed_score(J, bins), 0.75)  # a hand still on the board: at most 0.75
-    return _routed_score(J, bins)
+        return min(_traced_score(J, bins), 0.75)  # a hand still on the board: at most 0.75
+    return _traced_score(J, bins)
 
 
-def _routed_score(J, bins):
+def _traced_score(J, bins):
     if bins >= WHOLE and _past(J):
-        return 1.0  # the whole curve routed and the board fed on past the bit
+        return 1.0  # the whole curve traced and the board fed on past the bit
     if bins >= WHOLE or BIN * bins >= MOST:
         return 0.75  # the whole curve but the board left on or before the bit, or 18 cm of it
     if BIN * bins >= HALFWAY:
@@ -644,30 +637,32 @@ def _score(objects):
 
 
 def success(objects):
-    """The whole curve routed, the board pushed past the bit and let go (where the arms end is not scored). Called
+    """The whole curve traced, the board pushed past the bit and let go (where the arms end is not scored). Called
     first each step, so it also records the history."""
     _update(objects)
     return _score(objects) == 1.0
 
 
 def score(objects):
-    """0, irreversibly, if the board ever met the cutter (any part of it within the cutter's 15.9 mm radius) other
-    than by being turned into it about the starting pin while braced on it (within 1.5 mm), the curve not yet on the
-    bearing: a board fed into the bit off the pin, or slid back into it after leaving it, is scored as a grab. 0,
-    irreversibly, if any part of a gripper's own shape (palm, finger bodies, pads, tips, at their present opening)
-    touched the zone within 7.6 cm (3 in) of the bit's axis and 5 cm of the table. At most 0.75 while a gripper
-    touches the board (its palm or fingers within 2 mm of it). Otherwise: routed length is the curve's stretch the
-    bearing passed over (within 1.5 mm of it) in cuts each begun on the pin, fed right to left. 1.0 with the whole
-    curve routed (every 2 mm stretch but the one at each end) and the board 5 mm clear of the cutter with its
+    """0, irreversibly, if the board ever crossed the cutter circle (any part of it within the cutter's 15.9 mm radius
+    of the bit's axis) other than by being turned into it about the starting pin while braced on it (within 1.5 mm),
+    the curve not yet on the bearing: a board fed in off the pin, or slid back in after leaving it, is scored as a
+    grab. 0, irreversibly, if any part of a gripper's own shape (palm, finger bodies, pads, tips, at their present
+    opening) touched the zone within 7.6 cm (3 in) of the bit's axis and 5 cm of the table. At most 0.75 while a gripper
+    touches the board (its palm or fingers within 2 mm of it). Otherwise: traced length is the curve's stretch the
+    bearing passed over (within 1.5 mm of it) in passes each begun on the pin, fed right to left. 1.0 with the whole
+    curve traced (every 2 mm stretch but the one at each end) and the board 5 mm clear of the cutter circle with its
     trailing end past the bit; 0.75 with the whole curve but the board left on or before the bit, or with 18 cm
-    routed; 0.5 with 9 cm routed; 0.25 with the curve brought onto the bearing from the pin; 0 otherwise. Where the
+    traced; 0.5 with 9 cm traced; 0.25 with the curve brought onto the bearing from the pin; 0 otherwise. Where the
     arms end is not scored. Possible scores: 0, 0.25, 0.5, 0.75, 1."""
     return _score(objects)
 
 
-# --- The routed stretch, drawn as markers (visual only; scoring never reads it): a pale band of fresh-cut cherry
-# along the board's top at the curve, as wide as the rabbet, wherever the bearing has routed it.
+# --- The traced stretch, drawn as markers (visual only; scoring never reads it): the blue band the paste-coated bearing
+# leaves on the edge, drawn on the board's top along the curve (the top camera can't see the edge itself); and the drag's
+# cord, from the screw eye to the pulley.
 _VIS = {"markers": None, "failed": False}
+TRACE_W = 0.003  # m: the drawn band's width in from the edge
 
 
 def _markers():
@@ -677,12 +672,14 @@ def _markers():
         import isaaclab.sim as sim_utils
         from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 
-        mat = sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(kit._linear(c) for c in FRESH.color), roughness=0.6)
+        mat = sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(kit._linear(c) for c in TRACE.color), roughness=0.5)
+        cord = sim_utils.PreviewSurfaceCfg(diffuse_color=tuple(kit._linear(c) for c in CORD.color), roughness=0.8)
         _VIS["markers"] = VisualizationMarkers(VisualizationMarkersCfg(
-            prim_path="/World/Visuals/routed_edge",
-            markers={"cut": sim_utils.CuboidCfg(size=(RC - RB, BIN * 1.15, 0.0004), visual_material=mat)}))
+            prim_path="/World/Visuals/traced_edge",
+            markers={"trace": sim_utils.CuboidCfg(size=(TRACE_W, BIN * 1.15, 0.0004), visual_material=mat),
+                     "cord": sim_utils.CuboidCfg(size=(1.0, 0.003, 0.003), visual_material=cord)}))
     except Exception as e:  # visuals are optional
-        print(f"router: no routed-edge visuals ({e!r})", file=sys.stderr, flush=True)
+        print(f"router: no traced-edge visuals ({e!r})", file=sys.stderr, flush=True)
         _VIS["failed"] = True
     return _VIS["markers"]
 
@@ -694,19 +691,24 @@ def _draw(J):
     if m is None:
         return
     th = J["board_turn"]
-    tr, qs = [], []
+    eye = to_world(J, EYE)
+    mid, run = (eye + PULLEY) / 2, PULLEY - eye
+    yaw = math.atan2(run[1], run[0])
+    tr, qs = [(mid[0], mid[1], TOP + Z_MID)], [(0.0, 0.0, math.sin(yaw / 2), math.cos(yaw / 2))]
     for k in range(N_BINS):
-        if not _H.routed[k]:
+        if not _H.traced[k]:
             tr.append((0.0, 0.0, -10.0))
             qs.append((0.0, 0.0, 0.0, 1.0))
             continue
         a = -ALPHA + (k + 0.5) * BIN / R
-        p = to_world(J, C_L + (R - (RC - RB) / 2) * np.array([math.cos(a), math.sin(a)]))
+        p = to_world(J, C_L + (R - TRACE_W / 2) * np.array([math.cos(a), math.sin(a)]))
         yaw = a + th
         tr.append((p[0], p[1], TOP + GAP + T + 0.0003))
         qs.append((0.0, 0.0, math.sin(yaw / 2), math.cos(yaw / 2)))
-    m.visualize(translations=np.array(tr, float), orientations=np.array(qs, float),
-                marker_indices=np.zeros(N_BINS, int))
+    sc = np.ones((N_BINS + 1, 3))
+    sc[0, 0] = float(np.linalg.norm(run))
+    m.visualize(translations=np.array(tr, float), orientations=np.array(qs, float), scales=sc,
+                marker_indices=np.array([1] + [0] * N_BINS))
 
 
 # --- The scripted demo (both arms carry the board to the pin, the left pivots it onto the bearing, the right takes it
@@ -714,7 +716,7 @@ def _draw(J):
 TIP = PAD_TIP_PAST_TCP  # the tool point is this far above the pad tips
 PZ = TOP + GAP + T + TIP - 0.004  # the pads 4 mm into the board's top: pressing on it
 PZ_FIRM = TOP + GAP + T + TIP - 0.020  # aimed 20 mm in: a firm press (about 5-8 N, the arm giving 2.3-3.8 mm/N
-#                                       downward there), so the pads' grip carries the 3-4 N push against the cutter
+#                                       downward there), so the pads' grip carries the 3-4 N push against the drag
 # The arm gives under a sideways push at the pads (J K^-1 J^T with the YAM's 80 and 10 N*m/rad servos, at the pads
 # over the board): 6.2-7.6 mm per newton (here 6.7-7.1), mostly in the wrist. A hand that pushes the board with a few newtons must be
 # aimed that far past where the pads are; aimed at the pads, it holds nothing.
@@ -758,16 +760,16 @@ BRACED_LEAD = _rot(-LEAD) @ C_L - C_L  # the slides of that pose: the board 4.1 
 # The pivot. Nothing but friction and the hand holds the board on the pin. The pads press 13 cm from the pin toward
 # the trailing end, 85 deg in from the edge's tangent there, and push almost straight at the pin (a push through the
 # pin does not turn the board, so it holds as the board turns), 4 N onto it; pushed 60 deg in (2 N along the pin), the
-# board slid 6.5 mm along the pin before it met the cutter. Turning the board also takes a push round the pin against
-# the table's friction (about 1.8 N at the pads). From where the cutter starts to cut, the pads also push the board on
-# along the pin toward its leading end, rising to PIVOT_ALONG at the bearing, against the cutter's first bite (about
-# 2 N toward the trailing end), which would otherwise draw the curve's end off the bearing.
+# board slid 6.5 mm along the pin before it crossed the cutter circle. Turning the board also takes a push round the pin
+# against the table's friction (about 1.8 N at the pads). From where the curve crosses the cutter circle, the pads also
+# push the board on along the pin toward its leading end, rising to PIVOT_ALONG at the bearing, against the drag's cord,
+# which comes taut there and pulls toward the trailing end (it would otherwise draw the curve's end off the bearing).
 PIVOT_R = 0.130  # m: the pads' distance from the pin (at 11 cm a finger reached the 3 in zone)
 PIVOT_IN = math.radians(85.0)  # the push's angle in from the edge's tangent at the pin (toward the pin)
 PIVOT_F = 3.5  # N
 PIVOT_ALONG = 1.5  # N
 # Once the curve touches the bearing, the board can still roll between pin and bearing (the bearing rolls freely):
-# the cutter's push along the curve drives that roll toward the trailing end, which runs the curve's leading end off
+# the cord's pull along the curve drives that roll toward the trailing end, which runs the curve's leading end off
 # the bearing. The pads' push along the pin (the turning push, which here points along the pin, plus PIVOT_ALONG,
 # 3.5 N together) holds it there, with the pin's and the table's friction; it is kept through the hold on the bearing
 # (dropped there, the board rolled off at once). The whole push is 5.1 N, under a 6 N press.
@@ -801,8 +803,8 @@ def _over(a, b, C):
 # edge, and a push there in the feed direction swings the board about the pads instead of feeding it. Near the
 # trailing end there is no board behind the bearing to push from, and the pin runs off the curve's trailing end 5 cm
 # before the end of the cut, so nothing else holds the board there.)
-# Between them the hands push the board on along the curve against the cutter's 3.3 N and the table's friction, and
-# 0.5 N onto the bearing, and turn it as a pair: the trailing hand pushes toward the curve and the leading hand draws
+# Between them the hands push the board on along the curve against the cord's 3 N pull and the table's friction, and
+# 1 N onto the bearing, and turn it as a pair: the trailing hand pushes toward the curve and the leading hand draws
 # back toward the robot, a couple that balances the pushes about the bearing. Each hand's share is the smallest that
 # does it (FEED_PADS, below, for where they press).
 # The board is turned about its curve's center, which stays put (the bearing on the curve, the feed a turn of the
@@ -823,19 +825,25 @@ PAD_IN = 0.020  # m: the pads' middle at least 2 cm in from the back edge, so bo
 CARRY_L = np.array([BACK + PAD_IN, ENDS[1] - 0.030])  # where the hands carry the board to the pin (board frame)
 CARRY_R = np.array([BACK + PAD_IN, ENDS[0] + 0.030])
 # The feed's pads, in two stretches, the hands changing their places once, one at a time, with the board at rest
-# (the cutter pushes only while it cuts): where the hands' pushes are smallest. Each hand pushes its pads with its
+# (the drag pulls only while the board draws cord): where the hands' pushes are smallest. Each hand pushes its pads with its
 # share by the pads' grip (friction) under an 8 N press, the share at most 5.0 N, so the pads need a grip of at least
 # 0.63 times the press. (With one pair of places for the whole feed the larger push would be 5.7 N; at a 6 N press
 # with the pads 2 cm in at both ends the grip needed is 0.84 of the press, more than the sim's pads have.)
 PHI_SPLIT = math.radians(-5.0)  # where the hands change places (the bearing 5 deg past the curve's middle)
-FEED_PADS = (  # (from phi, to phi, left pads, right pads, right hand's yaw, squeeze N), board frame
+FEED_PADS = (  # (from phi, to phi, left pads, right pads, right hand's yaw, squeeze N, push onto the bearing N),
+    #             board frame
     (None, PHI_SPLIT, np.array([BACK + 0.020, ENDS[0] + 0.225]), np.array([BACK + 0.060, ENDS[0] + 0.025]),
-     math.radians(140.0), 1.0),
-    (PHI_SPLIT, None, np.array([BACK + 0.080, ENDS[0] + 0.225]), np.array([BACK + 0.020, ENDS[0] + 0.050]),
-     math.radians(110.0), 0.0))
+     math.radians(140.0), 1.0, 1.0),
+    (PHI_SPLIT, None, np.array([BACK + 0.080, ENDS[0] + 0.210]), np.array([BACK + 0.020, ENDS[0] + 0.050]),
+     math.radians(110.0), -0.5, 2.0))
 # The squeeze: planned with equal shares (4.7 N each), the first stretch ran with the trailing hand pushing 1.1-1.2 N
 # more along the line between the pads and the leading hand that much less (measured from the arms' deflection,
-# 5.2-5.9 N against 3.9-4.0 N); the plan leans 1 N the other way there so the run shares the push evenly.
+# 5.2-5.9 N against 3.9-4.0 N); the plan leans 1 N the other way there so the run shares the push evenly. In the
+# second stretch, against the cord's pull at the trailing end, with equal shares (up to 5.0 N each) and the leading
+# pads 2.5 cm in from the leading end, those pads crept on along the board and off its end; with 1 N leaned onto the
+# trailing hand the curve came off the bearing. The plan there leans 0.5 N onto the trailing hand, and the leading pads
+# press 4 cm in from the end (13 cm or more from the bit's axis); there the pair pushes 2 N onto the bearing (at 1 N
+# the curve drifted 1-2 mm off it).
 PAD_L, PAD_R = FEED_PADS[0][2], FEED_PADS[0][3]  # at the feed's start
 # Each hand is turned about the vertical so its fingers close roughly toward the bit: the closed fingers then reach
 # 2.4 cm toward it (their thickness), not 3.4 cm (half their 6.8 cm width), and stay out of the 3 in zone with the
@@ -846,9 +854,8 @@ HAND_YAW = {"left": math.radians(-80.0), "right": math.radians(110.0)}  # (the r
 # then close along world y; the gripper's shape stays 1.7 cm or more outside the 3 in zone, the arm deflected). The
 # wrist turns while the pads are lifted, on the way across high over the bit.
 PIVOT_YAW = 0.0
-FEED_BACK = 3.3  # N: the cutter's push back along the curve to plan for (Curti et al., above: 2.9 N at the demo's
-#                  feed, 3.3 N at 1 m/min; the board's speed jumps as it breaks free of the table's friction)
-FEED_ON = 0.5  # N: the hands' push onto the bearing, besides the cutter's own 1.9 N pull
+FEED_ON = 1.0  # N: the hands' push onto the bearing (the cord's line passes up to 0.4 N off it or 0.2 N onto it);
+#               2 N in the feed's second stretch (FEED_PADS)
 PRESS_N = 8.0  # N: each hand's press down on the board in the feed, so its pads' grip carries its share of the push
 #                (each newton of press adds 0.25 N of table friction, so pressing harder also costs push)
 BRACE_PRESS = 3.0  # N: the press while sliding the board onto the pin
@@ -868,8 +875,8 @@ def _feed_pose(phi):
     return th, _rot(-th) @ (c - PIN) - C_L, beta
 
 
-def _hand_forces(phi, pad_l=None, pad_r=None, squeeze=0.0):
-    """The two hands' pushes (world, N) at the feed pose for phi: together they balance the cutter's push back and
+def _hand_forces(phi, pad_l=None, pad_r=None, squeeze=0.0, on=FEED_ON):
+    """The two hands' pushes (world, N) at the feed pose for phi: together they balance the cord's pull at the eye and
     the table's friction and press the curve onto the bearing, with no turn about the contact; of all such pairs, the
     one whose larger push is smallest, then `squeeze` N more toward each other along the line between the pads (the
     leading hand pushing on more, the trailing hand less: the free choice, which balances nothing else)."""
@@ -880,10 +887,12 @@ def _hand_forces(phi, pad_l=None, pad_r=None, squeeze=0.0):
     pad_l = PAD_L if pad_l is None else pad_l
     pad_r = PAD_R if pad_r is None else pad_r
     a, b = _board_world(th, s, pad_l) - k, _board_world(th, s, pad_r) - k
-    net = FEED_BACK * tau + FEED_ON * nu
+    eye = _board_world(th, s, EYE)
+    cord = CORD_N * (PULLEY - eye) / float(np.linalg.norm(PULLEY - eye))  # the drag, pulling at the screw eye
+    net = -cord + on * nu
+    mom = -float((eye - k)[0] * cord[1] - (eye - k)[1] * cord[0])
     # the table's friction against the board's motion: under each hand (its press) and under the middle (the weight)
     th2, s2, _ = _feed_pose(phi - 1e-4)
-    mom = 0.0
     for p, n in ((pad_l, PRESS_N), (pad_r, PRESS_N), (np.array(CENTRE), BOARD_MASS * G)):
         v = _board_world(th2, s2, p) - _board_world(th, s, p)
         f_fr = MU_TABLE * n * v / max(float(np.linalg.norm(v)), 1e-12)  # what the hands must add there
@@ -1010,7 +1019,7 @@ def demo():
     rad = (pv_pad - pin_b) / PIVOT_R
     cw = np.array([rad[1], -rad[0]])  # clockwise round the pin, the way the pivot turns the board (board frame)
 
-    th_cut = next(a for a in np.arange(th_b, th1, -0.0005)  # where the cutter starts to cut
+    th_cut = next(a for a in np.arange(th_b, th1, -0.0005)  # where the curve crosses the cutter circle
                   if bit_dist({"board_turn": a, "board_x": s_b[0], "board": s_b[1]}) < RC)
 
     def f_along(th):
@@ -1036,7 +1045,7 @@ def demo():
     on_b = pv_aim(th1, push * PIVOT_F + f_turn * cw + f_along(th1))
     left.append(Waypoint(1.0, on_b, C, "on the bearing"))
     # The board is passed from hand to hand, never let go: lifted, the left hand left the board free to roll between
-    # pin and bearing under the cutter's push, off the curve's leading end. The right presses near the trailing end,
+    # pin and bearing under the cord's pull, off the curve's leading end. The right presses near the trailing end,
     # 9 cm in from its feed spot (at its feed spot its wrist came within 8.5 cm of the left's), and pushes its share of
     # the feed's start (_hand_forces), which alone holds that roll; the left lifts, crosses high over the bit and
     # presses near the leading end with its share, which also alone holds it; then the right steps back to its spot.
@@ -1064,7 +1073,7 @@ def demo():
         pivot_to += 1  # straight up still at the pivot's yaw; the wrist turns on the way across, high over the bit
     left.append(Waypoint(1.0, (wl[0], wl[1], above), C, "to the board's leading end"))
     # The left pads touch down straight onto their spot (the arm unloaded, so they land where they are aimed), then
-    # press and take up their whole share of the push at once (half loaded, the cutter's push can turn the board back
+    # press and take up their whole share of the push at once (half loaded, the cord's pull can turn the board back
     # about the bearing and onto the pin).
     left += [Waypoint(0.5, (wl[0], wl[1], TOP + GAP + T + TIP - 0.001), C, "pads on the board"),
              Waypoint(0.6, _aim("left", wl, f0[0]), C, "press"),
@@ -1072,7 +1081,7 @@ def demo():
     t_l, t_r = sum(w.duration for w in left), sum(w.duration for w in right)
     right.append(Waypoint(t_l - t_r, _aim("right", wh, f0[1]), C, "hold the board on the bearing"))
     y1 = FEED_PADS[0][4]
-    fs = _hand_forces(PHI_START, squeeze=FEED_PADS[0][5])  # the feed's first pushes
+    fs = _hand_forces(PHI_START, squeeze=FEED_PADS[0][5], on=FEED_PADS[0][6])  # the feed's first pushes
     yawed = {}  # waypoints with their own yaw (id -> yaw)
 
     def wy(w, yaw):
@@ -1092,7 +1101,7 @@ def demo():
     # presses the board.
     phis = np.linspace(PHI_START, PHI_END, FEED_N + 1)
     phi_at = PHI_START  # where the feed has got to
-    for n_ph, (a_ph, b_ph, pl, pr, yr, sq) in enumerate(FEED_PADS):
+    for n_ph, (a_ph, b_ph, pl, pr, yr, sq, on) in enumerate(FEED_PADS):
         if n_ph:
             th, s, _ = _feed_pose(phi_at)
             ol, orr = _board_world(th, s, FEED_PADS[n_ph - 1][2]), _board_world(th, s, FEED_PADS[n_ph - 1][3])
@@ -1111,14 +1120,14 @@ def demo():
                       wy(Waypoint(0.4, (nr[0], nr[1], low), C, "pads on the board"), yr),
                       wy(Waypoint(0.5, _aim("right", nr, yaw=yr), C, "press"), yr)]
             left.append(Waypoint(1.9, _aim("left", nl), C, "hold the board"))
-            fl, fr = _hand_forces(phi_at, pl, pr, sq)
+            fl, fr = _hand_forces(phi_at, pl, pr, sq, on)
             left.append(Waypoint(0.6, _aim("left", nl, fl), C, "push again"))
             right.append(wy(Waypoint(0.6, _aim("right", nr, fr, yaw=yr), C, "push again"), yr))
         for phi in phis[1:]:
             if (a_ph is not None and phi > a_ph) or (b_ph is not None and phi < b_ph):
                 continue
             th, s, _ = _feed_pose(phi)
-            fl, fr = _hand_forces(phi, pl, pr, sq)
+            fl, fr = _hand_forces(phi, pl, pr, sq, on)
             phi_at = float(phi)
             left.append(Waypoint(0.1, _aim("left", _board_world(th, s, pl), fl), C, "feed round the bearing"))
             right.append(wy(Waypoint(0.1, _aim("right", _board_world(th, s, pr), fr, yaw=yr), C,
