@@ -25,7 +25,7 @@ Render the videos of a run with `inspect-robots video <log.json>`. Offline check
 `--scorer task_score` gives 1.0 when the task succeeds (the full condition held for 1 s) and otherwise `score()` at
 the end of the trial. Every share is by mass, of the debris (22 pieces of 2.50 g, 55.0 g, in the simulator and in a
 real trial), read from where the pieces really are (their poses in the simulator; in a real trial, the three
-fractions weighed on a 0.01 g balance: see Real-world evaluation). The definitions are the same in both.
+fractions weighed on a 0.01 g scale: see Real-world evaluation). The definitions are the same in both.
 
 | Where a piece is | Counts as | Why |
 |---|---|---|
@@ -128,7 +128,7 @@ arms are stopped at their ready pose while the debris is made; the operator wear
    tray is empty, dry, weighed (0.01 g) and seated.
 2. Lay the template on the plate, its near edge along the lip and its right edge against the right splash guard.
 3. Open a fresh, sealed 4 oz can of black Play-Doh and record the code printed on it.
-4. Weigh the pieces: on the balance, tared on a weighing boat, pinch off dough and roll it into a ball between the
+4. Weigh the pieces: on the scale, tared on a weighing boat, pinch off dough and roll it into a ball between the
    gloved palms, adding or pinching off until it reads 2.50 g within 0.05 g; set it aside on a sheet of Reynolds
    parchment paper. 22 balls, about 6 s each. Then weigh all 22 together on the boat: 55.00 g within 0.30 g (the
    total mass check). The total is the trial's debris mass, D.
@@ -138,7 +138,7 @@ arms are stopped at their ready pose while the debris is made; the operator wear
 6. Lift the template straight up and set it aside. The pieces stay on the steel where they were pressed; a piece that
    lifts with the template or tears is removed, its spot wiped dry, and a new 2.50 g ball pressed through the template
    laid back in place.
-7. Nudge check, every piece: first learn the push by pressing a gloved fingertip straight down on the tared balance
+7. Nudge check, every piece: first learn the push by pressing a gloved fingertip straight down on the tared scale
    pan until it reads 40 g (0.39 N), three times. Then push each piece with the same fingertip, sideways toward the lip,
    low against its side, for 1 s. The piece stays put (no gap opens at its far side). A piece that slides is removed,
    its spot wiped dry, and a new piece pressed in its place through the template.
@@ -176,9 +176,9 @@ every trial.
   where the hands work.
 
 **Measuring the outcome (every trial).** Right after the trial, take the after photo (same camera and light), then
-collect three fractions, each into its own weighing boat weighed beforehand, on the 0.01 g balance, within 5 minutes
+collect three fractions, each into its own weighing boat weighed beforehand, on the 0.01 g scale, within 5 minutes
 of the trial's end:
-- in the tray (T): lift the tray out and weigh it (it sits across the balance's pan, centered); T is its gain;
+- in the tray (T): lift the tray out and weigh it (it sits across the scale's platform, centered); T is its gain;
 - left on the griddle (L): every piece still on the plate (stuck or loose), against the guards, or on the blade while
   it is over the griddle, lifted with the razor scraper. A thin smear on the steel (a stain with no raised edge that a
   single razor pass does not lift as a piece) is not a piece: it is not counted in L and is wiped off at the reset;
@@ -195,7 +195,7 @@ each trial, so anyone can recount.
 **Nothing left on the griddle (the 1.0 condition, real trials).** In the simulator, nothing left means no piece on the
 griddle (`FULL_RESIDUE` = 0 in `task.py`), and every piece weighs 2.50 g. In a real trial, nothing left means both:
 (a) L under 0.40 g, under a sixth of one piece (0.7 % of 55.0 g, well inside the 5 % allowed for 0.75), read on the
-0.01 g balance; and (b) no piece 1 mm or larger on the plate, guards or blade, checked by eye under the raking light
+0.01 g scale; and (b) no piece 1 mm or larger on the plate, guards or blade, checked by eye under the raking light
 without wiping, any doubtful piece measured against the 6 in. steel rule, and confirmed on the after photo with the
 1 cm grid. A thin smear (above) is not a piece. The other thresholds are the simulator's, applied to the weighed
 shares.
@@ -218,7 +218,7 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
 | Room | 20 to 24 degrees C | | the trial runs at room temperature; thermometer |
 | Plate before pressing | bare 430 stainless, clean, dry, unoiled | no particle 1 mm, no smear on the photo | Play-Doh sticks to clean, dry steel |
 | Dough | black Play-Doh, a fresh sealed 4 oz can each trial | can code recorded | one product, fresh each trial |
-| Each piece | 2.50 g, 1.9 cm square, about 4.8 mm thick | 0.05 g | simulator's piece; 0.01 g balance (repeatability 0.02 g) |
+| Each piece | 2.50 g, 1.9 cm square, about 4.8 mm thick | 0.05 g | simulator's piece; 0.01 g scale |
 | All 22 pieces | 55.00 g | 0.30 g | simulator's debris mass |
 | Press | 2 x 4 block down on the template, 5 s | | the template's thickness sets the piece's |
 | Nudge check | 40 g fingertip push at each piece's side, 1 s: it stays put | every piece | simulator's bond (0.8 N) is twice the nudge |
@@ -226,7 +226,7 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
 | Finger covers | a fresh nitrile glove on each finger of the scraper hand | every trial | Protecting the robot's hands |
 | Nothing left (1.0) | L under 0.40 g and no piece 1 mm or larger; a thin smear not counted | | a sixth of a 2.50 g piece; steel rule and 1 cm grid photo |
 | Mass balance | M = T + L + O vs D, the weighed pieces | 5 %, else repeat | 22 weighed pieces |
-| Weighing | U.S. Solid USS-DBS66-20, 0.01 g, within 5 minutes of the trial's end | 0.01 g (1 % of the debris is 0.55 g) | maker's specifications |
+| Weighing | BOMATA 1 kg x 0.01 g scale, within 5 minutes of the trial's end; tray plus contents within its 1,000 g | 0.01 g (1 % of the debris is 0.55 g); session check 100 g within 0.03 g | listed specifications; 100 g calibration weight |
 
 ## The debris (`debriskit.py`)
 
@@ -234,7 +234,7 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
   (just under half a 4 oz can). They lie in four rows 3.5 cm apart (6, 5, 6 and 5 pieces, 3.5 cm apart along a row,
   alternate rows offset by half), the near row's centers 2.5 cm from the lip, 1.6 cm of bare steel between
   neighbors. Why 22 pieces of 2.50 g: under half of one can, in pieces large enough to weigh to 2 % on a 0.01 g
-  balance and to press by hand in seconds, small enough that the 10.2 cm blade meets two or three at a time, and
+  scale and to press by hand in seconds, small enough that the 10.2 cm blade meets two or three at a time, and
   enough of them that a lane's leftovers matter (one piece is 4.5 % of the mass).
 - **Real bodies, bonded.** Each piece is its own rigid body: a box collider with the same visible box and its real
   mass, held 0.2 mm above the plate by a breakable joint (a PhysX fixed joint from the plate to the middle of the
@@ -302,7 +302,7 @@ specifications.
   (https://www.webstaurantstore.com/12-14-x-27-x-4-addon-2-burner-griddle-top/177AOGT1227.html). It stands on the
   bench on its frame with the plate's top 5.0 cm above the bench, clamped with two C-clamps on its frame, and is never
   heated. Its grease tray (about 0.5 kg, estimated from its size in sheet steel; weighed at setup) with the debris is
-  well under the balance's 2,000 g.
+  well within the scale's 1,000 g.
 - Scraper: use a Dexter-Russell Basics P94850 4 in. griddle scraper: 4 in. stiff stainless blade, 4-1/2 in.
   polypropylene handle, 8-1/2 in. overall, 4.8 oz (136 g)
   (https://www.wasserstrom.com/restaurant-supplies-equipment/dexter-russell-p94850-basics®-4-griddle-scraper-122621).
@@ -312,11 +312,11 @@ specifications.
 - Template: Elmer's 3/16 in. white foam board, one US Letter sheet printed at 100 %, an Elmer's glue stick, and an
   X-ACTO #1 knife to cut the squares.
 - Press: a 6 in. offcut of pine 2 x 4 lumber (planed face down) and Reynolds Kitchen parchment paper.
-- Balance: use a U.S. Solid USS-DBS66-20 precision balance, a low-cost 0.01 g balance with room for the tray: 2,000 g
-  by 0.01 g (repeatability 0.02 g, linearity 0.03 g), 128 x 157 mm stainless pan, external calibration
-  (https://ussolid.com/u-s-solid-2000g-x-0-01-g-precision-balance-ac-dc-power-supply.html). It weighs the pieces, the
-  tray and the fractions, and gives the nudge check its 40 g; it is calibrated with the weight its manual names at
-  the start of each session, after a 30-minute warm-up, away from drafts.
+- Scale: use a BOMATA 0.01 g / 1 kg compact digital scale (model BS2000-001B as listed; 1,000 g by 0.01 g, stainless
+  platform, tare, USB rechargeable), a common low-cost 0.01 g scale whose capacity covers the tray with its contents.
+  It weighs the pieces, the tray and the fractions, and gives the nudge check its 40 g. At the start of each session
+  it is checked, after a 10-minute warm-up and away from drafts, against a 100 g calibration weight (100.00 g within
+  0.03 g), and recalibrated by its manual if it reads outside that.
 - Finger covers: AMMEX Gloveworks GPNB black nitrile disposable gloves, industrial grade, 5 mil palm, powder free, size
   Large (GPNB46100, 100 a box;
   https://quill.com/gloveworks-gpnb-nitrile-industrial-grade-gloves-large-black-100-box-gpnb46100/cbs/55392359.html),

@@ -322,7 +322,7 @@ def main():
     for frag in ("25 %", "60 %", "90 %", "98 %", "5 %", "70 degrees", "10 degrees", "1 cm", "1 s", "55.0 g", "22 ",
                  "2.50 g", "1.9 cm", "4.8 mm", "0.8 N", "40 g", "capped at 0.5", "caps the score at 0.25", "136 g",
                  "10.2 cm", "5.0 cm", "0.6 mm", "0.15 to 0.2", "0.4 to 0.5", "x 17.5, 21.0, 24.5 and 28.0",
-                 "-10.75 to 6.75", "-9.0 to 5.0", "Play-Doh", "177AOGT1227", "P94850", "USS-DBS66-20", "0.40 g",
+                 "-10.75 to 6.75", "-9.0 to 5.0", "Play-Doh", "177AOGT1227", "P94850", "BOMATA", "0.40 g",
                  "tray's rim", "3 minutes", "5 minutes"):
         check(frag in text or frag.replace(" %", "%") in text, f"text states {frag!r}")
     limits = dict(title=120, instruction=1000, context=1000, setup=4000, scoring=4000, fidelity=500, scores=300)
