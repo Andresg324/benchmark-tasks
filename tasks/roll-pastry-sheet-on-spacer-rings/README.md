@@ -39,9 +39,9 @@ Results on this task.py (sha256 6d12ed359a95...): the scripted demo scores **1.0
 Volume (rolling keeps it): 11.5 x 24 x 0.48 = 132.5 mL. At 3.37 mm, where the model's level rolling settles (below),
 over the same 24 cm width that is 16.4 cm long; at the on-spec band's ends, 15.8 cm at 3.5 mm and 19.0 cm at 2.9 mm.
 Centered at x 24 cm, even the 19.0 cm sheet runs x 14.5 to 33.5, on the 30 cm board (x 10 to 40) and inside the strokes'
-reach. The demo's sheet ends about 16.4 cm long (x 15.8 to 32.2). A real sheet also spreads sideways a little as it is
-rolled, which the model does not (below); the rings sit 1.75 cm outside each long side of the 24 cm piece. The score
-has no length rule.
+reach. The demo's sheet ends about 16.4 cm long (x 15.8 to 32.2). In the model the sheet's width is held at 24 cm
+and its volume is conserved by lengthening (below); the rings sit 1.75 cm outside each long side of the piece. The
+score has no length rule.
 
 ## Spec
 
@@ -67,12 +67,12 @@ never changes.
 | Press law | elastic up to a yield squeeze of 5 % of the slice's thickness (0.24 mm on the 4.8 mm sheet): the slice springs fully back. Past it, the slice thins by half the excess beyond the yield squeeze: t <- t - 0.5 (h - 0.05 t) | rigid-plastic dough with an elastic threshold (below). From 4.8 mm, level crossings give 4.12, 3.76, 3.57, 3.47 mm and settle at 3.2 / 0.95 = 3.37 mm, on spec |
 | Rolling | a slice is pressed as the barrel's face reaches its top, sqrt(2 R h - h^2) ahead of the lowest line (R = 3.05 cm), once per crossing | a round barrel meets thick dough ahead of its lowest point (10 mm ahead on the 4.8 mm sheet) |
 | Pressing in place | a slice under the barrel's face that no crossing has pressed since the barrel last came down on it is pressed by the face's depth over it (h - s^2 / 2R at a distance s from the lowest line), once until the barrel lifts off it or rolls on | a straight-down press thins dough too, most under the line |
-| Lengthening | a pressed slice grows longer; the dough beyond it, away from the piece's middle, moves out | the middle is held by its own weight on the board; the sheet grows at both ends. Sideways spread is not modeled |
+| Lengthening | a pressed slice grows longer; the dough beyond it, away from the piece's middle, moves out | the middle is held by its own weight on the board; the sheet grows at both ends; its width is held at 24 cm, so the volume goes into length |
 | Rolled past an end | the end slice is pressed like any other the barrel crosses | the rings hold the barrel 3.2 mm up there too, so nothing goes thinner than the gap, and the model does not tear the sheet there |
 | Resistance | for each 2 cm strip in contact (h the largest squeeze there, t that slice's thickness): up, p x 2 cm x sqrt(2 R h - h^2) with p = 13 kPa x min(1, h / 0.05 t); back against the motion, 13 kPa x 2 cm x (h - 0.05 t) when positive; applied to the pin as a force and torque at the contact before every physics step | the dough's push on the barrel: elastic below its yield, its flow stress above; the back force is the plastic work per meter rolled. 13 kPa is set from a hand check on this dough (below) |
 | Put away | the pin set down (axis level within 3 degrees, lying on its rings on the board or on the table, their bottoms within 5 mm of it), its barrel's lowest line at least 1 cm clear of the rolled sheet's outline along its whole length, and let go | resting, not held, not left lying on the dough, not propped on something |
 | Let go | no part of either arm, from the upper arm (link3) to the fingertips, touching the pin: their real collision meshes (yam_links.npz, surface points every 1.5 mm, posed each control step from the simulator's link poses) overlap none of the pin's colliders (a gap of 0 or less) | contact, not nearness: a finger 0.3 mm off the pin has let go. guardkit's box model of the gripper is off by several mm against the real meshes, so it is used only in the offline tests (also as overlap) |
-| Board friction | wood on wood, 0.25 static, 0.20 dynamic (ring on the board) | Serway and Jewett, Physics for Scientists and Engineers, Table 5.1 (wood on wood: 0.25 to 0.5 static, 0.2 kinetic), the low static end for a floured board. The sim's gripped pin cannot turn and slides on its rings, where the named pin's barrel turns on nylon bushings and rolls |
+| Board friction | wood on wood, 0.25 static, 0.20 dynamic (ring on the board) | Serway and Jewett, Physics for Scientists and Engineers, Table 5.1 (wood on wood: 0.25 to 0.5 static, 0.2 kinetic), the low static end for a floured board. In the sim the gripped pin rides on its rings along the board and the barrel's contact with the dough sets the load; the named pin's barrel turns on nylon bushings |
 
 **How the load governs thinning.** The dough is modeled as rigid-plastic with an elastic threshold. Below a squeeze of
 5 % of its thickness it is elastic: the contact pressure rises from 0 to the flow stress (13 kPa) and the slice springs
@@ -84,8 +84,9 @@ the simulator the barrel's height is where the pin settles under the arms' push,
 board and this push back, so the thinning per pass is set by the load the hands put through the pin: a pin that is not
 pushed down rides up on the dough and presses less. The pin's own weight (7.2 N) stays under the yield load across the
 sheet at every thickness from the start to the rings' gap, so a pin resting on the dough, or rolled without a push,
-does not thin it. A light pass that skims the sheet (0.1 or 0.2 mm into it) stays elastic and thins nothing in any
-number of passes. One hand or two may roll: what counts is the load the pin carries, not which hands carry it. Level
+does not thin it. The dough yields above a squeeze of 5 % of its thickness; lighter presses spring back, so a pass
+that skims the sheet (0.1 or 0.2 mm into it) thins nothing in any number of passes, while passes that reach the yield
+thin it a little each time, as real dough does. One hand or two may roll: what counts is the load the pin carries, not which hands carry it. Level
 rolling with both rings on the board settles at 3.2 / 0.95 = 3.37 mm, inside the 2.9 to 3.5 mm band. The 5 % yield
 squeeze is an estimate; with it, the rolled sheet stays within 0.17 mm of the rings' gap, which matches the hand check
 below, where the dough rolled flat at a working push stayed flat.
@@ -203,9 +204,8 @@ located along each band with a steel tape (row points from the board's front edg
 rolled edge), and each is read with the depth rod of a Neiko 01407A digital caliper: the rod pushed through the dough to
 the board, the beam's end face lowered until it just touches the dough's top. A point under 2.9 mm, or a spot where
 dough stuck to the pin and pulled away, counts as off spec (a ringed pin stops at 3.2 mm, so anything thinner is
-damage). A hole or tear seen on the after photo, taken before the rod goes in, caps the score at 0.5. These arise only
-in a real trial; the sim's sheet stays whole and its pin slides on its rings, so it cannot represent dough sticking to
-a sliding pin. The pin's level, rest and clearance from the dough are read with a phone level app and a steel tape, and
+damage). A hole or tear seen on the after photo, taken before the rod goes in, caps the score at 0.5. These are read
+on the real sheet; the sim's sheet is whole by construction. The pin's level, rest and clearance from the dough are read with a phone level app and a steel tape, and
 the last second of the video shows whether a finger still touches it. The full procedure is in "Real-world evaluation"
 below.
 
