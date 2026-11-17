@@ -78,7 +78,7 @@ never changes.
 | Contact | a slice is pressed as the barrel's face reaches its top, sqrt(2 R h - h^2) ahead of the lowest line (h = t - gap, R = 3.05 cm) | a round barrel meets thick pastry ahead of its lowest point (10 mm ahead on the 4.8 mm sheet) |
 | Lengthening | a pressed slice grows longer; the pastry beyond it, away from the piece's middle, moves out | the middle is held by its own weight on the board; the sheet grows at both ends. Sideways spread is not modeled |
 | Rolled past an end | the end slice is pressed like any other the barrel crosses | the rings hold the barrel 3.2 mm up there too, so nothing goes thinner than the gap; no damage is assumed |
-| Resistance | the pastry pushes the pin up by STRESS x 2 cm x sqrt(2 R h) and back against its motion by STRESS x 2 cm x h for each 2 cm strip in contact (h the largest excess there), STRESS 15 kPa; applied to the pin as a force and torque at the contact before every physics step | cold pastry resists the barrel; the force is an estimate (above), inside the arms' ratings |
+| Resistance | the pastry pushes the pin up by STRESS x 2 cm x sqrt(2 R h) and back against its motion by STRESS x 2 cm x h for each 2 cm strip in contact (h the largest excess there), STRESS 15 kPa; applied to the pin as a force and torque at the contact before every physics step | cold pastry resists the barrel; STRESS is set from the first pass's force and checked on the rig with a kitchen scale (below), inside the arms' ratings |
 | Pin set down | axis level within 3 degrees, lying on its rings on the board or on the table (their bottoms within 5 mm of it) | resting, not held in the air or propped on something |
 | Both hands on the pin (sim only, a stand-in) | presses count only while both grippers touch the pin: each gripper's own shape (palm and fingers, boxes fitted to the YAM's collision meshes, at their present opening) within 2 mm of a handle, the barrel or a ring (flat-ended cylinders as the colliders), whether it grips a handle or presses on the barrel with a closed hand | the sim's pin slides on its rings instead of turning, so the model cannot tell rolling from pushing the pin along; two hands on the pin can hold both ends down, so both rings can stay on the board. The instruction names no grip, so handles and palms on the barrel both count. A hand hovering over the pin does not count. A stroke with one hand or none on the pin is not penalized, and nothing is assumed torn: that stroke just does not count. A real trial has no hand rule: it scores the measured sheet and the final pin state |
 | Let go | no gripper touching the pin's barrel, rings or handles (its own shape more than 2 mm away) | a hand still on the pin has not set it down; an open hand near the pin but not touching it has |
@@ -96,12 +96,21 @@ the contact's footprint (STRESS x 2 cm x a), and, while the barrel moves, agains
 off a 2 cm strip per meter rolled (STRESS x 2 cm x h). They are worked out from the pin's pose and applied to the pin
 body as an external force and torque before every physics step (240 a second), so the arms have to hold the pin down and
 drive it through the pastry, and a pin pressed harder at one end feels the thicker side push back harder. STRESS is 15
-kPa, an estimate: no published compression or sheeting force for chilled store-bought puff pastry was found (sheeting
-studies report bread dough), so it is set so that the first pass over the 4.8 mm sheet takes about 35 N of pressing down
-(about 3.6 kg on the pin, a firm push by a person rolling cold pastry) and about 6 N of pushing along, falling as the
-sheet thins (offline, for the demo's strokes). Both are inside the YAM's continuous ratings: per arm about 18 N of the
-52 N down and 3 N of the 11 N along the board. The real trial measures the outcome, the sheet, so the estimate affects
-only how hard the sim's arms work. The demo's hands are commanded 1 cm below the pin's axis while rolling, so the arms
+kPa, set from the first pass's force and anchored on the rig by a kitchen-scale check (below). It is of the same order
+as the 4 to 5 kPa yield stress measured for roll-in fats, the fat layers of laminated pastry (Macias-Rodriguez and
+Marangoni, Physics Today 71(1), 2018). On the first pass over the 4.8 mm sheet, with all twelve 2 cm strips under the
+barrel (h = 1.6 mm, a = sqrt(2 x 30.5 x 1.6) = 9.9 mm), it gives 15 kPa x 24 cm x 9.9 mm = 35.6 N up (3.6 kg) and 15 kPa x
+24 cm x 1.6 mm = 5.8 N back, falling as the sheet thins (offline, for the demo's strokes). Both are inside the YAM's
+continuous ratings: per arm about 18 N of the 52 N down and 3 N of the 11 N along the board. The real trial scores the
+outcome, the sheet, so this force sets how hard the sim's arms work.
+
+**Scale check of the first pass (once per rig).** An Escali Arti XL 2210IB glass kitchen scale (10 kg x 1 g, about
+$30) is set on the table and the bare board centered on it (before the board is taped into its marks), a sheet prepared as for a trial (thaw, flour, cut) laid on
+the board, and the scale tared with the pin lifted off. The pin is set on its rings behind the sheet and rolled once
+across it by hand at the demo's pace (4 cm/s, about 3 s across the 11.5 cm piece), pressed just enough to keep both rings
+on the board, while a phone films the display. The peak reading added over the tare is the first pass's downward
+force, pin weight included: the force the pastry pushes back with. It is recorded in the rig's log beside the sim's
+3.6 kg (35.6 N, from task.py's 15 kPa above), with the lot code and room temperature. The demo's hands are commanded 1 cm below the pin's axis while rolling, so the arms
 hold the rings down on the board against the push instead of letting the pin ride up on the pastry.
 
 Visuals (markers, no physics, never scored): the pastry is drawn as one golden sheet, built from abutting slabs, one
@@ -234,21 +243,22 @@ and gauge are used for every trial.
   and that value recorded as its reference.
 - Gripper pad covers: Glad Press'n Seal food wrap, a food-safe wrap that seals to itself under finger pressure.
 - Scale: American Weigh Scales Fast Weigh MS-500-BLK pocket scale (500 g x 0.1 g), for the flour.
+- Kitchen scale for the force check (once per rig): Escali Arti XL 2210IB glass kitchen scale (10 kg x 1 g).
 - Thermometers: a ThermoPro TP50 digital room thermometer (+-0.5 degrees C) at the bench; a Taylor 5924 dial
   refrigerator/freezer thermometer (-29 to 27 degrees C, -20 to 80 degrees F) in the freezer.
 - Also: a steel tape; masking tape; double-sided carpet tape; a timer; a phone with a level app and a camera on an
   overhead phone stand.
 
 Rough cost of the rig, at common US retail prices: board about $45, pin about $40, rings about $12, caliper about
-$25, feeler set about $10, scale about $20, the two thermometers about $20, ruler about $40, sieve, pizza wheel, tapes,
-wrap and phone stand about $40: about $250 in all, plus about $7 of pastry a box (two trials).
+$25, feeler set about $10, scale about $20, kitchen scale about $30, the two thermometers about $20, ruler about $40, sieve, pizza wheel, tapes,
+wrap and phone stand about $40: about $280 in all, plus about $7 of pastry a box (two trials).
 
 **Budget build.** Two items have cheaper equivalents that still meet the protocol's tolerances. The cut only needs a
 straight edge with 2 mm marks for its 3 mm tolerance, so a Johnson 40-0564 24 inch aluminum inch/metric straightedge
 (about $14) can replace the Omnigrid ruler. The flour is weighed to 5.0 +- 0.5 g, so any 500 g x 0.1 g pocket scale
 (about $10 to $12, an estimate) can replace the AWS scale. The thickness tools are already budget items (the Neiko
 caliper, +-0.02 mm, checked on a feeler stack within 0.03 mm, for a 0.3 mm band). The board and pin stay as named,
-because the sim models their sizes. Totals: primary about $250, budget about $215.
+because the sim models their sizes. Totals: primary about $280, budget about $245.
 
 ## Real-world evaluation (reproducible protocol)
 
@@ -256,7 +266,7 @@ Every real trial starts from the same measured state and is scored on the same p
 sheet), read with a caliper's depth rod. The protocol fixes the pastry (one product, one lot, the box's thaw, a measured
 cut), the room (20 to 24 degrees C), the positions (tape marks on the table and board), the flour (weighed), the
 measurement (the points located with a steel tape, a checked caliper, all points read within 5 minutes, plus the pin
-check and photos), the gripper pads' covers and the reset. Where a step comes from the maker's directions it is quoted;
+check and photos), the grippers' covers and cleanup, and the reset. Where a step comes from the maker's directions it is quoted;
 every other tolerance is the protocol's own setting, chosen to be well inside the scoring bands. They are collected in
 the table at the end. Positions are in cm from the midpoint between the arm bases (x forward, y to the robot's left),
 measured with the steel tape.
@@ -265,6 +275,8 @@ measured with the steel tape.
 the room thermometer at the bench at the start of each trial and recorded. Trials run only within that range.
 
 **Marks (once).**
+- Force check: before the board is taped down, the first pass is rolled with the board on a kitchen scale and
+  its peak recorded beside the sim's 3.6 kg ("Scale check of the first pass", above).
 - Board: masking-tape L marks on the table at the board's four corners put its front edge at x 10.0 and its center
   line at y 0 within 2 mm, square to the robot within 0.5 degree. The board is taped down inside them with
   double-sided carpet tape. The table and board are level within 0.5 degree (the phone's level app on the bare board,
@@ -323,12 +335,13 @@ and the maker's recipes at pepperidgefarm.com, e.g. Neapolitan Napoleons).
    down to the board: 0.00. Then stand the beam's end on the leaf stack laid on the board, the rod
    beside the stack, down on the board: it reads the stack's recorded value within 0.03 mm (about the caliper's
    accuracy), five times; otherwise it is cleaned, zeroed and checked again.
-7. Cover the gripper pads: tear a 10 x 10 cm piece of Glad Press'n Seal for each of the four fingers, lay it over the
+7. Cover the grippers: tear a 10 x 10 cm piece of Glad Press'n Seal for each of the four fingers, lay it over the
    finger's pad and tip, sticky side in, and press it to seal around the finger's back, smoothing it flat over the pad's
-   face (one layer there, no folds). The covers keep flour and pastry off the shared pads; the grippers hold the pin
-   only by its handles, which stay off the board. Wrap on the lacquered handles grips less than bare pads (the sim keeps
-   the pads' friction, an approximation); the grip's 50 N leaves a wide margin over the 0.73 kg pin and the pastry's few
-   newtons along the board.
+   face (one layer there, no folds). Cover each gripper's palm face between the fingers the same way with one more
+   piece. The demo holds the pin by its handles; a hand pressing on the barrel touches the pin and pastry only with its
+   covers, so flour and pastry stay off the shared grippers. The sim keeps the bare pads' friction (an approximation);
+   the grip through the wrap is checked once per series: close both covered grippers on the handles, lift the pin 10 cm
+   off the board and shake it gently side to side for 5 s. It stays in the grip without slipping.
 8. Take the before photo (a card in frame with the trial number, lot code, thaw time, average thickness and room
    temperature) and start the trial within 5 minutes of the end of the thaw. The run itself is limited to 2,400 steps
    (2 minutes).
@@ -357,7 +370,9 @@ rest.
 4. Repeatability (a check after the scored readings): re-read three points (the middle two of the middle row and
    one end point) in their first holes. Each repeat is within 0.05 mm of its first reading; otherwise the caliper is
    checked on the leaves again and the trial is flagged.
-5. Photo the sheet (the record of the sheet that was read). Unwrap the gripper pads' covers and throw them away.
+5. Photo the sheet (the record of the sheet that was read). Unwrap the grippers' covers and throw them away. Wipe each
+   finger's pad and tip and each palm face with a dry cloth, then look over every pad and palm by eye: clean and dry,
+   with no flour or pastry left, before the next trial's covers go on.
 6. Score with the simulator's rules: at least 90 % of the read points at 2.9 to 3.5 mm, each band's points averaged
    within 0.3 mm of every other band's average, all pastry on the board, and the pin down and let go for 1.0; the 0.5
    and 0.25 tiers as above; a hole or tear on the after photo caps the score at 0.5. The score uses the sheet and the
@@ -391,8 +406,10 @@ the board is still inside its marks and the camera stand unmoved.
 | Ring height | 3.2 mm (1/8 inch = 3.18 mm) | 0.1 mm | calipers, 3 places per ring, every trial | protocol |
 | Caliper zero | 0.00 with the beam's end and rod on the bare board | 0.00 | board margin | protocol |
 | Caliper check | about 3.00 mm stack of feeler leaves | its recorded value within 0.03 mm, five times | feeler gauge set | caliper's stated accuracy; tolerance protocol |
-| Pad covers | one layer of Glad Press'n Seal over each finger's pad and tip | fresh every trial, no folds on the pad face | by eye | protocol |
-| Reading window | all points, about 8 s each (30 on the demo's sheet) | within 5 min of the pin's set-down | timer | protocol setting |
+| Gripper covers | one layer of Glad Press'n Seal over each finger's pad and tip and each palm face | fresh every trial, no folds on the pad face; pads and palms wiped and inspected after every trial | by eye | protocol |
+| Grip through the wrap | pin held by its handles, lifted 10 cm and shaken 5 s | no slip | by eye, once per series | protocol |
+| First-pass force | the sim's 3.6 kg (35.6 N, 15 kPa) | peak recorded beside it | kitchen scale under the board, once per rig | protocol |
+| Reading window | all points, about 6 s each plus 10 s a band (30 on the demo's sheet) | within 5 min of the pin's set-down | timer | protocol setting |
 | Repeat readings | three points re-read in their holes | within 0.05 mm | caliper | protocol |
 | Pin down (scored) | level, on its rings | within 3 degrees; rings within 5 mm of the surface | level app, steel tape | scoring |
 | Let go (scored) | no finger on the pin | last 1 s of the video | video | scoring |
@@ -434,6 +451,9 @@ grows.
 - Check leaves: Draper 51701 20-blade metric feeler gauge set, 0.05 to 1.0 mm
   (drapertools.com/product/51701/20-blade-metric-feeler-gauge-set).
 - Scale: American Weigh Scales Fast Weigh MS-500-BLK, 500 g x 0.1 g (homebrewfinds.com review listing).
+- Kitchen scale: Escali Arti XL 2210IB glass digital kitchen scale, 22 lb (10 kg) x 1 g (walmart.com/ip/322204062).
+- Roll-in fat yield stress, 4000 to 5000 Pa (LAOS): B. Macias-Rodriguez and A. G. Marangoni, "The fat in a perfect
+  croissant", Physics Today 71(1), 2018 (physicstoday.aip.org/quick-study/the-fat-in-a-perfect-croissant).
 - Room thermometer: ThermoPro (TempPro) TP50, -50 to 70 degrees C, +-0.5 degrees C (temppro.com, TP50).
 - Freezer thermometer: Taylor 5924 refrigerator/freezer dial thermometer, -20 to 80 degrees F (katom.com, 383-5924).
 
