@@ -842,7 +842,7 @@ FEED_PADS = (  # (from phi, to phi, left pads, right pads, right hand's yaw, squ
 # second stretch, against the cord's pull at the trailing end, with equal shares (up to 5.0 N each) and the leading
 # pads 2.5 cm in from the leading end, those pads crept on along the board and off its end; with 1 N leaned onto the
 # trailing hand the curve came off the bearing. The plan there leans 0.5 N onto the trailing hand, and the leading pads
-# press 4 cm in from the end (13 cm or more from the bit's axis) with 12 N (PRESS_L2); the pair pushes 2 N onto the
+# press 4 cm in from the end (13 cm or more from the bit's axis) and both hands press 12 N (PRESS_2); the pair pushes 2 N onto the
 # bearing (at 1 N the curve drifted 1-2 mm off it).
 PAD_L, PAD_R = FEED_PADS[0][2], FEED_PADS[0][3]  # at the feed's start
 # Each hand is turned about the vertical so its fingers close roughly toward the bit: the closed fingers then reach
@@ -858,8 +858,10 @@ FEED_ON = 1.0  # N: the hands' push onto the bearing (the cord's line passes up 
 #               2 N in the feed's second stretch (FEED_PADS)
 PRESS_N = 8.0  # N: each hand's press down on the board in the feed, so its pads' grip carries its share of the push
 #                (each newton of press adds 0.25 N of table friction, so pressing harder also costs push)
-PRESS_L2 = 12.0  # N: the leading hand's press after the first stretch: at 8 N its pads slid 2-3 cm along the board
-#                  as they took up their push, and crept off its leading end
+PRESS_2 = 12.0  # N: both hands' press in the second stretch: at 8 N the leading pads slid 2-3 cm along the board
+#                 as they took up their push and crept off its leading end, and the trailing pads slid 5 mm, which
+#                 rolled the board 2.6 deg round the bearing and, turned about where its curve's center had been,
+#                 drew the curve off the bearing
 # Where the board stops for the hands to change places, in the sim: turned 12.9 deg, slid 9.25 cm along the pin's line
 # (it lags the hands' plan by 2.1 cm of curve over the first stretch, its leading pads slipping 1-2 cm). The second
 # stretch is planned from there: the hands' new places are set on the board where it is, and the feed goes on round
@@ -884,7 +886,7 @@ def _feed_pose(phi, beta=None):
     return th, _rot(-th) @ (c - PIN) - C_L, beta
 
 
-def _hand_forces(phi, pad_l=None, pad_r=None, squeeze=0.0, on=FEED_ON, press_l=PRESS_N, beta=None):
+def _hand_forces(phi, pad_l=None, pad_r=None, squeeze=0.0, on=FEED_ON, press=PRESS_N, beta=None):
     """The two hands' pushes (world, N) at the feed pose for phi: together they balance the cord's pull at the eye and
     the table's friction and press the curve onto the bearing, with no turn about the contact; of all such pairs, the
     one whose larger push is smallest, then `squeeze` N more toward each other along the line between the pads (the
@@ -902,7 +904,7 @@ def _hand_forces(phi, pad_l=None, pad_r=None, squeeze=0.0, on=FEED_ON, press_l=P
     mom = -float((eye - k)[0] * cord[1] - (eye - k)[1] * cord[0])
     # the table's friction against the board's motion: under each hand (its press) and under the middle (the weight)
     th2, s2, _ = _feed_pose(phi - 1e-4, beta)
-    for p, n in ((pad_l, press_l), (pad_r, PRESS_N), (np.array(CENTRE), BOARD_MASS * G)):
+    for p, n in ((pad_l, press), (pad_r, press), (np.array(CENTRE), BOARD_MASS * G)):
         v = _board_world(th2, s2, p) - _board_world(th, s, p)
         f_fr = MU_TABLE * n * v / max(float(np.linalg.norm(v)), 1e-12)  # what the hands must add there
         r = _board_world(th, s, p) - k
@@ -1113,7 +1115,7 @@ def demo():
     phi_at = PHI_START  # where the feed has got to
     bf = None  # the curve's center's bearing from the bit's axis, once the feed is planned from the board's stop
     for n_ph, (a_ph, b_ph, pl, pr, yr, sq, on) in enumerate(FEED_PADS):
-        pz = PRESS_L2 if n_ph else PRESS_N  # the leading hand's press
+        pz = PRESS_2 if n_ph else PRESS_N  # the hands' press
         if n_ph:
             th, s, _ = _feed_pose(phi_at)
             ol, orr = _board_world(th, s, FEED_PADS[n_ph - 1][2]), _board_world(th, s, FEED_PADS[n_ph - 1][3])
@@ -1132,15 +1134,15 @@ def demo():
                      Waypoint(0.4, (nl[0], nl[1], low), C, "pads on the board"),
                      Waypoint(0.5, _aim("left", nl, press=pz), C, "press")]
             right += [wy(Waypoint(0.6, _aim("right", orr, yaw=yr0), C, "stop: ease the push"), yr0),
-                      wy(Waypoint(1.9, _aim("right", orr, yaw=yr0), C, "hold the board"), yr0),
+                      wy(Waypoint(1.9, _aim("right", orr, press=pz, yaw=yr0), C, "hold the board"), yr0),
                       wy(Waypoint(0.4, (orr[0], orr[1], above), C, "lift the pads"), yr0),
                       wy(Waypoint(0.6, (nr[0], nr[1], above), C, "to its next place"), yr),
                       wy(Waypoint(0.4, (nr[0], nr[1], low), C, "pads on the board"), yr),
-                      wy(Waypoint(0.5, _aim("right", nr, yaw=yr), C, "press"), yr)]
+                      wy(Waypoint(0.5, _aim("right", nr, press=pz, yaw=yr), C, "press"), yr)]
             left.append(Waypoint(1.9, _aim("left", nl, press=pz), C, "hold the board"))
             fl, fr = _hand_forces(phi_at, pl, pr, sq, on, pz, bf)
             left.append(Waypoint(0.6, _aim("left", nl, fl, pz), C, "push again"))
-            right.append(wy(Waypoint(0.6, _aim("right", nr, fr, yaw=yr), C, "push again"), yr))
+            right.append(wy(Waypoint(0.6, _aim("right", nr, fr, pz, yaw=yr), C, "push again"), yr))
         for phi in phis[1:]:
             if bf is None and ((a_ph is not None and phi > a_ph) or (b_ph is not None and phi < b_ph)):
                 continue
@@ -1148,7 +1150,7 @@ def demo():
             fl, fr = _hand_forces(phi, pl, pr, sq, on, pz, bf)
             phi_at = float(phi)
             left.append(Waypoint(0.1, _aim("left", _board_world(th, s, pl), fl, pz), C, "feed round the bearing"))
-            right.append(wy(Waypoint(0.1, _aim("right", _board_world(th, s, pr), fr, yaw=yr), C,
+            right.append(wy(Waypoint(0.1, _aim("right", _board_world(th, s, pr), fr, pz, yaw=yr), C,
                                      "feed round the bearing"), yr))
     # On past the bit, the hands only carrying the board, then the press eased off and both hands lifted straight up.
     th_e, s_e, _ = _feed_pose(PHI_END, bf)
