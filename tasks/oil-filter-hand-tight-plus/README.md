@@ -137,7 +137,7 @@ and turn it clockwise: it must click before the can moves; if the can moves firs
 
 - Demo: 1.0 in 2,428 steps (121 s; the run ends 1 s after full credit is held).
 - Model run limit: 3,000 steps (2.5 minutes at 20 Hz; it was 2,400 before the trial included threading the filter on).
-- Dream-1: not yet run on this version (pending).
+- Dream-1: 0 in 3,000 steps on this task.py.
 - Seed 0, one fixed layout (`object_jitter=0`).
 
 ## Fidelity
