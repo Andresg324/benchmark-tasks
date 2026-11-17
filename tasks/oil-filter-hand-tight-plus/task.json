@@ -20,6 +20,6 @@
   "run_limit": "3,000 steps (2.5 minutes at 20 Hz)",
   "reset_notes": "Unscrew the filter, wipe the nipple and the boss, wipe and re-oil the gasket, and stand the filter on its gasket at its mark on the bench. Replace the filter if it was tightened past a full turn or cross-threaded, and chase the nipple's thread with an M20 x 1.5 die if it was cross-threaded. Lay the wrench back flat on its tape outline, cup down. Fit fresh glove covers on the gripper fingers; the used ones and the towel go in the oily-waste bag.",
   "fidelity": "The filter is a free part on six undriven joints; the thread takes it only pressed on within 4 degrees of the nipple's axis (more cross-threads). Past contact the gasket's torque rises linearly to 18 N·m at 0.75 turn (Kawasaki's figure). The wrench is a free body whose cup flutes drive the filter's flutes by contact; a pawl stop is its ratchet. The last strokes need the arms above rated torque, within peak. No oil or gasket deformation is simulated.",
-  "scores": "Dream-1 run: pending; demo: 1.0 (2,428 steps)",
+  "scores": "Dream-1 run: PENDING; demo: 1.0 (2,428 steps)",
   "media": "PENDING"
 }

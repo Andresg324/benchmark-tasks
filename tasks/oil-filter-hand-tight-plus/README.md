@@ -216,45 +216,79 @@ the witness line, then checks the torque directly.
 
 ## Real-world build
 
-A whole engine is not needed: the rig reproduces the installed location with a remote filter mount.
+The rig is a modeled engine front, not an engine. It reproduces the filter's installed position on the Teryx4 750 (on
+the crankcase's front face, its axis along the vehicle's FRONT arrow, low down, per Kawasaki's parts diagram E1710)
+and the access constraints round it, at the sim's dimensions. Positions are in cm from the midpoint between the arm
+bases (x forward, y to the robot's left, bench top at z 0), as in the sim.
 
-- Mount: a universal remote oil filter mount with an M20 x 1.5 nipple (Mishimoto MMOC-RFH-M20BK, M20 x 1.5, billet aluminum, $139.95 at onefastshop.com; only the head is used, not Mishimoto's engine take-off plate), bolted to a steel plate standing
-  upright on the bench (an angle bracket and two clamps), so the filter's axis is level, pointing at the robot, 13 cm
-  above the bench. A 32 mm steel tube clamped across under it (45 mm under the can) stands in for the frame's cross
-  tube, and a 60 mm length of flexible duct stood 30 mm to the filter's right for the CVT intake (the clearance table
-  above gives the tolerances). Its two hose ports are closed with their plugs.
-- Filter: Kawasaki 16097-0007 (MSRP $15.86 at kawasaki.com, which sells it in tens; listed for the 2012-2013 Teryx4 750 4x4, EPS and EPS LE), its gasket lightly oiled, a paint-pen witness line, three black
-  quarter-turn ticks. It stands on its gasket on the bench at the start, at its tape mark.
-- Wrench: a 65 mm, 14-flute cap-type filter wrench (Parts Unlimited 3801-0295, 65 mm, 14 flutes, 3/8-inch drive;
-  65 mm / 14 flutes is the size listed for the Hiflo HF204 / K&N KN-204 class; check its fit on the filter's flutes
-  when the rig is built) on a GearWrench 81364XP ratchet (1/2-inch drive, 24.04 in) through a GearWrench 81354
-  adapter (1/2-inch female to 3/8-inch male). It lies flat on the bench, cup down, on its tape outline.
-- Torque check after each trial: a low-range 3/8-inch-drive click torque wrench, 40-250 in·lb (Neiko NEI03708B, $69.90 at arizonatools.com; 156 in·lb is in the middle of its range), set to 18 N·m (13 ft·lb), in the cap's square drive.
+- Engine face: an upright 18 mm plywood panel, 34 cm wide and 24 cm tall, its front face at x 46.3, centered on y 5,
+  screwed to a plywood base board that is clamped to the bench with two C-clamps. A 6 mm steel plate, about 10 x
+  10 cm, is through-bolted to the panel's front with four M8 bolts, washers and nuts, its center at y 5, z 13.
+- Nipple: a Mishimoto MMSPA-M20 stainless steel adapter stud (sold to pass through an oil-filter sandwich
+  plate; M20 x 1.5 thread on both ends, the filter's thread: the K&N KN-204 listing gives M20 x 1.5 and K&N
+  cross-references it to Kawasaki 16097-0007). Before building, confirm it is hollow (or drill it) and measure its
+  length. It passes through a 20-21 mm hole in the plate and the panel, level and square to the plate,
+  pointing at the robot (x toward the arms), its axis at y 5, z 13, and is held by a nut on each side with
+  thread-locking compound. A 76 mm steel washer stack, 8 mm thick, under the front nut is the gasket land (the
+  sim's boss), so the filter's gasket seats 0.8 cm in front of the panel. The stud sticks out 7.5 mm past the land;
+  set it to that with the rear nut (or washers behind the plate). Through-bolted plate, two nuts and the clamped base take the 18 N·m (and the 29 N·m of an
+  over-tightened filter) without turning; check it once with the torque wrench at 30 N·m before the first trial.
+- Frame cross tube: a length of 1-inch Schedule 40 steel pipe (33.4 mm across, the sim's 32 mm within 2 mm) running
+  across under the filter at x 41.8 from y -12 to 20, its top 4.5 cm under the filter's can (z 5.2), held at both
+  ends on wooden blocks with pipe straps.
+- Intake duct: a 26 cm length of 2-inch Schedule 40 PVC pipe (60.3 mm across, the sim's 60 mm), painted black,
+  standing on the cross tube's level at x 42.8, y -4.3: 3 cm of air between it and the filter's can on its right. A
+  pipe strap to the panel holds it upright.
+- Drip tray: a plain black plastic oil drip tray about 61 x 91 cm and 3.8 cm deep (for example a Lisle 19722), from
+  x 40 to 101 under the panel, as in the sim.
+- Filter: a genuine Kawasaki 16097-0007 (kawasaki.com lists it for the 2012-2013 Teryx4 750 4x4, EPS and EPS LE),
+  its gasket lightly oiled, a paint-pen index stripe and three black quarter-turn ticks. It stands on its gasket on
+  the bench at x 30, y 30, on a tape mark.
+- Wrench, as modeled: a 65 mm, 14-flute, 3/8-inch-drive cap-type filter wrench (Parts Unlimited 3801-0295; 65 mm /
+  14 flutes is the size listed for the Hiflo HF204 / K&N KN-204 class, the cross-reference of this filter) on a
+  GearWrench 81364XP 24-inch, 1/2-inch-drive ratchet through a GearWrench 81354 adapter (1/2-inch female to 3/8-inch
+  male). The sim models these parts' published sizes and mass, and the 24-inch handle is what lets one arm reach
+  18 N·m, so a shorter ratchet would be a different task. It lies flat on the bench, cup down, its cup centered at x
+  30, y 14, the handle toward the robot's right, on a tape outline.
+- Torque check after each trial: a low-range 3/8-inch-drive click torque wrench such as a Neiko NEI03708B
+  (40-250 in·lb), set to 18 N·m (13 ft·lb, 156 in·lb, mid-range), in the cap's square drive.
 - Protecting the shared grippers from gasket oil: each gripper finger wears a disposable nitrile glove as a cover
-  (GloveWorks HD GWON48100, Ammex, 8 mil, diamond-textured, size XL; $28.53 a box of 100 at Fisheries Supply): the finger goes into the glove's
-  palm, the glove's fingers folded back along the outside of the robot's finger, the cuff taped above the pad. Fresh
-  covers each trial; used ones and the towel go in an oily-waste bag. The textured cover keeps a rubber-like face on
-  the grip, as the sim's contact (static friction 1.2 on objects, 1.0 on the pads). Before each session the covered
-  gripper lifts the filter and spins it a quarter turn on the nipple without a slip. The mount stands in a Lisle 19722
-  drip pan (24 x 36 x 1.5 in; about $34 at Speedway), as in the sim, which catches the drop of oil from the gasket and the
-  nipple.
+  (GloveWorks HD GWON48100, Ammex, 8 mil, diamond-textured, size XL): the finger goes into the glove's palm, the
+  glove's fingers folded back along the outside of the robot's finger, the cuff taped above the pad. Fresh covers
+  each trial; used ones and the wiping towel go in an oily-waste bag. The textured cover keeps a rubber-like face
+  on the grip, as the sim's contact. Before each session the covered gripper lifts the filter and spins it a quarter
+  turn on the nipple without a slip.
 - Room 20-24 degrees C.
 - Torque spec source: Kawasaki Teryx4 750 owner's manual, torque table (p. 101): "Oil Filter 18 N·m (1.8 kgf·m,
   13 ft·lb)", the gasket lightly oiled.
+- Small items: plywood, wood screws, M8 bolts, nuts and washers, thread-locking compound, pipe straps, wooden blocks,
+  C-clamps, black spray paint, paint pen, tape, shop towels, oily-waste bag.
 
-### Budget build
+The robot meets the same clearances in the rig as in the sim, each within the tolerance below (measured with a steel
+rule and a level when the rig is built, and checked before each session):
 
-| Item | Budget choice | Price | Why it still works |
-|---|---|---|---|
-| Filter | Kawasaki 16097-0007 at street price, or a single aftermarket 16097-0007 | about $13-17 (Walmart and FridayParts listings) | The same part number and size; the kawasaki.com MSRP ($15.86) comes in tens |
-| Mount | Mishimoto MMOC-RFH-M20BK head alone, no take-off plate or hoses | $139.95 | The only remote head we could verify with an M20 x 1.5 filter thread; cheap relocation kits we found take a 3/4-16 filter (Derale 15718, $81.54) or are sandwich plates, which do not fit this filter |
-| Ratchet | Keep the GearWrench 81364XP | about $110-125 | The sim models its published length, head and mass; a cheaper 24-inch ratchet would need the sim re-set and the demo re-run |
-| Cap wrench, adapter | Parts Unlimited 3801-0295, GearWrench 81354 | about $12, $8 | As named |
-| Torque check | Neiko NEI03708B, 40-250 in·lb | $69.90 | 13 ft·lb (156 in·lb) sits mid-range, where a click wrench is most accurate; a 10-80 ft·lb wrench would be near the bottom of its range |
-| Gloves, pan | GloveWorks HD GWON48100; Lisle 19722 | about $19-29 a box; about $31-41 | Shared across tasks; any 8 mil textured nitrile glove in XL serves |
-| Stand-ins | 32 mm steel tube, 60 mm flexible duct, steel plate and angle bracket, two clamps, paint pen | about $40 | Only their positions matter (the clearance table) |
+| What the robot meets | Sim | Rig | Tolerance | Source |
+|---|---|---|---|---|
+| Nipple's axis | level, at x 45.5 (land), y 5, z 13, pointing at the robot | nipple through the plate, set with a level | ±5 mm, ±2 degrees | parts diagram E1710 (direction); position set for the robot |
+| Engine face behind the land | 8 mm | washer stack | ±1 mm | estimated |
+| Gasket land | 76 mm across | 76 mm washer stack | ±2 mm | estimated |
+| Nipple past the land | 7.5 mm, M20 x 1.5 | MMSPA-M20 stud, set with washers or the nut | ±1 mm | thread: K&N KN-204 listing (M20 x 1.5) |
+| Engine face | 34 x 24 cm | plywood panel | ±1 cm | estimated |
+| Frame cross tube | 32 mm, top 45 mm under the can, x 41.8 | 1-inch Sch 40 pipe, 33.4 mm | ±2 mm across, ±5 mm position | estimated (owner reports; no drawing) |
+| Intake duct | 60 mm, 30 mm right of the can, x 42.8 | 2-inch Sch 40 PVC, 60.3 mm | ±5 mm | estimated |
+| Drip tray rim | 3.8 cm tall, from x 40 | tray | ±1 cm | Lisle 19722 listing |
+| Filter's start | standing at x 30, y 30 | tape mark | ±5 mm | set for the robot |
+| Wrench's start | flat, cup at x 30, y 14, handle to y -45 | tape outline | ±5 mm, ±2 degrees | set for the robot |
+| Filter | 66 x 71 mm, 250 g | genuine 16097-0007 | as bought | KN-204/HF204 cross-reference listings |
+| Gasket's torque | 18 N·m at 270 degrees past contact | the click check after each trial | the wrench clicks before the can moves | owner's manual p. 101 |
 
-Rough rig cost: about $430-460 in all (about $270 if the lab already has the ratchet and a low-range torque wrench).
+Build time: about 2 hours (cut and paint the panel, drill and bolt the plate, fit the nipple and washer stack, set
+the tube and duct, mark the start positions). Reset per trial: about 2 minutes: unscrew the filter, wipe the nipple,
+the land and the gasket, re-oil the gasket, stand the filter back on its mark, lay the wrench on its outline, fit
+fresh glove covers.
+
+Approximate total for the rig, filter, wrench, adapter, ratchet, torque wrench, drip tray and gloves: about $360
+(about $170 if the lab already has the ratchet and the torque wrench).
 
 ## Licenses
 
