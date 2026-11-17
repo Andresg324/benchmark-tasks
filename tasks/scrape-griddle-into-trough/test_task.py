@@ -314,7 +314,7 @@ def main():
                  "55.5 g", "88", "22 fragments", "four", "136 g", "10.2 cm", "5.0 cm", "0.6 mm", "0.15 to 0.2",
                  "0.4 to 0.5", "0.9 g per cubic cm", "capped at 0.5", "caps the score at 0.25", "7.0 cm", "5 mm",
                  "12 N per m", "0.11 to 0.21 N", "0.8 to 1.7", "x 19.5, y -7.5 and 0.5", "x 26.4, y -3.5 and 4.5",
-                 "1.0 cm from the lip", "6.55 cm", "Norpro 957R", "Gulf Wax", "177AOGT1227", "P94850", "14.0 g",
+                 "1.0 cm from the lip", "6.55 cm", "Norpro 957R", "Zen Principle", "177AOGT1227", "P94850", "14.0 g",
                  "USS-DBS66-20", "3 minutes"):
         check(frag in text or frag.replace(" %", "%") in text, f"text states {frag!r}")
     limits = dict(title=120, instruction=1000, context=1000, setup=4000, scoring=4000, fidelity=500, scores=300)
