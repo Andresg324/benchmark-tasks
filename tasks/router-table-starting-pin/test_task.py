@@ -33,6 +33,9 @@ class Trial:
         kit._EPISODE["count"] += 1
         self.j = {"board_turn": m.START[2], "board_x": m.START[0], "board": m.START[1]}
 
+    up = 0.0  # m: the board lifted off the table (and the pads with it), for the hover exploit
+    extra = None  # more objects each step (arm links: "<side>_<link>" states)
+
     def step(self, left=None, right=None, opening=0.0, **j):
         self.j.update(j)
         g = dict(PARK)
@@ -42,8 +45,10 @@ class Trial:
             g["right_gripper"] = right
         for k in g:
             kit._OPENING[k] = opening  # closed, as in the demo, unless given
-        objs = {"router_table": st((m.PIN[0], m.PIN[1], m.TOP)), "board": board(self.j),
-                **{k: st(p, m.PAD_TIP_PAST_TCP, DOWN) for k, p in g.items()}}
+        if self.up and left is not None:
+            g["left_gripper"] = (left[0], left[1], left[2] + self.up)
+        objs = {"router_table": st((m.PIN[0], m.PIN[1], m.TOP)), "board": board(self.j, up=self.up),
+                **{k: st(p, m.PAD_TIP_PAST_TCP, DOWN) for k, p in g.items()}, **(self.extra or {})}
         ok = m.success(objs)
         return m.score(objs), ok
 
@@ -99,7 +104,7 @@ def pivot(t, to=0.0):
     t.move(14, board_turn=to)
 
 
-def feed(t, phi_end=-m.ALPHA - math.radians(4.0), n=60, into=0.001):
+def feed(t, phi_end=-m.ALPHA - math.radians(4.0), n=60, into=0.0001):
     for phi in np.linspace(PHI0, phi_end, n):
         s = m._feed_slides(phi, into=into)
         t.j.update(board_turn=0.0, board_x=float(s[0]), board=float(s[1]))
@@ -115,7 +120,7 @@ def braced_slides(turn):
 LEAD = PHI0 - m.ALPHA  # the turn whose braced pose puts the bearing right at the curve's leading end
 
 
-def slides_at(phi, turn, into=0.001):
+def slides_at(phi, turn, into=0.0001):
     """Slides (at board turn `turn`) that put the curve's contact with the bearing at angle `phi` on the curve."""
     c = m.BIT - (m.R + m.RB - into) * np.array([math.cos(phi + turn), math.sin(phi + turn)])
     return m._rot(-turn) @ (c - m.PIN) - m.C_L
@@ -129,7 +134,8 @@ def brace_at(t, turn):
     t.move(14, board_turn=turn)
 
 
-def feed_at(t, turn, phi_from, phi_to, n=60, into=0.001):
+def feed_at(t, turn, phi_from, phi_to, n=60, into=0.0001):
+    phi_from = min(phi_from, m.ALPHA - 1e-4)  # just inside the leading end (at its very corner the curve has no point)
     for phi in np.linspace(phi_from, phi_to, n):
         s = slides_at(phi, turn, into)
         t.j.update(board_turn=turn, board_x=float(s[0]), board=float(s[1]))
@@ -196,6 +202,143 @@ def test_pass_off_the_bearing():
           f"fed round 1 mm off the bearing: {m.traced_cm():.1f} cm traced, score {sc}")
 
 
+def test_hover_trace():
+    """Anti-gaming (red team, hover): the board lifted 21 mm (clear of the screw head, still against the pin's side)
+    and swept with the bit's axis 15 mm in under its edge, never touching the bearing: a lifted board is never braced
+    and traces nothing; crossing the cutter circle that way is a grab."""
+    t = Trial()
+    t.rest(2)
+    t.up = 0.021
+    brace_at(t, LEAD)
+    feed_at(t, LEAD, m.ALPHA, -m.ALPHA - math.radians(4.0), into=0.015)
+    sc, _ = finish_at(t, LEAD)
+    check(float(m.traced_cm() == 0.0 and sc == 0.0), 1.0,
+          f"lifted 21 mm and swept over the bearing: {m.traced_cm():.1f} cm traced, score {sc}")
+
+
+def test_axis_under_board():
+    """Anti-gaming: braced, pivoted, then fed with the bit's axis 5 mm in under the curve (a reading no flat board on
+    the bearing's collider can give): nothing is traced."""
+    t = Trial()
+    brace_at(t, LEAD)
+    feed_at(t, LEAD, m.ALPHA, -m.ALPHA - math.radians(4.0), into=0.005)
+    sc, _ = finish_at(t, LEAD)
+    check(float(m.traced_cm() == 0.0 and sc <= 0.25), 1.0,
+          f"fed 5 mm into the bearing: {m.traced_cm():.1f} cm traced, score {sc}")
+
+
+def test_tipped_board():
+    """A board tipped 3 deg (one edge up) is not lying flat: not braced, and its entry is a grab."""
+    t = Trial()
+    t.rest(2)
+    s = braced_slides(LEAD)
+    t.move(12, board_turn=LEAD + TH0, board_x=float(s[0]), board=float(s[1]))
+    j = dict(t.j)
+    c = m.to_world(j, m.CENTRE)
+    tip = math.radians(3.0)
+    th = j["board_turn"]
+    q = (math.sin(tip / 2) * math.cos(th / 2), math.sin(tip / 2) * math.sin(th / 2), math.cos(tip / 2) * math.sin(th / 2),
+         math.cos(tip / 2) * math.cos(th / 2))
+    tipped = st((c[0], c[1], m.TOP + m.GAP + m.T / 2), q=q)
+    m._update({"router_table": st((m.PIN[0], m.PIN[1], m.TOP)), "board": tipped,
+               **{k: st(p, m.PAD_TIP_PAST_TCP, DOWN) for k, p in PARK.items()}})
+    check(float(m._LIFT["tilt"] > 2.5 and not m._H.braced_prev), 1.0, f"tipped {m._LIFT['tilt']:.1f} deg: not braced")
+
+
+def test_translate_in_beside_pin():
+    """Anti-gaming (red team, straight in): the board slid straight in along the edge's tangent at the pin, without
+    turning, 1.2 mm off the pin (never touching it) or touching it, into the cutter circle: not a pivot about the pin,
+    so the entry is a grab and the run scores 0."""
+    turn = LEAD
+    s = braced_slides(turn)
+    pin_b = -s
+    n = (pin_b - m.C_L) / np.linalg.norm(pin_b - m.C_L)
+    tg = np.array([-n[1], n[0]])
+    for off in (0.0012, 0.0):
+        for sign in (1, -1):
+            t = Trial()
+            t.rest(2)
+            start = s - off * n + sign * 0.06 * tg
+            t.move(12, board_turn=turn, board_x=float(start[0]), board=float(start[1]))
+            for k in range(1, 61):
+                p = start - sign * 0.06 * tg * k / 60
+                t.step(left=t.press(), board_x=float(p[0]), board=float(p[1]))
+            feed_at(t, turn, m.ALPHA, -m.ALPHA - math.radians(4.0))
+            sc, _ = finish_at(t, turn)
+            check(float(m._H.grab and sc == 0.0), 1.0,
+                  f"slid straight in {off * 1000:.1f} mm off the pin ({'+' if sign > 0 else '-'} along it): grab, score "
+                  f"{sc}")
+
+
+def test_predrawn_cord():
+    """Anti-gaming (red team, pre-drawn cord): the board carried 20 cm left first (drawing cord the cleat then holds),
+    then back, braced and fed: the cord is slack, no drag, over the feed, so nothing is traced."""
+    t = Trial()
+    t.rest(2)
+    t.move(10, board_x=-0.08)
+    t.move(20, board=0.20)
+    t.move(20, board=m.START[1])
+    t.move(10, board_x=m.START[0])
+    drawn = m._D.drawn - m.SNUG
+    brace_at(t, LEAD)
+    feed_at(t, LEAD, m.ALPHA, -m.ALPHA - math.radians(4.0))
+    sc, _ = finish_at(t, LEAD)
+    check(float(drawn > 0.05 and m.traced_cm() == 0.0 and sc <= 0.25), 1.0,
+          f"cord pre-drawn {drawn * 100:.0f} cm, then fed: {m.traced_cm():.1f} cm traced, score {sc}")
+
+
+def _link(p, yaw=0.0):
+    """A link frame at world p, turned `yaw` about z."""
+    return st(p, q=(0.0, 0.0, math.sin(yaw / 2), math.cos(yaw / 2)))
+
+
+def test_links_in_zone():
+    """The forearm and wrist count as well as the grippers: a wrist link low by the bit is in the 3 in zone."""
+    for z, want in ((0.02, 1.0), (0.12, 0.0)):
+        t = Trial()
+        t.rest(2)
+        t.extra = {"right_link5": _link((m.BIT[0] - 0.05, m.BIT[1], m.TOP + z))}
+        t.step()
+        check(float(m._H.hands), want, f"wrist link {z * 100:.0f} cm above the table, 5 cm from the bit's axis: "
+              f"{'in the zone' if want else 'clear'}")
+    t = Trial()
+    t.rest(2)
+    t.extra = {"left_link3": _link((m.BIT[0] - 0.06, m.BIT[1], m.TOP + 0.03))}
+    t.step()
+    check(float(m._H.hands), 1.0, "forearm link low by the bit: in the zone")
+
+
+def test_link_on_board_at_end():
+    """A whole pass, then a wrist link left resting on the board: someone is still on the work, at most 0.75."""
+    t, (sc, _) = whole_one_pass()
+    check(sc, 1.0, "the whole pass, hands lifted")
+    j = dict(t.j)
+    c = m.to_world(j, m.CENTRE)
+    t.extra = {"left_link5": _link((c[0], c[1], m.TOP + m.GAP + m.T + 0.02))}
+    sc, _ = t.step()
+    check(float(sc), 0.75, "a wrist link resting on the board: at most 0.75")
+
+
+def test_cord_touch():
+    """A gripper or arm link touching the drag's cord (it could pinch or pull it and take the drag off): score 0."""
+    t = Trial()
+    t.rest(2)
+    eye = m.to_world(t.j, m.EYE)
+    mid = (eye + m.PULLEY) / 2
+    t.step(right=(mid[0], mid[1], m.TOP + m.Z_MID + m.PAD_TIP_PAST_TCP - 0.001))
+    check(float(m._H.cord), 1.0, "pad tips on the cord: touching it")
+    check(t.rest(5)[0], 0.0, "and the run scores 0")
+    t = Trial()
+    t.rest(2)
+    t.step(right=(mid[0], mid[1], m.TOP + 0.08))
+    check(float(m._H.cord), 0.0, "a hand 8 cm over the cord: clear")
+    t = Trial()
+    t.rest(2)
+    t.extra = {"right_link4": _link((mid[0], mid[1], m.TOP + m.Z_MID + 0.02))}
+    t.step()
+    check(float(m._H.cord), 1.0, "a wrist link down on the cord: touching it")
+
+
 def test_demo_plan_offline():
     """The demo's waypoints (the board assumed to follow the pads exactly): no grab, no hands near the bit, the whole
     curve traced, past the bit: 1.0. The sim decides whether the board really follows; this checks the plan."""
@@ -240,9 +383,11 @@ def test_whole_curve_one_pass():
     check(float(m._H.hands or m._H.grab), 0.0, "no hands near the bit, no grab")
 
 
-def test_whole_curve_two_passes():
-    """review, Nov 12: a safe second pass braced on the pin is allowed: the old start, pulled back off the bit, then
-    braced again at the leading end and fed through."""
+def test_second_pass_slack_cord():
+    """Anti-gaming (stitching): a second pass braced on the pin is allowed, but a piece counts only while the board
+    draws cord against the hanging weight. The old start (mid-curve) fed to the end, then pulled back off the bit,
+    braced again at the leading end and fed through: the cleat holds what the first pass drew, so the second pass meets
+    a slack cord, no drag, on the fresh wood at the leading end, and traces nothing there."""
     t = Trial()
     brace(t), pivot(t), feed(t)
     finish(t)
@@ -255,9 +400,16 @@ def test_whole_curve_two_passes():
     check(float(m._H.grab), 0.0, "carried back round the bit without touching it")
     t.move(12, board_x=float(s[0]), board=float(s[1]))  # onto the pin
     t.move(14, board_turn=LEAD)  # pivoted in about it
-    feed_at(t, LEAD, m.ALPHA, -m.ALPHA - math.radians(4.0))
+    slack = []
+    for phi in np.linspace(m.ALPHA - 1e-4, -m.ALPHA - math.radians(4.0), 60):
+        s = slides_at(phi, LEAD)
+        t.j.update(board_turn=LEAD, board_x=float(s[0]), board=float(s[1]))
+        t.step(left=t.press())
+        slack.append(not m._D.force.any())
     sc, ok = finish_at(t, LEAD)
-    check(sc, 1.0, f"first pass {first:.1f} cm, second pass braced on the pin at the leading end: whole curve")
+    check(float(abs(m.traced_cm() - first) < 1e-9 and sc == 0.75 and all(slack[:30])), 1.0,
+          f"first pass {first:.1f} cm, second pass at the leading end on a slack cord: still {m.traced_cm():.1f} cm, "
+          f"score {sc}")
     check(float(m._H.grab), 0.0, "the second, braced entry is not a grab")
 
 
@@ -480,7 +632,11 @@ def test_carry_to_the_pin():
         if k <= m.CARRY_N:
             check(float(m.pin_gap(j) > 0.004 and m.bit_dist(j) > m.RC + 0.010), 1.0,
                   f"carry step {k}: {m.pin_gap(j) * 1000:.1f} mm off the pin, {m.bit_dist(j) * 1000:.1f} mm off the bit's axis")
-    check(float(m.braced(dict(t.j)) and not m._H.grab), 1.0, "ends braced on the pin, no grab")
+    th, sl = path[-1]
+    stop = sl - 0.003 * m.PIN_OUT  # the plan aims 3 mm on into the pin; its collider stops the board at contact
+    j = {"board_turn": th, "board_x": float(stop[0]), "board": float(stop[1])}
+    check(float(m.braced(j) and abs(m.pin_gap(j)) < 1e-4 and not m._H.grab), 1.0,
+          "ends braced on the pin (where the pin stops it), no grab")
     check(float(abs(path[0][0]) < 1e-12 and abs(path[m.CARRY_N][0] - TH0) < 1e-12), 1.0, "from square to the brace turn")
 
 

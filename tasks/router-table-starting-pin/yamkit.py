@@ -41,6 +41,8 @@ TIP_LINKS = ("tip_left", "tip_right")
 _OPENING: dict[str, float] = {}
 _EPISODE = {"count": 0, "last": None}  # trials seen, and the env's step count within the current one
 _PROPS: set[str] = set()
+ARM_LINKS = ("link3", "link4", "link5")  # local addition (router task): the forearm and wrist links whose poses are
+#                                          given as objects "<side>_<link>" (e.g. "left_link4"), for contact checks
 STEP_HOOKS: list = []  # local addition (router task): hook(env.unwrapped, objects) after the states of every control
 #                        step are read (before success() and score() see them); a task appends its own
 
@@ -797,6 +799,14 @@ def _patch(scene) -> None:
             _OPENING[key] = float(abs(art.data.joint_pos.torch[0, j].item()) / abs(FINGER_OPEN))
             out[key] = ObjectState(pos=tcp, quat_xyzw=np.array([x, y, z, w]), lin_vel=np.zeros(3),
                                    ang_vel=np.zeros(3), low=np.minimum(tcp, tips), high=np.maximum(tcp, tips))
+            for ln in ARM_LINKS:  # local addition (router task): the forearm and wrist links' frames
+                if ln not in art.body_names:
+                    continue
+                li = art.body_names.index(ln)
+                lp = art.data.body_pos_w.torch[0, li].detach().cpu().numpy().astype(np.float64) - origin
+                lq = art.data.body_quat_w.torch[0, li].detach().cpu().numpy().astype(np.float64)  # (x, y, z, w)
+                out[key.replace("gripper", ln)] = ObjectState(pos=lp, quat_xyzw=lq, lin_vel=np.zeros(3),
+                                                              ang_vel=np.zeros(3), low=lp, high=lp)
         for hook in STEP_HOOKS:  # local addition (router task): per-control-step hooks, e.g. a modeled outside force
             hook(base, out)
         return out

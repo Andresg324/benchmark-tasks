@@ -142,10 +142,19 @@ def bit_dist(J):
 
 
 # --- Scoring thresholds.
-BRACE = 0.0015  # m: the board is on the pin within 1.5 mm of its surface (the pin's collider keeps it from closer;
-#                 1.5 mm is the play of a hand-held board against a 0.25 in pin)
-ON_BEARING = 0.0005  # m: the curve is on the bearing within 0.5 mm of its surface: touching it (the bearing's collider
-#                      keeps the curve from going deeper; a curve fed past 1 mm off it, never touching, traces nothing)
+# Contact is contact: the board touches the pin, or its curve the bearing, when the gap between them is at most
+# TOUCH. PhysX rests the board pressed 0.03-0.06 mm into a collider (the demo's run), so 0.2 mm is the solver's
+# tolerance, not an air gap; a board hovering 0.3 mm or more away is not touching. And it is not pressed more than
+# DEEP into it: a flat board can't be, so a deeper reading is a board lifted over the pin or the bearing.
+TOUCH = 0.0002  # m
+DEEP = 0.001  # m
+BRACE = TOUCH  # the board on the pin: its edge within TOUCH of the pin's surface
+ON_BEARING = TOUCH  # the curve on the bearing: within TOUCH of the bearing's surface
+FLAT_UP = 0.001  # m: the board lies flat on the table: its middle at most 1 mm above where it rests,
+FLAT_TILT = 2.0  # deg: and tipped at most 2 deg (a board lifted or tipped over the bearing or the pin traces nothing)
+PIVOT_TURN = math.radians(0.01)  # rad per control step: the board turning about the pin as it enters the cutter
+PIVOT_SLIP = 0.0005  # m per control step: the pin's place on the board moving at most this much meanwhile (it pivots
+#                      about the pin, not slides along or past it)
 CLEAR = 0.005  # m: at the end, no part of the board within 5 mm of the cutter circle
 BIN = 0.002  # m: the traced length is kept as 2 mm stretches of the curve (129 of them)
 N_BINS = int(round(ARC / BIN))
@@ -162,16 +171,16 @@ GRIPPERS = ("left_gripper", "right_gripper")
 
 
 def on_bearing(J):
-    """The curved edge rides the bearing: the bit's axis within the bearing's radius plus 0.5 mm of the curve."""
+    """The curved edge touches the bearing: the curve's gap to the bearing's surface between -DEEP and TOUCH."""
     c = curve_point(to_board(J, BIT))
-    return c is not None and c[0] <= RB + ON_BEARING
+    return c is not None and RB - DEEP <= c[0] <= RB + ON_BEARING
 
 
 def braced(J):
-    """The pivot condition: the board within 1.5 mm of the pin and its curve not yet on the bearing. Nothing holds it
-    there but whatever pushes it onto the pin (the pin is a plain collider); once the curve rides the bearing it comes
-    off the pin."""
-    return pin_gap(J) <= BRACE and not on_bearing(J)
+    """The pivot condition: the board touching the pin (its gap to the pin's surface between -DEEP and TOUCH) and its
+    curve not yet on the bearing. Nothing holds it there but whatever pushes it onto the pin (the pin is a plain
+    collider); once the curve rides the bearing it comes off the pin."""
+    return -DEEP <= pin_gap(J) <= BRACE and not on_bearing(J)
 
 
 CENTRE = (float(C_L[0] + R - DEPTH / 2), float(C_L[1]))  # the board's middle in its frame: the board body's origin
@@ -428,9 +437,11 @@ class _History:
         self.episode = kit.episode()
         self.grab = False  # irreversible: the board crossed the cutter circle while not braced on the pin and turning
         #                    about it
-        self.hands = False  # irreversible: a gripper's shape touched the 3 in zone round the bit
+        self.hands = False  # irreversible: a gripper's shape or a forearm or wrist link touched the 3 in zone round the bit
+        self.cord = False  # irreversible: a gripper or a forearm or wrist link touched the drag's cord
         self.entered = False  # the board is inside the cutter circle after an entry made braced on the pin
-        self.braced_prev = False  # braced at the last step
+        self.braced_prev = False  # braced (and flat) at the last step
+        self.prev = None  # the board's pose at the last step
         self.started = False  # the curve reached the bearing in a pass begun on the pin
         self.angle = None  # the bearing's contact angle on the curve at the last step (None: not on the bearing)
         self.traced = np.zeros(N_BINS, bool)  # the curve's 2 mm stretches the bearing has traced
@@ -515,6 +526,15 @@ def _dbg(J, ang, objects=None):
 _LIFT = {"z": 0.0, "tilt": 0.0}
 
 
+def _pivoting(a, b):
+    """From pose a to pose b (one control step) the board turned about the pin: it turned at least PIVOT_TURN and the
+    pin's place on the board moved at most PIVOT_SLIP (sliding along the pin or past it moves it)."""
+    if a is None:
+        return False
+    slip = float(np.linalg.norm(to_board(b, PIN) - to_board(a, PIN)))
+    return abs(b["board_turn"] - a["board_turn"]) >= PIVOT_TURN and slip <= PIVOT_SLIP
+
+
 def _update(objects):
     global _H
     try:
@@ -524,18 +544,22 @@ def _update(objects):
     if _H.episode != kit.episode():  # the simulator reset the scene: a new trial, a clean history
         _H = _History()
     J = _joints(objects)
-    now_braced = braced(J)
+    flat = _LIFT["z"] <= 1000 * FLAT_UP and _LIFT["tilt"] <= FLAT_TILT
+    now_braced = flat and braced(J)
     in_cutter = bit_dist(J) < RC
     if in_cutter and not _H.entered:
-        if now_braced and _H.braced_prev:
-            _H.entered = True  # entered braced on the pin: the only motion there is turning about it
+        if now_braced and _H.braced_prev and _pivoting(_H.prev, J):
+            _H.entered = True  # entered braced on the pin and turning about it
         else:
             _H.grab = True  # across the cutter circle unbraced, the cutter's first bite: scored as a grab and throw
     if not in_cutter:
         _H.entered = False  # out of the cutter circle: a new entry needs the pin again
     _H.braced_prev = now_braced
+    _H.prev = J
+    drag_load(J)  # the cord's state at this pose (the step hook has already computed it in the sim)
+    taut = bool(_D.force.any())  # the board is drawing cord against the hanging weight: the drag acts
     c = curve_point(to_board(J, BIT))
-    ang = c[1] if (c is not None and c[0] <= RB + ON_BEARING and _H.entered) else None
+    ang = c[1] if (c is not None and flat and taut and _H.entered and on_bearing(J)) else None
     if ang is not None:
         _H.started = True
         # traced: the curve's stretches the bearing passed over feeding right to left, the contact moving from the
@@ -546,8 +570,10 @@ def _update(objects):
             _H.traced[_bin(ang)] = True
     _H.angle = ang
     _dbg(J, ang, objects)
-    if in_zone(objects):  # hands near the bit
+    if in_zone(objects):  # hands (or a forearm or wrist) near the bit
         _H.hands = True
+    if on_cord(objects, J):  # a gripper or arm link touching the drag's cord
+        _H.cord = True
     _draw(J)
 
 
@@ -559,9 +585,114 @@ _ZONE_AT = ObjectState(pos=np.array([BIT[0], BIT[1], TOP]), quat_xyzw=np.array([
                        high=np.array([BIT[0] + HANDS, BIT[1] + HANDS, TOP + HANDS_LOW]))
 
 
+# The arms' forearm and wrist links count as well as the grippers: yamkit gives their frames as objects
+# "<side>_<link>" (link3: the forearm, link4 and link5: the wrist), and each link's shape is its collision pieces,
+# each as the box that holds it (so the check errs toward touching).
+LINK_BOXES = {  # each link's collision pieces (yam_arm.urdf collision/linkN), each boxed in the link's frame
+    "link3": (
+        gk.Block((-0.0299, -0.0748, 0.0000), (0.1227, 0.0100, 0.0630)),
+        gk.Block((-0.0600, -0.0344, -0.2415), (0.0570, 0.0667, 0.0639)),
+        gk.Block((-0.0299, 0.0050, 0.0000), (0.1227, 0.0100, 0.0630)),
+        gk.Block((-0.0608, -0.0334, -0.1246), (0.0544, 0.0501, 0.0729)),
+        gk.Block((-0.0608, -0.0334, -0.0599), (0.0544, 0.0647, 0.0564)),
+        gk.Block((-0.0584, -0.0604, 0.0049), (0.0549, 0.0189, 0.0290)),
+        gk.Block((-0.0623, -0.0528, -0.0305), (0.0575, 0.0341, 0.0024)),
+        gk.Block((-0.0623, -0.0179, -0.0305), (0.0575, 0.0357, 0.0024)),
+        gk.Block((-0.0608, -0.0334, -0.1853), (0.0544, 0.0647, 0.0485)),
+        gk.Block((-0.0885, -0.0604, -0.0182), (0.0053, 0.0189, 0.0223)),
+        gk.Block((-0.0885, -0.0080, -0.0182), (0.0053, 0.0159, 0.0223)),
+        gk.Block((-0.0584, -0.0080, 0.0049), (0.0549, 0.0159, 0.0290)),
+    ),
+    "link4": (
+        gk.Block((-0.0694, 0.0339, -0.0768), (0.0577, 0.0566, 0.0510)),
+        gk.Block((-0.0002, 0.0704, -0.0068), (0.0350, 0.0052, 0.0484)),
+        gk.Block((-0.0694, 0.0339, -0.0447), (0.0577, 0.0351, 0.0133)),
+        gk.Block((-0.0009, 0.0333, -0.0345), (0.0368, 0.0795, 0.0070)),
+        gk.Block((-0.0371, 0.0339, -0.0345), (0.0244, 0.0501, 0.0070)),
+        gk.Block((-0.0221, 0.0339, -0.0345), (0.0056, 0.0565, 0.0070)),
+        gk.Block((0.0150, -0.0101, -0.0108), (0.0020, 0.0058, 0.0205)),
+        gk.Block((0.0000, -0.0036, -0.0068), (0.0350, 0.0072, 0.0484)),
+        gk.Block((-0.0737, 0.0339, -0.0345), (0.0489, 0.0354, 0.0070)),
+        gk.Block((-0.0152, -0.0101, -0.0071), (0.0015, 0.0058, 0.0278)),
+        gk.Block((0.0007, -0.0101, 0.0077), (0.0305, 0.0058, 0.0165)),
+        gk.Block((-0.0003, -0.0123, -0.0108), (0.0285, 0.0015, 0.0205)),
+    ),
+    "link5": (
+        gk.Block((0.0082, -0.0000, 0.0303), (0.0165, 0.0133, 0.0063)),
+        gk.Block((0.0143, -0.0000, -0.0008), (0.0044, 0.0305, 0.0468)),
+        gk.Block((0.0030, -0.0000, 0.0018), (0.0060, 0.0380, 0.0416)),
+        gk.Block((0.0375, -0.0000, 0.0316), (0.0420, 0.0069, 0.0038)),
+        gk.Block((0.0082, -0.0000, 0.0246), (0.0165, 0.0380, 0.0041)),
+        gk.Block((0.0082, -0.0000, 0.0269), (0.0165, 0.0165, 0.0005)),
+        gk.Block((0.0375, -0.0000, 0.0286), (0.0420, 0.0119, 0.0022)),
+        gk.Block((0.0405, 0.0000, -0.0310), (0.0379, 0.0355, 0.0093)),
+        gk.Block((0.0375, -0.0000, 0.0270), (0.0420, 0.0197, 0.0010)),
+        gk.Block((0.0375, -0.0000, 0.0248), (0.0420, 0.0380, 0.0035)),
+        gk.Block((0.0427, -0.0000, -0.0008), (0.0525, 0.0570, 0.0469)),
+        gk.Block((0.0405, 0.0019, -0.0253), (0.0379, 0.0318, 0.0021)),
+        gk.Block((0.0447, -0.0000, 0.0228), (0.0486, 0.0570, 0.0004)),
+        gk.Block((0.0184, -0.0000, 0.0228), (0.0039, 0.0403, 0.0004)),
+        gk.Block((0.0441, -0.0161, -0.0253), (0.0320, 0.0042, 0.0021)),
+        gk.Block((0.0530, -0.0228, -0.0253), (0.0155, 0.0092, 0.0021)),
+    ),
+}
+
+
+def links_touching(objects, obj, parts, tol, bound=None):
+    """Forearm and wrist links (objects "<side>_<link>") whose shape touches one of `parts` of `obj` (object frame)
+    within `tol`; `bound`, a part that holds all of `parts`, is checked first."""
+    so = objects[obj]
+    co, ro = np.asarray(so.pos, float), gk._rot(so.quat_xyzw)
+    parts = parts if isinstance(parts, (list, tuple)) else (parts,)
+    out = []
+    for side in ("left", "right"):
+        for ln, boxes in LINK_BOXES.items():
+            s = objects.get(f"{side}_{ln}")
+            if s is None:
+                continue
+            cg, rg = np.asarray(s.pos, float), gk._rot(s.quat_xyzw)
+            hit = False
+            for box in boxes:
+                ctr = cg + rg @ np.asarray(box.center, float)
+                reach = float(np.linalg.norm(np.asarray(box.size, float))) / 2
+                if bound is not None and gk._dist_local_any(bound, ro.T @ (ctr - co)) - reach > tol:
+                    continue
+                for part in parts:
+                    if gk._dist_local_any(part, ro.T @ (ctr - co)) - reach > tol:
+                        continue
+                    if gk._box_gap(cg, rg, box, co, ro, part) <= tol:
+                        hit = True
+                        break
+                if hit:
+                    break
+            if hit:
+                out.append(f"{side}_{ln}")
+    return tuple(out)
+
+
 def in_zone(objects):
-    """Grippers whose own shape (palm, fingers, pads, tips at their present opening) touches the 3 in zone."""
-    return gk.touching({**objects, "bit_zone": _ZONE_AT}, "bit_zone", ZONE, tol=0.0)
+    """Grippers whose own shape (palm, fingers, pads, tips at their present opening), or forearm and wrist links whose
+    shape, touches the 3 in zone."""
+    objs = {**objects, "bit_zone": _ZONE_AT}
+    return gk.touching(objs, "bit_zone", ZONE, tol=0.0) + links_touching(objs, "bit_zone", ZONE, 0.0)
+
+
+# The drag's cord, from the screw eye to the pulley at the eye's height, 3 mm thick. A hand or arm touching it could
+# hold, pinch or pull it and take the drag off the board, so touching it (its shape within CORD_TOL of the cord) scores
+# 0. On the rig: no gripper or arm touches the cord, in the top and side videos.
+CORD_R = 0.0015  # m: the braided cord's radius
+CORD_TOL = 0.001  # m
+_ORIGIN = ObjectState(pos=np.zeros(3), quat_xyzw=np.array([0.0, 0.0, 0.0, 1.0]), lin_vel=np.zeros(3),
+                      ang_vel=np.zeros(3), low=np.zeros(3), high=np.zeros(3))
+
+
+def on_cord(objects, J):
+    """Grippers or forearm and wrist links touching the cord (the straight run from the screw eye to the pulley)."""
+    eye = to_world(J, EYE)
+    seg = gk.Seg((float(eye[0]), float(eye[1]), TOP + Z_MID), (float(PULLEY[0]), float(PULLEY[1]), TOP + Z_MID),
+                 CORD_R)
+    objs = {**objects, "cord": _ORIGIN}
+    return gk.touching(objs, "cord", seg, tol=CORD_TOL) + links_touching(objs, "cord", seg, CORD_TOL)
 
 
 def traced_cm():
@@ -591,11 +722,13 @@ def board_state(J):
 
 
 def on_board(objects):
-    """Grippers touching the board (palm, finger or pad within 2 mm of it). Computed once per step."""
+    """Grippers touching the board (palm, finger or pad within 2 mm of it), and forearm or wrist links touching it.
+    Computed once per step."""
     if _TOUCH["objs"] is not objects:
         objs = {**objects, "board": board_state(_joints(objects))}
         near = gk.touching(objs, "board", _BOUND)  # the board's bounding box first: a hand clear of it is clear
-        _TOUCH.update(objs=objects, on=gk.touching(objs, "board", BOARD_SHAPE, grippers=near) if near else ())
+        on = gk.touching(objs, "board", BOARD_SHAPE, grippers=near) if near else ()
+        _TOUCH.update(objs=objects, on=on + links_touching(objs, "board", BOARD_SHAPE, gk.CONTACT, bound=_BOUND))
     return _TOUCH["on"]
 
 
@@ -612,8 +745,8 @@ def _past(J):
 
 def _job(objects):
     J = _joints(objects)
-    if _H.grab or _H.hands:
-        return 0.0  # a first bite off the pin (the proxy for a grab), or a hand went near the bit
+    if _H.grab or _H.hands or _H.cord:
+        return 0.0  # a first bite off the pin (the proxy for a grab), a hand went near the bit, or one touched the cord
     bins = int(_H.traced.sum())
     if not _released(objects):
         return min(_traced_score(J, bins), 0.75)  # a hand still on the board: at most 0.75
