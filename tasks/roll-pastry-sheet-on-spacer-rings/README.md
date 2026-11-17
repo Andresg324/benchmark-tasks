@@ -19,9 +19,9 @@ Run (from the repo root, Isaac Lab-Arena installed):
     python tasks/roll-pastry-sheet-on-spacer-rings/test_task.py      # offline model and scorer checks, prints "all pass"
 
 Use `--policy dream --max-steps 2400` for a Dream-1 trial (the run limit). The scene is deterministic (no seeds, object_jitter=0).
-Runtime per trial: the demo runs {{STEPS}} steps ({{SECS}} s at 20 Hz); a Dream-1 trial runs up to 2,400 steps (2 minutes).
+Runtime per trial: the demo runs 1,420 steps (71.0 s at 20 Hz); a Dream-1 trial runs up to 2,400 steps (2 minutes).
 
-Results on this task.py (sha256 {{SHA}}...): the scripted demo scores **1.0 in {{STEPS}} steps**. Dream-1: {{DREAM}}.
+Results on this task.py (sha256 6d12ed359a95...): the scripted demo scores **1.0 in 1,420 steps**. Dream-1 scored **0 in 2,400 steps** on the earlier task.py (a8f7b3ef9491); it has not been re-run on this one.
 
 ## The dough: what people buy, and the start sheet
 
@@ -162,13 +162,14 @@ strokes); one end 0.3 mm up through ten passes leaves 0.23 mm and its high side 
 person sees at a glance. A real trial reads them with a ruler and a level app; whether a hand still touches the pin is
 read from the video.
 
-The demo: both arms grip the pin's handles from above (fingers closing along x) where it lies, lift it over the middle
-of the dough and set it down on its rings, then five passes, each from the middle out to the far end and back, then out
+The demo: both arms come down on the pin's handles from 15 cm above them and grip them from above (fingers closing
+along x) where it lies, lift it over the middle of the dough and set it down on its rings, then five passes, each from the middle out to the far end and back, then out
 to the near end and back, aimed about 6 to 8 mm past the end as it then lies (worked out with doughkit; the pin trails
 the hands by about 1 cm at each turn, and rolling past an end presses the end like any other slice). Then the pin is
 lifted off the dough, set back down on its rings where it lay (x 35, about 3 cm clear of the sheet's far end), and both
-hands open. Offline the strokes give 1.0 with the pin stopping anywhere from at to 2 cm short of each commanded end; in
-the simulator the demo scores 1.0 in {{STEPS}} steps.
+hands open. In the simulator the loaded right arm tracks about 9 mm ahead of the left, turning the pin, so its targets
+from the grip on are set 9 mm back. Offline the strokes give 1.0 with the pin stopping anywhere from at to 2 cm short of each commanded end; in
+the simulator the demo scores 1.0 in 1,420 steps.
 
 Reach: the strokes run x 15 to 33 cm with the hands on the handles at |y| 19.5 cm, 11 cm in from the arm bases at |y|
 30.5 cm, so the hands stay 0.19 to 0.35 m from their arm's base. The pin is picked up and put down at x 35 (0.37 m),
