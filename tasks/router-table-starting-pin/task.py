@@ -835,7 +835,7 @@ FEED_PADS = (  # (from phi, to phi, left pads, right pads, right hand's yaw, squ
     (None, PHI_SPLIT, np.array([BACK + 0.020, ENDS[0] + 0.225]), np.array([BACK + 0.060, ENDS[0] + 0.025]),
      math.radians(140.0), 1.0, 1.0),
     (PHI_SPLIT, None, np.array([BACK + 0.080, ENDS[0] + 0.210]), np.array([BACK + 0.020, ENDS[0] + 0.050]),
-     math.radians(110.0), -0.5, 2.0))
+     math.radians(110.0), -0.5, 3.5))
 # The squeeze: planned with equal shares (4.7 N each), the first stretch ran with the trailing hand pushing 1.1-1.2 N
 # more along the line between the pads and the leading hand that much less (measured from the arms' deflection,
 # 5.2-5.9 N against 3.9-4.0 N); the plan leans 1 N the other way there so the run shares the push evenly. In the
