@@ -244,7 +244,7 @@ and corner. Either of two builds gives that; the robot's task, the instruction a
 Prices are as listed on November 16, 2026.
 
 **Build B, the affordable route, from new parts (about $25 in parts, plus plywood offcuts; the whole rig about $305 as
-listed, or about $200 with the budget build below).**
+listed, or about $135 with the budget build below).**
 
 | Part | What it is | Price, where | Note |
 |---|---|---|---|
@@ -358,8 +358,11 @@ cheaper equivalents do the same jobs:
   MAT403. About three pads are used a session, and any oil-only pad catches the drips from the blade.
 - Drip pan: an oil drain or drip tray big enough for the 47 x 50 cm plate (about $15-20) instead of the $33 Lisle
   19722. It only has to catch drips under the plate.
+- Oily waste can: an empty 1 gallon metal paint can with its lid (BEHR 96601, about $9, Home Depot) instead of the $74
+  Justrite 09200. It holds the few gloves and towels of a session with its lid pressed on, and is emptied into the
+  shop's oily waste at the end of the day.
 
-Primary rig (Build B) about $305; budget build about $200 (both with the $74 oily waste can) (excluding the robot and a phone). Build A adds the used
+Primary rig (Build B) about $305; budget build about $135 (each with its oily waste can) (excluding the robot and a phone). Build A adds the used
 engine ($220-1,080) in place of the dipstick, tube, can and housing.
 
 **Free withdrawal and reinsertion.** The sim's dipstick slides on the tube's axis even when out; the real one is
