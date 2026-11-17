@@ -34,19 +34,19 @@ fractions weighed on a 0.01 g scale: see Real-world evaluation). The definitions
 | Anywhere else: on the plate, against a guard or on its top, on the blade over the griddle, falling into the tray | left on the griddle | not yet delivered |
 
 - **Only the scraper counts.** A piece in the tray is credited only if the held scraper put it there:
-  1. its bond let go under the blade: the first time the piece leaves its place (moves 0.5 mm), the held blade or its
-     neck is pushing it (within 0.1 s), directly or through pieces the blade is pushing;
+  1. its bond let go under the blade: when the piece first leaves its place (0.5 mm from where it was pressed), the
+     held blade or its neck is touching it, directly or through pieces the blade is pushing (within 0.1 s);
   2. it went over the lip under the blade: within 0.5 s of the blade's last push;
   3. no part of the robot ever touched it.
-  "Pushing" is contact that moves the piece: the blade within 0.5 mm of it (the blade and the pieces are exact boxes,
-  and the solver rests touching bodies at zero gap) while the piece moves 0.5 mm or more that step; pieces in a pile
+  Touching is the blade within 0.5 mm of the piece (the blade and the pieces are exact boxes, and the solver rests
+  touching bodies at zero gap); pushing is touching while the piece moves 0.2 mm or more that step (4 mm/s); pieces in a pile
   pass the push on the same way. The handle does not scrape: a piece pushed or flicked with the handle is not
   credited. A piece in the tray that is not credited counts in no share (`Ledger` in `task.py`). Scooping a piece up
   on the blade and tipping it into the tray is scraper use and counts.
 - **Hands off the dough: 0.** The robot's own shape touching any piece at any time scores the whole trial 0: either
   gripper's palm and fingers (guardkit's boxes fitted to the gripper's meshes, at their present opening) or an arm's
   links from elbow to wrist (capsules of 3.5 cm radius between the joints), within 1 mm of a piece while that piece
-  moves 0.5 mm or more. A cook does not clear a griddle by hand (in service the plate is hot), and the task is the
+  moves 0.2 mm or more that step (a slow push counts too). A cook does not clear a griddle by hand (in service the plate is hot), and the task is the
   scraper's job; a 0 removes any reason to mix hand moves into a run. A hand passing near a piece, or resting on a
   piece that does not move, is not a touch. In a real trial a finger, palm or arm pushing, pinching or lifting any
   piece on the video, or dough on a white finger cover after the trial, scores 0.
