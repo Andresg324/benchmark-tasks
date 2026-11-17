@@ -19,6 +19,15 @@ past a strip's end presses the end slice like any other: the rings hold the barr
 
 Hands (the task's `gate(objects) -> bool`): presses count only while it is True (e.g. the pin driven by both handles).
 
+Resistance (Nov 16): the pastry pushes back on the pin. For each strip the barrel is in contact
+with (pastry thicker than the gap within the barrel's contact reach of its lowest line), with h the largest excess
+there and a = sqrt(2 R h) the contact length: an upward force STRESS x cell x a (the pastry's flow stress over the
+contact's footprint) and, while the line moves, a force against the motion STRESS x cell x h (the work of squeezing h
+off a cell-wide strip, per meter rolled). They act at the contact, so a pin pressed harder at one end feels the thicker
+side push back harder, and they are worked out from the pin's pose and applied to it as an external force and torque
+before every physics step (the press itself still happens once per control step).
+`stress` is set by the task (Pin.stress, Pa; 0 turns it off).
+
     dk.setup(dk.Sheet(...), dk.Pin(...))    once, at import time of task.py
     dk.update(objects)                       each control step (the hook calls it; offline tests call it)
     dk.grid() -> t                           thickness (m, 0 = no pastry) at the grid's cell centers
@@ -63,6 +72,7 @@ class Pin:
     radius: float
     length: float
     axis: tuple = (0.0, 1.0, 0.0)
+    stress: float = 0.0  # Pa: the pastry's flow stress against the barrel (0: no resistance)
 
 
 _CFG = {}
@@ -85,6 +95,8 @@ class _State:
         self.line = None  # per strip: (x, gap) of the barrel's lowest line last step, or None
         self.step = 0
         self.presses = 0  # presses that counted (both handles held)
+        self.wrench = (np.zeros(3), np.zeros(3))  # the pastry's force and torque on the pin (world, about its center)
+        self.peak = np.zeros(3)  # largest |Fx|, |Fy|, Fz seen this trial (N)
 
 
 def setup(sheet: Sheet, pin: Pin, gate=None) -> None:
@@ -148,6 +160,8 @@ def update(objects) -> None:
         return
     held = bool(_CFG["gate"](objects)) if _CFG.get("gate") else True
     t0, armed0 = S.t.copy(), S.armed.copy()
+    S.wrench = _reaction(S, objects, lines, S.line)
+    S.peak = np.maximum(S.peak, np.abs(S.wrench[0]))
     for j, (now, before) in enumerate(zip(lines, S.line)):
         if now is None or before is None:
             continue
@@ -180,6 +194,48 @@ def update(objects) -> None:
         S.presses += 1
     S.line = lines
     _rearm(S, lines)
+
+
+def _reaction(S, objects, lines, before):
+    """The pastry's force and torque on the pin this step (world frame, torque about the pin's center), from the
+    thickness before this step's presses (see Resistance in the module docstring)."""
+    p, sh = _CFG["pin"], _CFG["sheet"]
+    F, T = np.zeros(3), np.zeros(3)
+    o = objects.get(p.obj) if objects is not None else None
+    if not p.stress or o is None:
+        return F, T
+    center = np.asarray(o.pos, float)
+    for j, now in enumerate(lines):
+        if now is None:
+            continue
+        x, g = now
+        e = _edges(S, j)
+        c = 0.5 * (e[:-1] + e[1:])
+        ex = S.t[j] - g
+        r = np.array([_reach(t, g) for t in S.t[j]])
+        touch = (ex > 0) & (np.abs(c - x) <= r + 0.5 * (e[1:] - e[:-1]))
+        if not touch.any():
+            continue
+        h = float(ex[touch].max())
+        a = math.sqrt(max(0.0, 2 * p.radius * h - h * h))
+        d = 0.0
+        if before is not None and before[j] is not None and now[0] != before[j][0]:
+            d = 1.0 if now[0] > before[j][0] else -1.0
+        f = np.array([-d * p.stress * sh.cell * h, 0.0, p.stress * sh.cell * a])
+        at = np.array([x + d * 0.5 * a, float(S.ys[j]), sh.board_z + g])  # the middle of the contact, ahead of the line
+        F += f
+        T += np.cross(at - center, f)
+    return F, T
+
+
+def wrench():
+    """The pastry's (force, torque) on the pin from the last control step (N, N m; world frame, about its center)."""
+    return _state().wrench
+
+
+def peak():
+    """The largest |Fx|, |Fy| and upward Fz the pastry put on the pin this trial (N)."""
+    return _state().peak.copy()
 
 
 def _reach(t: float, g: float) -> float:
@@ -348,6 +404,7 @@ def _patch(scene) -> None:
         if key[1] is None or key != last["key"]:  # once per control step
             last["key"] = key
             update(out)
+            _apply(base)
             try:
                 _draw(base.scene.env_origins[0].detach().cpu().numpy())
             except Exception as e:  # noqa: BLE001  (never let the visuals break a run)
@@ -357,6 +414,70 @@ def _patch(scene) -> None:
         return out
 
     scene.object_states = object_states
+
+
+_APPLY = {"mode": None, "failed": False, "base": None, "S": None, "lines": None}
+
+
+class _Pose:
+    def __init__(self, pos, quat_xyzw):
+        self.pos, self.quat_xyzw = pos, quat_xyzw
+
+
+def _apply(base) -> None:
+    """Once: hook the scene's write to the simulator, so the pastry's push on the pin is worked out from the pin's
+    pose and put on it before every physics step (a push held for a whole control step makes the pin bounce)."""
+    if not _CFG["pin"].stress or _APPLY["failed"] or _APPLY["base"] is base:
+        return
+    _APPLY["base"] = base
+    write = base.scene.write_data_to_sim
+
+    def write_data_to_sim(*a, **k):
+        try:
+            _physics_step(base)
+        except Exception as error:  # noqa: BLE001  (never let the push break a run)
+            _APPLY["failed"] = True
+            print(f"doughkit: pastry push off ({error!r})", file=sys.stderr, flush=True)
+        return write(*a, **k)
+
+    base.scene.write_data_to_sim = write_data_to_sim
+
+
+def _physics_step(base) -> None:
+    import torch
+
+    S = _state()
+    if _APPLY["S"] is not S:  # a new trial: no previous line
+        _APPLY["S"], _APPLY["lines"] = S, None
+    asset = base.scene[_CFG["pin"].obj]
+    d = asset.data
+    origin = base.scene.env_origins[0].detach().cpu().numpy()
+    pos = d.root_pos_w[0].detach().cpu().numpy().astype(np.float64) - origin
+    quat = d.root_quat_w[0].detach().cpu().numpy().astype(np.float64)  # (x, y, z, w), as yamkit reads it here
+    objs = {_CFG["pin"].obj: _Pose(pos, quat)}
+    lines = [pin_line(objs, float(y)) for y in S.ys]
+    F, T = _reaction(S, objs, lines, _APPLY["lines"])
+    _APPLY["lines"] = lines
+    f = torch.tensor(np.asarray(F, np.float32).reshape(1, 1, 3), device=asset.device)
+    tq = torch.tensor(np.asarray(T, np.float32).reshape(1, 1, 3), device=asset.device)
+    tries = []
+    comp = getattr(asset, "permanent_wrench_composer", None)
+    if comp is not None:
+        tries.append(("wrench_composer", lambda: comp.set_forces_and_torques(
+            forces=f, torques=tq, body_ids=[0], env_ids=[0], is_global=True)))
+    if hasattr(asset, "set_external_force_and_torque"):
+        tries.append(("external_global", lambda: asset.set_external_force_and_torque(
+            f, tq, body_ids=[0], env_ids=[0], is_global=True)))
+    for name, fn in tries:
+        if _APPLY["mode"] not in (None, name):
+            continue
+        try:
+            fn()
+            _APPLY["mode"] = name
+            return
+        except Exception as error:  # noqa: BLE001  (try the next API)
+            print(f"doughkit: {name} failed ({error!r})", file=sys.stderr, flush=True)
+    raise RuntimeError("no way to put the pastry's push on the pin")
 
 
 class _Hook(kit._Hook):

@@ -11,9 +11,10 @@ Model (doughkit): the pastry has no collider; the pin rides on its rings. Each s
 across with its lowest line below the slice's top is pressed to gap + half its excess over the gap (the gap is the
 barrel's height above the board where it crosses), the slice lengthens and the pastry beyond it moves out, volume
 kept. Rolling past an end presses the end like any other slice (the rings hold the barrel 3.2 mm up there too).
-The model gives the pin no rolling resistance (the pastry pushes back on nothing), so in the sim the rings keep the
-pin level on the flat board whatever the hands do; a real trial checks the sheet's evenness directly (a depth gauge
-at the same patches the sim reads).
+The pastry pushes back on the pin (doughkit's resistance): upward over the barrel's contact and against its motion,
+in proportion to the excess being squeezed off, with an estimated flow stress for chilled puff pastry (PASTRY_STRESS),
+so the arms have to hold the pin down and drive it through the pastry. A real trial checks the sheet's evenness
+directly (a depth gauge at the same points the sim reads).
 """
 
 import math
@@ -44,7 +45,9 @@ BZ = TOP + BOARD_SIZE[2]  # the board's top
 X_RANGE = (BOARD[0] - BOARD_SIZE[0] / 2, BOARD[0] + BOARD_SIZE[0] / 2)  # the board's front and back edges
 CELL = 0.02  # m: the pastry model's cell (a 2 cm grid lined up with the board's front edge and center line)
 ROWS = (0, 2, 4, 7, 9, 11)  # the 2 cm bands read: centered 11, 7 and 3 cm either side of the center line
-PATCH = 0.04  # m: each band is read in 4 cm patches along x, the 40 mm length of the depth gauge's base (Mitutoyo 7210)
+COLS = slice(0, None, 2)  # every other 2 cm cell along x: x 11, 15, 19, ... cm (a 4 cm pitch from the front edge)
+END_IN = 0.01  # m: each band is also read 1 cm inside each of its rolled ends, so an unrolled end shows up
+END_CLEAR = 0.02  # m: a row point within 2 cm of an end point is left to the end point (no near-duplicate readings)
 
 PASTRY = (0.24, 0.0)  # the half sheet's center
 PASTRY_SIZE = (0.115, 0.24, 0.0048)  # half of a 23 x 24 cm sheet: 11.5 cm (x) by 24 cm (y), 4.8 mm (3/16 inch) thick
@@ -57,16 +60,18 @@ RING_IN, RING_OUT = 0.1375, 0.1525  # ... and sit on the barrel's last 1.5 cm at
 R_HANDLE = 0.0125  # handles 2.5 cm across ...
 HANDLE_IN, HANDLE_OUT = 0.1525, 0.2665  # ... 11.4 cm (4.5 inch) long; 53.3 cm (21 inch) overall
 PIN_MASS = 0.73  # kg (1.6 lb)
+PASTRY_STRESS = 15e3  # Pa: chilled puff pastry's flow stress against the barrel, an estimate (README): the first pass
+#                       over the 4.8 mm sheet pushes the pin up about 36 N and back about 6 N
 PIN_X = 0.35  # the pin lies on its rings on the board, axis along y, behind the pastry
 PIN_START = (PIN_X, 0.0, BZ + R_RING)
 
 # --- The rule's numbers (reasons in score() and the README).
 TARGET_T = 0.0032  # m: 1/8 inch, the sheet's thickness (the rings' gap)
 TOL_T = 0.0003  # m: a point is on spec within 0.3 mm of 3.2 mm (2.9 to 3.5 mm, about 10 %)
-SPEC_SHARE = 0.90  # share of the patches that must be on spec (the outer bands and the end patches, at the cut and
-#                    rolled edges, are most of the patches; 10 % lets about three of 30 be off)
-HALF_T = 0.0037  # m: at least 90 % of patches at most 3.7 mm (within 0.5 mm, about one pass to go) earns half
-QUARTER_T = 0.0042  # m: at least 90 % of patches at most 4.2 mm (0.6 mm off the 4.8 mm start) and even earns a quarter
+SPEC_SHARE = 0.90  # share of the measured points that must be on spec (the outer bands and the end points, at the cut
+#                    and rolled edges, are most of the points; 10 % lets about three of 30 be off)
+HALF_T = 0.0037  # m: at least 90 % of points at most 3.7 mm (within 0.5 mm, about one pass to go) earns half
+QUARTER_T = 0.0042  # m: at least 90 % of points at most 4.2 mm (0.6 mm off the 4.8 mm start) and even earns a quarter
 WEDGE_MAX = 0.0003  # m: the 2 cm bands' average thicknesses may differ by at most this across the width (the same
 #                     0.3 mm a point is allowed off 3.2 mm); a pin rolled with one end lifted leaves the sheet thicker
 #                     on that side, and puff pastry rises higher and bakes slower where it is thicker
@@ -122,7 +127,7 @@ def _gate(objects):
 
 
 dk.setup(dk.Sheet(center=PASTRY, size=PASTRY_SIZE, board_z=BZ, x_range=X_RANGE, cell=CELL),
-         dk.Pin("pin", radius=R_BARREL, length=2 * BARREL_HALF), gate=_gate)
+         dk.Pin("pin", radius=R_BARREL, length=2 * BARREL_HALF, stress=PASTRY_STRESS), gate=_gate)
 
 
 def _rotm(q):
@@ -147,25 +152,28 @@ def released(objects):
 
 
 def points(objects=None):
-    """The reading (m) for each patch, one row per band read (the 2 cm bands 3, 7 and 11 cm either side of the board's
-    center line). Each band's rolled length is tiled with 4 cm patches along x from its near end; the last patch is
-    set flush with its far end, so the patches cover the whole band, ends included, and each lies wholly on the sheet.
-    A patch's reading is the thickest pastry under it: a gauge base resting on the patch sits on its highest point. 0
-    pads the shorter rows. 30 patches on the demo's sheet (5 a band)."""
-    rows = []
-    for e, t in (dk.strips()[j] for j in ROWS):
-        x0, x1 = float(e[0]), float(e[-1])
-        n = max(1, int(math.ceil((x1 - x0) / PATCH - 1e-9)))
-        starts = [x0 + k * PATCH for k in range(n - 1)] + [max(x0, x1 - PATCH)]
-        rows.append([float(t[(e[1:] > a + 1e-9) & (e[:-1] < min(a + PATCH, x1) - 1e-9)].max()) for a in starts])
-    out = np.zeros((len(rows), max(len(r) for r in rows)))
-    for i, r in enumerate(rows):
-        out[i, :len(r)] = r
+    """The thickness (m) at each measuring point, one row per band read (the 2 cm bands 3, 7 and 11 cm either side of
+    the board's center line): the points every 4 cm along x from 1 cm behind the board's front edge (x 11, 15, 19, ...
+    cm) that the pastry covers, except any within 2 cm of an end point, then the two end points 1 cm inside the band's
+    rolled ends (last two columns); 0 where nothing is read. 30 points on the demo's sheet."""
+    xc = dk.cell_x()[COLS]
+    grid = dk.grid()[list(ROWS)][:, COLS]
+    strips = dk.strips()
+    out = np.zeros((len(ROWS), grid.shape[1] + 2))
+    for r, j in enumerate(ROWS):
+        e, t = strips[j]
+        ends = (e[0] + END_IN, e[-1] - END_IN)
+        row = grid[r].copy()
+        for k, x in enumerate(ends):
+            row[np.abs(xc - x) < END_CLEAR] = 0.0
+            i = int(np.clip(np.searchsorted(e, x, side="right") - 1, 0, len(t) - 1))
+            out[r, grid.shape[1] + k] = t[i]
+        out[r, :grid.shape[1]] = row
     return out
 
 
 def sheet(objects=None):
-    """(on-spec share, share at most HALF_T, share at most QUARTER_T, thinnest reading m) over the patches read."""
+    """(on-spec share, share at most HALF_T, share at most QUARTER_T, thinnest point m) over the points covered."""
     t = points(objects)
     p = t[t > 0]
     if p.size == 0:
@@ -175,7 +183,7 @@ def sheet(objects=None):
 
 
 def wedge(objects=None):
-    """How much thicker the thickest band read is than the thinnest, each averaged over its patches (m): 0 for a pin
+    """How much thicker the thickest band read is than the thinnest, each averaged over its points (m): 0 for a pin
     kept level, which presses every band alike; a pin with one end lifted leaves that side thicker."""
     t = points(objects)
     means = [row[row > 0].mean() for row in t if (row > 0).any()]
@@ -215,20 +223,20 @@ def success(objects):
 
 
 def score(objects):
-    """The pastry's thickness is read in the 2 cm bands 3, 7 and 11 cm either side of the board's center line, each band
-    tiled along its rolled length with 4 cm patches (the last flush with the far end), and each patch read as the
-    thickest pastry under it, as a depth gauge base resting on it reads; 30 patches on the demo's sheet, the same in a
-    real trial. Doing nothing scores 0 (the half sheet starts 4.8 mm, 3/16 inch, thick). In the sim only, rolling counts
-    while both hands are on the pin (each gripper touching it within 2 mm; the sim's pin slides rather than turns, so
-    this stands in for a pin rolled under two hands, which can keep both ends down). 1.0 if at least 90 % of the patches
-    are 3.2 mm (1/8 inch, the rings' gap) within 0.3 mm, the bands' average thicknesses differ by at most 0.3 mm across
-    the width (a pin with one end lifted leaves a wedge), all the pastry is still on the board, and the pin is set down
-    level (within 3 degrees) on its rings on the board or table (within 5 mm) with no hand touching it (2 mm contact
-    tolerance). 0.5 if at least 90 % of points are at most 3.7 mm (about one pass to go) but the sheet is not finished,
-    or if the sheet is done but a hand still touches the pin or it is not set down. 0.25 if at least 90 % of points are
-    at most 4.2 mm and the bands are within 0.3 mm of each other (about two passes to go). 0 otherwise (nothing done,
-    one pass, a wedge left by a tilted pin, or pastry pushed off the board). Where the arms end is not scored. Possible
-    scores: 0, 0.25, 0.5, 1.0."""
+    """The pastry's thickness is read in the 2 cm bands 3, 7 and 11 cm either side of the board's center line: in each
+    band at the points every 4 cm along x from 1 cm behind the board's front edge that the pastry covers, and 1 cm
+    inside each of the band's rolled ends (a point within 2 cm of an end point is left to it); 30 points on the demo's
+    sheet, the same points a real trial reads with a depth gauge. Doing nothing scores 0 (the half sheet starts 4.8 mm,
+    3/16 inch, thick). In the sim only, rolling counts while both hands are on the pin (each gripper touching it within
+    2 mm; the sim's pin slides rather than turns, so this stands in for a pin rolled under two hands, which can keep
+    both ends down). 1.0 if at least 90 % of the points are 3.2 mm (1/8 inch, the rings' gap) within 0.3 mm, the bands'
+    average thicknesses differ by at most 0.3 mm across the width (a pin with one end lifted leaves a wedge), all the
+    pastry is still on the board, and the pin is set down level (within 3 degrees) on its rings on the board or table
+    (within 5 mm) with no hand touching it (2 mm contact tolerance). 0.5 if at least 90 % of points are at most 3.7 mm
+    (about one pass to go) but the sheet is not finished, or if the sheet is done but a hand still touches the pin or it
+    is not set down. 0.25 if at least 90 % of points are at most 4.2 mm and the bands are within 0.3 mm of each other
+    (about two passes to go). 0 otherwise (nothing done, one pass, a wedge left by a tilted pin, or pastry pushed off
+    the board). Where the arms end is not scored. Possible scores: 0, 0.25, 0.5, 1.0."""
     return _score(objects)
 
 
@@ -237,11 +245,11 @@ def score(objects):
 # it lay, let go and go home.
 CENTER_X = PASTRY[0]
 AXIS_Z = BZ + R_RING  # tool point on the handle's axis with the pin on its rings
-PRESS = 0.004  # m: the hands are commanded this far below the axis, so the rings stay on the board
+PRESS = 0.010  # m: the hands are commanded this far below the axis, so they hold the rings down on the board against
+#                the pastry's push (about 35 N up on the first pass)
 LIFT = 0.05
 SPEED = 0.04  # m/s along a stroke
-TURN_HOLD = 0.5  # s: held at each turn so the trailing pin reaches the end (a patch reads its thickest pastry, so
-#                  the ends must be rolled right out)
+TURN_HOLD = 0.5  # s: held at each turn, so the pin, which trails the hands against the pastry's push, reaches the end
 YAW = math.pi / 2  # fingers close along x, across the handle
 # Stroke ends (x of the barrel's line), four passes, each from the middle out to the far end and back, then out to
 # the near end and back, aimed about 6 mm past the end as it then lies (worked out with doughkit): the pin trails its
