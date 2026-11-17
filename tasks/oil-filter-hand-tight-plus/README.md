@@ -42,7 +42,7 @@ Scripted demo (reaches full score):
 
     inspect-robots run --embodiment yam_arena --policy yam_scripted -E task=tasks/oil-filter-hand-tight-plus/task.py \
       -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-      --instruction "Fit the new oil filter." --scorer task_score --max-steps 2400
+      --instruction "Fit the new oil filter." --scorer task_score --max-steps 3000
 
 Model run (Dream-1): the same command with `--policy dream`.
 
