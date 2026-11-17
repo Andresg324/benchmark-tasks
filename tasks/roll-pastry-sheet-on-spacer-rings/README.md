@@ -74,19 +74,19 @@ never changes.
 | Quantity | Value | Why |
 |---|---|---|
 | Gap | the barrel's lowest line above the board where it crosses each strip, from the pin's pose | 3.2 mm with both rings on the board; one ring lifted 1 mm (0.2 degrees over the 29 cm between the rings) gives about 3.3 mm at one edge of the pastry and 4.1 mm at the other |
-| Press | a slice the barrel rolls across with the gap below its top goes to gap + 0.5 x (thickness - gap), once per crossing | the dough springs back: half the excess per crossing is an estimate (measure on the real build: thickness after one crossing). From 4.8 mm: 4.0, 3.6, 3.4, 3.3 mm, so three crossings put a point on spec |
+| Press | a slice the barrel rolls across with the gap below its top goes to gap + 0.5 x (thickness - gap), once per crossing | the dough springs back: the model keeps half the excess per crossing, and a real trial measures the sheet itself. From 4.8 mm: 4.0, 3.6, 3.4, 3.3 mm, so three crossings put a point on spec |
 | Contact | a slice is pressed as the barrel's face reaches its top, sqrt(2 R h - h^2) ahead of the lowest line (h = t - gap, R = 3.05 cm) | a round barrel meets thick pastry ahead of its lowest point (10 mm ahead on the 4.8 mm sheet) |
 | Lengthening | a pressed slice grows longer; the pastry beyond it, away from the piece's middle, moves out | the middle is held by its own weight on the board; the sheet grows at both ends. Sideways spread is not modeled |
-| Rolled past an end | the end slice is pressed like any other the barrel crosses | the rings hold the barrel 3.2 mm up there too, so nothing goes thinner than the gap; no damage is assumed |
-| Resistance | the pastry pushes the pin up by STRESS x 2 cm x sqrt(2 R h) and back against its motion by STRESS x 2 cm x h for each 2 cm strip in contact (h the largest excess there), STRESS 15 kPa; applied to the pin as a force and torque at the contact before every physics step | cold pastry resists the barrel; STRESS is set from the first pass's force and checked on the rig with a kitchen scale (below), inside the arms' ratings |
+| Rolled past an end | the end slice is pressed like any other the barrel crosses | the rings hold the barrel 3.2 mm up there too, so nothing goes thinner than the gap, and the model does not tear the sheet there |
+| Resistance | the pastry pushes the pin up by STRESS x 2 cm x sqrt(2 R h) and back against its motion by STRESS x 2 cm x h for each 2 cm strip in contact (h the largest excess there), STRESS 15 kPa; applied to the pin as a force and torque at the contact before every physics step | cold pastry resists the barrel; STRESS lies inside the published range (below), each rig's first pass is read on a kitchen scale (below), and the force is inside the arms' ratings |
 | Pin set down | axis level within 3 degrees, lying on its rings on the board or on the table (their bottoms within 5 mm of it) | resting, not held in the air or propped on something |
-| Both hands on the pin (sim only, a stand-in) | presses count only while both grippers touch the pin: each gripper's own shape (palm and fingers, boxes fitted to the YAM's collision meshes, at their present opening) within 2 mm of a handle, the barrel or a ring (flat-ended cylinders as the colliders), whether it grips a handle or presses on the barrel with a closed hand | the sim's pin slides on its rings instead of turning, so the model cannot tell rolling from pushing the pin along; two hands on the pin can hold both ends down, so both rings can stay on the board. The instruction names no grip, so handles and palms on the barrel both count. A hand hovering over the pin does not count. A stroke with one hand or none on the pin is not penalized, and nothing is assumed torn: that stroke just does not count. A real trial has no hand rule: it scores the measured sheet and the final pin state |
+| Both hands on the pin (sim only) | presses count only while both grippers touch the pin: each gripper's own shape (palm and fingers, boxes fitted to the YAM's collision meshes, at their present opening) within 2 mm of a handle, the barrel or a ring (flat-ended cylinders as the colliders), whether it grips a handle or presses on the barrel with a closed hand | the sim's pin slides on its rings instead of turning, so the model cannot tell rolling from pushing the pin along; two hands on the pin can hold both ends down, so both rings can stay on the board. The instruction names no grip, so handles and palms on the barrel both count. A hand hovering over the pin does not count. A stroke with one hand or none on the pin is not penalized and tears nothing: that stroke just does not count. A real trial has no hand rule: it scores the measured sheet and the final pin state |
 | Let go | no gripper touching the pin's barrel, rings or handles (its own shape more than 2 mm away) | a hand still on the pin has not set it down; an open hand near the pin but not touching it has |
-| Board friction | 0.15 static, 0.10 dynamic (ring on floured board) | a stand-in for a barrel that turns. The named pin's barrel turns on nylon bushings around its axle, so a real pin rolls under still handles and its travel is resisted by rolling, not sliding. The sim's gripped pin cannot turn and slides on its rings instead, so its sliding friction is set low: at 0.10, the 0.73 kg pin pressed down with 10 N drags with about 1.7 N. No measured coefficient is claimed |
+| Board friction | 0.15 static, 0.10 dynamic (ring on floured board) | set low because the sim's pin slides where a real barrel turns. The named pin's barrel turns on nylon bushings around its axle, so a real pin rolls under still handles and its travel is resisted by rolling, not sliding. The sim's gripped pin cannot turn and slides on its rings instead, so its sliding friction is set low: at 0.10, the 0.73 kg pin pressed down with 10 N drags with 1.7 N |
 
-What the model stands in for, and what a real trial checks instead: the thickness comes from the press rule above,
+What the model covers, and what a real trial checks directly: the thickness comes from the press rule above,
 which follows the real behavior (the rings set the floor, the dough springs back by a share of the excess, volume is
-kept). The springback share is an estimate, so a real trial measures the sheet itself. The model cannot tear the sheet,
+kept). A real trial measures the sheet itself, so its score rests on the caliper readings. The model cannot tear the sheet,
 stick it to the pin or press it below 3.2 mm; in the sim a stroke without both hands on the pin simply does not count.
 
 The pastry pushes back on the pin. Each control step, wherever the barrel is in contact with pastry thicker than the gap
@@ -100,19 +100,19 @@ kPa, between the published values that bracket it: about 8 kPa compressive stres
 room temperature (10.6 N on a 40 mm disc; Wang, Espert, Salvador and Sanz, Curr. Res. Food Sci. 7:100558, 2023) and
 pressures up to 50 kPa for roll-in fats during pastry sheeting (Steffe 1996, via Ooms, Pareyt, Brijs and Delcour, Crit.
 Rev. Food Sci. Nutr. 56:2101-2114, 2016); the roll-in fat's own yield stress is 4 to 5 kPa (Macias-Rodriguez and
-Marangoni, Physics Today 71(1), 2018). The rig is anchored by a kitchen-scale check (below). On the first pass over the 4.8 mm sheet, with all twelve 2 cm strips under the
+Marangoni, Physics Today 71(1), 2018). Each rig's first pass is read on a kitchen scale (below). On the first pass over the 4.8 mm sheet, with all twelve 2 cm strips under the
 barrel (h = 1.6 mm, a = sqrt(2 x 30.5 x 1.6) = 9.9 mm), it gives 15 kPa x 24 cm x 9.9 mm = 35.6 N up (3.6 kg) and 15 kPa x
 24 cm x 1.6 mm = 5.8 N back, falling as the sheet thins (offline, for the demo's strokes). Both are inside the YAM's
 continuous ratings: per arm about 18 N of the 52 N down and 3 N of the 11 N along the board. The real trial scores the
 outcome, the sheet, so this force sets how hard the sim's arms work.
 
-**Scale check of the first pass (once per rig, by whoever builds the rig).** The rig's one kitchen scale, a Greater
+**Scale check of the first pass (a setup step, once per rig, done by the rig's builder).** The rig's one kitchen scale, a Greater
 Goods 0471 high-capacity kitchen scale (10 kg x 1 g), is set on the table and the bare board centered on it
 (before the board is taped into its marks), a sheet prepared as for a trial (thaw, flour, cut) laid on the board, and the scale tared with the pin lifted off. The pin is set on its rings behind the sheet and rolled once
 across it by hand at the demo's pace (4 cm/s, about 3 s across the 11.5 cm piece), pressed just enough to keep both rings
 on the board, while a phone films the display. The peak reading added over the tare is the first pass's downward
 force, pin weight included: the force the pastry pushes back with. The scale carries the board (about 1.8 kg; 4 lb
-listed), the sheet and that peak, about 5.5 kg in all, so a 5 kg scale is too small and a 10 kg one is named. It is recorded in the rig's log beside the sim's
+listed), the sheet and that peak, about 5.5 kg in all, so a 5 kg scale is too small and a 10 kg one is named. The peak goes in the rig's log, and in the tolerance table's "First-pass force, rig reading" row, beside the sim's
 3.6 kg (35.6 N, from task.py's 15 kPa above), with the lot code and room temperature. The demo's hands are commanded 1 cm below the pin's axis while rolling, so the arms
 hold the rings down on the board against the push instead of letting the pin ride up on the pastry.
 
@@ -143,12 +143,12 @@ covers more than its own point, and no two points overlap. The evenness check co
 | Anything else: nothing done (4.8 mm everywhere), less than one pass, a wedge from a tilted pin, pastry pushed off the board | 0 |
 
 Where the arms end is not scored. Possible scores: 0, 0.25, 0.5, 1.0. Doing nothing scores 0. The score is the sheet the
-robot leaves: no penalty is assumed for a stroke with one hand off the pin (in the sim it just does not count) or for
+robot leaves: there is no penalty for a stroke with one hand off the pin (in the sim it just does not count) or for
 rolling past an end (the rings keep the barrel 3.2 mm up there as everywhere). There is no length rule: the sheet is
 as long as its volume makes it at the thickness reached.
 
 Sim and real trial differ in one rule. In the sim, the dough model presses the pastry only while both grippers touch
-the pin; this is a documented approximation, because the sim's pin slides on its rings instead of turning, so the
+the pin; the sim needs this rule because its pin slides on its rings instead of turning, so the
 model cannot tell rolling from pushing it along. The real trial has no hand rule at all: it scores only the measured
 sheet (thickness and evenness at the grid points, coverage) and the final pin state (set down level, let go). A sheet
 rolled partly or wholly with one hand scores exactly what the same sheet rolled with two hands scores.
@@ -158,8 +158,8 @@ its own because it is the one fault the rings exist to prevent: rolled with one 
 thicker on that side, and puff pastry rises higher and bakes slower where it is thicker, so it can come out lopsided.
 The pastry must stay on the board, where it is measured and can be used. The pin must be set down level and let go,
 because a pin still held or hung in the air is not finished with. In the sim only, strokes count while both hands are
-on the pin (on its handles or on the barrel): the sim's pin slides rather than turns, so two hands on it are the
-stand-in for rolling it. The real trial does not check the hands.
+on the pin (on its handles or on the barrel): the sim's pin slides rather than turns, so two hands on it are how
+the sim counts rolling. The real trial does not check the hands.
 
 Why each level is worth what it is: 1.0 is the job as asked. 0.5 is a sheet within 0.5 mm of the target nearly
 everywhere, with about one pass to go or a slight wedge, or a finished sheet with the pin not put away; either is half
@@ -168,7 +168,7 @@ the pastry is safely started and rolled the right way, but still two passes from
 single stroke out and back, or a wedge from a lifted end) there is no usable progress, so 0.
 
 Why the numbers: 3.2 mm is 1/8 inch, the thickness the maker's recipes roll this pastry to and the ring sold for it. 0.3
-mm (about 10 % of 3.2 mm) either side, a protocol setting rather than a measured baking tolerance: enough that a level
+mm (about 10 % of 3.2 mm) either side, the protocol's setting: enough that a level
 sheet three crossings in (3.4 mm) is on spec while the start (4.8 mm) and one crossing (4.0 mm) are not; it is ten times
 the caliper's 0.01 mm reading. 90 %: most of the points are in the outer bands or at the ends, near the cut and rolled
 edges where a sheet is pinched or ragged, and 10 % lets about three of the 30 be off. 3.7 mm is within 0.5 mm, about one
@@ -224,7 +224,7 @@ the reset, is in "Real-world evaluation" below.
 
 ## Real-world build
 
-The rig is common kitchen stock at the sim's sizes. The same board, pin, rings, ruler and gauge are used for every
+The rig is a low-cost setup of common kitchen stock at the sim's sizes. The same board, pin, rings, ruler and gauge are used for every
 trial. Where a product is named, any equivalent that meets the stated sizes serves.
 
 Parts:
@@ -258,8 +258,8 @@ Tools:
   millimeters thick; measured once and recorded) is the foot that rests on the pastry around a point.
 - Use a 10 kg kitchen scale (1 g steps), the Greater Goods 0471, once per rig for the force check and the teaspoon
   check (the board, sheet and peak come to about 5.5 kg). No scale is used during trials.
-- Use a digital room thermometer, the ThermoPro TP50 (+-0.5 degrees C), at the bench, for the room only. The
-  pastry's own temperature is not checked: the thaw is timed (below), and the freezer is the household one.
+- Use a digital room thermometer, the ThermoPro TP50 (+-0.5 degrees C), at the bench, for the room. The
+  pastry's state is set by the timed thaw (below) from a household freezer.
 - Use a standard US measuring teaspoon (for example from an OXO Good Grips stainless steel measuring spoon set),
   spooned full and leveled with a knife, a small fine-mesh sieve, a pizza wheel, a steel tape, a timer, and a phone
   with a level app and a camera on an overhead phone stand.
@@ -361,15 +361,15 @@ and the maker's recipes at pepperidgefarm.com, e.g. Neapolitan Napoleons).
    finger's pad and tip, sticky side in, and press it to seal around the finger's back, smoothing it flat over the pad's
    face (one layer there, no folds). Cover each gripper's palm face between the fingers the same way with one more
    piece. The demo holds the pin by its handles; a hand pressing on the barrel touches the pin and pastry only with its
-   covers, so flour and pastry stay off the shared grippers. The sim keeps the bare pads' friction (an approximation);
+   covers, so flour and pastry stay off the shared grippers. The sim uses the bare pads' friction;
    the grip through the wrap is checked once per series: close both covered grippers on the handles, lift the pin 10 cm
    off the board and shake it gently side to side for 5 s. It stays in the grip without slipping.
 8. Take the before photo (a card in frame with the trial number, lot code, thaw time, average thickness and room
    temperature) and start the trial within 5 minutes of the end of the thaw. The run itself is limited to 2,400 steps
    (2 minutes).
 
-**Measuring (every trial).** All points are read within 5 minutes of the pin's set-down (the protocol's fixed window, a
-setting rather than a measured rest time), so every sheet is read at the same age. Reading takes about 6 s a point and
+**Measuring (every trial).** All points are read within 5 minutes of the pin's set-down (the protocol's fixed
+window), so every sheet is read at the same age. Reading takes about 6 s a point and
 10 s a band to lay the steel tape, so the demo's 30 points take about 4 minutes. Start the timer when the pin comes to
 rest.
 1. Video: the last 1 s of the trial video shows no gripper finger touching the pin (let go).
@@ -431,6 +431,7 @@ the board is still inside its marks and the camera stand unmoved.
 | Gripper covers | one layer of Glad Press'n Seal over each finger's pad and tip and each palm face | fresh every trial, no folds on the pad face; pads and palms wiped and inspected after every trial | by eye | protocol |
 | Grip through the wrap | pin held by its handles, lifted 10 cm and shaken 5 s | no slip | by eye, once per series | protocol |
 | First-pass force | the sim's 3.6 kg (35.6 N, 15 kPa) | peak recorded beside it | kitchen scale (10 kg) under the board, once per rig, by the rig's builder | protocol |
+| First-pass force, rig reading |  | peak over the tare, kg (date, lot, room temperature) | kitchen scale, phone video of the display | rig log |
 | Reading window | all points, about 6 s each plus 10 s a band (30 on the demo's sheet) | within 5 min of the pin's set-down | timer | protocol setting |
 | Repeat readings | three points re-read in their holes | within 0.05 mm | caliper | protocol |
 | Pin down (scored) | level, on its rings | within 3 degrees; rings within 5 mm of the surface | level app, steel tape | scoring |
@@ -453,7 +454,7 @@ grows.
   (giantfoodstores.com/groceries/product/pepperidge-farm-puff-pastry-sheets-2-ct-frozen-17-3-oz-box/30027).
 - Thawing unwrapped: Pepperidge Farm, Neapolitan Napoleons (pepperidgefarm.com/recipe/neapolitan-napoleons): "At room
   temperature, thaw unwrapped pastry for no more than 40 minutes."
-- Sheet size and thickness: puffpastry.com/faq ("approximately 9.75 x 10.5 x 3/16 inch ... folded in thirds").
+- Sheet size and thickness: puffpastry.com/faq (9.75 x 10.5 inches, 3/16 inch thick, folded in thirds).
 - Measured sizes, other brands and availability: America's Test Kitchen, "The Best Store-Bought Puff Pastry"
   (americastestkitchen.com/taste_tests/2701-the-best-store-bought-puff-pastry).
 - Rolled size: Pepperidge Farm, Puff Pastry Pepperoni Pizza (pepperidgefarm.com/recipe/puff-pastry-pepperoni-pizza):
