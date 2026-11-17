@@ -151,8 +151,8 @@ Why these numbers, and how a real trial reads each one (the rig and filming are 
   plus the boxes' fit to the meshes, so a hand resting on the board counts and one hovering above it does not. A
   forearm or wrist on the board counts the same. Real trial: the side view at the end shows whether any gripper or
   arm is on the board.
-- The cord: a gripper, forearm or wrist within 1 mm of the 3 mm cord's straight run from the screw eye to the pulley
-  is touching it. Real trial: the top and side videos show nothing touching the cord.
+- The cord: a gripper, forearm or wrist whose shape meets the 3 mm cord's straight run from the screw eye to the
+  pulley is touching it. Real trial: the top and side videos show nothing touching the cord.
 
 Gaming paths each have an offline test (`test_task.py`): the start state meets no end condition; doing nothing
 scores 0; a pass fed 1 mm off the bearing, or with the bit's axis 5 mm in under the curve, or with the board lifted

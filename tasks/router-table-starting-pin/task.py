@@ -685,10 +685,11 @@ def in_zone(objects):
 
 
 # The drag's cord, from the screw eye to the pulley at the eye's height, 3 mm thick. A hand or arm touching it could
-# hold, pinch or pull it and take the drag off the board, so touching it (its shape within CORD_TOL of the cord) scores
-# 0. On the rig: no gripper or arm touches the cord, in the top and side videos.
+# hold, pinch or pull it and take the drag off the board, so touching it (its shape meeting the cord's) scores 0. The
+# grippers' and links' boxes already hold their meshes, so no extra tolerance is added. On the rig: no gripper or arm
+# touches the cord, in the top and side videos.
 CORD_R = 0.0015  # m: the braided cord's radius
-CORD_TOL = 0.001  # m
+CORD_TOL = 0.0  # m
 _ORIGIN = ObjectState(pos=np.zeros(3), quat_xyzw=np.array([0.0, 0.0, 0.0, 1.0]), lin_vel=np.zeros(3),
                       ang_vel=np.zeros(3), low=np.zeros(3), high=np.zeros(3))
 
