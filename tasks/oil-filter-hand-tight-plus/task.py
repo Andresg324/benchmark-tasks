@@ -944,17 +944,27 @@ def _wrench_phase(st):
     def on(out, realign):
         def f():
             ang = _align_angle(st, SEAT_BAND[1]) if realign or "align" not in st else st["align"]
-            return carried(*_tool_pose_on(ang, out, st.get("tfix", np.zeros(3))))
+            p, r = _tool_pose_on(ang, out, st.get("tfix", np.zeros(3)))
+            return carried(p, st.get("trfix", np.eye(3)) @ r)
         return f
     add("wrench: the cup in front of the filter", 2.2, on(0.03, True))
     st["tfix"] = np.zeros(3)
-    for _ in range(2):
-        def center():  # where is the cap? aim it onto the filter's axis
+    st["trfix"] = np.eye(3)
+    for _ in range(3):
+        def center():  # where is the cap, and which way does it point? aim it onto the filter's axis, square to it
+            from yam_arena.urdf import axis_angle_matrix
             fp, fa, _ = _filter_now()
             o = _obj()
             if o is not None and CAP in o:
-                off = _pose(o, CAP)[0] - (fp + fa * (CAN_H + 0.0305))
+                cp, cr = _pose(o, CAP)
+                off = cp - (fp + fa * (CAN_H + 0.0305))
                 st["tfix"] = st["tfix"] - 0.8 * np.clip(off - np.dot(off, fa) * fa, -0.01, 0.01)
+                have, want = cr[:, 2], np.asarray(fa, float)  # the cap's axis out of its back: along the filter's
+                c = np.cross(have, want)
+                sn = float(np.linalg.norm(c))
+                if sn > 1e-6:  # (the cup clears the flutes by 0.4 mm: it goes on only within about 3 degrees)
+                    st["trfix"] = axis_angle_matrix(c / sn, 0.8 * math.atan2(sn, float(np.dot(have, want)))) \
+                        @ st["trfix"]
             return on(0.03, True)()
         add("wrench: line the cap up", 0.8, center)
     add("wrench: cup over the flutes", 1.4, on(-0.002, False))
@@ -973,8 +983,9 @@ def _wrench_phase(st):
     add("wrench: right hand onto the grip", 1.0, regrip(FINGER_OPEN, 0.0))
     add("wrench: right hand grips", 0.8, regrip(F_GRIP, 0.0))
 
-    def pose_at(ang):
-        return _tool_pose_on(ang, -0.002)
+    def pose_at(ang):  # with the aim the line-up found (the arms sag in this pose)
+        p, r = _tool_pose_on(ang, -0.002, st.get("tfix", np.zeros(3)))
+        return p, st.get("trfix", np.eye(3)) @ r
 
     def hands(ang, tau, press=LEFT_PRESS):
         pt, rt = pose_at(ang)
