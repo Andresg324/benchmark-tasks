@@ -841,9 +841,9 @@ FEED_PADS = (  # (from phi, to phi, left pads, right pads, right hand's yaw, squ
 # 5.2-5.9 N against 3.9-4.0 N); the plan leans 1 N the other way there so the run shares the push evenly. In the
 # second stretch, against the cord's pull at the trailing end, with equal shares (up to 5.0 N each) and the leading
 # pads 2.5 cm in from the leading end, those pads crept on along the board and off its end; with 1 N leaned onto the
-# trailing hand the curve came off the bearing. The plan there leans 0.5 N onto the trailing hand, and the leading pads
-# press 4 cm in from the end (13 cm or more from the bit's axis) and both hands press 12 N (PRESS_2); the pair pushes 2 N onto the
-# bearing (at 1 N the curve drifted 1-2 mm off it).
+# trailing hand the curve came off the bearing. The plan there leans 0.5 N onto the trailing hand, the leading pads
+# press 4 cm in from the end (13 cm or more from the bit's axis), both hands press 12 N (PRESS_2), and the pair pushes
+# 2 N onto the bearing (at 1 N the curve drifted 1-2 mm off it).
 PAD_L, PAD_R = FEED_PADS[0][2], FEED_PADS[0][3]  # at the feed's start
 # Each hand is turned about the vertical so its fingers close roughly toward the bit: the closed fingers then reach
 # 2.4 cm toward it (their thickness), not 3.4 cm (half their 6.8 cm width), and stay out of the 3 in zone with the
@@ -868,6 +868,12 @@ PRESS_2 = 12.0  # N: both hands' press in the second stretch: at 8 N the leading
 # the bearing from that pose (planned from where the board should have been, the pads landed 1.8 cm off their places,
 # and the hands, holding firm, carried the board's curve off the bearing).
 SPLIT_POSE = (math.radians(12.9), np.array([-0.0017, 0.0925]))
+# As the pushes come back on, the board first slides on along the bearing (its curve's center moving round the bit's
+# axis) before it turns: in the sim, 3.3 deg round in the second stretch's first 3.5 s, after which it turns about the
+# center where it then is. The plan moves the center that way, eased over those first steps, then turns the board about
+# it (turned about where the center had been, the board's curve came off the bearing).
+SPLIT_SLIDE = math.radians(-3.3)
+SPLIT_SLIDE_N = 35  # the feed's 0.1 s steps over which the center is moved
 BRACE_PRESS = 3.0  # N: the press while sliding the board onto the pin
 PIVOT_PRESS = 6.0  # N: the press in the pivot
 FEED_N = 600  # 0.1 s steps over the feed: 29 cm of curve in 60 s, 0.3 m/min
@@ -1125,6 +1131,11 @@ def demo():
             phi_at = bf - th_a
             th, s, _ = _feed_pose(phi_at, bf)
             phis = np.concatenate([[phi_at], np.arange(phi_at - d_phi, PHI_END - 1e-9, -d_phi)])
+            phi_a, b_a = phi_at, bf
+
+            def b_at(phi):
+                u = min(max((phi_a - float(phi)) / (SPLIT_SLIDE_N * d_phi), 0.0), 1.0)
+                return b_a + SPLIT_SLIDE * u * u * (3 - 2 * u)
             nl, nr = _board_world(th, s, pl), _board_world(th, s, pr)
             yr0 = FEED_PADS[n_ph - 1][4]
             low = TOP + GAP + T + TIP - 0.001
@@ -1146,14 +1157,15 @@ def demo():
         for phi in phis[1:]:
             if bf is None and ((a_ph is not None and phi > a_ph) or (b_ph is not None and phi < b_ph)):
                 continue
-            th, s, _ = _feed_pose(phi, bf)
-            fl, fr = _hand_forces(phi, pl, pr, sq, on, pz, bf)
+            b = None if bf is None else b_at(phi)
+            th, s, _ = _feed_pose(phi, b)
+            fl, fr = _hand_forces(phi, pl, pr, sq, on, pz, b)
             phi_at = float(phi)
             left.append(Waypoint(0.1, _aim("left", _board_world(th, s, pl), fl, pz), C, "feed round the bearing"))
             right.append(wy(Waypoint(0.1, _aim("right", _board_world(th, s, pr), fr, pz, yaw=yr), C,
                                      "feed round the bearing"), yr))
     # On past the bit, the hands only carrying the board, then the press eased off and both hands lifted straight up.
-    th_e, s_e, _ = _feed_pose(PHI_END, bf)
+    th_e, s_e, _ = _feed_pose(PHI_END, None if bf is None else bf + SPLIT_SLIDE)
     yr = FEED_PADS[-1][4]
     for side, arm, p in (("left", left, FEED_PADS[-1][2]), ("right", right, FEED_PADS[-1][3])):
         yw = yr if side == "right" else None
