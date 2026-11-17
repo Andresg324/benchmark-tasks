@@ -528,7 +528,7 @@ def _dbg(J, ang, objects=None):
         print(f"router dbg {_DBG['n']}: turn {math.degrees(J['board_turn']):.1f} slides {J['board_x']*100:.2f} "
               f"{J['board']*100:.2f} cm; pin gap {pin_gap(J)*1000:.1f} mm; bit dist {bit_dist(J)*1000:.1f} mm; "
               f"on bearing {ang is not None}; traced {traced_cm():.1f} cm; drag ({f[0]:.2f}, {f[1]:.2f}) N; "
-              f"grab {_H.grab} hands {_H.hands}; up {_LIFT['z']:.2f} mm, tipped {_LIFT['tilt']:.2f} deg", file=sys.stderr, flush=True)
+              f"grab {_H.grab} hands {_H.hands} cord {_H.cord}; up {_LIFT['z']:.2f} mm, tipped {_LIFT['tilt']:.2f} deg", file=sys.stderr, flush=True)
 
 
 _LIFT = {"z": 0.0, "tilt": 0.0}
