@@ -5,10 +5,10 @@ silicone spacer rings on both ends of its barrel, lying on the board behind the 
 an even 1/8 inch (3.2 mm) thick, then set the rolling pin down off the dough." The sheet starts at 3/16 inch (4.8 mm),
 set by rolling the dough between guide strips. The rings set the thickness only while both of them ride on the board,
 so the pin has to be kept level along its length: with one end lifted the barrel leaves a wedge, thick on that side. A
-light pass does not flatten the dough for good: it takes a working push and several passes. Category: Societal
-relatability. Rolling dough out flat with a rolling pin, for a pie crust, cookies or a pizza base, is something most
-people have done at home; refrigerated crescent roll dough in a can is a supermarket staple people unroll and roll
-flat, and spacer rings that slip onto a rolling pin are sold by ordinary kitchen retailers for an even thickness.
+light press springs back; passes past the dough's yield thin it a little each time, so it takes several. Category:
+Societal relatability. Rolling dough out flat with a rolling pin, for a pie crust, cookies or a pizza base, is a
+common home-baking job; the dough here is a store-bought refrigerated one (Pillsbury Original Crescent, an 8 oz can),
+and spacer rings that slip onto a rolling pin are sold by ordinary kitchen retailers for an even thickness.
 
 Run (from the repo root, Isaac Lab-Arena installed):
 
@@ -71,7 +71,7 @@ never changes.
 | Resistance | for each 2 cm strip in contact (h the largest squeeze there): up, the contact pressure over the contact's footprint, p x 2 cm x sqrt(2 R h - h^2), with p rising to the flow stress (13 kPa) at the yield and equal to it beyond; back against the motion, the plastic work per meter rolled; applied to the pin as a force and torque at the contact before every physics step | the dough's push on the barrel: elastic below its yield, its flow stress above. 13 kPa is set from a hand check on this dough (below) |
 | Put away | the pin set down (axis level within 3 degrees, lying on its rings on the board or on the table, their bottoms within 5 mm of it), its barrel's lowest line at least 1 cm clear of the rolled sheet's outline along its whole length, and let go | resting, not held, not left lying on the dough, not propped on something |
 | Let go | no part of either arm, from the upper arm (link3) to the fingertips, touching the pin: their real collision meshes (yam_links.npz, surface points every 1.5 mm, posed each control step from the simulator's link poses) overlap none of the pin's colliders (a gap of 0 or less) | contact, not nearness: a finger 0.3 mm off the pin has let go. guardkit's box model of the gripper is off by several mm against the real meshes, so it is used only in the offline tests (also as overlap) |
-| Board friction | wood on wood, 0.25 static, 0.20 dynamic (ring on the board) | Serway and Jewett, Physics for Scientists and Engineers, Table 5.1 (wood on wood: 0.25 to 0.5 static, 0.2 kinetic), the low static end for a floured board. In the sim the gripped pin rides on its rings along the board and the barrel's contact with the dough sets the load; the named pin's barrel turns on nylon bushings |
+| Ring-board contact | 0.25 static, 0.20 dynamic friction | the real barrel turns on its bushings, so its silicone rings roll on the board as the pin rolls. The sim's pin is one rigid body held by its handles, so its rings ride along the board on a low sliding friction in place of that rolling (the low end of the wood-on-wood range in Serway and Jewett, Physics for Scientists and Engineers, Table 5.1) |
 
 **How the load governs thinning.** The dough is modeled as rigid-plastic with an elastic threshold: it springs back
 from light presses and thins once pressed past its yield. Below the yield the contact pressure rises with the squeeze
@@ -83,23 +83,20 @@ back, so the thinning per pass is set by the load the hands put through the pin:
 on the dough and presses less. One hand or two may roll: what counts is the load the pin carries, not which hands carry
 it. Tested offline (test_task.py): the pin's own weight (7.2 N) stays under the yield load across the sheet at every
 thickness from the start to the rings' gap, so a pin resting on the dough, or rolled without a push, does not thin it;
-passes that skim the sheet (the barrel 0.1 or 0.2 mm into it, end to end) thin nothing however many are made; a pin
-dropped onto the sheet and bouncing off thins nothing; passes that reach the yield thin it a little each time, as real
-dough does; and level rolling with both rings on the board ends inside the 2.9 to 3.5 mm band, which matches the hand
-check below, where the dough rolled flat at a working push stayed flat.
+passes that skim the start sheet (the barrel 0.1 or 0.2 mm into it, end to end) thin nothing however many are made; a
+pin dropped onto the sheet and bouncing off thins nothing; passes past the yield thin it a little each time; and level
+rolling with both rings on the board ends inside the 2.9 to 3.5 mm band.
 
-**The resistance, from a hand check on this dough.** Pillsbury Original Crescent dough, balled and re-rolled as trials
-use it, at room temperature, on a bare cutting board set on a kitchen scale, rolled with a rolling pin without rings
-from about 3/16 inch to about 1/8 inch. The pin was pushed with the normal working pressure a person uses to roll
-dough flat: enough that the dough stays flat, no extra weight. The scale under the board read about 3.0 to 3.5 kg at
-its peak (29 to 34 N). After enough passes the rolled dough stayed flat, with no noticeable spring-back, as people
-routinely roll this dough. The sim's flow stress is set from that working force: on the sim's first pass (the 4.8 mm
-sheet, 24 cm wide, h = 1.6 mm, a = sqrt(2 x 30.5 x 1.6 - 1.6^2) = 9.75 mm), F = stress x 24 cm x 9.75 mm, so 29 to
-34 N gives 12.4 to 14.5 kPa; the task uses 13 kPa, which gives 30.4 N up (3.1 kg) and 4.2 N back on the first pass.
-Lighter passes do not thin the dough for good, which is what the check showed: a push short of the working force does
-not leave the dough flat. For scale, a published compression test on a different laminated dough, puff-pastry base
-dough at room temperature, measured about 8 kPa (10.6 N on a 40 mm disc; Wang, Espert, Salvador and Sanz, Curr. Res.
-Food Sci. 7:100558, 2023). Both forces are inside the YAM's continuous ratings: per arm about 15 N of the 52 N down and
+**The resistance, from a hand check on this dough.** Pillsbury Original Crescent dough, balled and re-rolled, at room
+temperature, on a bare cutting board set on a kitchen scale, rolled with a rolling pin without rings from about 3/16
+inch to about 1/8 inch. The pin was pushed with the normal working pressure a person uses to roll dough flat: enough
+that the dough stays flat, no extra weight. The scale under the board read about 3.0 to 3.5 kg at its peak (29 to
+34 N). After enough passes the rolled dough stayed flat. The check did not record the sheet's width or the squeeze per
+pass, so 13 kPa is the flow stress at which the sim's first pass carries that measured force: on the sim's first pass
+(the 4.8 mm sheet, 24 cm wide, h = 1.6 mm, a = sqrt(2 x 30.5 x 1.6 - 1.6^2) = 9.75 mm), F = stress x 24 cm x 9.75 mm,
+so 29 to 34 N gives 12.4 to 14.5 kPa; the task uses 13 kPa, which gives 30.4 N up (3.1 kg) and 4.2 N back on the
+first pass. A press too light to pass the dough's yield springs back; a lighter push past it thins less a pass and
+needs more passes. Both forces are inside the YAM's continuous ratings: per arm about 15 N of the 52 N down and
 2 N of the 11 N along the board with both hands, and one arm alone can carry the whole first pass. The demo's hands are
 commanded 1 cm below the pin's axis while rolling, so the arms hold the rings down on the board against the push.
 
@@ -138,8 +135,8 @@ Why each rule: an even 1/8 inch is the job itself, a sheet that bakes evenly. Ev
 its own because it is the one fault the rings exist to prevent: rolled with one end lifted, the pin leaves a wedge,
 thicker on that side, and a sheet bakes unevenly, browning where it is thin before it is done where it is thick. The
 dough must stay on the board, where it is measured and can be used. The pin must be put away, set down off the dough
-and let go, because a pin still held, hung in the air or left lying on the sheet (where its weight marks the soft
-dough) is not finished with.
+and let go, because a pin still held, hung in the air or left lying on the sheet (it is in the way and has not
+been put away) is not finished with.
 
 Why each level is worth what it is: 1.0 is the job as asked. 0.5 is a sheet within 0.5 mm of the target nearly
 everywhere, with about one pass to go or a slight wedge, or a finished sheet with the pin not put away; either is half
@@ -234,6 +231,7 @@ Parts:
   tolerance is 3 mm an edge.
 - Check leaves: a 20-leaf metric feeler gauge set, 0.05 to 1.00 mm (the Draper 51701 set, or any metric set with
   these leaves), stacked to about 3.00 mm (1.00 + 0.95 + 0.90 + 0.15).
+- Fingertip marks: Scotch 35 vinyl electrical tape, red, a band round each fingertip's back over the wrap.
 - Gripper pad covers: Glad Press'n Seal food wrap, a food-safe wrap that seals to itself under finger pressure, over
   the robot's finger pads, tips and palm faces.
 - Gloves (for people): AMMEX X3 disposable nitrile gloves (powder-free, made from materials that comply with FDA
@@ -302,23 +300,26 @@ demo's sheet gives 30 (3 row points and 2 end points a band); a longer sheet add
    both flush with the barrel's ends within 1 mm (a ring outside that, torn or loose is replaced as a pair).
 
 **Each trial.**
-1. Form the start sheet. Lightly flour the rolling pin and the board. Lay the two guide strips along x on the board and
-   set the pin on them, so the barrel rests on both strips and the rings hang just outside them (the strips' outer
-   edges against the rings' inner faces, about 24.8 cm between the strips). Ball the dough (for the session's first
-   trial the can's dough; after that the last trial's rolled sheet and all the trimmings), put it between the strips
-   centered on x 24, and roll it until the barrel rides on both strips along the whole sheet: 3/16 inch (4.76 mm).
-   Lift the strips away. Lay the straightedge on the x 18.25 ticks and run the pizza wheel along it, then on the x
+1. Form the start sheet. Lightly flour the rolling pin and the board. Ball the dough (for the session's first trial
+   the can's dough; after that the last trial's rolled sheet and all the trimmings), set it centered on x 24, y 0, and
+   roll it out in all directions with the pin to a rough rectangle a little over 12 cm along x and 25 cm along y. Lay
+   the two guide strips along x on the board, one beside each long side of the dough, and set the pin on them, so the
+   barrel rests on both strips and the rings hang just outside them (the strips' outer edges against the rings' inner
+   faces, about 24.8 cm between the strips). Finish rolling along x until the barrel rides on both strips along the
+   whole sheet: 3/16 inch (4.76 mm). Lift the strips away. Lay the straightedge on the x 18.25 ticks and run the pizza wheel along it, then on the x
    29.75 ticks, then along x on the y -12 and 12 ticks. The sheet is 11.5 x 24.0 cm, each edge within 3 mm; the
    trimmings go on the plate for the next trial. Start check: read the thickness with the caliper's depth rod at 3
    points (x 24 on y -7, 0 and 7): each 4.6 to 5.0 mm, otherwise ball it and roll it again.
 2. Set up. Lay the pin on its rings with its axis over the x 35 ticks (within 5 mm), centered. Fit fresh covers on the
    grippers: a 10 x 10 cm piece of Glad Press'n Seal over each of the four fingers' pad and tip, sticky side in, pressed
-   to seal around the finger's back and smooth over the pad's face (one layer, no folds), and one more piece over each
-   palm face between the fingers. Take the before photo, with a card in frame giving the trial number, the lot code
+   to seal around the finger's back and smooth over the pad's face (one layer, no folds), one more piece over each
+   palm face between the fingers, and a band of red vinyl electrical tape (Scotch 35, red) round each fingertip's back
+   over the wrap, so the overhead video shows each finger against the pin. Take the before photo, with a card in frame giving the trial number, the lot code
    and the start check's readings.
 3. Run the trial: at most 2,400 steps.
 4. Measure (all points read within 5 minutes of the pin's set-down; start the phone's timer when the pin comes to rest).
-   - Let go: the last 1 s of the trial video shows no part of the robot touching the pin.
+   - Let go: the last 1 s of the overhead video shows no part of the robot touching the pin (the red tape bands mark
+     the fingertips).
    - Pin: lay the phone along the top of the barrel, steadied by a fingertip on the phone, and read the level app
      (zeroed on the bare board): within 3 degrees. Hold the steel tape upright beside each ring: its lowest point is
      within 5 mm of the surface under it. With the steel tape, the barrel's lowest line is at least 1 cm clear of the
@@ -356,7 +357,7 @@ above).
 | Rings | 3.2 mm (1/8 inch = 3.18 mm), flush on the barrel's ends | 0.1 mm; flush within 1 mm | caliper, 3 places per ring, once per session | protocol |
 | Caliper | 0.00 on the bare board; the leaf stack's recorded value (about 3.00 mm) | 0.00; within 0.03 mm, five times | board, feeler leaves, once per session | caliper's stated accuracy; tolerance protocol |
 | Gloves (people) | AMMEX X3 nitrile on anyone handling the dough | fresh pair each session and when torn | by eye | protocol |
-| Gripper covers | one layer of Glad Press'n Seal over each finger's pad and tip and each palm face | fresh every trial, no folds on the pad face; pads and palms wiped and inspected after every trial | by eye | protocol |
+| Gripper covers | one layer of Glad Press'n Seal over each finger's pad and tip and each palm face; a red tape band round each fingertip | fresh every trial, no folds on the pad face; pads and palms wiped and inspected after every trial | by eye | protocol |
 | Grip through the wrap | pin held by its handles, lifted 10 cm and shaken 5 s | no slip | by eye, once per rig | protocol |
 | Reading window | all points (30 on the demo's sheet) | within 5 min of the pin's set-down | phone timer | protocol setting |
 | Repeat readings | three points re-read in their holes | within 0.05 mm | caliper | protocol |
@@ -396,11 +397,8 @@ springs back, so it takes several passes and the ends move out as it grows. Then
   with depth rod (zoro.com, item G321697191; machinistguides.com, Neiko 01407A review).
 - Check leaves: Draper 51701 20-blade metric feeler gauge set, 0.05 to 1.0 mm
   (drapertools.com/product/51701/20-blade-metric-feeler-gauge-set).
-- Friction, wood on wood, 0.25 to 0.5 static and 0.2 kinetic: R. A. Serway and J. W. Jewett, Physics for Scientists
+- Friction, wood on wood, 0.25 to 0.5 static and 0.2 kinetic (the ring-board contact uses its low end): R. A. Serway and J. W. Jewett, Physics for Scientists
   and Engineers, Table 5.1 (coefficients of friction).
-- Laminated (puff-pastry base) dough compression, hardness 10.6 N on a 40 x 6 mm disc at 1 mm/s: X. Wang, M. Espert,
-  A. Salvador and T. Sanz, Current Research in Food Science 7:100558, 2023 (doi:10.1016/j.crfs.2023.100558, open
-  access).
 
 ## Files
 
