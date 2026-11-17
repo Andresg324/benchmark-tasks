@@ -1,14 +1,14 @@
-"""An 8-inch adjustable wrench set on an M5 nylon 6/6 hex nut (8 mm across flats) tightened to its recommended 0.76 N*m,
-on a stud of a steel equipment mounting plate. The wrench's jaw has been left 1 mm wider than the nut. The job is to
-loosen the nut. Nylon nuts are used where a fastener must insulate or not corrode; their recommended torque is close
-to their failure torque (0.93 N*m for M5), so a loose jaw bearing on the corners damages them at service load.
+"""An 8-inch adjustable wrench set on an M5 nylon 6/6 hex nut (8 mm across flats), run down finger-tight and turned a
+marked quarter turn, on a stud of a steel equipment mounting plate. The wrench's jaw has been left 1 mm wider than the
+nut. The job is to loosen the nut. Nylon nuts are used where a fastener must insulate or not corrode.
 
 What a trained mechanic does first is roll the knurled worm (thumbwheel) in the wrench's head until the movable jaw
-closes snug on the nut's flats: a jaw with play lets the wrench turn on the nut until it bears on the corners, which
-rounds them off and the wrench slips. Then they pull so that the nut presses into the FIXED jaw: on this wrench, as it
-lies on the nut, that is a counterclockwise pull (seen from above), which is also the way a right-hand nut loosens.
-Pulling the other way loads the movable jaw's tip, which levers the jaw open in its slot so that the wrench springs
-off the nut. Last, they take the wrench off the nut and lay it down.
+closes snug on the nut's flats (hand-tool safety guidance: "Do not pull on an adjustable wrench that is loosely
+adjusted"). Snug here is play no more than ISO 6787's maximum jaw clearance for a 200 mm wrench, 0.28 mm. Then they
+pull so that the nut presses into the FIXED jaw: on this wrench, as it lies on the nut, that is a counterclockwise pull
+(seen from above), which is also the way a right-hand nut loosens. Pulling the other way loads the movable jaw's tip,
+which levers the jaw open in its slot so that the wrench springs off the nut. Last, they take the wrench off the nut
+and lay it down.
 
 The sim: the wrench is a chain of joints on the base plate (lift, turn about the nut's axis, two slides), so it can be
 lifted off the nut, moved and laid flat again, but it can't tip or be flipped over. The movable jaw is driven by the
@@ -72,13 +72,14 @@ LIFT_MAX = 0.06
 CLEAR = 0.03  # m: the wrench is off the nut once its jaw center is 3 cm from the nut's axis (the head is 4.4 cm long)
 
 # --- Scoring thresholds.
-PLAY_MAX = 0.00025  # m: snug = jaw play no more than a new wrench's own jaw clearance (ISO 6787:2001, Table 1: 0.25 mm max)
-ROUND_DEG = 2.0  # degrees: the nut turned this far with the jaw loose = corners rounded (it bears only on them)
-SPIN_TURN_DEG = 30.0  # degrees: the wrench spun this far on a nut that turns freely in its jaws = corners rounded
+PLAY_MAX = 0.00028  # m: snug = jaw play no more than a new wrench's own jaw clearance (ISO 6787:2001, Table 1, 200 mm
+#                    row: j max 0.28 mm; this wrench is 8 in, 205 mm)
+ROUND_DEG = 2.0  # degrees: the nut turned this far with the jaw loose = a loose-jaw pull (flag named `rounded`)
+SPIN_TURN_DEG = 30.0  # degrees: the wrench spun this far on a nut that turns freely in its jaws = a loose-jaw pull
 CW_DEG = 2.0  # degrees: the nut forced this far clockwise (tighter) = the pull loaded the movable jaw
-# PLAY_MAX with ROUND_DEG, and CW_DEG, are operational proxies: the sim's nut can't deform, so the scorer counts the
-# pull that would round the corners or spring the jaw. A real trial reads the jaw's play and the nut's turn from
-# overhead video in every frame, checks the nylon nut's corners in before and after photos (see the README).
+# PLAY_MAX with ROUND_DEG, and CW_DEG, are the two wrench-use rules (a snug jaw; the turn toward the fixed jaw), read
+# from angles, not a damage measure. A real trial reads the jaw's play and the nut's turn from overhead video in every
+# frame (see the README).
 BROKEN_DEG = 5.0  # degrees: the nut has broken loose (more than any flex or play: it really turned on its thread)
 LOOSE_DEG = 60.0  # degrees: one flat of the hex, a full swing before the wrench is reset on the next flats
 SPRUNG_GAP = 0.003  # m: how far a movable jaw loaded at its tip springs open in its slot
@@ -125,7 +126,7 @@ class Model:
         self.loose_turn = 0.0  # rad: nut turn made with jaw play over PLAY_MAX
         self.spin_turn = 0.0  # rad: wrench turn on a nut that spins freely in its jaws
         self.max_play_turning = 0.0  # m: the largest play the nut was turned with (for the report)
-        self.rounded = False  # irreversible: the nut's corners were rounded (the wrench then slips on it)
+        self.rounded = False  # irreversible: a loose-jaw pull was made (the nut turned with the jaw loose)
         self.sprung = False  # irreversible: the movable jaw was loaded at its tip and sprang open
         self.wheel0 = None
         self.lock_turn = None  # the wrench lying down off the nut: held where it was set down
@@ -456,9 +457,9 @@ def success(objects):
 
 
 def score(objects):
-    """Doing nothing scores 0. 0 if the nut was ever turned 2 degrees or more with the jaw over 0.25 mm wider than its
-    flats (the proxy for rounding its corners; irreversible), or forced 2 degrees or more clockwise (the proxy for
-    loading the movable jaw, which springs open; irreversible), or if it never turned 5 degrees looser, or if a
+    """Doing nothing scores 0. 0 if the nut was ever turned 2 degrees or more with the jaw over 0.28 mm wider than its
+    flats (a loose-jaw pull; irreversible), or forced 2 degrees or more clockwise (a pull loading the movable jaw;
+    irreversible), or if it never turned 5 degrees looser, or if a
     gripper still holds the wrench at the end (fingers under 60 % open, tool point within 5 cm of it). Otherwise 0.25
     if the nut turned 5 to 60 degrees looser; 0.5 if 60 degrees or more but the wrench is not off the nut and laid
     down; 1.0 with it laid down off the nut (its jaws 3 cm or more from the nut's axis).
