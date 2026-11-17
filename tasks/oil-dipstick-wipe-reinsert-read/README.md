@@ -243,8 +243,8 @@ The rig needs a real dipstick in a real fill tube over a real oil reservoir, wit
 and corner. Either of two builds gives that; the robot's task, the instruction and the scoring are the same on both.
 Prices are as listed on November 16, 2026.
 
-**Build B, the affordable route, from new parts (about $25 in parts, plus plywood offcuts; the whole rig about $230 as
-listed, or about $125 with the budget build below).**
+**Build B, the affordable route, from new parts (about $25 in parts, plus plywood offcuts; the whole rig about $305 as
+listed, or about $200 with the budget build below).**
 
 | Part | What it is | Price, where | Note |
 |---|---|---|---|
@@ -257,7 +257,12 @@ listed, or about $125 with the budget build below).**
 The reservoir is a quart can, not a gallon can: it stands under the tube, where a 19 cm tall gallon can would come up
 beside the left hand's path (see Build B against the sim).
 
-Assembly, once, about 30 minutes plus the paint's drying time. Tools: a drill with a step bit, a jigsaw, a
+Lead time: Russo Power lists both Kohler parts as special order. Kohler special-order parts usually ship in about 2
+to 6 weeks (Partswarehouse's special-order label for other Kohler parts; confirm with the seller for these two). A
+used engine (Build A) is the in-stock route: it ships with its own dipstick and tube.
+
+Assembly, once, about 30 minutes plus the paint's drying time (Build A: about an hour to drain the fuel and bolt the
+engine to the plate). Tools: a drill with a step bit, a jigsaw, a
 screwdriver, a tape measure and a steel rule, black spray paint.
 
 1. Cut the box: four 30 cm sides and a top, 41 x 41 cm outside. Cut its near right corner (the robot's near right, where
@@ -329,14 +334,17 @@ after it:
   diamond-textured on both sides, size XL ($28.53 a box of 100, Fisheries Supply). Pull it over the finger like a
   sock, the finger in the glove's palm and the glove's own fingers folded back along its outside, and close the cuff
   round the finger's base with one turn of tape, away from the grip faces. One layer of nitrile then covers the pad,
-  the tip and the inner face. Four gloves a trial; the used ones go in the oily-waste bag. A finger cot or a strip of
+  the tip and the inner face. Four gloves a trial; the used ones go in the oily waste can (below). A finger cot or a strip of
   tape would be simpler but does not do the job: the YAM's finger is about 6.8 cm wide and 2.4 cm thick with a 4 cm
   pad, too big for the largest nitrile finger cots (Uline S-15365, size XL, made for a human finger); tape over the
   pads alone leaves the finger's sides bare to the oily rag; and PTFE tape would make the grip slip.
 - The engine (or the box and can) stands in a Lisle 19722 Catch-All Drip Pan, 24 x 36 x 1.5 in, polyethylene, 8 quart
   ($33.29, JB Tools), with a PIG Oil-Only Absorbent Mat Pad MAT403 (New Pig, 15 x 20 in, polypropylene, $105 a bag of
   100) in it under the fill tube, where a drop from the blade lands. Two more MAT403 pads cover the bench under the
-  rag's place and the card. A fresh shop towel each trial; the used one goes in the oily-waste bag.
+  rag's place and the card. A fresh shop towel each trial; the used one goes in the oily waste can.
+- Used gloves, towels and pads go straight into a closed metal oily waste can: Justrite 09200, 2 gallon, galvanized
+  steel, with a self-closing lid ($73.69, TestEquity). It is emptied into the shop's oily-waste disposal at the end of
+  each session, never left full overnight.
 - Grip: the sim's grasped objects have a rubber-like contact (static friction 1.2, dynamic 1.0, `yam_arena`'s
   `GRIPPY_FRICTION`), and the covers keep a rubber (nitrile) face on the grip, textured, at 0.2 mm thick; the handle's
   1.8 cm grip is unchanged within that. The loads held are light (the 50 g dipstick, the 40 g rag, the 15 g puck), far
@@ -351,7 +359,7 @@ cheaper equivalents do the same jobs:
 - Drip pan: an oil drain or drip tray big enough for the 47 x 50 cm plate (about $15-20) instead of the $33 Lisle
   19722. It only has to catch drips under the plate.
 
-Primary rig (Build B) about $230; budget build about $125 (excluding the robot and a phone). Build A adds the used
+Primary rig (Build B) about $305; budget build about $200 (both with the $74 oily waste can) (excluding the robot and a phone). Build A adds the used
 engine ($220-1,080) in place of the dipstick, tube, can and housing.
 
 **Free withdrawal and reinsertion.** The sim's dipstick slides on the tube's axis even when out; the real one is
@@ -360,6 +368,13 @@ into the mouth without help on each push (the reseat and the closing seat) and h
 the robot drops or lays down, or that the tester has to guide, ends the trial, scored on what was done up to that
 moment. The results report this separately as the free-reinsertion rate, the measure of the gap between the guided
 sim stick and the free real one.
+
+**Time.** Building the rig is once: about 30 minutes for Build B (above). Resetting between trials takes about 8
+minutes (estimated from the steps): the measurement after the trial (pull, wipe, reseat, pull, measure the band and
+photograph it, about 2 minutes); new gloves on all four fingers and a new towel (about 2 minutes); setting the next
+level by syringe and checking it with a pull and a wipe (about 3 minutes); smearing the blade and the tube, seating
+the dipstick and putting the rag and the puck back (about 1 minute). With the trial itself (at most 2 minutes), a
+block of three trials takes about 30 minutes.
 
 **Each trial.** Trials run in blocks of three, one at each level, in an order shuffled by a die roll, so every level is
 tested equally often. Before each trial, set the oil with a syringe to just under the indicator's bottom, mid-range, or
