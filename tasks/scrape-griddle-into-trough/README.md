@@ -324,7 +324,7 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
 ## Runtime and seeds
 
 - Demo: a 111 s plan (2,220 control steps), run with `--max-steps 2400`. The recorded run scored 1.0 at
-  step DEMO_STEPS (the trial ends once the set-down has held for 1 s, before the plan's final wait): every piece freed
+  step 2,169 (the trial ends once the set-down has held for 1 s, before the plan's final wait): every piece freed
   by the blade and pushed by it over the lip into the tray (all 22 credited), no hand on the dough, none left on the
   griddle, and the scraper in the taped square.
 - Model run limit: 2,400 steps (2 minutes at 20 Hz). Dream-1: pending on this task.py.
