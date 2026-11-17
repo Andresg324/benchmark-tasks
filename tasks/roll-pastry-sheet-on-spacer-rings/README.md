@@ -42,11 +42,9 @@ Results on this task.py (sha256 a8f7b3ef9491...): the scripted demo scores **1.0
   (Puff Pastry Pepperoni Pizza, pepperidgefarm.com): from about 9.75 x 10.5 inches at 3/16 inch, that is about 1/8 inch
   (4.8 mm x 102 / 150 = 3.3 mm). 1/8 inch is also the spacer ring sold for it (below). So there is real rolling to do: a
   third of the thickness comes off.
-- **Cold.** The package says the thawed sheet "should still be cold", to thaw it no more than 40 minutes, and if the
-  sheets get warm or sticky to put them in the freezer for 5 minutes or the refrigerator for 10 to 15. A real session
-  thaws one sheet once, 35 minutes at room temperature, and re-forms it into the start piece before each trial; when
-  the dough turns warm or sticky it goes in the refrigerator for 10 to 15 minutes, as the box says (see "Real-world
-  evaluation" below).
+- **Thaw.** The package says to thaw the sheet no more than 40 minutes. A real session thaws one sheet once, 40
+  minutes at room temperature, and re-forms it into the start piece before each trial (see "Real-world evaluation"
+  below).
 
 Volume (rolling keeps it): 11.5 x 24 x 0.48 = 132.5 mL. At 3.2 mm over the same 24 cm width that is 17.3 cm long
 (132.5 / (24 x 0.32)); at the on-spec band's ends, 15.8 cm at 3.5 mm and 19.0 cm at 2.9 mm. Centered at x 24 cm, even
@@ -331,7 +329,7 @@ row points and 2 end points a band); a longer sheet adds row points, a shorter o
 
 **Session start (once per session).**
 1. Take one sheet of Pepperidge Farm Puff Pastry Sheets (17.3 oz) from the household freezer and put the other back at
-   once; record the box's lot code. Thaw it unwrapped at room temperature for 35 minutes, as the box directs ("Thaw
+   once; record the box's lot code. Thaw it unwrapped at room temperature for 40 minutes, as the box directs ("Thaw
    pastry sheet(s) until the pastry unfolds easily no more than 40 minutes"; "Pastry should unfold easily but still be
    cold after thawing"). The sheet is thawed once and serves the whole session.
 2. Unfold it on the board, press the fold seams together, and "If pastry cracks when unfolding, sprinkle the crack
@@ -349,8 +347,7 @@ row points and 2 end points a band); a longer sheet adds row points, a shorter o
    Lay the straightedge on the x 18.25 ticks and run the pizza wheel along it, then on the x 29.75 ticks, then along x
    on the y -12 and 12 ticks. The piece is 11.5 x 24.0 cm, each edge within 3 mm; the trimmings go on the plate for
    the next trial. Read the piece's thickness with the caliper jaws at the middle of each edge: average 4.3 to 5.3 mm,
-   otherwise roll it again between the strips. If the dough turns warm or sticky, it goes in the refrigerator for 10
-   to 15 minutes first, as the box says.
+   otherwise roll it again between the strips.
 2. Set up. Lay the pin on its rings with its axis over the x 35 ticks (within 5 mm), centered. Fit
    fresh covers on the grippers: a 10 x 10 cm piece of Glad Press'n Seal over each of the four fingers' pad and tip,
    sticky side in, pressed to seal around the finger's back and smooth over the pad's face (one layer, no folds), and
@@ -390,9 +387,8 @@ records each trial's rolling count. At the end of the session the dough is throw
 | What | Target | Tolerance | How checked | Source |
 |---|---|---|---|---|
 | Product | Pepperidge Farm Puff Pastry Sheets, 17.3 oz | one lot per series, inside best-by | box label recorded | protocol |
-| Thaw | one sheet, unwrapped, at room temperature, 35 min, once per session | the box's "no more than 40 minutes" | phone timer | package limit; 35 min protocol |
+| Thaw | one sheet, unwrapped, at room temperature, 40 min, once per session | the box's "no more than 40 minutes" | phone timer | package |
 | Seams and cracks | pressed together | cracks sprinkled with water and pressed to seal | by eye | package |
-| Warm or sticky dough | refrigerator 10 to 15 min | before forming the piece | by feel | package |
 | Start piece | 11.5 x 24.0 cm at x 18.25 to 29.75, y -12 to 12, rolled between 3/16 inch strips | 3 mm each edge; average 4.3 to 5.3 mm | straightedge on the ticks, steel tape; caliper jaws, 4 edges | protocol |
 | Dough reuse | the session's sheet, balled and re-formed each trial | no limit; rolling count on the card | before photo | protocol |
 | Flour | a light dusting on the pin and the board | | by eye | package ("lightly floured surface") |
