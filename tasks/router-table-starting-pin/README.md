@@ -200,10 +200,9 @@ The sim applies the rig's drag, and the rig's drag is sized to the real cut:
   Int functions of the grain angle at the mean chip position. For this pass (black cherry at 561 kg/m3; a 1.25 in
   two-flute cutter at 18,000 rpm, Freud's maximum speed for 1-1/4 in bits; 9.5 mm wide as set by the bearing;
   3.2 mm high), with the grain at 10-60 degrees to the cut at the mean chip position along this curve, the model
-  gives 3.0-3.1 N against the feed at the demo's 0.3 m/min feed and 3.4-3.9 N at a 2 m/min hand feed. The model was
-  fitted on mean chips of 40-100 um; this pass's mean chip is 4 um at the demo's feed and 29 um at 2 m/min. The cord
-  applies a constant 3.0 N against the feed, matched to the model's mean cutting force against the feed at the
-  demo's feed.
+  gives 3.0-3.1 N against the feed at the demo's 0.3 m/min feed. The cord applies a constant 3.0 N against the
+  feed, matched to the Curti et al. (2021) model's mean cutting force for this pass at the demo's feed (3.0-3.1 N;
+  cutting_force.py).
 - Why 1/8 in high. Router makers' manuals cap one pass at 1/8 in: Ridgid R2900, "do not exceed 1/8 in. depth of cut
   in a single pass, regardless of the bit size or the softness or condition of the workpiece"; Ryobi RE180PL, cuts "at a
   depth not exceeding 1/8 in. (3.2 mm)", deeper ones in several passes. Woodworking guidance (Woodcraft, Fine
