@@ -1,6 +1,6 @@
-"""Where the drag's 3 N comes from: the cutting force of the real pass this rig stands in for.
+"""Where the drag's 3 N comes from: the cutting force of the pass this rig stands in for.
 
-    python cutting_force.py        (NumPy only; prints the mean forces of the pass at several feed speeds)
+    python cutting_force.py        (NumPy only; prints the mean forces of the pass at hand-feed speeds)
 
 Curti, Marcon, Denaud, Togni, Furferi and Goli (2021), "Generalized cutting force model for peripheral milling of
 wood, based on the effect of density and fibre orientation", Eur. J. Wood Prod. 79:667-678, Table 5 (up-milling,
@@ -11,8 +11,9 @@ h = fz sin(phi), the mean force against the feed is
 and the mean pull toward the bit's axis is
     Fy = z ap / (2 pi) * (Ks fz (phi_e / 2 - sin(2 phi_e) / 4) + Int (1 - cos(phi_e))).
 The pass: black cherry (561 kg/m3 at 12% moisture, AHEC), a 1.25 in two-flute rabbeting bit at 22,000 rpm with a
-0.5 in bearing (9.55 mm of radial engagement), 1/8 in (3.2 mm) high. These feed speeds give chips of 5-20 um, below
-the 40-100 um the model was fitted on, so the chip-independent term Int carries most of the force.
+0.5 in bearing (9.55 mm of radial engagement), 1/8 in (3.2 mm) high. The curved edge meets the board's grain at
+0-25 deg (the curve spans 24.6 deg either side of the board's length). Fed by hand at 0.25-1 m/min, the pass takes
+2.9-3.2 N against the feed over those grain angles; the rig's cord pulls 3.0 N.
 """
 
 import math
@@ -42,10 +43,10 @@ def cutting_force(ae, ap, vf, ga_deg):
 
 
 if __name__ == "__main__":
-    print("feed m/min  chip um  against the feed N  toward the bit N   (grain angle 0 deg / 30 deg)")
-    for vf_min in (0.25, 0.5, 0.75, 1.0, 5.0):
+    print("feed m/min  chip mm/tooth  against the feed N (grain angle 0 / 12 / 25 deg)  toward the bit N (0 / 25 deg)")
+    for vf_min in (0.25, 0.5, 0.75, 1.0):
         vf = vf_min / 60.0
-        fz = 1e6 * vf / (RPM / 60.0 * FLUTES)
-        a0, b0 = cutting_force(RC - RB, CUT_H, vf, 0.0)
-        a1, b1 = cutting_force(RC - RB, CUT_H, vf, 30.0)
-        print(f"{vf_min:10.2f}  {fz:7.1f}  {a0:8.2f} / {a1:5.2f}      {b0:6.2f} / {b1:5.2f}")
+        fz = 1e3 * vf / (RPM / 60.0 * FLUTES)
+        fx = [cutting_force(RC - RB, CUT_H, vf, ga)[0] for ga in (0.0, 12.0, 25.0)]
+        fy = [cutting_force(RC - RB, CUT_H, vf, ga)[1] for ga in (0.0, 25.0)]
+        print(f"{vf_min:10.2f}  {fz:13.4f}  {fx[0]:6.2f} / {fx[1]:5.2f} / {fx[2]:5.2f}{'':26s}{fy[0]:5.2f} / {fy[1]:5.2f}")
