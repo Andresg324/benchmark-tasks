@@ -240,9 +240,11 @@ GRIPPERS = ("left_gripper", "right_gripper")
 HANDS_CAP = 0.0  # the robot touching any piece (fingers, palm or arm) at any time: the trial scores 0
 TOUCH_BLADE = 0.0005  # m: blade on a piece, or piece on piece: within 0.5 mm (exact boxes; PhysX rests them at 0)
 TOUCH_HAND = 0.001  # m: the robot's shape on a piece: within 1 mm (the hand's boxes are fitted to its meshes)
-MOVE = 0.0005  # m: a piece counts as moved by a contact only if it moved 0.5 mm or more that step
+MOVE = 0.0002  # m: a contact moves a piece if the piece moved 0.2 mm or more that step (4 mm/s)
+DEPART = 0.0005  # m: a piece has left its place (its bond let go) once it is 0.5 mm from where it was pressed
 ARM_R = 0.035  # m: the arm's links as capsules of this radius between their joints (elbow to wrist)
-FREE_WINDOW = 2  # steps: a piece freed by the blade first leaves its place while the blade pushes it (within 0.1 s)
+FREE_WINDOW = 2  # steps: a piece freed by the blade leaves its place while the blade (or a pile it pushes) is in contact
+# with it, or within 0.1 s of that contact
 PUSH_WINDOW = 10  # steps (0.5 s): a piece is credited when it goes over the lip within 0.5 s of being pushed by the blade
 PIECE_PART = gk.Block((0.0, 0.0, 0.0), (PIECE_W, PIECE_W, PIECE_T))
 
@@ -390,7 +392,8 @@ class Ledger:
         self.debris = START_DEBRIS.copy()
         n = len(CHIPS)
         self.hand = np.zeros(n, bool)  # a gripper has touched this piece (latched)
-        self.pushed_at = np.full(n, -10 ** 9)  # last step the held blade pushed it (directly or through a pile)
+        self.bladed_at = np.full(n, -10 ** 9)  # last step the held blade touched it (directly or through a pile)
+        self.pushed_at = np.full(n, -10 ** 9)  # ... and moved it
         self.departed = np.zeros(n, bool)  # it has left its place (its bond let go)
         self.freed = np.zeros(n, bool)  # ... while the held blade was pushing it
         self.credit = np.zeros(n, bool)  # freed by the blade, and its last trip over the lip was under the blade
@@ -399,24 +402,24 @@ class Ledger:
         self.good = 0  # consecutive steps with the plate clean (the full shares) and the scraper set down and released
 
     def advance(self, objects, held: bool) -> None:
-        """Contacts, releases and lip crossings for this step's debris. Only pieces that moved 0.5 mm or more this
-        step are checked: a contact that moves nothing (a hand hovering, a blade resting on a piece) does not count."""
+        """Contacts, releases and lip crossings for this step's debris. A contact counts as a push only when the
+        touched piece moved 0.2 mm or more that step: a hand hovering or resting on a still piece does not count."""
         self.n += 1
         prev = self.debris
         if dk.KEY in objects:
             self.debris = np.asarray(objects[dk.KEY], float).reshape(-1, 7)
         d = self.debris
         moved = np.linalg.norm(d[:, :3] - prev[:, :3], axis=1) >= MOVE
-        if not moved.any():
-            return
-        self.hand |= robot_on(objects, d, moved)
-        if held:
-            pushed = chain(blade_on(objects["scraper"], d, moved), d, moved)
-            self.pushed_at[pushed] = self.n
-        left = ~self.departed & (np.linalg.norm(d[:, :3] - START_DEBRIS[:, :3], axis=1) >= MOVE)
+        if moved.any():
+            self.hand |= robot_on(objects, d, moved)
+        if held:  # the blade on a piece, directly or through a pile of touching pieces
+            on = chain(blade_on(objects["scraper"], d, np.ones(len(d), bool)), d, np.ones(len(d), bool))
+            self.bladed_at[on] = self.n
+            self.pushed_at[on & moved] = self.n
+        left = ~self.departed & (np.linalg.norm(d[:, :3] - START_DEBRIS[:, :3], axis=1) >= DEPART)
         for i in np.nonzero(left)[0]:  # the first time a piece leaves its place: its bond let go
             self.departed[i] = True
-            self.freed[i] = self.n - self.pushed_at[i] <= FREE_WINDOW
+            self.freed[i] = self.n - self.bladed_at[i] <= FREE_WINDOW
         went = over_plate(prev) & (d[:, 0] < LIP_X)  # over the lip this step
         for i in np.nonzero(went)[0]:
             self.credit[i] = self.freed[i] and self.n - self.pushed_at[i] <= PUSH_WINDOW

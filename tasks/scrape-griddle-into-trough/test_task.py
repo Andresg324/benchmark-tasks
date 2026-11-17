@@ -442,6 +442,23 @@ def main():
     s = run(nudged + sts, d, set_down(40, pos=SPOT_POS))
     check(not M._L.freed[0] and not M._L.credit[0] and s == 0.75, f"a piece knocked loose by something other than the "
                                                                   f"blade, then scraped in: not credited, 0.75 ({s})")
+    # a bond that gives slowly under the blade (the piece creeps 0.15 mm a step before it lets go): freed by the blade
+    fresh()
+    d = M.START_DEBRIS.copy()
+    y = float(d[0, 1])
+    creep = []
+    for k in range(1, 6):
+        d[0, 0] = M.START_DEBRIS[0, 0] - 0.00015 * k
+        creep.append(pusher_state(d.copy(), "blade", float(d[0, 0]) + M.PIECE_W / 2, y))
+    sts, d = scrape(ALL, d0=d)
+    s = run(creep + sts, d, set_down(40, pos=SPOT_POS))
+    check(M._L.freed[0] and s == 1.0, f"a piece that creeps off its place under the blade before its bond lets go: "
+                                      f"freed by the blade, 1.0 ({s})")
+    # a hand pushing a piece slowly (5 mm/s, 0.25 mm a step) still touches the dough
+    fresh()
+    sts, d = scrape(ALL[:1], how="hand", step=0.00025)
+    feed(sts[:40])
+    check(M._L.hands, "a gripper pushing a piece slowly (5 mm/s): a hand on the dough")
     # near misses: a finger 2 mm above a still piece, or 2 mm off a piece the blade moves, is not a touch
     fresh()
     o, op = pusher_state(M.START_DEBRIS.copy(), "hand", 0, 0)
