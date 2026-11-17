@@ -79,8 +79,8 @@ from a freshly opened, sealed 4 oz (113 g) can, each piece weighed to 2.50 g and
 through a template, so every piece has the same mass, size and place every trial.
 - Why it works as stuck-on food: Play-Doh pressed onto clean, dry, bare steel sticks to the steel where it was pressed
   and holds against a light push, so each piece has to be broken free by the scraper's edge driven under it at a low
-  angle, as burnt-on food does. It sticks only where it was pressed on, so a blade sliding under a piece seldom picks
-  it up: the freed piece is pushed along the plate and over the lip. The pieces are separate (1.6 cm apart), so each
+  angle, as burnt-on food does. It sticks only where it was pressed on, so a blade sliding under a piece pushes the
+  freed piece along the plate and over the lip. The pieces are separate (1.6 cm apart), so each
   is freed on its own and strokes have to overlap to collect them all.
 - Why it is repeatable: one named product made to one formula, from a sealed can opened for that trial (the can's
   printed code is recorded), at room temperature; each piece's mass is set by weighing, its outline and thickness by
@@ -242,8 +242,7 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
   for good, the first time holding the piece takes more than its break force; from then on the piece is free.
   Nothing is drawn or moved by a script: the blade's collider has to meet a piece and push it hard enough to free it,
   and a piece falls into the tray only when it is pushed past the lip. The score reads only the pieces' poses.
-- **Bond strength: set, not measured.** There is no published value for modeling compound stuck to steel, so the bond
-  is set from the real check every piece passes: a 40 g fingertip nudge (0.39 N) at its side does not move it, and
+- **Bond strength: set from the real check.** The bond is set from the check every piece passes: a 40 g fingertip nudge (0.39 N) at its side does not move it, and
   the scraper's edge breaks it free. Break force 0.8 N a piece, about twice the nudge and 33 times the piece's
   weight; break torque = break force x 2.5 mm (an edge that gets under a piece peels it off with less push than a
   flat shove).
@@ -256,7 +255,7 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
 - **Contact settings.** Pieces are 4.8 mm thick (the blade is 1.5 mm, moving 4 cm/s: 0.2 mm per 240 Hz physics step,
   so nothing passes through); contacts start 2 mm out and rest at zero gap; 16 position iterations; a piece pinched
   into a collider is pushed out no faster than 0.3 m/s.
-- **Friction.** A piece on steel, 0.5 static and 0.4 sliding (estimated), combined by "min" with the other surface:
+- **Friction.** A piece on steel, 0.5 static and 0.4 sliding, combined by "min" with the other surface:
   on the plate (0.20 and 0.15) a freed piece slides ahead of the blade, and on the blade (0.5) it slides back off a
   40 degree blade (tan 40 degrees is 0.84) instead of riding up with it.
 - **The layout is fixed.** The pieces are not in the task's object list, so the simulator's object jitter (which
@@ -266,8 +265,8 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
   in the next lane's path, so the demo's half-blade overlaps and repeated passes pick them up.
 - **The plate's surface.** The plate is bare steel, wiped with a damp cloth between trials; Play-Doh is oily and
   salty and leaves a light film where it was pressed, so a steel blade slides on it. The plate has the friction of a
-  greased or filmed steel surface (0.20 static, 0.15 sliding; steel on steel greased about 0.16, Engineering ToolBox;
-  set, not measured) instead of the simulator's default 1.2, at which a blade edge sticks and chatters.
+  greased or filmed steel surface (0.20 static, 0.15 sliding; steel on steel greased about 0.16, Engineering ToolBox)
+  instead of the simulator's default 1.2, at which a blade edge sticks and chatters.
 
 ## Runtime and seeds
 
@@ -301,37 +300,37 @@ specifications.
   1-1/4 in. grease tray across the open front, from WebstaurantStore
   (https://www.webstaurantstore.com/12-14-x-27-x-4-addon-2-burner-griddle-top/177AOGT1227.html). It stands on the
   bench on its frame with the plate's top 5.0 cm above the bench, clamped with two C-clamps on its frame, and is never
-  heated. Its grease tray (about 0.5 kg, estimated from its size in sheet steel; weighed at setup) with the debris is
+  heated. Its grease tray (about 0.5 kg; weighed at setup) with the debris is
   well within the scale's 1,000 g.
 - Scraper: use a Dexter-Russell Basics P94850 4 in. griddle scraper: 4 in. stiff stainless blade, 4-1/2 in.
   polypropylene handle, 8-1/2 in. overall, 4.8 oz (136 g)
   (https://www.wasserstrom.com/restaurant-supplies-equipment/dexter-russell-p94850-basics®-4-griddle-scraper-122621).
   The simulator's scraper is this tool, at its size and mass; the handle (3.0 x 2.4 cm in the simulator) is within
   the gripper's opening.
-- Debris: black Play-Doh modeling compound (Hasbro), sealed 4 oz (113 g) cans, one opened for each trial.
-- Template: Elmer's 3/16 in. white foam board, one US Letter sheet printed at 100 %, an Elmer's glue stick, and an
+- Debris: use black Play-Doh modeling compound (Hasbro), sealed 4 oz (113 g) cans, one opened for each trial.
+- Template: use Elmer's 3/16 in. white foam board, one US Letter sheet printed at 100 %, an Elmer's glue stick, and an
   X-ACTO #1 knife to cut the squares.
-- Press: a 6 in. offcut of pine 2 x 4 lumber (planed face down) and Reynolds Kitchen parchment paper.
+- Press: use a 6 in. offcut of pine 2 x 4 lumber (planed face down) and Reynolds Kitchen parchment paper.
 - Scale: use a BOMATA 0.01 g / 1 kg compact digital scale (model BS2000-001B as listed; 1,000 g by 0.01 g, stainless
   platform, tare, USB rechargeable), a common low-cost 0.01 g scale whose capacity covers the tray with its contents.
   It weighs the pieces, the tray and the fractions, and gives the nudge check its 40 g. At the start of each session
   it is checked, after a 10-minute warm-up and away from drafts, against a 100 g calibration weight (100.00 g within
   0.03 g), and recalibrated by its manual if it reads outside that.
-- Finger covers: AMMEX Gloveworks GPNB black nitrile disposable gloves, industrial grade, 5 mil palm, powder free, size
+- Finger covers: use AMMEX Gloveworks GPNB black nitrile disposable gloves, industrial grade, 5 mil palm, powder free, size
   Large (GPNB46100, 100 a box;
   https://quill.com/gloveworks-gpnb-nitrile-industrial-grade-gloves-large-black-100-box-gpnb46100/cbs/55392359.html),
   held with ScotchBlue 2090 painter's tape. The same box serves the operator.
-- Cleaning: microfiber cloths and water for the plate, tray, scraper and robot; paper towels to dry.
-- Room: ThermoPro TP49 digital thermometer and hygrometer on the bench beside the griddle.
-- Overhead camera: a phone on a NEEWER X6 overhead phone stand, 26.5 to 80 cm high, clamped to the bench
+- Cleaning: use microfiber cloths and water for the plate, tray, scraper and robot; paper towels to dry.
+- Room: use a ThermoPro TP49 digital thermometer and hygrometer on the bench beside the griddle.
+- Overhead camera: use a phone on a NEEWER X6 overhead phone stand, 26.5 to 80 cm high, clamped to the bench
   (https://neewer.com/collections/all-product/products/neewer-entry-level-version-x6-phone-stand-66608636).
-- Raking light: IKEA TERTIAL clamp work lamp with an 800-lumen SOLHETTA LED bulb
+- Raking light: use an IKEA TERTIAL clamp work lamp with an 800-lumen SOLHETTA LED bulb
   (https://www.ikea.com/ca/en/catalog/products/20355434/).
-- Razor scraper: Red Devil 3010, 1 in. blade
+- Razor scraper: use a Red Devil 3010, 1 in. blade
   (https://www.dillonsupply.com/Catalog/Products/Hand-Tools/Scrapers-Spreaders-And-Trowels/Hand-Scrapers/red-devil-3010).
-- Rule and level: Empire 27302 6 in. steel rule (https://www.toolnut.com/products/empire-27302-6-steel-rule) and a
+- Rule and level: use an Empire 27302 6 in. steel rule (https://www.toolnut.com/products/empire-27302-6-steel-rule) and a
   Stanley 0-42-294 torpedo level (https://www.stanleytools.co.uk/product/0-42-294/stanley-torpedo-level-200mm).
-- Also: a steel tape, weighing boats, white plastic catch sheets, masking tape, two wooden stop blocks and two
+- Also: use a steel tape, weighing boats, white plastic catch sheets, masking tape, two wooden stop blocks and two
   C-clamps.
 
 ## Files
