@@ -100,7 +100,8 @@ FLUTE_IN, FLUTE_W = 0.031, 0.005  # the flutes' roots (radius) and their width; 
 # (1.8 kgf*m, 13 ft*lb)".
 TORQUE_SPEC = 18.0
 THREAD = fk.Thread(pitch=0.0015, turns_to_seat=3.0, run_on=0.3, gasket_rate=TORQUE_SPEC / math.radians(270.0),
-                   max_past=math.radians(540.0), root_r=NIP_ROOT_R, crest_r=BORE_R, bore_z0=BORE_Z0, lead=LEAD,
+                   max_past=math.radians(540.0), root_r=NIP_ROOT_R, crest_r=BORE_R, bore_z0=BORE_Z0, bore_z1=BORE_Z1,
+                   collar_r=0.0125, lead=LEAD,
                    d2=0.019026, pd_clear=PD_CLEAR)
 D0 = THREAD.d0  # 4.5 mm: the gasket face's distance from the land when the thread catches
 NIP_L = THREAD.nip_len  # the nipple stands 8.4 mm out of the land: its chamfered end inside the bore at the catch
@@ -194,8 +195,8 @@ def _filter_parts():
                                      point=1)
     meshes += flute_meshes
     cols = (_ring(0.022, 0.0285, 0.0, 0.004, n=12)  # the gasket
-            + _ring(BORE_R, BORE_R + 0.0015, BORE_Z0, BORE_Z1, n=36)  # the threaded bore, at its thread's crests
-            + _ring(BORE_R + 0.0012, 0.031, BORE_Z0, 0.006, n=12)  # the base plate round it
+            + _ring(BORE_R, 0.0125, BORE_Z0, BORE_Z1, n=36)  # the threaded collar, its bore at its thread's crests
+            + _ring(0.0122, 0.031, BORE_Z0, 0.006, n=12)  # the base plate round it
             + [kit.Collider((0, 0, (0.0105 + body_top) / 2), radius=CAN_R, height=body_top - 0.0105),
                kit.Collider((0, 0, (body_top + CAN_H) / 2), radius=FLUTE_IN, height=FLUTE_L)]
             + flute_cols)
@@ -627,7 +628,8 @@ CARRY_X = 0.38  # the filter is carried across here, clear of the crankcase, the
 PRESS = 0.0015  # the hand aims 1.5 mm past where the threads' crests meet (the arm's give presses it on)
 OUT_NEAR = NIP_L - BORE_Z0 + 0.0015  # lining up closely: the bore's entry 1.5 mm short of the nipple's end
 FINE_MM, FINE_DEG = 0.06, 0.4  # lined up: within 0.06 mm of the axis (the bore's clearance is 0.2) and 0.4 degrees
-FINE_LOOKS = 8
+FINE_LOOKS = 3
+PRESS_LOOKS = 10  # pressed on the nipple's end, re-aimed each second until the bore drops over it
 
 
 def _horiz(roll_deg):
@@ -684,23 +686,49 @@ def _hand_phase(st):
         return 1000 * math.hypot(b[1] - Y_F, b[2] - Z_F), tilt
 
     def fine(label, gate=lambda: True):
-        """Up to FINE_LOOKS close looks. Each one, when it starts, checks whether the last brought the bore's entry
-        within FINE_MM of the axis and FINE_DEG of square; once one has, the rest are skipped (decided as each starts,
-        so a look already made keeps its time)."""
+        """Up to FINE_LOOKS close looks, each a correction and then a hold while the arm settles (it lags its target
+        by most of a second). Each one, when it starts, checks whether the last brought the bore's entry within
+        FINE_MM of the axis and FINE_DEG of square; once one has, the rest are skipped (decided as each starts, so a
+        look already made keeps its time)."""
         g = {"done": None}
+        out_ = []
 
         def look(i):
             def f():
                 e, t = off_axis()
                 if g["done"] is None and e <= FINE_MM and t <= FINE_DEG:
                     g["done"] = i
-                return align(OUT_NEAR, 0.8, 0.002)()
+                g["last"] = align(OUT_NEAR, 0.7, 0.002)()
+                return g["last"]
             return f
-        return [_Live(0.7, look(i), label, lambda i=i: gate() and (g["done"] is None or i <= g["done"]))
-                for i in range(FINE_LOOKS)]
+        for i in range(FINE_LOOKS):
+            keep = (lambda i=i: gate() and (g["done"] is None or i <= g["done"]))
+            out_.append(_Live(0.6, look(i), label, keep))
+            out_.append(_Live(1.0, lambda: g["last"], label + " (settle)", keep))
+        return out_
 
     def onto():
         return _tcp_for_gasket(X_LAND - D0 + PRESS, st["fix"]), st["rfix"] @ r_pick, F_CAN
+
+    def is_on():
+        return fmodel().on or fmodel().state != fk.FREE
+
+    def press(label, gate=lambda: True):
+        """Pushed on, the base plate against the nipple's end if the bore is not yet over it: up to PRESS_LOOKS
+        looks a second apart, each reading where the bore's entry is and re-aiming it (gently: the plate is held
+        on the end's face by the push), as a hand feels for the start; once the bore has gone over the nipple's end
+        the rest are skipped (decided as each starts)."""
+        g = {"done": None}
+
+        def look(i):
+            def f():
+                if g["done"] is None and is_on():
+                    g["done"] = i
+                align(OUT_NEAR, 0.5, 0.001)()
+                return onto()
+            return f
+        return [_Live(1.6 if i == 0 else 1.0, look(i), label,
+                      lambda i=i: gate() and (g["done"] is None or i <= g["done"])) for i in range(PRESS_LOOKS)]
 
     def off_nipple():  # not on it (the base plate met the nipple's end): back off and look again
         return _tcp_for_gasket(X_LAND - OUT_NEAR - 0.003, st["fix"]), st["rfix"] @ r_pick, F_CAN
@@ -708,17 +736,17 @@ def _hand_phase(st):
     for _ in range(5):  # coarse: 8 mm out
         out.append(_Live(0.6, align(D0 + 0.008), "filter: line it up"))
     out += fine("filter: line it up closely")  # the bore's entry 1.5 mm short of the nipple's end
-    out.append(_Live(1.6, onto, "filter: onto the nipple"))
+    out += press("filter: onto the nipple")
 
     def miss():  # not on the nipple (the base plate met the nipple's end); once on it, never again (latched)
-        if fmodel().on or fmodel().state != fk.FREE:
+        if is_on():
             st["was_on"] = True
         return not st.get("was_on", False)
 
     for _ in range(2):  # at most two more tries
         out.append(_Live(0.8, off_nipple, "filter: missed the nipple, back off", miss))
         out += fine("filter: line it up again", miss)
-        out.append(_Live(1.6, onto, "filter: onto the nipple again", miss))
+        out += press("filter: onto the nipple again", miss)
 
     def xg_now(extra=0.0):
         fm = fmodel()

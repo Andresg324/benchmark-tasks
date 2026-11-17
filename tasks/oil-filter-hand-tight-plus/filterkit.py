@@ -51,6 +51,9 @@ FREE, ENGAGED, CROSSED = "free", "engaged", "crossed"
 START_TURN = math.radians(20.0)  # turned this far clockwise against the crests: the thread starts (or crosses)
 ON_SLACK = 0.00015  # m: the solver's penetration allowed on top of the bore's clearance when judging that the nipple's
 #                     end is inside the bore (the colliders, not this, keep it there)
+FORCED = 0.0006  # m: the nipple's end found inside the collar's metal, this far off the bore's axis (three times the
+#                  clearance) and 0.3 mm in: the filter was forced over it off its axis (a solver penetration, not a
+#                  real fit); it jams, as a crooked start does, and the trial fails
 K_HOLD = 2000.0  # N*m/rad: the stick-slip hold's stiffness (0.5 degrees of give at 18 N*m)
 AX_K = 20000.0  # N/m: the thread's axial stiffness (a drive on top of the stop)
 CLICK = math.radians(3.0)  # the ratchet's 120 teeth
@@ -72,6 +75,8 @@ class Thread:
     root_r: float = 0.009064  # m: the nipple's root (minor) radius, its collider; its end is chamfered down to it
     crest_r: float = 0.009263  # m: the filter's internal crests (its minor radius), the bore's colliders
     bore_z0: float = 0.003  # m: where the bore starts, from the gasket's face (the filter's frame)
+    bore_z1: float = 0.0105  # m: and where it ends
+    collar_r: float = 0.0125  # m: the threaded collar's outside radius
     lead: float = 0.00092  # m: the nipple's end chamfer, axially (45 degrees from its crests to its root)
     d2: float = 0.019026  # m: the pitch diameter
     pd_clear: float = 0.000207  # m: the fit's clearance on the pitch diameter (internal minus external)
@@ -198,6 +203,7 @@ class FilterModel:
     on: bool = False  # the nipple's end inside the bore, against the threads' crests (not yet started)
     tilt0: float = 0.0  # the tilt (rad) and offset (m) it caught with: the flanks take them out over the first turn
     lat0: float = 0.0
+    forced: bool = False  # forced over the nipple's end off its axis (see FORCED)
     peak_past: float = -1e9  # rad
     lock: dict = field(default_factory=dict)
 
@@ -227,9 +233,14 @@ class FilterModel:
                     for n in CHAIN}
         if self.state == FREE:
             tip = tip_in_filter(J, th.nip_len)
+            tr = math.hypot(tip[0], tip[1])
+            if th.bore_z0 + 0.0003 < tip[2] < th.bore_z1 and FORCED < tr < th.collar_r:
+                self.state, self.crossed_tilt, self.forced = CROSSED, tilt, True
+                self.lock = dict(J)
+                return {n: (J[n], 2000.0, 0.0, 5.0, 1000.0, (J[n] - 1e-3, J[n] + 1e-3)) for n in CHAIN}
             # the nipple's end inside the bore (which only its colliders let happen within its clearance), and not
             # past the crests' stop
-            on = (tip[2] > th.bore_z0 and math.hypot(tip[0], tip[1]) < th.clearance + ON_SLACK
+            on = (tip[2] > th.bore_z0 and tr < th.clearance + ON_SLACK
                   and out >= th.d0 - 0.0005)
             self.on = on
             if not on:

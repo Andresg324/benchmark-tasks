@@ -67,7 +67,8 @@ case("9 degrees off (the nipple's end not square in the bore): cross-threaded at
      f.state != fk.ENGAGED, True)
 for mm, want in ((0.0, fk.ENGAGED), (0.1, fk.ENGAGED), (0.2, fk.ENGAGED), (0.5, fk.FREE), (1.0, fk.FREE),
                  (2.0, fk.FREE), (6.0, fk.FREE)):
-    f, _ = start(0.0, lat=mm / 1000)
+    # outside the clearance the colliders leave the base plate on the nipple's end face
+    f, _ = start(0.0, lat=mm / 1000, out=None if want == fk.ENGAGED else TH.nip_len - TH.bore_z0)
     case(f"{mm} mm off the axis, pushed and turned: "
          + ("within the bore's 0.2 mm clearance, the thread catches" if want == fk.ENGAGED
             else "outside it the base plate sits on the nipple's end: nothing catches, nothing pulls it on"),
@@ -107,6 +108,11 @@ for _ in range(30):
 case("unscrewed past where it caught: loose again, flagged", (f.state, f.came_off), (fk.FREE, True))
 
 # cheats on the thread
+f = fk.FilterModel(0, TH)
+J = dict(f_up=0.0015, f_side=0.0, f_out=TH.d0 + 0.0003, f_pitch=0.0, f_roll=0.0, filter=0.0)
+f.step(J)
+case("cheat: shoved over the nipple's end 1.5 mm off its axis (only a solver penetration could): jammed, a fail",
+     (f.state, f.forced), (fk.CROSSED, True))
 f = fk.FilterModel(0, TH)
 J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.0003, f_pitch=0.0, f_roll=0.0, filter=0.0)
 for out in np.linspace(TH.d0 + 0.0003, TH.d0 - 0.0004, 40):  # shoved on hard, never turned
