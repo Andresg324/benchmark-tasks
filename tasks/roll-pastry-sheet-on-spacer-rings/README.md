@@ -19,7 +19,7 @@ Run (from the repo root, Isaac Lab-Arena installed):
 Use `--policy dream --max-steps 2400` for a Dream-1 trial (the run limit). The scene is deterministic (no seeds, object_jitter=0).
 Runtime per trial: the demo runs 1,167 steps (58.4 s at 20 Hz); a Dream-1 trial runs up to 2,400 steps (2 minutes).
 
-Results on this task.py (sha256 a8f7b3ef9491...): the scripted demo scores **1.0 in 1,167 steps**. Dream-1: PENDING.
+Results on this task.py (sha256 a8f7b3ef9491...): the scripted demo scores **1.0 in 1,167 steps**. Dream-1 scores **0 in 2,400 steps** (did not finish).
 
 ## The pastry: what people buy, and what it is rolled to
 
