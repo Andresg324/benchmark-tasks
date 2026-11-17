@@ -55,12 +55,11 @@ ALPHA = math.asin(HALF / R)  # the half-angle the curve spans about its center (
 ARC = 2 * ALPHA * R  # m: the curve's length, 25.8 cm
 Z_MID = GAP + T / 2  # the board's mid-thickness above the table (its frame's height)
 G = 9.81
-# The board's friction on the router table's top (phenolic or high-pressure laminate). The board is a free rigid body
-# lying on the table, so its weight and the hands' press bear on the table top through a contact, and PhysX's Coulomb
-# friction there resists its sliding and turning: mu 0.25 sliding, 0.3 at rest. No published value for planed hardwood on
-# phenolic or laminate was found; 0.25 is the low end of clean, dry wood on wood (0.25-0.5) and inside wood on clean
-# metal (0.2-0.6) (Engineering ToolBox, "Friction - friction coefficients"), and above wet or waxed wood (0.2 and
-# less). The real trial's feed-force check measures it.
+# The board's friction on the table's top, a planed wooden slab in the sim as on the rig (README): wood on wood. The
+# board is a free rigid body lying on the table, so its weight and the hands' press bear on the table top through a
+# contact, and PhysX's Coulomb friction there resists its sliding and turning: mu 0.25 sliding, 0.3 at rest, the low
+# end of clean, dry wood on wood (0.25-0.5, Engineering ToolBox, "Friction - friction coefficients"), for smooth
+# planed faces. The rig's tilt test checks it (a test board starts sliding at 14-17 deg; paste wax if steeper).
 MU_TABLE = 0.25  # sliding
 MU_TABLE_STATIC = 0.30
 
@@ -249,8 +248,8 @@ def drag_load(J):
     """The cord's pull on the board, as (its moment about the pin, its components along the board's x and y), and its
     bookkeeping; _push_board puts it on the board's body. CORD_N toward the pulley at the eye while the cord is taut,
     else 0: taut while the board draws cord out, and while it lets the cord back up to CATCH from the most drawn (the
-    cams slipping); then the cams grip there and the cord is slack until the board draws out past that again. It computes once per control step (the same pose returns
-    the same load)."""
+    cams slipping); then the cams grip there and the cord is slack until the board draws out past that again. It
+    computes once per control step (the same pose returns the same load)."""
     global _D
     if _D.episode != kit.episode():
         _D = _Drag()
@@ -445,7 +444,7 @@ class _History:
         self.episode = kit.episode()
         self.grab = False  # irreversible: the board crossed the cutter circle while not braced on the pin and turning
         #                    about it
-        self.hands = False  # irreversible: a gripper's shape or a forearm or wrist link touched the 3 in zone round the bit
+        self.hands = False  # irreversible: a gripper's shape, or a forearm or wrist link, touched the 3 in zone
         self.cord = False  # irreversible: a gripper or a forearm or wrist link touched the drag's cord
         self.entered = False  # the board is inside the cutter circle after an entry made braced on the pin
         self.braced_prev = False  # braced (and flat) at the last step
@@ -786,15 +785,16 @@ def success(objects):
 
 def score(objects):
     """0, irreversibly, if the board ever crossed the cutter circle (any part of it within the cutter's 15.9 mm radius
-    of the bit's axis) other than by being turned into it about the starting pin while braced on it (within 1.5 mm),
-    the curve not yet on the bearing: a board fed in off the pin, or slid back in after leaving it, is scored as a
-    grab. 0, irreversibly, if any part of a gripper's own shape (palm, finger bodies, pads, tips, at their present
-    opening) touched the zone within 7.6 cm (3 in) of the bit's axis and 5 cm of the table. At most 0.75 while a gripper
-    touches the board (its palm or fingers within 2 mm of it). Otherwise: traced length is the curve's stretch the
-    bearing passed over (within 0.5 mm of it: touching) in passes each begun on the pin, fed right to left. 1.0 with
-    the whole curve traced (every 2 mm stretch but the one at each end) and the board 5 mm clear of the cutter circle
-    with its trailing end past the bit; 0.75 with the whole curve but the board left on or before the bit, or with 18 cm
-    traced; 0.5 with 9 cm traced; 0.25 with the curve brought onto the bearing from the pin; 0 otherwise. Where the
+    of the bit's axis) other than by being turned about the starting pin while braced on it (flat, touching the pin,
+    the curve not yet on the bearing, turning about the pin at that step): a board fed in off the pin, slid in beside
+    or along it, lifted, or slid back in after leaving it, is scored as a grab. 0, irreversibly, if any part of a
+    gripper's own shape (palm, finger bodies, pads, tips, at their present opening) or of a forearm or wrist link
+    touched the zone within 7.6 cm (3 in) of the bit's axis and 5 cm of the table, or touched the drag's cord. At most
+    0.75 while a gripper, forearm or wrist touches the board (within 2 mm of it). Otherwise: traced length is the
+    curve's stretch the bearing passed over touching it (TOUCH, DEEP), the board flat and the cord taut, in passes
+    each begun on the pin, fed right to left. 1.0 with the whole curve traced (every 2 mm stretch but the one at each
+    end) and the board 5 mm clear of the cutter circle with its trailing end past the bit; 0.75 with the whole curve
+    but the board left on or before the bit, or with 18 cm traced; 0.5 with 9 cm traced; 0.25 with the curve brought onto the bearing from the pin; 0 otherwise. Where the
     arms end is not scored. Possible scores: 0, 0.25, 0.5, 0.75, 1."""
     return _score(objects)
 
