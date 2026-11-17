@@ -94,7 +94,7 @@ grippers' palm and finger shapes used by the touching-the-board check):
 
 Where the arms end is not scored. Possible scores: 0, 0.25, 0.5, 0.75, 1.0.
 
-Traced length: the curve's 2 mm stretches that the bearing passed over (the curve within 1.5 mm of the bearing) in
+Traced length: the curve's 2 mm stretches that the bearing passed over (the curve within 0.5 mm of the bearing: touching it) in
 passes each begun on the pin (a second pass is fine if it too is braced on the pin), while fed right to left (the
 contact moving from the leading end toward the trailing end). Feeding the other way, a climb cut, counts nothing. A
 bearing-guided bit cuts exactly the stretch its bearing passes over, so the traced length is the routed length.
@@ -106,9 +106,9 @@ Why these numbers, and how a real trial reads each one (the rig and filming are 
   grab the board and throw it or pull the hand in. Neither the sim nor the rig has a cutter to throw the board, so
   the first unbraced crossing scores 0 at once. Real trial: the top video shows whether the board touched the pin
   before its edge crossed the painted circle, and a board that jumps off the pin is a grab.
-- 1.5 mm braced and on the bearing: the play of a hand-held board against a 0.25 in pin or a 0.5 in bearing; the
-  colliders keep the board from coming closer, so within 1.5 mm is touching. Real trial: touching or not, read from
-  the top video.
+- 1.5 mm braced: the play of a hand-held board against a 0.25 in pin; the pin's collider keeps the board from coming
+  closer, so within 1.5 mm is touching. 0.5 mm on the bearing: touching it (a curve fed past 1 mm off the bearing,
+  never touching, traces nothing). Real trial: touching or not, read from the top video and the blue band.
 - The whole curve: the instruction asks for the rabbet along the curved edge, so full credit needs all of it. The
   scorer counts the curve in 2 mm pieces and excuses only the piece at each very end, where the bearing rolls off
   the corner. Braced on this pin, the board can be set so the bearing meets the curve right at its leading end (the
@@ -258,7 +258,7 @@ protractor, a combination square, a steel rule and a 1/8 in drill bit as a heigh
 
 The paste on the bearing's rim stays wet and transfers where it touches. Wherever the board's edge rode the bearing
 it carries a blue band 3.2-8.0 mm up the edge, so the edge itself records the stretch the bearing passed over, which
-is what the scorer counts (the curve within 1.5 mm of the bearing; the paste needs contact, the stricter reading).
+is what the scorer counts (the curve within 0.5 mm of the bearing, touching it; the paste too needs contact).
 
 Reading the trace, after the trial:
 

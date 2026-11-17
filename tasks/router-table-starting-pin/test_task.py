@@ -129,9 +129,9 @@ def brace_at(t, turn):
     t.move(14, board_turn=turn)
 
 
-def feed_at(t, turn, phi_from, phi_to, n=60):
+def feed_at(t, turn, phi_from, phi_to, n=60, into=0.001):
     for phi in np.linspace(phi_from, phi_to, n):
-        s = slides_at(phi, turn)
+        s = slides_at(phi, turn, into)
         t.j.update(board_turn=turn, board_x=float(s[0]), board=float(s[1]))
         t.step(left=t.press())
 
@@ -175,6 +175,25 @@ def test_geometry():
 def test_do_nothing():
     t = Trial()
     check(t.rest(60)[0], 0.0, "do nothing")
+
+
+def test_start_state():
+    """Anti-gaming: the start state meets no end condition: not braced, not on the bearing, nothing traced, 0."""
+    t = Trial()
+    sc, ok = t.step()
+    check(float(sc == 0.0 and not ok and not m.braced(t.j) and not m.on_bearing(t.j) and m.traced_cm() == 0.0), 1.0,
+          "the start: not braced, curve off the bearing, nothing traced, score 0")
+
+
+def test_pass_off_the_bearing():
+    """Anti-gaming: braced, pivoted, then fed round 1 mm off the bearing (never touching it) and on past the bit: the
+    bearing passed over nothing, so nothing is traced (a curve within 0.5 mm of the bearing is touching it)."""
+    t = Trial()
+    brace_at(t, LEAD)
+    feed_at(t, LEAD, m.ALPHA - 0.004 / m.R, -m.ALPHA - math.radians(4.0), into=-0.001)
+    sc, _ = finish_at(t, LEAD)
+    check(float(m.traced_cm() <= 0.4 and sc <= 0.25), 1.0,
+          f"fed round 1 mm off the bearing: {m.traced_cm():.1f} cm traced, score {sc}")
 
 
 def test_demo_plan_offline():

@@ -144,8 +144,8 @@ def bit_dist(J):
 # --- Scoring thresholds.
 BRACE = 0.0015  # m: the board is on the pin within 1.5 mm of its surface (the pin's collider keeps it from closer;
 #                 1.5 mm is the play of a hand-held board against a 0.25 in pin)
-ON_BEARING = 0.0015  # m: the curve is on the bearing within 1.5 mm of its surface (the rabbet then within 1.5 mm of
-#                      full width; the bearing's collider keeps the curve from going deeper)
+ON_BEARING = 0.0005  # m: the curve is on the bearing within 0.5 mm of its surface: touching it (the bearing's collider
+#                      keeps the curve from going deeper; a curve fed past 1 mm off it, never touching, traces nothing)
 CLEAR = 0.005  # m: at the end, no part of the board within 5 mm of the cutter circle
 BIN = 0.002  # m: the traced length is kept as 2 mm stretches of the curve (129 of them)
 N_BINS = int(round(ARC / BIN))
@@ -162,7 +162,7 @@ GRIPPERS = ("left_gripper", "right_gripper")
 
 
 def on_bearing(J):
-    """The curved edge rides the bearing: the bit's axis within the bearing's radius plus 1.5 mm of the curve."""
+    """The curved edge rides the bearing: the bit's axis within the bearing's radius plus 0.5 mm of the curve."""
     c = curve_point(to_board(J, BIT))
     return c is not None and c[0] <= RB + ON_BEARING
 
@@ -650,7 +650,7 @@ def score(objects):
     grab. 0, irreversibly, if any part of a gripper's own shape (palm, finger bodies, pads, tips, at their present
     opening) touched the zone within 7.6 cm (3 in) of the bit's axis and 5 cm of the table. At most 0.75 while a gripper
     touches the board (its palm or fingers within 2 mm of it). Otherwise: traced length is the curve's stretch the
-    bearing passed over (within 1.5 mm of it) in passes each begun on the pin, fed right to left. 1.0 with the whole
+    bearing passed over (within 0.5 mm of it: touching) in passes each begun on the pin, fed right to left. 1.0 with the whole
     curve traced (every 2 mm stretch but the one at each end) and the board 5 mm clear of the cutter circle with its
     trailing end past the bit; 0.75 with the whole curve but the board left on or before the bit, or with 18 cm
     traced; 0.5 with 9 cm traced; 0.25 with the curve brought onto the bearing from the pin; 0 otherwise. Where the
