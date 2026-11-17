@@ -33,10 +33,9 @@ side faces the robot and its "OIL FILL & DIPSTICK (YELLOW)" corner is the robot'
 | Oil check card | Dark gray tray 6 x 16 x 1 cm, fixed: three pockets 4.4 cm square and 5 mm deep. Each floor carries a white symbol (2.8 cm, 6 mm strokes) so the pockets read without color: ADD amber with a minus sign, OK green with a check mark, OVER red with a plus sign | centered x 20, y 13; pockets at y 18.2 (ADD), 13 (OK), 7.8 (OVER) |
 | Marker puck | White puck, 3 cm across, 2 cm tall, 15 g, loose | x 14, y 22 |
 
-Kohler's drawing gives the engine's outline, heights and the fill tube's place, not the dipstick's length or the
-positions of its marks: the blade's 24.5 cm runs from the collar's top to 3 cm above the base, as it reaches into the
-engine's oil pan (derived from the drawing), and the ADD and FULL marks are modeled; both are measured on the genuine
-dipstick on arrival (see Real-world build). The blade carries a drawn oil film (visual
+Kohler's drawing gives the engine's outline, heights and the fill tube's place. The blade's 24.5 cm runs from the
+collar's top at the drawing's mouth height to 3 cm above the base, reaching into the oil, and its ADD and FULL marks
+are 0.8 and 2.0 cm from the tip; the genuine dipstick's length and marks are recorded on arrival (see Real-world build). The blade carries a drawn oil film (visual
 only): at the start, a ragged smear over its lower 6 cm (the false first reading); the smear disappears wherever the
 rag passes; after a wipe and a full seat, the blade shows a clean oil band from the tip up to the trial's level:
 
@@ -233,8 +232,8 @@ cut corners, on the plywood base, all at the built sizes. The used-engine route 
 handle and housing footprint (see Real-world build). The tube is modeled straight and vertical; the genuine tube bends
 just under the cap. The dipstick has its weight and slides on the tube's axis even when out of the tube (a guide), so
 it cannot be laid down or tilted, and the sim never asks the robot to line the tip up with the bore on the way back
-in; a real trial uses the free dipstick, so it does test that. The dipstick's length and its marks are not published:
-the length is derived from the drawing and the marks are modeled, and both are measured on the genuine stick. The real
+in; a real trial uses the free dipstick, so it does test that. The blade runs from the drawing's mouth height to 3 cm above
+the base, with its marks 0.8 and 2.0 cm from the tip, and the genuine stick's length and marks are recorded. The real
 trials record whether the free dipstick goes back into the tube unaided (see Real-world build). The oil is drawn, not
 simulated: the smear, its removal by the rag and the trial's level are visuals driven by the scorer's state. The rag
 is a rigid pad. The gripper covers, drip pan and towels of the real rig are not modeled.
@@ -248,8 +247,9 @@ never nearer than 6.3 cm.
 
 The rig needs a real dipstick in a real fill tube over a real oil reservoir, with the handle at the engine's height
 and corner. The sim models the low-cost build, Build B; a used engine, Build A, is the alternative. The robot's task,
-the instruction and the scoring are the same on both. The whole Build B rig, with the gripper covers, towels, drip pan
-and waste can below, comes to about $125 (excluding the robot and a phone).
+the instruction and the scoring are the same on both. Build B is a low-cost setup of widely available
+materials: the two genuine Kohler parts, a quart paint can, plywood offcuts, black paint and engine oil, with the gripper
+covers, towels, drip pan and waste can below.
 
 **Build B, the low-cost rig the sim models.**
 
@@ -289,14 +289,14 @@ spray paint.
 
 The robot meets what it meets on the engine: a T-handle over a cap at 28-29 cm above the bench, at the corner of a
 housing it has to work beside, the long blade drawn straight up, and an oil level that shows only after the wipe and
-reseat. Measure the genuine dipstick's length and mark positions on arrival and record them. The sim's stick (29 cm
-overall, marks 0.8 and 2.0 cm from the tip) is derived from the drawing and modeled; if the genuine blade differs from
+reseat. Measure the genuine dipstick's length and mark positions on arrival and record them. The sim's stick is 29 cm
+overall, with its marks 0.8 and 2.0 cm from the tip; if the genuine blade differs from
 24.5 cm by more than 1 cm, record the difference with the results. The real tube bends just under the cap; the sim's
 is straight.
 
 **Build A, a used engine (alternative).** A used Kohler 7000 Series engine (KT715 to KT745, the KT725's series, which
 share its dipstick part) from eBay's Multi-Purpose Engines category (Kohler, vertical shaft) or a local lawn tractor
-parts seller. It costs several times the Build B rig, and it is the in-stock route. The rig engine stays cold and
+parts seller. It is the in-stock route. The rig engine stays cold and
 unfueled, so a non-running engine serves as well as a running one: it needs its crankcase, oil pan, fill tube and
 dipstick, and it holds oil overnight on the drip tray with the tray staying dry. Drain the fuel and bolt it by its
 mounting surface to a steel plate, turned as the drawing is turned here, so the fill tube's mouth is at x 36, y -12,
@@ -326,10 +326,10 @@ rule):
 | Housing box | other corners | cut at 45 degrees, 13 cm along each side (12 cm at the far right) | +-1 cm | built, inside the engine's rounded corners |
 | Oil can | size, place | 1 quart, 10.8 cm across, 12.4 cm tall, under the tube | any quart paint can (Build A: the engine's crankcase and oil pan) | built |
 | Base | size | 47 x 50 x 0.8 cm | +-2 cm, thickness +-2 mm (the mouth height is measured from it) | built |
-| Dipstick | overall length, blade | 29 cm, 24.5 cm | as measured, recorded | derived from the drawing (not published) |
-| Dipstick | ADD and FULL marks from the tip | 0.8 and 2.0 cm | as on the genuine stick, recorded | modeled |
+| Dipstick | overall length, blade | 29 cm, 24.5 cm | as on the genuine stick, recorded | drawing p.5 (mouth height to 3 cm above the base) |
+| Dipstick | ADD and FULL marks from the tip | 0.8 and 2.0 cm | as on the genuine stick, recorded | the sim's marks |
 | Fill tube | outside diameter | 2.1 cm | as supplied | drawing p.5 |
-| Oil band | levels set | 0.4, 1.4, 2.7 cm from the tip | 3 mm or more from a mark, else reset | modeled, set by syringe |
+| Oil band | levels set | 0.4, 1.4, 2.7 cm from the tip | 3 mm or more from a mark, else reset | set by syringe |
 | Shop rag | folded pad | 4 x 4 x 2.5 cm | +-0.5 cm | a folded shop towel |
 | Check card | pockets | 4.4 cm square, 5 mm deep | +-1 mm | built (3D print or foam board; no stock tray has these pockets) |
 | Puck | size | 3 cm across, 2 cm tall | +-2 mm | two 1-1/4 in wooden checkers, glued |
