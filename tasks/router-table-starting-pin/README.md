@@ -118,8 +118,7 @@ Why these numbers, and how a real trial reads each one (the router setup and fil
   plus the boxes' fit to the meshes, so a hand resting on the board counts and one hovering above it does not.
   Real trial: the side view at the end shows whether any gripper is on the board.
 
-A real trial: the router unplugged and locked out, the bit replaced by a smooth stand-in bearing coated in blue
-spotting paste, a one-way hanging-weight drag on the board set to the modeled cutting force, filmed from above and
+A real trial: no router or bit, a smooth stand-in bearing at the bit's place coated in blue spotting paste, a one-way hanging-weight drag on the board set to the modeled cutting force, filmed from above and
 from the side; the board's edge pencil-marked every centimeter; check from the video that the board touched the pin
 before it crossed the painted cutter circle and stayed on it until the edge met the bearing (a board that jumps off
 the pin is a grab), then read the routed length off the blue trace on the edge (Real-world build).
@@ -168,34 +167,47 @@ model:
 
 ## Real-world build
 
-A bench-top router table (or 19 mm laminated MDF with a 9.25 x 11.75 in phenolic insert plate) with a fixed-base
-router whose collet takes a 1/4 in shank, the plate's 0.25 in steel starting pin 5 cm right of the bit's axis, a
-clear overhead pin guard set 1-1/2 in above the table (Bench Dog ProGuard, as in the sim), and 0.5 in cherry boards
-25 x 15 cm band-sawn to a 30 cm radius on one long side from one template, a fresh one each trial. Everything named
-below is catalog or hardware-store stock; the whole rig comes to about $700, robot and cameras aside.
+The sim's router table is, for the robot, a flat top with an insert plate, the bit's bearing, a starting pin and an
+overhead pin guard; there is no fence (a curved part is routed against the pin and the bearing), and the router body
+hangs under the table where the robot never reaches. Nothing in the sim needs the router itself, and since nothing
+cuts in the robot trials, the real rig has no router: the bearing stands on a fixed arbor in the top.
+
+- Top: a 3/4 in melamine panel, 2 x 4 ft (hardware-store shelving stock), clamped to the bench, with the sim's 40 x
+  62 cm table area and the 23.5 x 30 cm insert plate's outline marked on it. The sim's plate is drawn but shares the
+  table's friction surface, so one flat melamine surface serves for both. Commercial bench-top router tables (Skil
+  RAS900, Bosch RA1181) have smaller tops and their own plate sizes, so the panel matches the sim's layout more
+  closely.
+- Starting pin: a 1/4 in x 1-1/2 in steel dowel pin pressed into a 1/4 in hole drilled 5 cm right of the bit's axis
+  (at the sim's x 33.75, y 1 cm), standing 3 cm tall.
+- Pin guard: a Bench Dog ProGuard screwed to the top, its shield 1-1/2 in above the table over the bit's axis, as in
+  the sim.
+- Boards: 0.5 in cherry, 25 x 15 cm, band-sawn to a 30 cm radius on one long side from one template, a fresh one each
+  trial.
+
+Everything named here is catalog or hardware-store stock; the whole rig comes to about $350, robot and cameras aside.
 
 The robot trials use a protected, force-equivalent stand-in for the cutter and read the cut from an independent
 trace, in three parts.
 
 ### 1. Protected: nothing sharp, nothing powered
 
-- Lockout, for the whole robot session: the router's switch off, its plug pulled and closed in a Master Lock 487
-  plug lockout, shut with a Master Lock 410RED Zenex safety padlock. The operator keeps the only key.
-- The bit is out of the router. In its place the collet holds a smooth stand-in: a 1/4 in x 2 in hardened steel
-  dowel pin as the arbor, and on it an R188-2Z shielded ball bearing (1/4 in bore, 1/2 in across, 3/16 in tall), the
-  same 1/2 in diameter and 4.8 mm height as the rabbeting bit's own bearing, which the board rides in the sim.
-- Height: a Climax C-025 set-screw collar (1/4 in bore) on the arbor below the table's surface, a 1/4 in ID x 3/8 in
-  OD nylon spacer on it, then the bearing. The collar is slid until the bearing's underside sits 1/8 in up, gauged by
-  the shank of a 1/8 in drill bit laid on the table: the bearing then spans 3.2 to 8.0 mm, the sim's 3.4 to 8.2 mm
-  within 0.2 mm. A 1/4 in long nylon spacer and a second C-025 collar above hold it down, the collar's underside
-  14.3 mm up, above the board's 12.7 mm top. The spacers are 3/8 in across, inside the bearing, so the edge touches
-  only the bearing.
-- Below the bearing, where the cutter was, only the 1/4 in arbor stands, as in the sim, where the cutter has no
+- No router and no bit: nothing on the table is powered, sharp or spinning, so there is nothing to lock out.
+- The stand-in: an R188-2Z shielded ball bearing (1/4 in bore, 1/2 in across, 3/16 in tall), the same 1/2 in
+  diameter and 4.8 mm height as the rabbeting bit's own bearing, which the board rides in the sim, on a 1/4 in
+  shoulder x 1 in alloy steel shoulder screw (10-24 thread, McMaster-Carr 91259A series) through a 1/4 in hole
+  drilled at the bit's axis (x 33, y 6 cm), with a washer and nylon-insert nut under the top.
+- Height: the stack on the screw is a 1/8 in long nylon spacer (1/4 in ID, 3/8 in OD, McMaster-Carr 94639A series)
+  on the table, the bearing, then a 1/4 in long spacer of the same kind under the screw's head. The bearing then spans
+  3.2 to 8.0 mm above the table, the sim's 3.4 to 8.2 mm within 0.2 mm, checked with the shank of a 1/8 in drill bit
+  laid on the table. The head's underside is 14.3 mm up, above the board's 12.7 mm top. The spacers and the 3/8 in
+  head are inside the bearing's 1/2 in, so the edge touches only the bearing, which turns freely on its clamped inner
+  ring.
+- Below the bearing, where the cutter would be, only the 3/8 in spacer stands, as in the sim, where the cutter has no
   collider: the board's edge passes into the cutter's circle and rides the bearing, the same motion and the same
-  stopping point as the sim's. The 1-1/4 in cutter circle is painted on the plate round the arbor for scoring.
+  stopping point as the sim's. The 1-1/4 in cutter circle is painted on the top round the screw for scoring.
 - So a gripper or a board that reaches the bit's place in any run, a failed one included, meets a smooth steel
-  bearing and round collars at rest, unpowered. The arms' own stop button stays in the operator's hand, the operator
-  and anyone else stay outside the arms' reach while they are powered, and boards are changed with the arms stopped.
+  bearing on a fixed screw. The arms' own stop button stays in the operator's hand, the operator and anyone else
+  stay outside the arms' reach while they are powered, and boards are changed with the arms stopped.
 
 ### 2. Force-equivalent: the sim's cutting force as a one-way drag
 
@@ -231,7 +243,7 @@ real drag copies that law:
   back to its start pose. The cord is then slack by the distance the board must move, so the drag takes hold where
   the sim's cut begins.
 - Table friction: the sim's mu 0.25 sliding and 0.30 at rest is checked with a protractor by tilting a test board
-  on an offcut of the same plate until it slides (0.25 is 14 degrees, 0.30 is 16.7).
+  on an offcut of the same melamine panel until it slides (0.25 is 14 degrees, 0.30 is 16.7).
 
 ### 3. Independent cut validation: the blue trace
 
@@ -255,30 +267,27 @@ Reading the trace, after the trial, by this rule:
   3 in circle drawn round the arbor, no gripper on the board in the side view at the end, and the board's gap to the
   painted cutter circle measured with a ruler on the end photo.
 
-Trace check against a real cut, once before the robot trials, with the arms switched off and the operator alone at
-the table: a 3/8 in rabbeting bit with a 1/2 in bearing and 1-1/4 in cutter (e.g. Freud 32-104) goes in 1/8 in high,
-the lockout comes off, and with the overhead guard in place the operator routes three test boards by hand from the
-pin, the bit's bearing coated in the same blue. Two are fed the whole curve; on the third the operator stops at the
-15 cm mark, swings the board off, braces it on the pin again and feeds the rest without re-coating the bearing. On
-each board the blue band and the cut rabbet must start and end within one 2 mm piece of each other, and the band
-must be unbroken over the full 25.8 cm of a pass and over the second pass, which shows one coat lasts a trial and
-the band reads the length a real cut routes. Then the router is unplugged and locked out again, the bit comes out
-and the stand-in goes in; one more test board fed by hand past the stand-in must show its blue band at the same
-height on the edge as the bit's bearing left, within 0.5 mm. Dust collection, eye and hearing protection are used
-for this check.
+Trace check, once before the robot trials, with the arms switched off: the operator feeds three test boards by
+hand past the coated stand-in, braced on the pin at the start, with the board's edge pencil-marked every centimeter
+and the top camera running. Two are fed the whole curve without re-coating; on the third the operator stops at the
+15 cm mark, swings the board off, braces it on the pin again and feeds the rest. On each board the blue band must
+start and end within one 2 mm piece of where the video shows the edge first met and last left the bearing, the
+third board's band must show its 15 cm stop, and the band must be unbroken over the full 25.8 cm and over the
+second pass. That shows one coat lasts a trial and that the band records exactly the stretch the bearing passed
+over, which is the stretch a bearing-guided rabbeting bit cuts and the stretch the sim's scorer counts.
 
 Conditions and tolerances:
 
 | Quantity | Value | Tolerance | Source |
 |---|---|---|---|
 | Stand-in bearing | 12.7 mm across, 4.8 mm tall | catalog size | R188-2Z (1/4 x 1/2 x 3/16 in); the bit's bearing is 1/2 in across |
-| Bearing height above the table | 3.2 to 8.0 mm | 0.2 mm below the sim's 3.4 to 8.2 mm | collar set with a 1/8 in drill-bit shank as a gauge |
-| Bearing axis | the bit's axis | on the router's own collet | same spindle as the bit |
+| Bearing height above the table | 3.2 to 8.0 mm | 0.2 mm below the sim's 3.4 to 8.2 mm | 1/8 in nylon spacer under it, checked with a 1/8 in drill-bit shank |
+| Bearing axis | the bit's axis (x 33, y 6 cm) | 1 mm | shoulder screw in a hole drilled there |
 | Drag against the feed | 3.0 N, only while the board moves right to left | 0.1 N, set on the luggage scale | task.py `cutting_force`: 2.92-3.04 N at 0.25 m/min, 2.88-3.24 N at 0-1 m/min |
 | Drag direction | along the feed at the cut | within 9 degrees | pulley at x 30, y -40 cm |
 | Table friction | mu 0.25 sliding, 0.30 at rest | tilt angle 14-17 degrees | Engineering ToolBox, wood on wood 0.25-0.5 (low end); the sim's values |
 | Board | cherry, 25 x 15 x 1.27 cm, 250 g | 1 mm; mass to 10% | one band-saw template; black cherry 561 kg/m3 at 12% moisture (AHEC) |
 | Curve | 30 cm radius, 25.8 cm long | within 1 mm of the template | band-sawn to the template line |
-| Starting pin | 0.25 in steel, 5 cm right of the bit's axis | the plate's pin hole | the insert plate |
+| Starting pin | 0.25 in steel, 5 cm right of the bit's axis, 3 cm tall | 1 mm | dowel pin pressed into a drilled hole |
 | Pin guard | underside 1-1/2 in above the table | as set by the maker | Bench Dog ProGuard |
 | Room | 20-24 degrees C | boards kept in the room a day before | indoor shop conditions, so the boards stay near the 12% moisture their density is given at |
