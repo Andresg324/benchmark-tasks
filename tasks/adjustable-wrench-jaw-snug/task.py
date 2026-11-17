@@ -72,8 +72,7 @@ LIFT_MAX = 0.06
 CLEAR = 0.03  # m: the wrench is off the nut once its jaw center is 3 cm from the nut's axis (the head is 4.4 cm long)
 
 # --- Scoring thresholds.
-PLAY_MAX = 0.0004  # m: snug = jaw within 0.4 mm of the flats; 0.4 mm lets the nut turn 5.4 degrees in the jaws
-#                    (see play_angle); a new 150 mm wrench's jaw clearance is at most 0.25 mm (ISO 6787)
+PLAY_MAX = 0.00025  # m: snug = jaw play no more than a new wrench's own jaw clearance (ISO 6787:2001, Table 1: 0.25 mm max)
 ROUND_DEG = 2.0  # degrees: the nut turned this far with the jaw loose = corners rounded (it bears only on them)
 SPIN_TURN_DEG = 30.0  # degrees: the wrench spun this far on a nut that turns freely in its jaws = corners rounded
 CW_DEG = 2.0  # degrees: the nut forced this far clockwise (tighter) = the pull loaded the movable jaw
@@ -457,7 +456,7 @@ def success(objects):
 
 
 def score(objects):
-    """Doing nothing scores 0. 0 if the nut was ever turned 2 degrees or more with the jaw over 0.4 mm wider than its
+    """Doing nothing scores 0. 0 if the nut was ever turned 2 degrees or more with the jaw over 0.25 mm wider than its
     flats (the proxy for rounding its corners; irreversible), or forced 2 degrees or more clockwise (the proxy for
     loading the movable jaw, which springs open; irreversible), or if it never turned 5 degrees looser, or if a
     gripper still holds the wrench at the end (fingers under 60 % open, tool point within 5 cm of it). Otherwise 0.25

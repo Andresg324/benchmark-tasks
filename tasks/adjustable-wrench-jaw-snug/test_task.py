@@ -167,8 +167,8 @@ def loose_jaw_round_then_snug_and_redo_still_zero():
 
 @case
 def play_just_under_limit_ok():
-    t = Trial().step(3, wheel=0.65 * PER_MM)  # 0.35 mm of play left
-    t.turn(66 + math.degrees(m.BREAK + m.play_angle(0.00035)))
+    t = Trial().step(3, wheel=0.8 * PER_MM)  # 0.2 mm of play left
+    t.turn(66 + math.degrees(m.BREAK + m.play_angle(0.0002)))
     assert not m.model().rounded
     t.step(3, wr_turn=t.j["wr_turn"] - m.BREAK).take_off().home()
     assert t.s == 1.0, (t.s, m.loosened_deg(m.model()))
@@ -176,7 +176,7 @@ def play_just_under_limit_ok():
 
 @case
 def play_just_over_limit_rounds():
-    t = Trial().step(3, wheel=0.5 * PER_MM)  # 0.5 mm of play
+    t = Trial().step(3, wheel=0.65 * PER_MM)  # 0.35 mm of play
     t.turn(20)
     assert m.model().rounded and t.s == 0.0
 
@@ -351,7 +351,7 @@ def scoring_holds_across_breakaway_range():
     """Review, Nov 14 (breakaway after 5 minutes of relaxation vs the sim's 0.76 N*m): the rules are read from angles
     (the jaw's play while the nut turns, the nut's clockwise turn, how far it loosened), so the same pulls score the
     same whatever the real breakaway is between 0.10 and 0.93 N*m: a snug full job 1.0, a loose-jaw pull 0, a pull
-    loading the movable jaw 0, play 0.35 mm 1.0, play 0.5 mm 0, and a swing inside the thread's flex moves nothing."""
+    loading the movable jaw 0, play 0.2 mm 1.0, play 0.35 mm 0, and a swing inside the thread's flex moves nothing."""
     keep = m.BREAK
     try:
         for tq in BREAKAWAYS:
@@ -367,13 +367,13 @@ def scoring_holds_across_breakaway_range():
             t.turn(80)
             t.take_off().home()
             assert t.s == 0.0, (tq, "movable jaw", t.s)
-            t = Trial().step(3, wheel=0.65 * PER_MM)
-            t.turn(66 + math.degrees(m.BREAK + m.play_angle(0.00035)))
+            t = Trial().step(3, wheel=0.8 * PER_MM)
+            t.turn(66 + math.degrees(m.BREAK + m.play_angle(0.0002)))
             t.step(3, wr_turn=t.j["wr_turn"] - m.BREAK).take_off().home()
-            assert t.s == 1.0, (tq, "0.35 mm play", t.s)
-            t = Trial().step(3, wheel=0.5 * PER_MM)
+            assert t.s == 1.0, (tq, "0.2 mm play", t.s)
+            t = Trial().step(3, wheel=0.65 * PER_MM)
             t.turn(20)
-            assert m.model().rounded and t.s == 0.0, (tq, "0.5 mm play", t.s)
+            assert m.model().rounded and t.s == 0.0, (tq, "0.35 mm play", t.s)
             t = Trial().step(3, wheel=SNUG)
             t.turn(math.degrees(m.BREAK) * 0.9)
             assert abs(m.loosened_deg(m.model())) < 0.01, (tq, "inside the flex")
