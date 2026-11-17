@@ -96,9 +96,11 @@ the contact's footprint (STRESS x 2 cm x a), and, while the barrel moves, agains
 off a 2 cm strip per meter rolled (STRESS x 2 cm x h). They are worked out from the pin's pose and applied to the pin
 body as an external force and torque before every physics step (240 a second), so the arms have to hold the pin down and
 drive it through the pastry, and a pin pressed harder at one end feels the thicker side push back harder. STRESS is 15
-kPa, set from the first pass's force and anchored on the rig by a kitchen-scale check (below). It is of the same order
-as the 4 to 5 kPa yield stress measured for roll-in fats, the fat layers of laminated pastry (Macias-Rodriguez and
-Marangoni, Physics Today 71(1), 2018). On the first pass over the 4.8 mm sheet, with all twelve 2 cm strips under the
+kPa, between the published values that bracket it: about 8 kPa compressive stress measured for puff-pastry dough at
+room temperature (10.6 N on a 40 mm disc; Wang, Espert, Salvador and Sanz, Curr. Res. Food Sci. 7:100558, 2023) and
+pressures up to 50 kPa for roll-in fats during pastry sheeting (Steffe 1996, via Ooms, Pareyt, Brijs and Delcour, Crit.
+Rev. Food Sci. Nutr. 56:2101-2114, 2016); the roll-in fat's own yield stress is 4 to 5 kPa (Macias-Rodriguez and
+Marangoni, Physics Today 71(1), 2018). The rig is anchored by a kitchen-scale check (below). On the first pass over the 4.8 mm sheet, with all twelve 2 cm strips under the
 barrel (h = 1.6 mm, a = sqrt(2 x 30.5 x 1.6) = 9.9 mm), it gives 15 kPa x 24 cm x 9.9 mm = 35.6 N up (3.6 kg) and 15 kPa x
 24 cm x 1.6 mm = 5.8 N back, falling as the sheet thins (offline, for the demo's strokes). Both are inside the YAM's
 continuous ratings: per arm about 18 N of the 52 N down and 3 N of the 11 N along the board. The real trial scores the
@@ -475,6 +477,10 @@ grows.
 - Kitchen scale: Greater Goods high-capacity kitchen scale, model 0471, 22 lb (10 kg) x 1 g, stainless platform
   (retail listings).
 - Board weight: 4 lb for the J.K. Adams WLS-1612 (chefsupplies.ca listing above).
+- Puff-pastry dough compression, hardness 10.6 N on a 40 x 6 mm disc at 1 mm/s: X. Wang, M. Espert, A. Salvador and
+  T. Sanz, Current Research in Food Science 7:100558, 2023 (doi:10.1016/j.crfs.2023.100558, open access).
+- Roll-in fat pressures in pastry sheeting, up to 50 kPa at 1-100 /s: Ooms, Pareyt, Brijs and Delcour, Critical Reviews
+  in Food Science and Nutrition 56:2101-2114, 2016 (doi:10.1080/10408398.2014.928259), citing Steffe 1996.
 - Roll-in fat yield stress, 4000 to 5000 Pa (LAOS): B. Macias-Rodriguez and A. G. Marangoni, "The fat in a perfect
   croissant", Physics Today 71(1), 2018 (physicstoday.aip.org/quick-study/the-fat-in-a-perfect-croissant).
 - Room thermometer: ThermoPro (TempPro) TP50, -50 to 70 degrees C, +-0.5 degrees C (temppro.com, TP50).
