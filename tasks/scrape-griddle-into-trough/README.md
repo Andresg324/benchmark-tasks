@@ -310,85 +310,60 @@ debris take about 25 minutes, with the wax kept melted all session.
 
 ## Real-world build
 
-Everything is off the shelf and chosen to be cheap and widely sold; the pages below give each item's published
-specifications, and the prices are retail listings seen in November 2026 (rounded).
-
-**Rough rig cost: about $530** (griddle $105 to $150, balance $66, hot plate $75, heat gun about $25, the other
-items below about $155, and about $40 of tape, boats, sheets, clamps and blocks), not counting the robot and the phone. Consumables
-are about $1 a trial (56 g of wax and a little dye and spirits).
+Everything is off the shelf and chosen to be low-cost and widely sold; the pages below give each item's published
+specifications. The whole rig comes to about $420 in all, not counting the robot and the phone.
 - Griddle: Assure Parts 177AOGT1227 add-on 2-burner griddle top, 27 x 12-1/4 x 4 in., 22-3/8 x 12-1/4 in. cooking
   surface of 7-gauge type 430 stainless, 1-1/2 in. rear and side edges, adjustable plate height, 3 x 12-1/4 x 1-1/4 in.
-  grease tray across the open front, about $105 to $150
+  grease tray across the open front, bought from WebstaurantStore
   (https://www.webstaurantstore.com/12-14-x-27-x-4-addon-2-burner-griddle-top/177AOGT1227.html). It stands on the
   bench on its frame with the plate's top 5.0 cm above the bench, clamped with two C-clamps on its frame. It is never
   heated on a burner: only the four cavity spots are warmed to 40 to 45 degrees C with the heat gun before the pour. Its grease tray (about 0.5 kg, estimated from its size in sheet steel;
   weighed at setup) with the debris is well under the balance's 2,000 g.
 - Scraper: Dexter-Russell Basics P94850 4 in. griddle scraper: 4 in. stiff stainless blade, 4-1/2 in. polypropylene
-  handle, 8-1/2 in. overall, 4.8 oz (136 g), about $11 to $25
+  handle, 8-1/2 in. overall, 4.8 oz (136 g)
   (https://www.wasserstrom.com/restaurant-supplies-equipment/dexter-russell-p94850-basics®-4-griddle-scraper-122621).
   The handle (3.0 x 2.4 cm in the simulator) is within the gripper's opening.
 - Mold: Norpro 957R silicone silver-dollar pancake mold, seven 2.75 in. (7 cm) cavities, 9.5 x 9 x 1.75 in., built-in
-  handles, heat safe to 450 F, about $11 to $15; lifted off once the wax has set
+  handles, heat safe to 450 F; lifted off once the wax has set
   (https://www.bakedeco.com/detail.asp?id=49842,
   https://chefsupplies.ca/products/norpro-silver-dollar-size-pancake-ring-957r).
-- Wax: Gulf Wax household paraffin, 16 oz, a few dollars at grocery stores (Royal Oak Enterprises; food-grade, for
+- Wax: Gulf Wax household paraffin, 16 oz, sold at grocery stores (Royal Oak Enterprises; food-grade, for
   canning and candles; melt over boiling water, as in a double boiler, never directly on a burner;
   https://hannaford.com/groceries/home-office/kitchen-dining/gulf-wax-household-paraffin-wax-for-canning-candlemaking-16-oz-pkg.html).
   About 56 g a trial.
-- Dye: CandleScience black liquid candle dye, 1 oz, $5.43 (3 drops per lb for a light shade, 6 for a dark one; works in
+- Dye: CandleScience black liquid candle dye, 1 oz (3 drops per lb for a light shade, 6 for a dark one; works in
   paraffin; https://candlescience.com/color/black-liquid-dye).
-- Melting: CandleScience small aluminum pouring pitcher, 1 lb (454 g), $10.75
-  (https://candlescience.com/equipment/small-pouring-pitcher), standing in a 2 qt saucepan of water on a Cuisinart
-  CB-30 1,300 W single-burner hot plate, about $75 (any thermostatic hot plate will do: the water bath sets the
-  temperature; https://www.macys.com/shop/product/cuisinart-cb-30-countertop-single-burner?ID=8299114),
-  and a cork trivet for the pitcher on the balance.
-- Cleaning: Klean-Strip odorless mineral spirits, about $10 a quart (removes grease and oil; https://kleanstrip.com/?p=366) on paper
+- Melting: CandleScience small aluminum pouring pitcher, 1 lb (454 g)
+  (https://candlescience.com/equipment/small-pouring-pitcher), standing in a 2 qt saucepan of water on an Elite Gourmet
+  ESB-301BF 1,000 W single-burner hot plate (adjustable temperature knob;
+  https://www.bestbuy.com/product/elite-gourmet-electric-single-cast-burner-black/JXT9J6HZSY) or the lab's own
+  stove: the burner only has to boil water, since the water bath caps the melt at 100 degrees C and the IR
+  thermometer holds it at 75 to 85 degrees C. A cork trivet stands the pitcher on the balance.
+- Cleaning: Klean-Strip odorless mineral spirits, a quart (removes grease and oil; https://kleanstrip.com/?p=366) on paper
   towels, for the wax film left on the plate.
 - Balance: U.S. Solid USS-DBS66-20 precision balance, 2,000 g by 0.01 g (repeatability 0.02 g, linearity 0.03 g),
-  128 x 157 mm stainless pan, external calibration, $65.79
+  128 x 157 mm stainless pan, external calibration
   (https://ussolid.com/u-s-solid-2000g-x-0-01-g-precision-balance-ac-dc-power-supply.html). It weighs the pours, the
   tray and the fractions; it is calibrated with the weight its manual names at the start of each session, after a
   30-minute warm-up, away from drafts.
-- Heat gun: Wagner HT1000, two settings (750 F and 1,000 F; the low one is used), about $22 to $25
+- Heat gun: Wagner HT1000, two settings (750 F and 1,000 F; the low one is used)
   (https://www.wagnerspraytech.com/product/ht-heat-gun/ht1000-heat-gun/). It warms the four cavity spots to 40 to 45
   degrees C before the pour.
-- Proof-load rig: a 1 in. nylon pulley and a small spring clamp (a few dollars at a hardware store), a wooden paint
+- Proof-load rig: a 1 in. nylon pulley and a small spring clamp (hardware-store items), a wooden paint
   stirrer cut to 7.0 cm, string, a 9 oz plastic cup and a squeeze bottle of water.
-- Infrared thermometer: Etekcity Lasergrip 774, -50 to 450 degrees C, adjustable emissivity (set to 0.95), $18.99
+- Infrared thermometer: Etekcity Lasergrip 774, -50 to 450 degrees C, adjustable emissivity (set to 0.95)
   (https://etekcity.com/products/lasergrip-774-upgrade). It is meant for high-emissivity surfaces and reads shiny
   metal low, so it is aimed at the wax, the melt and the masking-tape marks on the plate, never at bare steel.
-- Overhead camera: a phone on a NEEWER X6 overhead phone stand, 26.5 to 80 cm high, clamped to the bench, $25.99
+- Overhead camera: a phone on a NEEWER X6 overhead phone stand, 26.5 to 80 cm high, clamped to the bench
   (https://neewer.com/collections/all-product/products/neewer-entry-level-version-x6-phone-stand-66608636).
-- Raking light: IKEA TERTIAL clamp work lamp with an 800-lumen SOLHETTA LED bulb, about $20 with the bulb
+- Raking light: IKEA TERTIAL clamp work lamp with an 800-lumen SOLHETTA LED bulb
   (https://www.ikea.com/ca/en/catalog/products/20355434/).
-- Razor scraper: Red Devil 3010, 1 in. blade, a few dollars
+- Razor scraper: Red Devil 3010, 1 in. blade
   (https://www.dillonsupply.com/Catalog/Products/Hand-Tools/Scrapers-Spreaders-And-Trowels/Hand-Scrapers/red-devil-3010).
 - Rule and level: Empire 27302 6 in. steel rule (https://www.toolnut.com/products/empire-27302-6-steel-rule) and a
   Stanley 0-42-294 torpedo level (https://www.stanleytools.co.uk/product/0-42-294/stanley-torpedo-level-200mm).
 - Also: a steel tape, a soft brush, weighing boats, paper towels, oven mitts (for the pitcher), nitrile gloves, white
   plastic catch sheets, masking tape, two wooden stop blocks and two C-clamps.
-
-### Budget build
-
-The named items above stay as they are, and nothing changes for the sim or the scoring. These cheaper equivalents do
-the same jobs:
-
-- Griddle: buy the same Assure Parts 177AOGT1227 from WebstaurantStore, $104.49 (other sellers list it at up to
-  $406.99). It is the sim's griddle, so only the source changes.
-- Heat: the lab's own stove ($0) or a single electric burner such as the Elite Gourmet ESB-301BF (about $20) in place of
-  the Cuisinart CB-30 hot plate ($75). The water bath caps the melt at 100 degrees C and the IR thermometer holds it at
-  75 to 85 degrees C, so the burner only has to boil water.
-- Scale: an American Weigh Scales AWS-100-CAL pocket scale, 100 g by 0.01 g, with its 100 g calibration weight
-  ($17 to $20), in place of the $66 balance. It has the same 0.01 g readability. Each fraction is under 56 g and is
-  weighed in a pre-weighed boat, so it stays under 100 g: T is the debris brushed out of the tray into a boat (the
-  ~0.5 kg tray is over the scale's capacity), and each 14 g pour is weighed into a small pre-weighed paper cup, poured
-  into the cavity and the emptied cup re-weighed. The 5 % check of M against D still catches anything lost in the
-  brushing. The 86 g proof-load cup is under 100 g; at qualification the release cup's water is weighed in portions
-  under 100 g and summed.
-- Camera and light: a clamp-on overhead phone arm (about $12 to $15) in place of the NEEWER X6, and any clamp lamp the
-  lab has in place of the TERTIAL; the camera only has to look straight down and the lamp only has to rake the plate.
-
-Primary rig about $530; budget build about $350 (excluding the robot and a phone).
 
 ## Files
 
