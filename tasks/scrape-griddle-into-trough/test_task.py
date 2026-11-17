@@ -530,7 +530,8 @@ def main():
     xs, ys, zs = ([w.pos[i] for w in plan] for i in range(3))
     check(min(xs) >= 0.15 and max(xs) <= 0.48, f"tool points within x 0.15-0.48 m ({min(xs):.3f}-{max(xs):.3f})")
     check(max(zs) - M.TOP <= 0.19, f"highest tool point {max(zs) - M.TOP:.3f} m above the table (wpcheck passes to 0.19)")
-    check(all(abs(y) < 0.30 for y in ys), "tool points within |y| < 0.30 m")
+    check(all(-0.45 < y < 0.30 for y in ys),
+          "tool points within y -0.45 to 0.30 m (the taped square lies 10 cm outboard of the right arm's base)")
     check(all(w.yaw == 0.0 or (getattr(w, "pitch", 0.0) != 0.0 and w.yaw == M.YAW_TRIM) for w in plan),
           "every waypoint at yaw 0 (fingers across world y, across the handle); tilted ones trimmed by YAW_TRIM")
     fins = {float(w.finger) for w in plan}

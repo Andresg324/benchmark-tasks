@@ -4,8 +4,8 @@ Files for the `yam_arena` embodiment (Isaac Lab-Arena, bimanual YAM, `station` s
 stands on the bench with its grease tray toward the robot. Near the lip, 22 separate pieces of black Play-Doh are
 pressed flat onto the steel plate, each stuck where it was pressed, standing in for food burnt onto a griddle (a
 standard substitute made in about 5 minutes from a freshly opened can, nothing heated). The robot takes a 4 in.
-griddle scraper from the bench, breaks the pieces free and pushes them over the lip into the tray, and sets the
-scraper down. The setup, scoring and fidelity notes are in `task.json`.
+griddle scraper from the bench, breaks the pieces free with its blade and pushes them over the lip into the tray, and
+sets the scraper down in a taped square on the bench. Only the scraper may move the dough. The setup, scoring and fidelity notes are in `task.json`.
 
 ## Run a trial
 
@@ -31,20 +31,41 @@ fractions weighed on a 0.01 g scale: see Real-world evaluation). The definitions
 |---|---|---|
 | Inside the tray's walls (x 7.4 to 15.0, across the plate's width), below the plate's top | in the tray | delivered |
 | Outside the griddle's footprint (plate, tray and splash guards), including on the scraper once it is set down on the bench | off the griddle | on the bench or floor, or carried off on the scraper |
-| Anywhere else: on the plate, against a guard, on the blade over the griddle, falling into the tray | left on the griddle | not yet delivered |
+| Anywhere else: on the plate, against a guard or on its top, on the blade over the griddle, falling into the tray | left on the griddle | not yet delivered |
 
-- **In the tray, by tiers.** 0.25 at 25 % in the tray (about six pieces), 0.5 at 60 %, 0.75 at 90 % with at most
+- **Only the scraper counts.** A piece in the tray is credited only if the held scraper put it there:
+  1. its bond let go under the blade: the first time the piece leaves its place (moves 0.5 mm), the held blade or its
+     neck is pushing it (within 0.1 s), directly or through pieces the blade is pushing;
+  2. it went over the lip under the blade: within 0.5 s of the blade's last push;
+  3. no part of the robot ever touched it.
+  "Pushing" is contact that moves the piece: the blade within 0.5 mm of it (the blade and the pieces are exact boxes,
+  and the solver rests touching bodies at zero gap) while the piece moves 0.5 mm or more that step; pieces in a pile
+  pass the push on the same way. The handle does not scrape: a piece pushed or flicked with the handle is not
+  credited. A piece in the tray that is not credited counts in no share (`Ledger` in `task.py`). Scooping a piece up
+  on the blade and tipping it into the tray is scraper use and counts.
+- **Hands off the dough: 0.** The robot's own shape touching any piece at any time scores the whole trial 0: either
+  gripper's palm and fingers (guardkit's boxes fitted to the gripper's meshes, at their present opening) or an arm's
+  links from elbow to wrist (capsules of 3.5 cm radius between the joints), within 1 mm of a piece while that piece
+  moves 0.5 mm or more. A cook does not clear a griddle by hand (in service the plate is hot), and the task is the
+  scraper's job; a 0 removes any reason to mix hand moves into a run. A hand passing near a piece, or resting on a
+  piece that does not move, is not a touch. In a real trial a finger, palm or arm pushing, pinching or lifting any
+  piece on the video, or dough on a white finger cover after the trial, scores 0.
+- **In the tray, by tiers.** Shares in the tray are credited shares (below). 0.25 at 25 % in the tray (about six pieces), 0.5 at 60 %, 0.75 at 90 % with at most
   5 % left on the griddle (one piece, 4.5 %), and 1.0 (with the set-down below) at 98 % with nothing left on the
   griddle: every piece is off the plate. In the simulator 98 % means all 22 pieces in the tray; one piece left behind
   scores 0.75, two score 0.5. A piece pushed loose but left on the plate is not clean: it is the same debris moved.
 - **Dough on the scraper.** Dough left on the scraper may be knocked into the tray before the set-down, for example by
   drawing the blade across the tray's rim; it then counts in the tray. Only what is on the blade at the set-down
   counts as off the griddle.
-- **Set down.** 1.0 needs the clean plate and the scraper set down on the bench off the griddle (its origin within
-  3.0 cm of the bench top and outside the griddle's footprint: a scraper lying on the plate or dropped in the grease
-  tray does not count), released (no gripper's palm or fingers touching it: `touching()` in `guardkit.py`, a contact
-  check, not a distance zone) and still (under 1 cm/s and 0.5 degree per step, 10 degrees/s) for 1 s. The job is
-  finished once the scraper is out of hand and off the plate. The arm's pose is not scored.
+- **Picked up, then set down in the taped square.** The scraper starts on the bench with its origin (where the neck
+  meets the handle) 8.5 cm outside a 12 cm square of blue painter's tape (outer edge, centered at x 25.0, y -40.0), so
+  its start never satisfies the set-down. 1.0 needs the clean plate and the scraper picked up (held, its origin 5 cm
+  above where it lay; a scraper dragged along the bench is not picked up) and then set down in the square (its origin
+  inside the tape's outer edge and within 3.0 cm of the bench top: a scraper left on the plate, dropped in the tray,
+  put back where it started or anywhere else on the bench does not count), released (no gripper's palm or fingers
+  touching it: `touching()` in `guardkit.py`, a contact check, not a distance zone) and still (under 1 cm/s and 0.5
+  degree per step, 10 degrees/s) for 1 s. The job is finished once the scraper is out of hand in its place. A scraper
+  left on the plate can still reach 0.75. The arm's pose is not scored.
 - **Off the griddle: capped at 0.25.** More than 5 % of the debris (more than one piece) off the griddle caps the score
   at 0.25: food thrown onto the line or the floor is a slip and fire hazard, which is why cooks push the pile over the
   lip and lift the blade slowly. Judged from where the pieces are, like the tiers.
@@ -57,6 +78,23 @@ fractions weighed on a 0.01 g scale: see Real-world evaluation). The definitions
   bare steel plate itself: a new scratch in the steel 1 cm or longer, against a photo taken before the trial under a
   raking light.
 - Doing nothing scores 0. Possible scores: 0, 0.25, 0.5, 0.75, 1.0.
+
+**Ways to game it, and what stops each** (each has a check in `test_task.py`):
+
+| Strategy | Result |
+|---|---|
+| Push, pinch or carry pieces with a gripper, with or without the scraper in the other hand | 0 (hands off the dough) |
+| Break a bond with a finger, then scrape the piece in | 0 |
+| Sweep pieces with the forearm or wrist | 0 |
+| Pieces reaching the tray with no blade on them (a tipped griddle or moved tray: both are fixed bodies here and clamped in real trials) | not credited |
+| Blade hovering near a piece (2 mm) while something else moves it | not freed by the blade, not credited |
+| A piece knocked loose by anything but the blade, then scraped in | not credited |
+| Push with the handle, or with a scraper nobody holds (thrown, let go) | not credited |
+| Push a piece to the lip, then let it go over later (0.5 s or more) by itself | not credited |
+| Leave the scraper where it started, drag it into the square, leave it on the plate or in the tray | no 1.0 |
+| Fling pieces off the griddle | over 5 % off caps at 0.25 |
+| Scrape at a steep angle or on a corner | caps at 0.5 |
+| Do nothing, or only pick up the scraper | 0 |
 
 ## Real-world evaluation (reproducible protocol)
 
@@ -98,8 +136,13 @@ through a template, so every piece has the same mass, size and place every trial
   across its near end, set at the same marks, serves as well.
 - Scraper: its outline traced on masking tape on the bench, blade edge toward the robot, centered at x 25.0, y -25.5.
   It is laid in the outline within 5 mm and 3 degrees.
-- Camera and light: the phone on the overhead stand, 60 cm above the plate, looking straight down (all of the plate
-  in frame), and the desk lamp on a marked spot at the far right corner shining across the plate at about 15 degrees
+- Set-down square: four strips of ScotchBlue painter's tape (3/4 in.) on the bench forming a square 12 cm on a side
+  (outer edge), centered at x 25.0, y -40.0, right of the scraper's outline, measured with the steel tape.
+- Cameras and light: the phone on the overhead stand, 60 cm above the plate, looking straight down (all of the plate,
+  the scraper's outline and the taped square in frame), records video of the whole trial and takes the photos. A
+  second phone on a small tabletop tripod at the plate's near left corner, at plate height, looks along the lip and
+  records the same trial: it shows the blade at the pieces and every piece going over the lip, and a finger near the
+  dough from the side. and the desk lamp on a marked spot at the far right corner shining across the plate at about 15 degrees
   (raking light). Both stay put. A 1 cm grid printed on paper is photographed on the plate once, to register the
   photos to the plate's corners.
 - Catch sheets: white plastic sheet taped to the bench around the griddle and to the floor in front of the bench, so
@@ -132,8 +175,9 @@ arms are stopped at their ready pose while the debris is made; the operator wear
    gloved palms, adding or pinching off until it reads 2.50 g within 0.05 g; set it aside on a sheet of Reynolds
    parchment paper. 22 balls, about 6 s each. Then weigh all 22 together on the boat: 55.00 g within 0.30 g (the
    total mass check). The total is the trial's debris mass, D.
-5. Press the pieces: drop one ball into each hole, lay a square of parchment paper over it, and press each piece flat
-   with the base of a measuring cup, firmly, for 3 seconds. The cup's base is wider than the hole and stops on the
+5. Press the pieces: drop one ball into each hole, lay a square of parchment paper over it, set the measuring cup on
+   it base down, and stand a full 1 L water bottle (1 kg) on the cup for 3 seconds. Every piece gets the same press,
+   which sets how hard it sticks. The cup's base is wider than the hole and stops on the
    template, which sets each piece's thickness, and the parchment lets the cup lift clean.
 6. Lift the template straight up and set it aside. The pieces stay on the steel where they were pressed; a piece that
    lifts with the template or tears is removed, its spot wiped dry, and a new 2.50 g ball pressed through the template
@@ -154,7 +198,7 @@ written in the trial log with the room temperature.
 gripper's pads would change their grip; the same arms are shared with other tasks. The hands are meant to touch only
 the scraper's handle, but a policy can drive a finger into the dough or brush a guard, so the fingers are covered for
 every trial.
-- Covers: one AMMEX Gloveworks black nitrile disposable glove (5 mil, size L) over each of the two fingers of the hand
+- Covers: one Kimtech Pure G3 white nitrile glove (Kimberly-Clark, size L; white, so black dough on a cover shows) over each of the two fingers of the hand
   that may use the scraper (both hands if the policy may use either). A YAM finger's pad is about 4 cm wide and 1.8
   cm tall, and its finger about 6.8 cm wide: too wide for the fingers of a glove or for finger cots, so the finger goes
   into the glove's palm, its pad against the glove's palm side, until the finger's tip is at the glove's knuckles. The
@@ -163,8 +207,9 @@ every trial.
   are then covered by one smooth layer of nitrile, nothing loose is on the gripping side, and nitrile keeps the pad's
   grip on the polypropylene handle. Before the trial, the hand is opened fully and closed once with nothing held, to
   check the covers move freely.
-- Changed every trial (two gloves a hand), and at once if a cover is torn or marked with dough. A used cover is
-  peeled off with the tape into the waste bin.
+- Changed every trial (two gloves a hand), and at once if a cover is torn. After each trial the covers are looked at
+  under the raking light before they come off: dough on a cover means a finger touched the dough, and the trial
+  scores 0. A used cover is peeled off with the tape into the waste bin.
 - Wipe-down: at each reset, the scraper's handle and blade are wiped with a damp microfiber cloth and dried, so the
   hands only ever take a clean handle. If dough reaches a bare finger or the wrist, the arm is stopped and the part
   wiped with a damp microfiber cloth (water only; Play-Doh dissolves in water) and dried before the next trial.
@@ -183,9 +228,12 @@ of the trial's end:
   single razor pass does not lift as a piece) is not a piece: it is not counted in L and is wiped off at the reset;
 - off the griddle (O): everything on the catch sheets, the bench, the floor and the scraper once it is set down
   (dough still on the blade at the set-down is off the griddle; dough knocked into the tray before then is in T).
-The total M = T + L + O. The shares are T / M, L / M and O / M, scored with the simulator's thresholds (the tiers, the
-5 % off-griddle cap) and the set-down judged from the trial's video (the scraper lying on the bench off the griddle,
-released and still for 1 s). M is within 5 % of D (the weighed pieces) for a valid trial; otherwise the trial is
+Then the two videos are watched back: each piece that reached the tray other than broken free and pushed over the
+lip by the held blade (or by pieces the blade was pushing) is counted (n pieces); a finger, palm or arm pushing,
+pinching or lifting any piece scores the trial 0. The total M = T + L + O, with T as weighed. The shares are
+(T - 2.50 g x n) / M in the tray (an uncredited piece counts in no share), L / M and O / M, scored with the
+simulator's thresholds (the tiers, the 5 % off-griddle cap) and the pick-up and set-down judged from the overhead
+video (the scraper lifted, then lying in the taped square, released and still for 1 s). M is within 5 % of D (the weighed pieces) for a valid trial; otherwise the trial is
 repeated. The two photos are overlaid with the 1 cm grid registered to the plate's corners: the cells holding a dark
 particle 1 mm or larger are counted and kept as the record of where residue was left, and a line visible after but
 not before, 1 cm or longer, is a new scratch in the steel: the gouge cap (0.5). The photos and weights are kept with
@@ -204,7 +252,7 @@ waste bin (used dough is not reused), wipe the tray with a damp microfiber cloth
 it. Lift anything left on the plate with the razor scraper, wipe the plate where the pieces were with a damp
 microfiber cloth (water only), then dry it with a paper towel; the plate is ready when the raking-light photo shows no
 dark particle 1 mm or larger and no smear, and the steel is dry to the touch of a dry paper towel. Wipe the scraper
-(Protecting the robot's hands) and lay it in its outline. The same griddle, template and scraper are used throughout;
+(Protecting the robot's hands) and lay it in its outline (not in the taped square). The same griddle, template and scraper are used throughout;
 the scraper is replaced if its edge has a nick 0.5 mm or deeper, the template if a hole's edge is torn. Then make the
 next debris (above). A trial, its reset and the next debris take about 10 minutes.
 
@@ -213,16 +261,18 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
 | Plate's near right corner | x 15.0, y -17.55 (stops) | 2 mm; lip square within 0.5 degree | simulator's layout; steel tape |
 | Plate's top above the bench | 5.0 cm, level | 2 mm at each corner; 0.5 degree | simulator's layout; torpedo level |
 | Scraper | in its outline at x 25.0, y -25.5 | 5 mm, 3 degrees | simulator's start pose |
+| Set-down square | 12 cm tape square (outer edge) centered at x 25.0, y -40.0 | 5 mm | simulator's square; steel tape |
 | Template | near edge along the lip, right edge against the right guard; squares 1.9 cm | squares 0.5 mm, centers 1 mm | simulator's piece layout; 6 in. steel rule |
 | Room | 20 to 24 degrees C | | the trial runs at room temperature; thermometer |
 | Plate before pressing | bare 430 stainless, clean, dry, unoiled | no particle 1 mm, no smear on the photo | Play-Doh sticks to clean, dry steel |
 | Dough | black Play-Doh, a fresh sealed 4 oz can each trial | can lot code recorded | one product, fresh each trial |
 | Each piece | 2.50 g, 1.9 cm square, about 4.8 mm thick | 0.05 g | simulator's piece; 0.01 g scale |
 | All 22 pieces | 55.00 g | 0.30 g | simulator's debris mass |
-| Press | base of a measuring cup, firmly, 3 s, down to the template | | the template's thickness sets the piece's |
+| Press | base of a measuring cup with a full 1 L water bottle (1 kg) on it, 3 s, down to the template | | the template's thickness sets the piece's; the bottle sets the press |
 | Contact check | by eye: every piece flat and fully in contact with the plate, no lifted edges | every piece | a lifted piece is remade |
 | Start | within 10 minutes of the last piece pressed | | fresh dough |
-| Finger covers | a fresh nitrile glove on each finger of the scraper hand | every trial | Protecting the robot's hands |
+| Finger covers | a fresh white nitrile glove on each finger | every trial; no dough on them after | Protecting the robot's hands |
+| Video | overhead phone (plate, outline and square in frame) and a phone at plate height at the near left corner | whole trial | credit and hands-off judged from both |
 | Nothing left (1.0) | L under 0.40 g and no piece 1 mm or larger; a thin smear not counted | | a sixth of a 2.50 g piece; steel rule and 1 cm grid photo |
 | Mass balance | M = T + L + O vs D, the weighed pieces | 5 %, else repeat | 22 weighed pieces |
 | Weighing | BOMATA 1 kg x 0.01 g scale, within 5 minutes of the trial's end; tray plus contents within its 1,000 g | 0.01 g (1 % of the debris is 0.55 g); session check 100 g within 0.03 g | listed specifications; 100 g calibration weight |
@@ -236,33 +286,37 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
   scale and to press by hand in seconds, small enough that the 10.2 cm blade meets two or three at a time, and
   enough of them that a lane's leftovers matter (one piece is 4.5 % of the mass).
 - **Real bodies, bonded.** Each piece is its own rigid body: a box collider with the same visible box and its real
-  mass, held 0.2 mm above the plate by a breakable joint (a PhysX fixed joint from the plate to the middle of the
+  mass, lying on the plate and held by a breakable joint (a PhysX fixed joint from the plate to the middle of the
   piece's underside). Pieces are bonded to the plate only, not to one another. The physics solver breaks the joint,
   for good, the first time holding the piece takes more than its break force; from then on the piece is free.
   Nothing is drawn or moved by a script: the blade's collider has to meet a piece and push it hard enough to free it,
   and a piece falls into the tray only when it is pushed past the lip. The score reads only the pieces' poses.
-- **Bond strength.** Each piece is bonded to the plate on its own and breaks free under the scraper's edge; an edge
-  that gets under a piece peels it off with less push than a flat shove.
-- **Break force in PhysX.** PhysX tests a joint's break force against its own measure of the joint's load, not the push on the
-  piece, so the task scales the bond it writes (`BREAK_CAL`). A broken bond
-  is not restored by the scene's reset (one trial per run).
-- **Rigid pieces.** Real Play-Doh is soft: under the blade a piece may squash a little or leave a thin smear. The
-  score is by mass and the smear threshold (under 0.40 g) is the same in both, so this does not change it.
+- **Bond strength.** Each piece breaks free at 0.8 N of sideways push, about 33 times its weight: it does not slide
+  or tip on its own, and the held scraper's edge frees it. There is no published bond for modeling compound on
+  steel; in a real trial the press sets it (a 1 kg water bottle on the cup for 3 s, the same for every piece), and
+  the qualification checks that the scraper frees each piece in one stroke. The break torque is the same 0.8 N at the
+  piece's half-width (9.5 mm): pressing down on a piece's edge or corner (a heel, a fingertip, the flat of the blade)
+  needs as much force as a sideways push, so a piece is not cheaply pried off from above.
+- **Break force in PhysX.** PhysX tests a joint's break force against its own measure of the joint's load, not the
+  push on the piece, so the task scales the bond it writes (`BREAK_CAL` = 32). Pushed with a slowly rising force in
+  the simulator, bonded pieces came free at 0.9 to 1.8 times the bond (0.7 to 1.4 N). A broken bond is not restored by
+  the scene's reset (one trial per run).
+- **Rigid pieces.** Real Play-Doh is soft: under the blade a piece may squash, leave a thin smear, or be cut through
+  with a base layer left on the steel, which the rigid pieces never do. The score is by mass and the smear threshold
+  (under 0.40 g) is the same in both; a cut-through piece makes the real trial harder, not easier.
 - **Contact settings.** Pieces are 4.8 mm thick (the blade is 1.5 mm, moving 4 cm/s: 0.2 mm per 240 Hz physics step,
-  so nothing passes through); contacts start 2 mm out and rest at zero gap; 16 position iterations; a piece pinched
-  into a collider is pushed out no faster than 0.3 m/s.
-- **Friction.** A piece on steel, 0.5 static and 0.4 sliding, combined by "min" with the other surface:
-  on the plate (0.20 and 0.15) a freed piece slides ahead of the blade, and on the blade (0.5) it slides back off a
-  40 degree blade (tan 40 degrees is 0.84) instead of riding up with it.
+  so nothing passes through); contacts are generated from 2 mm out and rest at zero gap; 16 position iterations; a
+  piece pinched into a collider is pushed out no faster than 0.3 m/s. Each piece has linear and angular damping of 1
+  per second, which takes the solver's stored push out of a piece the moment its bond lets go, so a freed piece does
+  not spring away (real dough does not); it hardly slows a piece being pushed.
+- **Friction.** The plate is clean, dry, bare steel, as in a real trial: 0.7 static and 0.6 sliding for the blade on
+  the plate (dry steel on steel; common engineering tables give 0.5 to 0.8) and for a freed piece of dough on it
+  (combined by "min"). A freed piece drags on the plate and stops when the blade stops.
 - **The layout is fixed.** The pieces are not in the task's object list, so the simulator's object jitter (which
   moves each free object up to 3 cm on its own) leaves them where the template puts them; the scene's reset puts them
   back where they started. The scraper is still jittered.
 - **Why the strokes overlap.** Pushed pieces spread sideways and spill round the blade's ends; a lane's leftovers lie
   in the next lane's path, so the demo's half-blade overlaps and repeated passes pick them up.
-- **The plate's surface.** The plate is bare steel, wiped with a damp cloth between trials; Play-Doh is oily and
-  salty and leaves a light film where it was pressed, so a steel blade slides on it. The plate has the friction of a
-  greased or filmed steel surface (0.20 static, 0.15 sliding; steel on steel greased about 0.16, Engineering ToolBox)
-  instead of the simulator's default 1.2, at which a blade edge sticks and chatters.
 
 ## Runtime and seeds
 
@@ -312,14 +366,14 @@ specifications.
   It weighs the pieces, the tray and the fractions. At the start of each session
   it is checked, after a 10-minute warm-up and away from drafts, against a 100 g calibration weight (100.00 g within
   0.03 g), and recalibrated by its manual if it reads outside that.
-- Finger covers: use AMMEX Gloveworks GPNB black nitrile disposable gloves, industrial grade, 5 mil palm, powder free, size
-  Large (GPNB46100, 100 a box;
-  https://quill.com/gloveworks-gpnb-nitrile-industrial-grade-gloves-large-black-100-box-gpnb46100/cbs/55392359.html),
-  held with ScotchBlue 2090 painter's tape. The same box serves the operator.
+- Finger covers: use Kimtech Pure G3 white nitrile gloves (Kimberly-Clark), size Large, held with ScotchBlue 2090
+  painter's tape. The same box serves the operator. White, so dough on a cover shows.
 - Cleaning: use microfiber cloths and water for the plate, tray, scraper and robot; paper towels to dry.
 - Room: use a ThermoPro TP49 digital thermometer and hygrometer on the bench beside the griddle.
 - Overhead camera: use a phone on a NEEWER X6 overhead phone stand, 26.5 to 80 cm high, clamped to the bench
   (https://neewer.com/collections/all-product/products/neewer-entry-level-version-x6-phone-stand-66608636).
+- Side camera: use a second phone on a small tabletop phone tripod.
+- Set-down square: ScotchBlue 2090 painter's tape, 3/4 in.
 - Raking light: use an IKEA TERTIAL clamp work lamp with an 800-lumen SOLHETTA LED bulb
   (https://www.ikea.com/ca/en/catalog/products/20355434/).
 - Razor scraper: use a Red Devil 3010, 1 in. blade
@@ -335,6 +389,8 @@ specifications.
 - `debriskit.py`: the task's helper module that spawns the debris pieces as rigid bodies, bonds them to the plate
   with breakable joints, and reads their poses.
 - `scrapekit.py`: the task's helper module for the blade-angle rule (the gouge cap); its soil model is not used.
-- `yamkit.py`: the task's helper module that spawns the modeled props (griddle plate, scraper).
-- `guardkit.py`: the task's helper module for contact between the grippers' own shapes and the scraper.
+- `yamkit.py`: the task's helper module that spawns the modeled props (griddle plate, scraper) and reports the arms'
+  joint positions to the scorer.
+- `guardkit.py`: the task's helper module for contact between the robot's own shapes (grippers, arm links) and the
+  scraper or the pieces, and for the exact gap between two boxes.
 - `test_task.py`: offline checks of the scorer, the debris layout and the demo plan.
