@@ -894,20 +894,20 @@ BRACED_LEAD = _rot(-LEAD) @ C_L - C_L  # the slides of that pose: the board 4.1 
 PIVOT_R = 0.130  # m: the pads' distance from the pin (at 11 cm a finger reached the 3 in zone)
 PIVOT_IN = math.radians(85.0)  # the push's angle in from the edge's tangent at the pin (toward the pin)
 PIVOT_F = 3.5  # N
-PIVOT_ALONG = 1.0  # N: at 1.5 N, held on the bearing, the board crept 1 mm along it, so the curve's first touch
-#                    came 4.4 mm in from its leading end
+PIVOT_ALONG = 1.5  # N
 # Once the curve touches the bearing, the board can still roll between pin and bearing (the bearing rolls freely):
 # the cord's pull along the curve drives that roll toward the trailing end, which runs the curve's leading end off
 # the bearing. The pads' push along the pin (the turning push, which here points along the pin, plus PIVOT_ALONG,
-# 3.0 N together) holds it there, with the pin's and the table's friction; it is kept through the hold on the bearing
+# 3.5 N together) holds it there, with the pin's and the table's friction; it is kept through the hold on the bearing
 # (dropped there, the board rolled off at once).
 # The pivot is planned from the braced pose the two-hand carry leaves the board in, in the sim: turned 15 deg (1 deg
 # past the plan), 2 mm on along the pin, where a pivot brings the bearing onto the curve 5 mm in from its leading end.
 PIVOT_POSE = (math.radians(15.0), np.array([0.0068, -0.0355]))
-# The hand swings on 1.5 deg past the turn that puts the curve on the bearing and holds there, so the curve is on the
-# bearing before the pads lift. Free on the pin, the board can still roll between pin and bearing: a larger overshoot
-# (6.8 deg, 1.8 cm of the hand's give) wound up enough push to roll the curve's leading end off the bearing.
-PIVOT_OVER = math.radians(1.5)
+# The hand swings on 3 deg past the turn that puts the curve on the bearing and holds there, so the curve is on the
+# bearing before the pads lift (at 1.5 deg the board stopped 0.9 mm short of it, and first touched it 4.4 mm in from
+# its leading end when the other hand took it). Free on the pin, the board can still roll between pin and bearing: a
+# larger overshoot (6.8 deg, 1.8 cm of the hand's give) wound up enough push to roll the leading end off the bearing.
+PIVOT_OVER = math.radians(3.0)
 HIGH = TOP + 0.09  # pad tips 6.5 cm above the table: well clear of the 5 cm hand rule
 
 
