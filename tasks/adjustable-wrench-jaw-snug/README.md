@@ -1,11 +1,11 @@
-# Loosen a nylon nut with an adjustable wrench, rolling the jaw snug on the flats first
+# Loosen a nylon nut with an adjustable wrench, rolling the jaw closed onto the flats first
 
 An 8-inch adjustable wrench sits on an M5 nylon 6/6 hex nut (8 mm across flats), run down finger-tight and then a
 quarter turn on a stud of a steel equipment mounting plate, its jaw left 1 mm wider than the nut. The robot is
 asked to loosen the nut and take the wrench off. Nylon nuts are a normal fastener where a joint must insulate or not
 corrode (electrical panels and enclosures, electronics mounts, wet equipment). Their service torque sits close to
 their failure torque, and it is a load the arm can deliver.
-A trained worker first rolls the worm (thumbwheel) until the jaw is snug on the flats, then pulls so that the nut presses
+A trained worker first rolls the worm (thumbwheel) until the jaw is closed onto the flats, then pulls so that the nut presses
 into the fixed jaw, then lifts the wrench off and lays it down. Pulling with the loose jaw lets it bear on the nut's corners;
 pulling the other way loads the movable jaw. Both score 0 as wrench-use faults, the two rules hand-tool safety
 guidance gives for adjustable wrenches (Canadian Centre for Occupational Health and Safety, "Hand Tools - Wrenches"):
@@ -38,12 +38,13 @@ Why each rule and level:
   wrench that is loosely adjusted"; "Select the correct jaw size to avoid slippage"). The fault is the nut turning 2
   degrees or more, summed over every pull, while the play is over 0.28 mm (or the wrench turning 30 degrees round a
   nut its jaws cannot grip, over 1.24 mm of play). "Loosely adjusted" is set by the standard: ISO 6787:2001
-  (adjustable wrenches), Table 1, gives the maximum clearance j of a new wrench's adjustable jaw for each length, and
-  the 200 mm row, which this 8-inch (205 mm) wrench falls in, gives 0.28 mm. A jaw rolled snug on the flats therefore
-  reads 0.28 mm or less, and any wider reading is a jaw left open. The rule scores wrench use, not damage to the
+  (adjustable wrenches), Table 1, gives the maximum clearance j of a new wrench's adjustable jaw for each length. A
+  closed jaw is defined by ISO 6787's official published value for this wrench: jaw play no more than 0.28 mm, the
+  maximum jaw clearance of a new 200 mm adjustable wrench (ISO 6787:2001, Table 1, 200 mm row; this wrench is 8-inch,
+  205 mm). Any wider reading is a jaw left open. The rule scores wrench use, not damage to the
   nut. 2 degrees of turn is more than the reading error of the video angle tool and under the 3.4 degrees the
   wrench flexes before the nut moves in the simulation.
-  Play is tracked over the whole run, so a jaw snugged for the first pull and opened again before a later one is
+  Play is tracked over the whole run, so a jaw closed for the first pull and opened again before a later one is
   caught. A real trial reads the same play and turn from video, frame by frame (see the real-world build).
 - Movable jaw loaded: the other procedural fault, a turn against the movable jaw (CCOHS: "the direction of the turn
   should be against (towards) the permanent jaw"). A tightening pull lands on the movable jaw's tip, which levers it
@@ -51,7 +52,7 @@ Why each rule and level:
   flexed 3.4 degrees against the thread, so 2 degrees of nut turn is a real tightening pull, not flex. A real trial
   reads that turn from the paint line on the nut.
 - 5 degrees: more than the jaws' play and the thread's flex, so the nut has really turned on its thread.
-- 0.25 for 5 to 60 degrees: the hard part is done (a snug jaw and the right pull broke the nut loose), but it is less
+- 0.25 for 5 to 60 degrees: the hard part is done (a closed jaw and the right pull broke the nut loose), but it is less
   than one swing.
 - 60 degrees: one flat of the hex, a full swing before a mechanic resets the wrench on the next flats.
 - 0.5 with the wrench left on: the nut is loose, but the wrench is still on it, in the way of spinning the nut off
@@ -74,7 +75,7 @@ Where the arms end up does not matter.
   from the hex's geometry) it turns freely, then flexes against a spring (12.7 N*m/rad) up to 3.4 degrees (0.76 N*m),
   past which the nut turns with it. The worm stops when the jaw meets the flats.
 - Off the nut (lifted 16 mm or more, where the jaws clear the stud's end) the wrench moves freely in its plane; laid
-  down, its slides and turn are held. It lifts straight off the flats with the jaw snug, as a real one does: the
+  down, its slides and turn are held. It lifts straight off the flats with the jaw closed, as a real one does: the
   jaw is never clamped on the nut, so it does not need opening first.
 - In task.py the model's flag for a loose-jaw pull is named `rounded`; it marks the procedural fault described
   above.
@@ -90,13 +91,13 @@ DIN 125 M5 zinc washer, M5 hex nuts of natural nylon 6/6 (DIN 934; one per trial
 Tightening (the start state). Each trial's nut is run down the stud by hand until it seats on the washer
 (finger-tight), then turned a further quarter turn (90 degrees) with the wrench against a pencil mark on the washer.
 This is the turn-of-nut method from bolted-joint practice (RCSC Specification for Structural Joints Using High-Strength
-Bolts, Section 8.2.1: bring the joint snug, match-mark, then turn the nut a set rotation), so the starting state is
+Bolts, Section 8.2.1: bring the joint into firm contact, match-mark, then turn the nut a set rotation), so the starting state is
 set by the procedure itself, with no waiting period and no torque reading. Every scoring rule reads angles (the play
 while the nut turns, the nut's clockwise turn, how far it loosened), and the offline check
 `scoring_holds_across_breakaway_range` runs the same pulls with the thread breaking loose at 0.10, 0.38, 0.76 and
 0.93 N*m, from a nut that has almost let go up to the nut's 0.93 N*m ultimate torque (Plastic Nuts & Bolts, nylon 6/6
 mechanical data, dry as molded, 23 C), the most an M5 nylon 6/6 nut can hold. The scores are the same at every one:
-a snug full job 1.0, a loose-jaw pull 0, a turn against the movable jaw 0, 0.25 mm of play 1.0 and 0.32 mm 0. The
+a full job with a closed jaw 1.0, a loose-jaw pull 0, a turn against the movable jaw 0, 0.25 mm of play 1.0 and 0.32 mm 0. The
 sim's thread breaks loose at 0.76 N*m, the maker's recommended torque (0.73-0.79 N*m), inside that range. Even at the
 nut's 0.93 N*m strength the pull is 7.2 N at the grip, 13 cm from the nut; the YAM's shoulder and elbow servos (Damiao
 DM-J4340, 9 N*m rated, 27 N*m peak) and wrist servos (DM-J4310, 3 N*m rated, 7 N*m peak) give, worked through the
@@ -104,7 +105,7 @@ arm's Jacobian with the torque that holds the arm up included, 11 N or more in a
 (continuous) torque in typical tabletop poses, so every start the procedure can give is within the arm's continuous
 rating.
 
-What the faults score: the two procedural rules above (a snug jaw, the turn toward the fixed jaw), read from video.
+What the faults score: the two procedural rules above (a closed jaw, the turn toward the fixed jaw), read from video.
 Before and after photos of the nut are kept with the results as a record.
 
 Before and after each trial, photograph the nut's top square-on from 15 cm with a macro lens or a phone in macro mode,
