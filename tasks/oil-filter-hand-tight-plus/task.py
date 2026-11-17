@@ -693,18 +693,22 @@ def _hand_phase(st):
         g = {"done": None}
         out_ = []
 
+        def keep(i):
+            return gate() and (g["done"] is None or i <= g["done"])
+
         def look(i):
             def f():
+                if not keep(i):  # skipped (the planner still reads its target): no correction
+                    return st["last"]
                 e, t = off_axis()
                 if g["done"] is None and e <= FINE_MM and t <= FINE_DEG:
                     g["done"] = i
-                g["last"] = align(OUT_NEAR, 0.7, 0.002)()
-                return g["last"]
+                st["last"] = align(OUT_NEAR, 0.7, 0.002)()
+                return st["last"]
             return f
         for i in range(FINE_LOOKS):
-            keep = (lambda i=i: gate() and (g["done"] is None or i <= g["done"]))
-            out_.append(_Live(0.6, look(i), label, keep))
-            out_.append(_Live(1.0, lambda: g["last"], label + " (settle)", keep))
+            out_.append(_Live(0.6, look(i), label, lambda i=i: keep(i)))
+            out_.append(_Live(1.0, lambda: st["last"], label + " (settle)", lambda i=i: keep(i)))
         return out_
 
     def onto():
@@ -720,21 +724,34 @@ def _hand_phase(st):
         the rest are skipped (decided as each starts)."""
         g = {"done": None}
 
+        def keep(i):
+            return gate() and (g["done"] is None or i <= g["done"])
+
         def look(i):
             def f():
+                if not keep(i):  # skipped (the planner still reads its target): no correction
+                    return st["last"]
                 if g["done"] is None and is_on():
                     g["done"] = i
-                align(OUT_NEAR, 0.5, 0.001)()
-                return onto()
+                else:
+                    align(OUT_NEAR, 0.5, 0.001)()
+                st["last"] = onto()
+                return st["last"]
             return f
-        return [_Live(1.6 if i == 0 else 1.0, look(i), label,
-                      lambda i=i: gate() and (g["done"] is None or i <= g["done"])) for i in range(PRESS_LOOKS)]
+        return [_Live(1.6 if i == 0 else 1.0, look(i), label, lambda i=i: keep(i)) for i in range(PRESS_LOOKS)]
 
     def off_nipple():  # not on it (the base plate met the nipple's end): back off and look again
-        return _tcp_for_gasket(X_LAND - OUT_NEAR - 0.003, st["fix"]), st["rfix"] @ r_pick, F_CAN
+        if not miss():
+            return st["last"]
+        st["last"] = _tcp_for_gasket(X_LAND - OUT_NEAR - 0.003, st["fix"]), st["rfix"] @ r_pick, F_CAN
+        return st["last"]
+
+    def coarse():
+        st["last"] = align(D0 + 0.008)()
+        return st["last"]
 
     for _ in range(5):  # coarse: 8 mm out
-        out.append(_Live(0.6, align(D0 + 0.008), "filter: line it up"))
+        out.append(_Live(0.6, coarse, "filter: line it up"))
     out += fine("filter: line it up closely")  # the bore's entry 1.5 mm short of the nipple's end
     out += press("filter: onto the nipple")
 
