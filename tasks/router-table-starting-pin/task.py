@@ -842,8 +842,8 @@ FEED_PADS = (  # (from phi, to phi, left pads, right pads, right hand's yaw, squ
 # second stretch, against the cord's pull at the trailing end, with equal shares (up to 5.0 N each) and the leading
 # pads 2.5 cm in from the leading end, those pads crept on along the board and off its end; with 1 N leaned onto the
 # trailing hand the curve came off the bearing. The plan there leans 0.5 N onto the trailing hand, and the leading pads
-# press 4 cm in from the end (13 cm or more from the bit's axis); there the pair pushes 2 N onto the bearing (at 1 N
-# the curve drifted 1-2 mm off it).
+# press 4 cm in from the end (13 cm or more from the bit's axis) with 12 N (PRESS_L2); the pair pushes 2 N onto the
+# bearing (at 1 N the curve drifted 1-2 mm off it).
 PAD_L, PAD_R = FEED_PADS[0][2], FEED_PADS[0][3]  # at the feed's start
 # Each hand is turned about the vertical so its fingers close roughly toward the bit: the closed fingers then reach
 # 2.4 cm toward it (their thickness), not 3.4 cm (half their 6.8 cm width), and stay out of the 3 in zone with the
