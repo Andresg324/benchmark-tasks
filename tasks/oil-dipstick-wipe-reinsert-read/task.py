@@ -1,8 +1,7 @@
-"""A lawn tractor's Kohler 7000 Series KT725 V-twin engine, modeled at its real size from Kohler's dimension drawing,
-standing on a section of the tractor's frame, with its yellow-handled dipstick seated in the near-vertical oil fill
-tube at the engine's front corner, a folded shop rag, and an oil check card with ADD, OK and OVER pockets and a marker
-puck. Checking the oil means
-pulling the dipstick, wiping the blade clean on the rag (the first pull reads a false, smeared level because oil
+"""A lawn tractor engine's oil check on the low-cost rig: the genuine yellow-handled dipstick of a Kohler KT725 V-twin
+seated in its genuine oil fill tube over a quart can of oil, at the corner of a black plywood box that stands in for
+the engine's blower housing, all at the engine's real sizes and places from Kohler's dimension drawing, with a folded
+shop rag and an oil check card with ADD, OK and OVER pockets and a marker puck. Checking the oil means pulling the dipstick, wiping the blade clean on the rag (the first pull reads a false, smeared level because oil
 splashes up the tube while the engine runs), pushing it back in until the cap seats, pulling it again and holding it
 still to read the level, then seating it again, putting the rag down and reporting the level by leaving the puck in
 the matching pocket. The level changes from trial to trial (below ADD, between the marks, or above FULL), so the report
@@ -16,7 +15,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np  # noqa: E402
-import yamkit as kit  # noqa: E402  (spawns the modeled engine and its sliding dipstick; nothing on disk changes)
+import yamkit as kit  # noqa: E402  (spawns the rig and its sliding dipstick; nothing on disk changes)
 import guardkit as gk  # noqa: E402  (the gripper's own shape, for the let-go checks)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN  # noqa: E402
 from yam_arena.demo import Waypoint  # noqa: E402
@@ -29,20 +28,21 @@ SCORE_OVER = "end"
 INSTRUCTION = ("Check the oil level on the engine with the dipstick, mark it on the check card with the puck, then put "
                "everything back.")
 
-# The engine (Kohler KT725, Kohler service manual 32 690 03 Rev. H, dimension drawing p.5) is fixed to the table, its
-# mounting surface on an 8 mm frame plate. Its oil fill tube rises straight up at the engine's front corner (p.5 top
-# view: "OIL FILL & DIPSTICK (YELLOW)"); the dipstick slides along the tube's axis. The tube frame has its origin at the
+# The rig (the low-cost build of the README) is fixed to the table on an 8 mm plywood base that stands for the engine's
+# mounting surface. The oil fill tube rises straight up at the housing box's front corner, where Kohler's drawing for
+# the KT725 (service manual 32 690 03 Rev. H, p.5 top view: "OIL FILL & DIPSTICK (YELLOW)") puts it on the engine; the
+# dipstick slides along the tube's axis. The tube frame has its origin at the
 # middle of the tube's mouth (the collar's top rim) and its z axis along the tube, out of the mouth (here world z).
-SX, SY = 0.36, -0.12  # the tube's mouth in world x, y (the robot's near right corner of the engine)
-PLATE_T = 0.008  # the frame plate under the engine's mounting surface
-MOUTH = PLATE_T + 0.275  # the collar's top 27.5 cm above the mounting surface (read off the p.5 oil-filter-side view)
+SX, SY = 0.36, -0.12  # the tube's mouth in world x, y (the robot's near right corner of the housing box)
+PLATE_T = 0.008  # the plywood base, standing for the engine's mounting surface
+MOUTH = PLATE_T + 0.275  # the collar's top 27.5 cm above the base (the engine's height, read off the p.5 drawing)
 U = np.array([0.0, 0.0, 1.0])  # the tube's axis, out of the mouth: straight up (the drawing's tube is near vertical)
 # The tube frame is the world frame turned a quarter turn about z: the blade's width (tube x) runs along world y and its
 # thickness (tube y) along world x, so its flat faces look toward and away from the robot.
 TILT = (0.0, 0.0, float(math.sqrt(0.5)), float(math.sqrt(0.5)))  # x, y, z, w (plain floats: Warp rejects float64)
 R_TUBE = np.array([[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
 MOUTH_W = np.array([SX, SY, TOP + MOUTH])  # the mouth's middle in world coordinates
-BLADE = 0.245  # the dipstick blade, from the cap's underside to the tip: to 3 cm above the mounting surface, in the sump
+BLADE = 0.245  # the dipstick blade, from the cap's underside to the tip: to 3 cm above the base, in the can's oil
 # (with the cap and T-handle below, the stick is 0.29 m overall, sized to the drawing's tube; handle top ~31 cm up)
 BLADE_W, BLADE_T = 0.010, 0.003  # blade width (along the tube frame's x) and thickness (along y)
 CAP_R, CAP_H = 0.016, 0.010  # the cap's disc, which seats on the tube's rim
@@ -50,7 +50,7 @@ HANDLE = (0.035, 0.018, 0.035)  # the T-handle above the cap: width (tube x), th
 HANDLE_C = CAP_H + HANDLE[2] / 2  # the handle's middle along the tube from the link origin (the cap's underside)
 TUBE_R = 0.0105  # the fill tube's outside radius (about 2.1 cm across in the drawing)
 COLLAR_R, COLLAR_H = 0.018, 0.05  # the wider collar at the tube's top, which the cap seats on
-TUBE_IN = 0.20  # the tube runs this far down to where it enters the crankcase
+TUBE_IN = 0.20  # the tube runs this far down, through the can's lid into the can
 RAG = (0.04, 0.04, 0.025)  # the folded shop rag (pad): x, y, z
 RAG_START = (0.20, 0.0, TOP + RAG[2] / 2)
 
@@ -61,7 +61,7 @@ LEVELS = {"low": 0.004, "ok": 0.014, "over": 0.027}  # m above the tip: below AD
 CASES = ("low", "ok", "over")
 # The oil check card (fixed to the bench, beside the rag) and its marker puck. The pockets run ADD, OK, OVER from the
 # robot's left to its right (left to right in the top camera).
-CARD_C = (0.20, 0.13)  # the card's middle, x, y (in front of the engine, on the robot's left)
+CARD_C = (0.20, 0.13)  # the card's middle, x, y (in front of the housing, on the robot's left)
 CARD = (0.06, 0.16, 0.010)  # x, y, z: 6 x 16 cm, 1 cm tall
 FLOOR = 0.005  # each pocket is 5 mm deep: its floor 5 mm above the table, the card's top 1 cm
 POCKET = 0.044  # pockets 4.4 cm square
@@ -112,15 +112,13 @@ IN_POCKET = 0.012  # m: the puck's middle within this of a pocket's middle along
 SUNK = 0.002  # m: and its bottom at least 2 mm below the card's top (down in the 5 mm pocket, not lying on the rim)
 DEBOUNCE = 2  # control steps: the puck in a pocket for 2 steps is a report made (one step can be a physics pop)
 
-ALU = kit.Look((0.62, 0.64, 0.66), 0.4, metallic=0.6)  # cast aluminum crankcase and oil pan
-FINS = kit.Look((0.46, 0.47, 0.49), 0.5, metallic=0.5)  # the cylinder's cast cooling fins
+SHROUD = kit.Look((0.05, 0.05, 0.055), 0.6)  # the housing box: plywood painted plain black
+PLY = kit.Look((0.74, 0.62, 0.45), 0.85)  # the unpainted plywood base the box is screwed to
+CAN = kit.Look((0.72, 0.73, 0.75), 0.35, metallic=0.8)  # the unlined steel quart can (tinplate)
 DARK = kit.Look((0.14, 0.14, 0.15), 0.6)
-SHROUD = kit.Look((0.05, 0.05, 0.055), 0.45)  # black painted sheet steel: blower housing and cylinder shroud
-SCREEN = kit.Look((0.16, 0.16, 0.17), 0.6)  # the rotating grass screen over the flywheel
-YELLOW = kit.Look((0.96, 0.76, 0.08), 0.45)  # Kohler yellow: dipstick cap and handle, the housing's stripe
+YELLOW = kit.Look((0.96, 0.76, 0.08), 0.45)  # Kohler yellow: dipstick cap and handle
 STEEL = kit.Look((0.82, 0.83, 0.85), 0.25, metallic=0.9)
 BLACK = kit.Look((0.06, 0.06, 0.06), 0.7)
-PLATE = kit.Look((0.24, 0.25, 0.27), 0.5, metallic=0.4)  # the engine's steel mounting plate (tractor frame section)
 RAGLOOK = kit.Look((0.20, 0.35, 0.70), 0.9)  # blue shop towel
 CARDLOOK = kit.Look((0.20, 0.21, 0.23), 0.6)  # dark gray card
 POCKET_LOOK = {"low": kit.Look((0.95, 0.55, 0.05), 0.5), "ok": kit.Look((0.10, 0.65, 0.20), 0.5),
@@ -146,28 +144,121 @@ def _parts(boxes):
     return tuple(meshes), tuple(colliders)
 
 
-# The engine: Kohler KT725 (Kohler 7000 Series V-twin, 725 cc), sized from the service manual's dimension drawing (p.5):
-# 423 mm front to back, about 445 mm across, 300 mm to the blower housing's flat top, 329 mm to the top of the air
-# cleaner, all above the mounting surface. Its frame: x along the drawing's left-to-right, y from its front to its back
-# (the robot sees the drawing's "oil filter side"), origin on the crankshaft's axis at the table. The 90-degree V of
-# cylinders opens toward the back; the blower housing with its round rotating screen covers the top; the oil fill tube
-# stands at the front-left corner. Everything but the colliders below is looks only.
-DIP_LOCAL = (-0.152, -0.112)  # the tube's axis from the crankshaft's axis (drawing: about 152 mm left, 112 mm front)
-ENGINE_C = (SX - DIP_LOCAL[0], SY - DIP_LOCAL[1])  # the crankshaft's axis on the table (world x, y)
-MS = PLATE_T  # the mounting surface's height above the table
-VALVE = kit.Look((0.07, 0.07, 0.075), 0.35, metallic=0.3)  # black valve covers
-FILTER = kit.Look((0.10, 0.12, 0.14), 0.5)  # the oil filter's can
-AIRC = kit.Look((0.09, 0.09, 0.095), 0.5)  # the air cleaner cover
+# The rig (the low-cost build, README "Real-world build"): Kohler's genuine fill tube 32 123 14-S and dipstick
+# 32 038 14-S, the tube standing in a 1 quart steel can of oil, at the corner of a 41 x 41 x 30 cm box of 12 mm plywood
+# painted black that stands where the KT725's blower housing is, its footprint, top and corners from Kohler's dimension
+# drawing (p.5). The box is screwed to an 8 mm plywood base, 47 x 50 cm. Its near right corner (where the tube stands)
+# is cut off as two flat faces from 20 cm along the front and the right side to a point 6 cm in from both; they run from
+# the top down to 20 cm above the base and are open below, where the can stands under the tube. The other three corners
+# are cut at 45 degrees, 13 cm along each side (12 cm at the far right corner).
+BASE_C, BASE = (0.512, 0.062), (0.47, 0.50)  # the plywood base's middle (world x, y) and its size
+BX0, BX1, BY0, BY1 = 0.307, 0.717, -0.145, 0.265  # the box's outside, 41 x 41 cm (world x, y)
+BOX_H, PLY_T = 0.30, 0.012  # the box's height above the base, the plywood's thickness
+CUT, CUT_IN, CUT_Z = 0.20, 0.06, 0.20  # the tube corner's faces: 20 cm along each side, 6 cm in, down to 20 cm up
+CHAMFER = {"far_right": 0.12, "far_left": 0.13, "near_left": 0.13}  # the other corners' 45 degree cuts
+CAN_R, CAN_H = 0.054, 0.124  # the 1 quart can: 10.8 cm across, 12.4 cm tall, on the base under the tube
+MS = PLATE_T  # the base's top: the box, the can and the tube's mouth height are measured from here
+TAB_Z = MS + 0.225  # the tube's tab, screwed to the corner face just above its lower edge
 
 
-def _ring_slats(z, r0, r1, n, width, look):
-    """The grass screen's radial slats, flat on top of the screen disc."""
-    out = []
+def _outline():
+    """The box's outline (world x, y), counterclockwise from above, from the tube corner's right-hand face."""
+    c = CHAMFER
+    return [(BX0 + CUT, BY0), (BX1 - c["far_right"], BY0), (BX1, BY0 + c["far_right"]), (BX1, BY1 - c["far_left"]),
+            (BX1 - c["far_left"], BY1), (BX0 + c["near_left"], BY1), (BX0, BY1 - c["near_left"]), (BX0, BY0 + CUT),
+            (BX0 + CUT_IN, BY0 + CUT_IN)]
+
+
+CORNER_FACES = (7, 8)  # the outline's edges from these vertices are the two faces at the tube
+
+
+def _prism(poly, z0, z1, look):
+    """A closed slab over a convex outline (x, y points, counterclockwise), from z0 to z1."""
+    n = len(poly)
+    pts = [(x, y, z) for z in (z0, z1) for x, y in poly]
+    counts, idx = [], []
     for k in range(n):
-        a = 2 * math.pi * (k + 0.5) / n
-        c, s_ = math.cos(a), math.sin(a)
-        out.append(kit.band([(r0 * c, r0 * s_, z), (r1 * c, r1 * s_, z)], width, 0.002, look, normal=(0, 0, 1)))
+        counts.append(4)
+        idx += [k, (k + 1) % n, (k + 1) % n + n, k + n]
+    counts += [n, n]
+    idx += list(range(n))[::-1] + [n + k for k in range(n)]
+    return kit._mesh(pts, counts, idx, look)
+
+
+def _span(poly, x):
+    """The outline's y extent at x (a convex outline)."""
+    ys = []
+    n = len(poly)
+    for k in range(n):
+        (xa, ya), (xb, yb) = poly[k], poly[(k + 1) % n]
+        if min(xa, xb) - 1e-9 <= x <= max(xa, xb) + 1e-9:
+            ys += [ya, yb] if abs(xb - xa) < 1e-9 else [ya + (yb - ya) * (x - xa) / (xb - xa)]
+    return min(ys), max(ys)
+
+
+def _strips(poly, breaks, z0, z1, y_floor=None):
+    """Box colliders inside the outline: one per strip between x breaks, as wide in y as the outline is at both ends.
+    y_floor (x_until, y) raises the strips' low side to y where they end at or before x_until (the open corner)."""
+    out = []
+    for xa, xb in zip(breaks, breaks[1:]):
+        (la, ha), (lb, hb) = _span(poly, xa), _span(poly, xb)
+        lo, hi = max(la, lb), min(ha, hb)
+        if y_floor is not None and xb <= y_floor[0] + 1e-9:
+            lo = max(lo, y_floor[1])
+        if hi - lo > 1e-4:
+            out.append(((xa, lo, z0), (xb, hi, z1)))
     return out
+
+
+def _housing():
+    """The plywood base, the black box with its cut corners, the quart can under the tube and the tube's tab, in the
+    base's frame (origin on the table at BASE_C)."""
+    ox, oy = BASE_C
+    poly = [(x - ox, y - oy) for x, y in _outline()]
+    top = MS + BOX_H
+    m = [kit.box((0.0, 0.0, PLATE_T / 2), (BASE[0], BASE[1], PLATE_T), PLY),
+         _prism(poly, top - PLY_T, top, SHROUD)]  # the base and the box's top
+    for k in range(len(poly)):  # the sides, 12 mm plywood; the two faces at the tube stop 20 cm above the base
+        a, b = np.array(poly[k]), np.array(poly[(k + 1) % len(poly)])
+        t = (b - a) / np.linalg.norm(b - a)
+        inward = np.array([-t[1], t[0]]) * PLY_T / 2
+        z0 = MS + CUT_Z if k in CORNER_FACES else MS
+        zc = (z0 + top - PLY_T) / 2
+        m.append(kit.band([(*(a + inward), zc), (*(b + inward), zc)], top - PLY_T - z0, PLY_T, SHROUD,
+                          normal=(0, 0, 1)))
+    # The quart can on the base under the tube, its rolled rims, and the lid the tube goes down through
+    cx, cy = SX - ox, SY - oy
+    m.append(kit.lathe([(0.0, MS), (CAN_R - 0.002, MS), (CAN_R, MS + 0.003), (CAN_R, MS + CAN_H - 0.006),
+                        (CAN_R + 0.0015, MS + CAN_H - 0.004), (CAN_R + 0.0015, MS + CAN_H), (CAN_R - 0.005, MS + CAN_H),
+                        (CAN_R - 0.005, MS + CAN_H - 0.003), (0.0, MS + CAN_H - 0.003)], CAN, center=(cx, cy, 0.0),
+                       n=40))
+    # The tube's tab, from the tube to the nearer corner face, screwed to it
+    tube = np.array([cx, cy])
+    face = []
+    for i in CORNER_FACES:
+        a, b = np.array(poly[i]), np.array(poly[(i + 1) % len(poly)])
+        u = float(np.clip((tube - a) @ (b - a) / ((b - a) @ (b - a)), 0.0, 1.0))
+        face.append(a + u * (b - a))
+    f = min(face, key=lambda p: float(np.linalg.norm(p - tube)))
+    d = (f - tube) / np.linalg.norm(f - tube)
+    m.append(kit.band([(*(tube + d * (TUBE_R - 0.001)), TAB_Z), (*f, TAB_Z)], 0.012, 0.0015, STEEL,
+                      normal=(0, 0, 1)))
+    # Colliders: the base, the box as strips inside its outline (below 20 cm without the open corner), and the can as
+    # four blocks round a 2.4 cm channel for the blade
+    x0, x1 = BX0 - ox, BX1 - ox
+    breaks = sorted(set([round(x0 + 0.02 * k, 6) for k in range(11)] + [round(x1 - 0.13 + 0.026 * k, 6) for k in range(6)]
+                        + [x1]))
+    cols = [kit.Collider((0.0, 0.0, PLATE_T / 2), size=(BASE[0], BASE[1], PLATE_T))]
+    boxes = (_strips(poly, breaks, MS + CUT_Z, top) +
+             _strips(poly, breaks, MS, MS + CUT_Z, y_floor=(x0 + CUT, BY0 + CUT - oy)))
+    s2 = CAN_R / math.sqrt(2)
+    boxes += [((cx - s2, cy - s2, MS), (cx - 0.012, cy + s2, MS + CAN_H)),
+              ((cx + 0.012, cy - s2, MS), (cx + s2, cy + s2, MS + CAN_H)),
+              ((cx - 0.012, cy - s2, MS), (cx + 0.012, cy - 0.012, MS + CAN_H)),
+              ((cx - 0.012, cy + 0.012, MS), (cx + 0.012, cy + s2, MS + CAN_H))]
+    for lo, hi in boxes:
+        cols.append(kit.Collider(tuple((p + q) / 2 for p, q in zip(lo, hi)), size=tuple(q - p for p, q in zip(lo, hi))))
+    return kit.Prop("block", pos=(*BASE_C, TOP), size=(BASE[0], BASE[1], 0.31), meshes=tuple(m), colliders=tuple(cols))
 
 
 def _tab(center, w, t, h, r, look):
@@ -178,118 +269,6 @@ def _tab(center, w, t, h, r, look):
         for sz in (-1, 1):
             parts.append(kit.cylinder((cx + sx * (w / 2 - r), cy, cz + sz * (h / 2 - r)), r, t, look, axis="y", n=16))
     return parts
-
-
-def _rslab(x0, x1, y0, y1, z0, z1, r, look):
-    """A slab with rounded vertical edges (radius r) from (x0, y0, z0) to (x1, y1, z1)."""
-    cx, cy, cz, h = (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, z1 - z0
-    parts = [kit.box((cx, cy, cz), (x1 - x0 - 2 * r, y1 - y0, h), look),
-             kit.box((cx, cy, cz), (x1 - x0, y1 - y0 - 2 * r, h), look)]
-    for x in (x0 + r, x1 - r):
-        for y in (y0 + r, y1 - r):
-            parts.append(kit.cylinder((x, y, cz), r, h, look, n=20))
-    return parts
-
-
-def _rrect(x0, x1, y0, y1, radii, z, n=10):
-    """A rounded rectangle's outline at height z, counterclockwise from above; radii for the corners (x0, y0), (x1, y0),
-    (x1, y1), (x0, y1)."""
-    corners = ((x0, y0, -1, -1), (x1, y0, 1, -1), (x1, y1, 1, 1), (x0, y1, -1, 1))
-    start = (math.pi, 1.5 * math.pi, 0.0, 0.5 * math.pi)
-    pts = []
-    for (cx, cy, sx, sy), r, a0 in zip(corners, radii, start):
-        for k in range(n):
-            a = a0 + 0.5 * math.pi * k / (n - 1)
-            pts.append((cx - sx * r + r * math.cos(a), cy - sy * r + r * math.sin(a), z))
-    return pts
-
-
-def _loft(sections, look):
-    """A closed smooth shell through rounded-rectangle sections (x0, x1, y0, y1, radii, z), bottom to top."""
-    rings = [_rrect(*sec) for sec in sections]
-    n = len(rings[0])
-    pts = [p for ring in rings for p in ring]
-    counts, idx = [], []
-    for i in range(len(rings) - 1):
-        for k in range(n):
-            a, b = i * n + k, i * n + (k + 1) % n
-            counts.append(4)
-            idx += [a, b, b + n, a + n]
-    counts += [n, n]
-    idx += list(range(n))[::-1] + [(len(rings) - 1) * n + k for k in range(n)]
-    return kit._mesh(pts, counts, idx, look)
-
-
-def _cylinder_bank(sx):
-    """One cylinder of the V: finned barrel, head and black valve cover, pointing back-left (sx -1) or back-right
-    (sx +1) at 45 degrees, its axis 134 mm above the mounting surface (the drawing's spark plug height). The valve
-    covers' outer faces come to 33.4 cm apart (the drawing's 334.3 mm across the valve covers)."""
-    d = np.array([sx * math.sqrt(0.5), math.sqrt(0.5), 0.0])
-    zc = MS + 0.134
-    out = []
-    for k in range(7):  # cooling fins round the barrel (83 mm bore)
-        c = d * (0.07 + 0.0095 * k)
-        out.append(kit.cylinder((c[0], c[1], zc), 0.06, 0.004, FINS, axis=tuple(d), n=28))
-    c = d * 0.10
-    out.append(kit.cylinder((c[0], c[1], zc), 0.05, 0.07, FINS, axis=tuple(d), n=28))
-    a, b = d * 0.13, d * 0.155  # the head
-    out.append(kit.band([(a[0], a[1], zc), (b[0], b[1], zc)], 0.12, 0.12, ALU, normal=(0, 0, 1)))
-    a, b = d * 0.155, d * 0.178  # the valve cover
-    out.append(kit.band([(a[0], a[1], zc), (b[0], b[1], zc)], 0.105, 0.115, VALVE, normal=(0, 0, 1)))
-    p = d * 0.142 + np.array([-d[1], d[0], 0.0]) * 0.066 * sx  # spark plug and its boot on the head's side
-    out.append(kit.cylinder((p[0], p[1], zc), 0.011, 0.04, BLACK, axis=(-d[1] * sx, d[0] * sx, 0.0), n=12))
-    return out
-
-
-def _block():
-    """The KT725 round the fill tube, in its own frame (origin on the table at ENGINE_C)."""
-    tx, ty = DIP_LOCAL
-    m = []
-    m.append(kit.box((0.0, 0.07, PLATE_T / 2), (0.47, 0.50, PLATE_T), PLATE))  # tractor frame section
-    m += _rslab(-0.145, 0.15, -0.125, 0.165, MS, MS + 0.095, 0.04, ALU)  # oil pan
-    m.append(kit.box((0.0, 0.02, MS + 0.006), (0.30, 0.30, 0.012), DARK))  # its mounting flange
-    m += _rslab(-0.12, 0.13, -0.10, 0.13, MS + 0.095, MS + 0.14, 0.03, ALU)  # crankcase
-    m += _cylinder_bank(-1) + _cylinder_bank(1)
-    # Blower housing (black sheet steel), one smooth shell: the flywheel's housing at the front reaching down to the
-    # crankcase, the hood over the V with a rounded top edge, the front-left corner swept round wide where the fill tube
-    # stands (drawing, top view)
-    hood_r = (0.20, 0.12, 0.13, 0.13)  # corner radii: front-left (round the tube), front-right, back-right, back-left
-    m.append(_loft([(-0.17, 0.17, -0.137, 0.06, (0.165, 0.09, 0.03, 0.03), MS + 0.10),
-                    (-0.17, 0.17, -0.137, 0.06, (0.165, 0.09, 0.03, 0.03), MS + 0.205)], SHROUD))
-    m.append(_loft([(-0.205, 0.205, -0.137, 0.27, hood_r, MS + 0.20),
-                    (-0.205, 0.205, -0.137, 0.27, hood_r, MS + 0.275),
-                    (-0.198, 0.198, -0.130, 0.263, hood_r, MS + 0.292),
-                    (-0.185, 0.185, -0.117, 0.25, hood_r, MS + 0.30)], SHROUD))
-    # Rotating debris screen over the flywheel on the housing's top (drawing: about 206 mm across, on the crankshaft)
-    m.append(kit.cylinder((0.0, 0.0, MS + 0.303), 0.103, 0.006, SCREEN, n=48))
-    m += _ring_slats(MS + 0.3065, 0.025, 0.10, 24, 0.007, BLACK)
-    m.append(kit.cylinder((0.0, 0.0, MS + 0.307), 0.022, 0.006, BLACK, n=32))
-    # Air cleaner: oval black cover at the back, its top 329 mm up
-    m += _rslab(-0.10, 0.10, 0.135, 0.255, MS + 0.30, MS + 0.322, 0.055, AIRC)
-    m += _rslab(-0.075, 0.075, 0.155, 0.235, MS + 0.322, MS + 0.329, 0.04, SHROUD)
-    # Oil filter on the front-left, its axis toward the robot, below the fill tube's bracket
-    m.append(kit.cylinder((-0.17, 0.0, MS + 0.075), 0.038, 0.07, FILTER, axis="x", n=28))
-    m.append(kit.cylinder((-0.207, 0.0, MS + 0.075), 0.03, 0.006, STEEL, axis="x", n=24))
-    # Electric starter on the right side
-    m.append(kit.cylinder((0.175, -0.04, MS + 0.10), 0.036, 0.10, BLACK, axis="y", n=28))
-    # Fill tube's boss on the crankcase and its bracket to the housing
-    m += _rslab(tx - 0.02, tx + 0.04, ty - 0.02, ty + 0.03, MS, MS + 0.085, 0.015, ALU)
-    # (from the tube's outside, so it never crosses the tube's bore, to the housing's side)
-    m.append(kit.box((tx + (TUBE_R + 0.06) / 2, ty, MS + 0.20), (0.06 - TUBE_R, 0.012, 0.012), STEEL))
-    colliders = (
-        kit.Collider((0.0, 0.07, PLATE_T / 2), size=(0.47, 0.50, PLATE_T)),  # frame section
-        kit.Collider((0.005, 0.035, MS + 0.07), size=(0.26, 0.25, 0.14)),  # oil pan and crankcase
-        kit.Collider((0.0, -0.016, MS + 0.16), size=(0.28, 0.11, 0.12)),  # flywheel housing (front)
-        kit.Collider((0.0, 0.06, MS + 0.25), size=(0.41, 0.18, 0.10)),  # hood over the V
-        kit.Collider((0.0, 0.20, MS + 0.25), size=(0.30, 0.10, 0.10)),  # its back, inside the rounded corners
-        kit.Collider((0.0, -0.035, MS + 0.20), size=(0.26, 0.09, 0.20)),  # housing round its rounded front-left corner
-        kit.Collider((0.07, -0.10, MS + 0.20), size=(0.27, 0.07, 0.20)),
-        # each cylinder, head and valve cover as three boxes along its 45-degree axis
-        *[kit.Collider((sx * r * math.sqrt(0.5), r * math.sqrt(0.5), MS + 0.134), size=(w, w, 0.12))
-          for sx in (-1, 1) for r, w in ((0.08, 0.09), (0.125, 0.09), (0.16, 0.08))],
-        kit.Collider((0.0, 0.195, MS + 0.315), size=(0.20, 0.12, 0.03)),  # air cleaner
-    )
-    return kit.Prop("block", pos=(*ENGINE_C, TOP), size=(0.47, 0.50, 0.33), meshes=tuple(m), colliders=colliders)
 
 
 def _engine():
@@ -379,7 +358,7 @@ def _puck():
                     colliders=(kit.Collider((0.0, 0.0, 0.0), radius=PUCK_R, height=PUCK_H),))
 
 
-OBJECTS = [_block(), _engine(), _rag(), _card(), _puck()]
+OBJECTS = [_housing(), _engine(), _rag(), _card(), _puck()]
 
 
 # --- What happened during the run. success() and score() are called after every control step, so the run's history is
@@ -687,12 +666,12 @@ def score(objects):
 # --- Scripted demo: the right arm draws the dipstick straight up by its handle and pushes it home, the left arm wipes
 # the blade with the rag and reports with the puck.
 R_PITCH, R_ROLL = -math.pi / 2, math.pi / 2  # the right grip level, pointing along +y (into the corner from the
-# engine's open front side), its fingers closing along x across the handle's 1.8 cm thickness
+# housing's open front side), its fingers closing along x across the handle's 1.8 cm thickness
 A_HANDLE = 0.032  # the tool point 3.2 cm above the cap's underside (the handle's middle is at 2.75 cm): the pads (4 cm
 # wide, here up and down) stay clear of the cap's disc
 R_UP = 0.07  # the open hand waits this far above its grip on the handle, its fingers either side of the handle
 R_OPEN = 0.45 * FINGER_OPEN  # opened 4.2 cm round the 1.8 cm handle: 1.2 cm each side, and the fingers clear of
-# the blower housing beside the corner
+# the housing box beside the corner
 Q_PULL = 0.275  # each pull draws the cap 27.5 cm up: the blade's tip 3 cm out of the mouth (the tool point ~59 cm up,
 # inside the arm's reach for this level grip, about 61-62 cm here)
 DEMO_PUSH = -0.004  # push 4 mm past the seat so the cap is pressed down
@@ -761,7 +740,7 @@ def demo():
 
     ry, rz = RAG_START[1], RAG_START[2] - TOP
     # (in low and close to the robot first: a wider sweep brushed the left forearm past the housing's near corner)
-    left = [Waypoint(2.0, (0.16, 0.18, TOP + 0.14), FINGER_OPEN, "in toward the robot, clear of the engine"),
+    left = [Waypoint(2.0, (0.16, 0.18, TOP + 0.14), FINGER_OPEN, "in toward the robot, clear of the housing"),
             Waypoint(1.6, (RAG_START[0], ry, TOP + rz + 0.06), FINGER_OPEN, "over the rag"),
             Waypoint(1.0, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ), FINGER_OPEN, "down on the rag"),
             Waypoint(0.6, (RAG_START[0], ry, TOP + rz + RAG_GRIP_DZ), FINGER_CLOSED, "pick up the rag"),
