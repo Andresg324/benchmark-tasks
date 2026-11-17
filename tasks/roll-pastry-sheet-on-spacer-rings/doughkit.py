@@ -426,11 +426,49 @@ def _patch_embodiment() -> None:
     cls._observation = _observation
 
 
+def _prime(env) -> None:
+    """At env build: create the markers now (so the renderer has compiled their material long before the first frame)
+    and draw the start sheet after every scene reset, before the settle steps and the reset renders: frame 0 already
+    shows the dough in its final colour and shape (GLOBAL-FIXES, Nov 13 frame-0 rule)."""
+    global _S
+    base = env.unwrapped
+    if getattr(base, "_doughkit_vis", False) or _markers() is None:
+        return
+    base._doughkit_vis = True
+    _S = None
+    _draw(base.scene.env_origins[0].detach().cpu().numpy())
+    inner = base.reset
+
+    def reset(*a, **k):
+        global _S
+        out = inner(*a, **k)
+        if not _VIS["failed"]:
+            try:
+                _S = None  # a fresh sheet for the new trial
+                _draw(base.scene.env_origins[0].detach().cpu().numpy())
+            except Exception as e:  # noqa: BLE001  (never let the visuals break a run)
+                print(f"doughkit: start drawing off ({e!r})", file=sys.stderr, flush=True)
+        return out
+
+    base.reset = reset
+
+
 def _patch(scene) -> None:
     _patch_embodiment()
     if getattr(scene, "_doughkit", False):
         return
     scene._doughkit = True
+    make = getattr(scene, "make_env", None)
+    if make is not None:
+        def make_env(*a, **k):
+            env = make(*a, **k)
+            try:
+                _prime(env)
+            except Exception as e:  # noqa: BLE001  (never let the visuals break a run)
+                print(f"doughkit: visuals not primed ({e!r})", file=sys.stderr, flush=True)
+            return env
+
+        scene.make_env = make_env
     inner = scene.object_states
     last = {"key": None}
 
