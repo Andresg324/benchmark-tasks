@@ -322,10 +322,11 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
 
 ## Runtime and seeds
 
-- Demo: a 110 s plan (2,190 control steps), run with `--max-steps 2400`. The recorded run scored 1.0 at step 2,139
-  (the trial ends once the set-down has held for 1 s, before the plan's final wait): every piece in the tray and none
-  left on the griddle; the last frame shows the plate clean and the pieces in the tray.
-- Model run limit: 2,400 steps (2 minutes at 20 Hz). Dream-1: 0 in 2,400 steps on this task.py.
+- Demo: a 111 s plan (2,220 control steps), run with `--max-steps 2400`. The recorded run scored 1.0 at
+  step DEMO_STEPS (the trial ends once the set-down has held for 1 s, before the plan's final wait): every piece freed
+  by the blade and pushed by it over the lip into the tray (all 22 credited), no hand on the dough, none left on the
+  griddle, and the scraper in the taped square.
+- Model run limit: 2,400 steps (2 minutes at 20 Hz). Dream-1: pending on this task.py.
 - The demo: the right hand takes the scraper by the handle from above, fingers closing across the handle (yaw 0: along
   world y), lifts it level and carries it over the right splash guard (tilted, its edge would hang below the guard's
   top), then tilts it over the plate so the blade meets the plate at 40 degrees with the edge toward the robot. The
@@ -339,8 +340,8 @@ next debris (above). A trial, its reset and the next debris take about 10 minute
   to 8.1, every piece inside), three times over: the first pass breaks the pieces free and clears most of them, and
   the later passes pick up the pieces that spill round the blade's ends. A cleanup stroke from x 30.0 along each
   splash guard (centered at y -12.0 and 8.0, the blade's ends 4.5 mm inside the guards) collects the pieces pushed
-  past the outer lanes' ends. Then the scraper is leveled over the tray, carried back over the guard, laid back where
-  it was, and let go.
+  past the outer lanes' ends. Then the scraper is leveled over the tray, carried back over the guard to the taped
+  square, laid down in it and let go.
 - Seeds: none. The layout is fixed (`object_jitter=0`) and the same every trial.
 
 ## Real-world build

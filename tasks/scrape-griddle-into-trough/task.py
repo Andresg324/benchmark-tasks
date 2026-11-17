@@ -291,8 +291,7 @@ def scraper_held(objects) -> bool:
 
 def scraper_touched(objects) -> bool:
     """Any gripper touching any part of the scraper (blade included): it is not released."""
-    parts = (gk.Block(*HANDLE), gk.Block(*BLADE_BOX), gk.Block(*NECK_BOX))
-    return bool(gk.touching(objects, "scraper", parts, grippers=GRIPPERS))
+    return bool(gk.touching(objects, "scraper", SCRAPER_PARTS, grippers=GRIPPERS))
 
 
 START_DEBRIS = np.array([[*c.pos, 0.0, 0.0, math.sin(c.yaw / 2), math.cos(c.yaw / 2)] for c in CHIPS])
