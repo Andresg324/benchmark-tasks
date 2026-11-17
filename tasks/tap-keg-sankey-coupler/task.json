@@ -1,0 +1,23 @@
+{
+  "title": "Tap a loose sixtel keg with a Sankey D coupler, steadying the keg by its chime",
+  "category": "Impact on jobs",
+  "keywords": [
+    "bimanual",
+    "bar",
+    "beer keg",
+    "Sankey D coupler",
+    "bayonet quarter turn",
+    "over-center lever",
+    "steady and act",
+    "order of operations"
+  ],
+  "instruction": "Tap the keg with the coupler.",
+  "context": "Bartender helpers (O*NET 35-9011.00, 546,600 US jobs in 2025): 'Stock refrigerating units with wines or bottled beer or replace empty beer kegs.' Bartenders (O*NET 35-3011.00, 762,600 US jobs in 2025): 'Serve wine, and bottled or draft beer.' Micro Matic's D-system steps: handle upright (OFF); align the two coupler lugs with the openings in the keg valve; insert and turn clockwise about 90 degrees; press the handle down (ON). The keg stands loose, neither clamped nor chocked, as behind a bar: the coupler's quarter turn pushes sideways on the valve, and an empty sixtel (7.5 kg) turns with it unless held, so one hand steadies it by its chime while the other seats, turns and locks the coupler, both lines connected all the time. Pressing the handle before the lock would lift an unlocked coupler off a pressurised keg and spray.",
+  "setup": "Positions in cm from the midpoint between the arm bases (x forward, y left), rig table top z 0. Keg: an empty, vented sixth-barrel (sixtel) keg with a Sankey D spear (59.4 cm tall, 23.5 cm across, 7.5 kg), loose, valve axis at (26.0, 0.0), flange openings along y. The whole empty keg stands loose on a stand on the floor in front of the rig table, its top through a 26 cm cut-out in a table-height 3/4 in plywood shelf, chime top 10.1 +- 0.5 cm above the table (stand height = table height - 49.3 cm; the table's front edge at most 14 cm in front of the bases); the tray and the wall stand on that shelf, and both lines lie on it, never off its edge; the simulation models that keg's top 10 cm. Coupler: Micro Matic 7485BB D coupler (chrome-plated brass) standing on a 12 x 12 cm rubber drip tray at (20.0, -26.0), handle up and toward the robot. Beer line 3/16 in ID vinyl, 76 cm, to a shank on a 2 cm board standing across the shelf at x 56 (shank at (54.5, 10.0), 15 cm up); gas line 5/16 in ID, 91 cm, to a regulator body at (54.5, 22.0), 8 cm up, with no CO2 cylinder. Yellow paint lines on the flange's +x side and the coupler's +x face. Both arms start at their ready pose.",
+  "scoring": "Read in the keg's own frame (the keg may slide or turn). Seated: the coupler's axis within 4 mm of the valve's, its roof within 2 mm of the flange top (lugs below the flange), upright within 6 degrees. Locked: seated and turned to within 10 degrees of a locked position (lugs under the flange, against the stops; 0 or 180 degrees). Handle down: at least 17 degrees below level. 1.0: locked, handle down, both whole hands (palm and fingers) 1 cm clear of the coupler, handle and keg, keg and coupler still (under 0.5 mm per step) for 1 s. 0.75: locked with the handle down, not yet let go or still. 0.5: locked, handle up. 0.25: seated, not turned. Otherwise 0, including doing nothing. The whole trial scores 0 if the handle goes more than 3 degrees past level while the coupler is not locked (even one control step), the keg tips more than 10 degrees, the coupler is dropped (tilted more than 45 degrees) or falls off, or a line is pulled off. Possible scores: 0, 0.25, 0.5, 0.75, 1.0. Real trial: no gap under the skirt (2 mm card), paint lines on the top video against a 10-degree card, the handle in its detent (photo), hands 1 cm clear and nothing moving for 30 frames.",
+  "run_limit": "1,200 steps (1 minute at 20 Hz)",
+  "reset_notes": "Lift the handle up past level (OFF), turn the coupler a quarter turn counter-clockwise and lift it off, stand it on the tray handle toward the robot with both lines in their loops, and check the keg stands in its taped outline with the openings along y. About 40 s.",
+  "fidelity": "Keg: its top 10 cm on the counter at real width and empty mass (7.5 kg), free to slide, turn and tip; friction 0.4, clean dry metal on wood (0.2-0.6, Engineering ToolBox). Flange edge slightly rounded. Bayonet: contact geometry (lugs, openings, flange, stops), no snap. Handle: over-center lever that snaps down past level; only its angle is scored. Lines: chains of short vinyl segments that collide with themselves and everything, attached all trial, off if pulled hard. No liquid or gas.",
+  "scores": "Dream-1 run: 0 (1,200 steps); demo: 1.0 (750 steps). Both on task.py 49b88f540b29.",
+  "media": "M-VD3WDM"
+}
