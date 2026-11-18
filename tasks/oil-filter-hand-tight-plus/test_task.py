@@ -75,9 +75,16 @@ for mm, want in ((0.0, fk.ENGAGED), (0.1, fk.ENGAGED), (0.2, fk.ENGAGED), (0.5, 
          f.state, want)
     case(f"  ({mm} mm off: the model reports it on the nipple only within the clearance)", f.on or
          f.state == fk.ENGAGED, want == fk.ENGAGED)
-f, _ = start(0.0, lat=0.0006)
-case("0.6 mm off (three times the clearance): no stop applied, no catch; it stays where the colliders leave it",
-     (f.state, f.on), (fk.FREE, False))
+f, _ = start(0.0, lat=0.0004)
+case("0.4 mm off yet 3.8 mm over the nipple's end (only a solver penetration could): jammed, a fail",
+     (f.state, f.forced), (fk.CROSSED, True))
+f = fk.FilterModel(0, TH)
+J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.006, f_pitch=0.0, f_roll=0.0, filter=0.0)
+f.step(J)
+J["f_out"] = TH.d0 - 0.0008  # shoved past the crests in one step, never turned
+f.step(J)
+case("cheat: shoved past the crests' stop in one control step: jammed, a fail (never threaded)",
+     (f.state, f.forced), (fk.CROSSED, True))
 f, _ = start(0.0, out=TH.d0 + 0.006)
 case("held 6 mm short of the nipple and turned: nothing", f.state, fk.FREE)
 f, J = start(0.0, turn_deg=10.0)
@@ -85,13 +92,17 @@ case("turned only 10 degrees against the crests: not caught yet", f.state, fk.FR
 f, J = start(1.5, lat=0.00015, turn_deg=30.0)
 case("caught 0.15 mm off and 1.5 degrees crooked: caught", f.state, fk.ENGAGED)
 cmd = f.step(J)
-case("  just caught: its side stop is where it caught, no closer (nothing draws it in)",
+case("  just caught: its side stop is where it caught, no closer",
      round(cmd["f_up"][5][1] * 1e6) >= round(0.00015 * 0.95 * 1e6), True)
 case("  and no drive on the side slides or tilts (stiffness 0)",
      [cmd[n][1] for n in ("f_up", "f_side", "f_pitch", "f_roll")], [0.0] * 4)
 f, J = start(1.5, lat=0.00015, turn_deg=420.0)
 cmd = f.step(J)
-case("  a turn on, the flanks hold it within their play (0.10 mm, 0.36 degrees)",
+case("  a turn on, its stops are still where it caught (0.15 mm, 1.5 degrees): nothing squeezes it square",
+     (round(cmd["f_up"][5][1] * 1e5), round(math.degrees(cmd["f_pitch"][5][1]), 1)), (16, 1.5))
+f, J = start(0.0, turn_deg=420.0)
+cmd = f.step(J)
+case("  caught square: the engaged threads' play (0.10 mm, 0.36 degrees)",
      (round(cmd["f_up"][5][1] * 1e6), round(math.degrees(cmd["f_pitch"][5][1]), 2)), (104, 0.36))
 f, J = start(0.0, turn_deg=3 * 360.0 + 60.0)
 case("three turns and 60 degrees on (the first 30 start the thread): 30 past contact", round(math.degrees(f.past), 3),

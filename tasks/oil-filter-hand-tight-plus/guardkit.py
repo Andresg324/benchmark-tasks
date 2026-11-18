@@ -96,7 +96,8 @@ def _dist_local_any(part, p) -> float:
 
 
 # The YAM gripper's own shape in its tool-point frame (x: the fingers' closing axis, z: the approach, toward the pad
-# tips), as boxes fitted to the collision meshes the simulator uses (yam.urdf collision/gripper, tip_left, tip_right):
+# tips), as boxes fitted to the environment's collision hulls for those links (yam_arm.urdf: gripper, tip_left,
+# tip_right; loaded at run time, not shipped here):
 # the palm, and for each finger its body, its pad and its narrower tip. `o` is each finger's inner face's distance
 # from the tool point: 0 closed, 47 mm fully open (the pads open 94 mm apart).
 PALM = Block((0.0, 0.0, -0.1075), (0.102, 0.065, 0.074))

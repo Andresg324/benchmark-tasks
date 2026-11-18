@@ -92,7 +92,7 @@ FILTER_MASS = 0.25
 FLUTE_L = 0.014  # the fluted end the cap wrench fits over
 FLUTE_N = 14
 FLUTE_IN, FLUTE_W = 0.031, 0.005  # the flutes' roots (radius) and their width; their crests are the can's 33 mm
-# The thread: M20 x 1.5, right-handed; three turns (4.5 mm, an estimate, measured on the rig) from the first thread
+# The thread: M20 x 1.5, right-handed; three turns (4.5 mm, an estimate; the rig measures it) from the first thread
 # catching to gasket contact. Before contact it runs on with about 0.3 N*m. Past contact the squeezed gasket resists
 # with a torque that rises linearly to Kawasaki's 18 N*m at three quarters of a turn (the makers' equivalence: three
 # quarters of a turn past contact gives the specified torque) and on at the same slope (29 N*m at 1.25 turns); a hard
@@ -489,7 +489,8 @@ def success(objects):
 
 def score(objects):
     """Angles are degrees past gasket contact. 0 if the filter was cross-threaded (its thread started with its axis
-    more than 4 degrees off the nipple's), was unscrewed off the thread after it was started, is not on the thread,
+    more than 2.6 degrees off the nipple's, or it was forced over the nipple's end), was unscrewed off the thread after
+    it was started, is not on the thread,
     was ever more than 450 degrees past contact, ends under 90 past contact, or if more than 45 degrees of the new
     ground it gained past contact was turned neither by a holding hand's own wrist roll (a gripper closed on the can,
     its roll about the filter's axis, at most 30 degrees ahead) nor by the wrench while its cap was on the filter and

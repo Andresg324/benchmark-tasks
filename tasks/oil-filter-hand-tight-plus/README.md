@@ -20,7 +20,7 @@ can crush the gasket, which can blow out under oil pressure.
 | Start | The filter loose, off the thread. The wrench off the filter |
 | Instruction | "Fit the new oil filter." |
 | Unstated rule | Start it square by hand, spin it to gasket contact, then tighten it to the engine maker's torque with the filter wrench (about three quarters of a turn more): not crooked, not left at contact, not cranked on; the wrench taken off |
-| Core mechanism | A free filter that the thread takes only if it is pressed onto the nipple with its axis within 4 degrees of the nipple's and turned clockwise (more and it cross-threads); past gasket contact a resistance rising to 18 N·m at three quarters of a turn; a free cap wrench whose cup drives the filter only through its flutes (colliders), on a ratchet with a pawl |
+| Core mechanism | A free filter and the real M20 x 1.5 nipple: the filter's threaded bore goes over the nipple's end only centered within the thread's 0.2 mm clearance (colliders at the real diameters; nothing pulls it on), and the thread takes it only if it is then turned clockwise with its axis within 2.6 degrees of the nipple's (more and it cross-threads); past gasket contact a resistance rising to 18 N·m at three quarters of a turn; a free cap wrench whose cup drives the filter only through its flutes (colliders), on a ratchet with a pawl |
 | Category | Impact on jobs: automotive service technicians and mechanics (O*NET 49-3023.00; 825,800 US jobs in 2025, BLS Occupational Outlook Handbook) replace oil filters as regular work. O*NET lists the task "Perform routine and scheduled maintenance services, such as oil changes, lubrications, and tune-ups"; a new filter is normally fitted at each oil change |
 | Trap | Starting it crooked (0, irreversible); stopping at contact or a little past it (0 or 0.25); over-tightening past a turn (0.5) or past 1.25 turns (0, irreversible) |
 | Score | Degrees past contact at the end, in bands with reasons (below); the turning past contact must come from a holding hand's own wrist roll or from the wrench while its cap is on the filter and a hand holds it; let go, the wrench off the filter and out of the hands |
@@ -33,7 +33,7 @@ can crush the gasket, which can blow out under oil pressure.
 | `filterkit.py` | The loose filter and its thread, and the free wrench's ratchet. The filter is a free part on six undriven joints from its nipple (three slides, two tilts, its spin), and the thread's model (`FilterModel`) decides each control step whether it is loose, on the thread, or cross-threaded, and drives the thread when it is on: pitch, the run-on friction and the gasket's torque. The ratchet's pawl (`RatchetModel`) is a moving stop on the hinge between the ratchet and the cap. |
 | `guardkit.py` | Contact checks: the grippers' own shapes (boxes fitted to the YAM's collision meshes) and the 2 mm contact test that decides whether a hand is still on the filter. |
 | `yamkit.py` | Spawns the modeled props and articulations (now with turned box colliders, for the flutes) and gives the scorer the grippers. It patches `yam_arena` in memory at import; no files change. |
-| `test_task.py` | Offline checks of the thread's model (square, crooked, off the axis, short of the nipple, unscrewed), the pawl and the scorer, with near misses and cheats. No simulator needed. |
+| `test_task.py` | Offline checks of the thread's fit and model (centered, 0.1, 0.2, 0.5, 1, 2 and 6 mm off the axis; tilts either side of 2.6 degrees; short of the nipple; unscrewed), the pawl and the scorer, with near misses and cheats (pushed on without turning, slowly or in one step; turned the wrong way; forced over the nipple's end off its axis; the wrench seated before the thread starts; the start state; doing nothing). No simulator needed. |
 | `task.json` | The task card. |
 
 ## Run a trial
@@ -58,20 +58,27 @@ pose, from the simulator, and works each move out from them when it starts.
 By hand. The left arm picks the filter up off the bench by its closed end (top-down, the pads 2.5 cm in from the end,
 closed to 8 mm under the can's width, about 20 N a finger, the fingers closing along x so that turning the filter over
 cannot pivot it between the pads). It carries the filter out from the engine and across to the nipple and turns it to
-point at it. It then reads where the gasket face's center is and which way the filter points, and corrects both, five
-times (in this pose the arm sags 2-3 cm under the filter, and the aim takes that up). It pushes the filter onto the
-nipple; if the filter is not on it, the hand backs off and tries again (twice at most). It spins the filter on
+point at it. It then reads where the center of the filter's threaded bore is and which way the filter points, and
+corrects both, five times 8 mm out (in this pose the arm sags 2-3 cm under the filter, and the aim takes that up), then
+again with the bore 1.5 mm short of the nipple's end (up to three looks, each held while the arm settles). It then
+pushes the filter on. The bore clears the nipple's end by only 0.2 mm and the arm sways about a millimeter, so the
+base plate usually lands on the nipple's end face first: pressing there, the hand reads where the bore is each second
+and re-aims it a little, as a hand feels for the start, until the bore drops over the nipple's end (up to ten
+seconds). If it never does, the hand backs off, lines it up again and retries (twice at most). It spins the filter on
 clockwise (seen from its end) in wrist rolls of up to 150 degrees, following the thread in, regripping between rolls.
 Once a roll past gasket contact turns the filter less than 8 degrees (the pads slipping: hand-tight) it lets go and
-backs off. The right arm waits at home meanwhile.
+backs off. Then, reading where the wrench lies, it takes the can again and turns the filter back up to a flute's
+width (12.7 degrees in this run), so that the cap's teeth will meet the gaps between the filter's flutes at a handle
+angle the right arm reaches. The right arm waits at home meanwhile.
 
 With the wrench. Both hands take the wrench top-down where it lies flat: the left across the ratchet's head (on the
 drive's axis), the right on the round grip 55 cm out. Each hand checks that it is holding, and if not opens and tries
 once more 8 mm lower. They lift it 7 cm and turn it a quarter turn about the handle while bringing it across, so the
 cup faces the engine. They hold it 3 cm in front of the filter's end with the handle at an angle the right arm can
-reach (lining the cap's flutes up with the filter's when that angle allows; the flutes' ends are pointed, so a cup
-that meets them end to end turns into the gaps), read where the cap is and correct, twice, and push the cup over the
-fluted end. The right hand moves to a top-down grip on the grip. Then strokes: the right hand swings the handle down
+reach that lines the cap's teeth up with the gaps between the filter's flutes (the left hand set the filter's angle
+for this), read where the cap is and which way it points: twice they square it to the filter and center it, three
+times more they center it, then twice again with its teeth 3.5 mm short of the flutes (the cup clears them by 0.4 mm),
+and push the cup over the fluted end. The right hand moves to a top-down grip on the grip. Then strokes: the right hand swings the handle down
 from 6 degrees above level to 10 below, pushing what the gasket takes (plus 1 N·m), aimed past the handle by its
 arm's give (J K^-1 J^T from the servos' stiffness), while the left presses the cup on (8 N toward the engine); then
 it swings the handle back up while the ratchet clicks. Each stroke is sized from the filter's angle when it starts,
@@ -79,8 +86,8 @@ and they stop once it is 270 degrees past contact (where the gasket takes 18 N·
 less than 2 degrees. The right hand goes back to the grip it carried with, they pull the cup off, turn the wrench
 back cup down, lay it flat on the bench, let go, lift clear and go home.
 
-Result on this version: 1.0 in 2,428 steps (121 s): hand-tight 13 degrees past contact, then 18 wrench strokes to
-274 degrees past contact (18.2 N·m).
+Result on this version: 1.0 in DEMO_STEPS steps (DEMO_S s): the thread caught 0.3 degrees off square; hand-tight 9.5
+degrees past contact; the wrench strokes took it to 270.9 degrees past contact (18.1 N·m).
 
 ## Scoring
 
@@ -89,7 +96,7 @@ when tightened past it.
 
 | Outcome | Score |
 |---|---|
-| Cross-threaded: the thread was started (the filter turned 20 degrees clockwise while pressed on the nipple) with its axis more than 4 degrees off the nipple's. The real nipple's thread is damaged | 0, irreversible |
+| Cross-threaded: the thread was started (the filter turned 20 degrees clockwise while pressed on the nipple) with its axis more than 2.6 degrees off the nipple's, or the filter was forced over the nipple's end off its axis. The real nipple's thread is damaged | 0, irreversible |
 | Unscrewed off the thread after it was started, even if started again | 0, irreversible |
 | Not on the thread at the end (left on the bench, dropped, or pushed on without starting it) | 0 |
 | Tightened more than 450 degrees (1.25 turns) past contact at any point, even if backed off: the gasket is over-compressed and can roll out (the angle as proxy; the real gasket is checked afterwards) | 0, irreversible |
@@ -117,8 +124,9 @@ shape within 2 mm of the can). `success()` is a full score held for 1 s. Each sc
 
 Why these limits:
 - Cross-threading: MAHLE's bulletin on spin-on filter installation warns to screw it on "with care to avoid cross-threading" because "cross-threading mis-aligns the
-  filter causing improper rubber gasket contact". 4 degrees is about where an M20 x 1.5 thread's first turn can still
-  draw the filter square (an estimate; the rig measures the angle at which a real filter cross-threads, below).
+  filter causing improper rubber gasket contact". 2.6 degrees is where the filter's first thread, tilted across the
+  19.03 mm pitch diameter, lands half a pitch (0.75 mm) plus the flanks' 0.12 mm axial play out on its far side, so
+  that side drops into the next groove (geometry from the ISO 965 fit, below; the rig checks it, below).
 - 240 to 360 degrees: filter makers print "after the gasket contacts the base, tighten three quarters of a turn", and
   several print "three quarters to one full turn". Full credit spans both readings, less 30 degrees for judging three
   quarters of a turn against the can's quarter-turn ticks.
@@ -135,8 +143,8 @@ and turn it clockwise: it must click before the can moves; if the can moves firs
 
 ## Runtime and seeds
 
-- Demo: 1.0 in 2,428 steps (121 s; the run ends 1 s after full credit is held).
-- Model run limit: 3,000 steps (2.5 minutes at 20 Hz; it was 2,400 before the trial included threading the filter on).
+- Demo: 1.0 in DEMO_STEPS steps (DEMO_S s; the run ends 1 s after full credit is held).
+- Model run limit: 3,000 steps (2.5 minutes at 20 Hz).
 - Dream-1: 0 in 3,000 steps on this task.py.
 - Seed 0, one fixed layout (`object_jitter=0`).
 
@@ -154,6 +162,7 @@ published drawing gives them) and are what the rig reproduces:
 |---|---|---|---|
 | Filter | 66 mm across, 71 mm tall, 250 g | as bought | KN-204/HF204 cross-reference listings (66 x 71 mm); mass estimated |
 | Thread | M20 x 1.5, right-hand | the real nipple | K&N KN-204 listing (M20 x 1.5) |
+| Thread fit | nipple 6g: crests 19.97 mm, root 18.13 mm, end chamfered 45 degrees to the root; filter 6H: crests 18.53 mm. The filter's crests clear the nipple's chamfered end by 0.20 mm all round (0.12-0.27 mm over both tolerance bands); pitch diameters 0.21 mm apart | the real stud and filter | ISO 965-1/-2 (M20 x 1.5, 6H/6g, middle of each band); ISO 4753 (end chamfered to no more than the root diameter) |
 | Turns from the first thread to gasket contact | 3 (4.5 mm) | measure; set the start mark from it | estimated |
 | Nipple's axis | level, pointing at the robot, 13 cm above the bench | ±5 mm, ±2 degrees | parts diagram (direction); height set for the robot |
 | Boss | 76 mm across, 8 mm proud of the case | ±2 mm | estimated |
@@ -161,25 +170,32 @@ published drawing gives them) and are what the rig reproduces:
 | CVT intake duct | 60 mm, 30 mm from the can's side, on its right | ±5 mm | estimated |
 | Gasket's torque | rises linearly past contact to 18 N·m at 270 degrees, 29 N·m at 450 | the click check after the trial | Kawasaki owner's manual p. 101 (18 N·m); makers' three quarters of a turn; the straight line is our model |
 | Run-on before contact | 0.3 N·m | n/a | estimated |
-| Cross-thread angle | over 4 degrees | measure on the rig: tilt a real filter on the nipple until it no longer threads | estimated |
-| Start capture | within 6 mm of the nipple's axis (its chamfered end guides the filter on) | measure on the rig | estimated |
+| Cross-thread angle | over 2.6 degrees | measure on the rig: tilt a real filter on the nipple until it no longer threads | derived: atan((0.75 + 0.12) / 19.03) from the fit above |
+| Going on the nipple | the bore over the nipple's end only within its 0.20 mm clearance; no capture | the real stud and filter | the fit above |
 | Crankcase front | 34 cm wide, 24 cm tall, its face 8 mm behind the gasket land | a plate or board at that face | estimated |
 | Room | 20-24 degrees C | 20-24 degrees C | lab practice (gasket rubber and oil film) |
 
 The filter is a free part. It sits on six joints with no drive from the nipple (three slides, two tilts and its spin)
 that cover everything within reach, so it falls, tips, is picked up, carried and set down like a loose part; the joints
-are its coordinates, not a constraint. Its colliders are hollow where the nipple goes (a ring for the gasket, a ring
-for the base plate with the threaded hole), and the nipple is a collider (8 mm across against the hole's 21 mm: the
-nipple's chamfered end guides a filter that meets it within 6 mm of its axis), so the filter goes on only near the
-axis; once the thread catches it draws the filter onto the axis.
-Pressed onto the nipple, the threads' crests stop it 4.5 mm out (a stop on its axial joint). Turned 20 degrees
-clockwise there, the thread starts: with its axis within 4 degrees of the nipple's, it catches, and from then on the
-filter turns only about the nipple's axis and travels 1.5 mm a turn; tilted more, it cross-threads and jams. Before
+are its coordinates, not a constraint. Its colliders are hollow where the nipple goes (a ring for the gasket; the
+threaded bore, 36 colliders at its thread's crests, 18.53 mm across; the base plate round it), and the nipple is a
+collider at its real root diameter, 18.13 mm, standing 8.4 mm out of the land; its end, chamfered to that diameter,
+is flat. Nothing pulls the filter toward the nipple: off its axis by more than the 0.20 mm clearance, the base plate
+lands on the nipple's end and stops there, and the robot has to center it and push it on itself.
+With the nipple's end in the bore, the threads' crests stop the filter 4.5 mm out (a stop on its axial joint: the
+helical crests can't be colliders, so they are this stop). Turned 20 degrees clockwise there, the thread starts:
+with its axis within 2.6 degrees of the nipple's, it catches, and from then on it travels 1.5 mm a turn and is held
+by fixed stops (no drive) at the engaged threads' play, 0.10 mm and 0.36 degrees, or at the offset and tilt it caught
+with if those are larger; nothing squares it but contact, the gasket meeting the land. Its axial joint is driven to
+1.5 mm a turn: that drive is the helix. Tilted more at the start, it cross-threads and
+jams. If the solver ever lets the filter be shoved over the nipple's end (the nipple's end found 0.3 mm or more inside
+the bore and more than 0.35 mm off its axis, or past the crests' stop), the filter jams there and the trial fails, so
+no gain can come from forcing it. Before
 gasket contact it runs on with 0.3 N·m; past contact the squeezed gasket holds it where it is left and gives way only
 at the gasket's torque, either way (a stiff hold, 2,000 N·m/rad, whose drive is capped at that torque: stick-slip
 friction, not a spring). A hard stop at 1.5 turns past contact is the gasket squeezed flat. In the demo the hand,
-pinching at about 20 N a finger on the can's 33 mm radius, stopped turning it 13 degrees past contact (about
-0.9 N·m); the rest needs the wrench, as on a real engine.
+pinching at about 20 N a finger on the can's 33 mm radius, stopped turning it 9.5 degrees past contact (about
+0.6 N·m); the rest needs the wrench, as on a real engine.
 
 The wrench is a free body: the ratchet (handle and head) floats, and the drive (adapter and cap) turns on it about
 the drive's axis. Nothing ties it to the filter. Its cup has 14 flutes inside (4 mm wide, 12 mm deep, reaching in to
@@ -205,10 +221,10 @@ when the rig is built):
 The arms' strength. The YAM's servos are Damiao DM-J4340 on joints 1-3 (9 N·m rated, 27 N·m peak) and DM-J4310 on
 joints 4-6 (3 N·m rated, 7 N·m peak); the sim uses the peak limits (i2rt's yam_v1 config). The right hand swings the
 handle alone, 0.55 m out: at 18 N·m (plus the demo's 1 N·m margin) it pushes about 35 N down the swing, while the left
-hand, on the head, only presses the cup on (8 N). The earlier revision's Jacobian study of the same ratchet at this
-reach put each hand's push at 30-45 N at peak torque and well under that at rated torque, so the last strokes, a few
-seconds each, run the right arm above its rated torque, within its peak; we state it rather than claim otherwise. In
-the demo the arm delivered it: the strokes took the filter to 274 degrees past contact (18.2 N·m). Pushing down, the
+hand, on the head, only presses the cup on (8 N). A Jacobian study of the same ratchet at this reach puts each
+hand's push at 30-45 N at peak torque and well under that at rated torque, so the last strokes, a few seconds each,
+run the right arm above its rated torque, within its peak. In the demo the strokes took the filter to 270.9 degrees
+past contact (18.1 N·m). Pushing down, the
 hand bears on its fingers, and the arm's own weight helps.
 
 No oil, gasket deformation or leak is simulated; the scorer reads the angle, and a real trial reads the same angle from
@@ -257,11 +273,11 @@ Build steps:
    through the plate and the panel at its corners, and bolt the plate on with the M8 bolts, washers and nuts.
 3. Drill a 21 mm hole through the plate and the panel on the axis mark.
 4. Run the M20 nut onto the stud's back end. Put the stud through the hole from the front, run the jam nut onto it
-   against the plate's face, and set the nuts so the stud's thread stands 15.5 mm proud of the plate face, level and
+   against the plate's face, and set the nuts so the stud's thread stands 16.4 mm proud of the plate face, level and
    square to the plate (check with the spirit level and the steel rule). Add thread-locking compound and tighten both
    nuts with the 30 mm wrench.
 5. Screw the 76 mm steel ring to the plate round the jam nut, centered on the stud. This is the gasket land (the sim's
-   boss): the thread now stands 7.5 mm past it, and the filter's gasket seats 0.8 cm in front of the plate.
+   boss): the thread now stands 8.4 mm past it, and the filter's gasket seats 0.8 cm in front of the plate.
 6. Check the mount once, before the first trial: jam two spare M20 x 1.5 nuts together on the stud's end, set the
    torque wrench to 30 N·m (22 ft·lb), and turn the outer nut clockwise with the 30 mm socket until the wrench
    clicks. The stud, its nuts and the plate stay put, which covers the 18 N·m of a good trial and the 29 N·m of an
@@ -285,7 +301,7 @@ is built and before each session):
 | Nipple's axis | level, at x 45.5 (land), y 5, z 13, pointing at the robot | stud through the plate, set with a level | ±5 mm, ±2 degrees | parts diagram E1710 (direction); position set for the robot |
 | Engine face behind the land | 8 mm | 8 mm steel ring | ±1 mm | estimated |
 | Gasket land | 76 mm across | 76 mm steel ring | ±2 mm | estimated |
-| Nipple past the land | 7.5 mm, M20 x 1.5 | MMSPA-M20 stud, 15.5 mm proud of the plate, set by the nuts | ±1 mm | thread: K&N KN-204 listing (M20 x 1.5) |
+| Nipple past the land | 8.4 mm, M20 x 1.5 (6g) | MMSPA-M20 stud, 16.4 mm proud of the plate, set by the nuts | ±1 mm | thread: K&N KN-204 listing (M20 x 1.5) |
 | Engine face | 34 x 24 cm | plywood panel | ±1 cm | estimated |
 | Frame cross tube | 32 mm, top 45 mm under the can, x 41.8 | 1-inch rigid steel conduit, 33.4 mm | ±2 mm across, ±5 mm position | estimated (owner reports; no drawing) |
 | Intake duct | 60 mm, 30 mm right of the can, x 42.8 | 2-inch Sch 40 PVC, 60.3 mm | ±5 mm | estimated |
@@ -323,4 +339,5 @@ Build time: about 2 hours.
 ## Licenses
 
 All code here was written for this task; no third-party code is included. No third-party assets are used: every shape
-is generated by `yamkit.py`, `filterkit.py` and `task.py`.
+is generated by `yamkit.py`, `filterkit.py` and `task.py`. The robot model and its collision hulls load at run time
+from the competition environment (arena revision 0059d02a) and are not redistributed.

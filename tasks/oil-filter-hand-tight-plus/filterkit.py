@@ -21,9 +21,10 @@ goes on.
 - Started: turned clockwise (seen from its closed end) by START_TURN there. If its axis was within the thread's
   cross-threading angle of the nipple's (`Thread.cross_tilt`: the tilt at which the bore's first thread lands half a
   pitch, plus the flanks' play, out across the pitch diameter, so its far side drops into the wrong groove), the
-  thread catches: from then on the slide follows pitch x turns, and the side slides and tilts are held within the
-  engaged threads' play; whatever tilt and offset it caught with (both already inside the bore's clearance) the
-  flanks take out over the first turn, as turning squares a nut. If it was tilted more, it is cross-threaded: it jams
+  thread catches: from then on the slide is driven to pitch x turns (the helix), and the side slides and tilts are
+  held by fixed stops at the engaged threads' play, or at the offset and tilt it caught with if those are larger
+  (both already inside the bore's clearance and the cross-threading angle): nothing squares it but contact, the
+  gasket meeting the land. If it was tilted more, it is cross-threaded: it jams
   where it is (all joints locked) and the trial has failed (a cross-threaded filter damages the nipple's thread).
 - Engaged: turning it costs `run_on` (N*m) before gasket contact and the gasket's torque past it (`gasket(past)`), as
   a stick-slip hold: it stays where it is left, and gives way only to that torque, either way (the drive's force cap
@@ -51,9 +52,9 @@ FREE, ENGAGED, CROSSED = "free", "engaged", "crossed"
 START_TURN = math.radians(20.0)  # turned this far clockwise against the crests: the thread starts (or crosses)
 ON_SLACK = 0.00015  # m: the solver's penetration allowed on top of the bore's clearance when judging that the nipple's
 #                     end is inside the bore (the colliders, not this, keep it there)
-FORCED = 0.0006  # m: the nipple's end found inside the collar's metal, this far off the bore's axis (three times the
-#                  clearance) and 0.3 mm in: the filter was forced over it off its axis (a solver penetration, not a
-#                  real fit); it jams, as a crooked start does, and the trial fails
+# The nipple's end found 0.3 mm or more inside the bore farther off its axis than the clearance plus ON_SLACK, or
+# inside the bore past the crests' stop: the filter was forced over it (a solver penetration, not a real fit); it
+# jams, as a crooked start does, and the trial fails. Every state is either on the nipple, off it, or this.
 K_HOLD = 2000.0  # N*m/rad: the stick-slip hold's stiffness (0.5 degrees of give at 18 N*m)
 AX_K = 20000.0  # N/m: the thread's axial stiffness (a drive on top of the stop)
 CLICK = math.radians(3.0)  # the ratchet's 120 teeth
@@ -203,7 +204,7 @@ class FilterModel:
     on: bool = False  # the nipple's end inside the bore, against the threads' crests (not yet started)
     tilt0: float = 0.0  # the tilt (rad) and offset (m) it caught with: the flanks take them out over the first turn
     lat0: float = 0.0
-    forced: bool = False  # forced over the nipple's end off its axis (see FORCED)
+    forced: bool = False  # forced over the nipple's end (see above ON_SLACK)
     peak_past: float = -1e9  # rad
     lock: dict = field(default_factory=dict)
 
@@ -234,7 +235,8 @@ class FilterModel:
         if self.state == FREE:
             tip = tip_in_filter(J, th.nip_len)
             tr = math.hypot(tip[0], tip[1])
-            if th.bore_z0 + 0.0003 < tip[2] < th.bore_z1 and FORCED < tr < th.collar_r:
+            inside = th.bore_z0 + 0.0003 < tip[2] < th.bore_z1 and tr < th.collar_r
+            if inside and (tr >= th.clearance + ON_SLACK or out < th.d0 - 0.0005):
                 self.state, self.crossed_tilt, self.forced = CROSSED, tilt, True
                 self.lock = dict(J)
                 return {n: (J[n], 2000.0, 0.0, 5.0, 1000.0, (J[n] - 1e-3, J[n] + 1e-3)) for n in CHAIN}
@@ -271,11 +273,10 @@ class FilterModel:
         d = max(th.d0 - th.pitch * self.turned / (2 * math.pi), -th.seat_travel)
         out_lim = (min(d, out) - 0.0003, max(d, out) + 0.0003)
         cmd = {"f_out": (d, AX_K, 0.0, 20.0, 400.0, out_lim)}
-        # the engaged flanks: no drive, a stop at the threads' play; what it caught with (inside the bore's
-        # clearance and the cross-threading angle) taken out as the first turn goes in
-        k = min(max(1.0 - self.turned / (2 * math.pi), 0.0), 1.0)
-        lat_lim = max(th.play_lat, self.lat0 * k)
-        tilt_lim = max(th.play_tilt, self.tilt0 * k)
+        # the engaged flanks: no drive, a fixed stop at the threads' play, or at what it caught with if more (inside
+        # the bore's clearance and the cross-threading angle); nothing squares it but contact (the gasket on the land)
+        lat_lim = max(th.play_lat, self.lat0 + 1e-5)
+        tilt_lim = max(th.play_tilt, self.tilt0 + 1e-4)
         for n, lim in (("f_up", lat_lim), ("f_side", lat_lim), ("f_pitch", tilt_lim), ("f_roll", tilt_lim)):
             cmd[n] = (J[n], 0.0, 0.0, 0.05, 1000.0, (-lim, lim))
         tau = th.torque(past)
