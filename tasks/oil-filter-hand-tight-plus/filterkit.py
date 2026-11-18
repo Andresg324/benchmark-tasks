@@ -2,33 +2,37 @@
 
 The filter is a free part: a yamkit `Mechanism` fixed at the nipple whose filter link sits on six joints with no drive
 (three slides, then two tilts and the spin about its own axis), so it falls, tips, is carried and set down like any
-loose part. Its joints are the chain's coordinates, not a constraint: the filter can be anywhere within reach, pitched
-from -69 to 126 degrees (upright on the bench is 90) and rolled up to 69 degrees either way. The base frame has its z
-axis along the nipple, pointing out of the engine, with the origin at the center of the gasket land; the filter's own
-frame has its origin on its axis at the gasket's face, its z axis toward the closed end.
+loose part. Its joints are the chain's coordinates, not a constraint: their ranges (PITCH, ROLL and the task's
+`reach`) cover the whole bench the arms reach and every way the filter can lie (standing on either end, on its side
+in any direction). The base frame has its z axis along the nipple, pointing out of the engine, with the origin at the
+center of the gasket land; the filter's own frame has its origin on its axis at the gasket's face, its z axis toward
+the closed end.
 
 The thread (FilterModel, one control step at a time). The fit is the real one (the numbers are the task's, from
-ISO 965 for M20 x 1.5 6H/6g): the nipple's collider is its root cylinder (its thread's minor diameter, to which its
-end is chamfered), the filter's threaded bore is a ring of colliders at its thread's crests (the internal minor
-diameter), 0.2 mm larger in radius. Before the thread catches nothing drives the filter: the colliders alone decide
-whether it goes on. Once caught, the thread is an axial drive (the helix, 1.5 mm a turn).
-- Free: no drive on any joint. Off the axis by more than the bore's clearance, the base plate meets the nipple's end
-  face and stops there; it goes over the nipple's end only when the robot has centered it within that clearance (and
-  squared it enough for the bore to clear the end).
+ISO 965 for M20 x 1.5 6H/6g): the nipple's collider is its root cylinder (its thread's minor diameter; its end is flat
+at that diameter, the small end of the ISO 4753 chamfer), the filter's threaded bore is a ring of colliders at its
+thread's crests (the internal minor diameter), 0.2 mm larger in radius. The flanks are not collision geometry.
+- Free: no drive on any joint. Only contact decides whether the filter goes on: off the axis by more than the bore's
+  clearance, the base plate meets the nipple's end face and stops there; it goes over the nipple's end only when the
+  robot has centered it within that clearance and squared it enough for the bore to clear the end.
 - On the nipple's end (its end inside the bore, within the bore's clearance of its axis): the threads' crests stop it
-  at `d0` from the land, where the bore's first thread meets the nipple's first full thread past its chamfer (a stop
-  on the axial slide); pushing harder does not take it further.
-- Started: turned clockwise (seen from its closed end) by START_TURN there. If its axis was within the thread's
-  cross-threading angle of the nipple's (`Thread.cross_tilt`: the tilt at which the bore's first thread lands half a
-  pitch, plus the flanks' play, out across the pitch diameter, so its far side drops into the wrong groove), the
-  thread catches: from then on the slide is driven to pitch x turns (the helix), and the side slides and tilts are
-  held by fixed stops at the engaged threads' play, or at the offset and tilt it caught with if those are larger
-  (both already inside the bore's clearance and the cross-threading angle): nothing squares it but contact, the
-  gasket meeting the land. If it was tilted more, it is cross-threaded: it jams
-  where it is (all joints locked) and the trial has failed (a cross-threaded filter damages the nipple's thread).
+  at `d0` from the land, where the bore's first thread meets the nipple's first full thread (a stop on the axial
+  slide); pushing harder does not take it further.
+- Started: turned clockwise (seen from its closed end) by START_TURN while pressed on the crests (within START_GIVE of
+  the stop). The catch is then judged once, from the measured tilt against the thread's cross-threading angle
+  (`Thread.cross_tilt`: the tilt at which the bore's first thread lands half a pitch, plus the flanks' play, out
+  across the pitch diameter, so its far side drops into the wrong groove). Within it the thread catches: from then on
+  the axial slide is driven to pitch x turns (the helix), and the side slides and tilts are held by round stops (no
+  drive) at the engaged flanks' play, or at the offset and tilt it caught with if those are larger, so nothing pulls
+  it in; nothing squares it but contact, the gasket meeting the land. Tilted more, it is cross-threaded: it jams where
+  it is (all joints locked) and the trial has failed (a cross-threaded filter damages the nipple's thread).
 - Engaged: turning it costs `run_on` (N*m) before gasket contact and the gasket's torque past it (`gasket(past)`), as
   a stick-slip hold: it stays where it is left, and gives way only to that torque, either way (the drive's force cap
-  is the torque, its target the last place it slipped to). Unscrewed past the thread's start it is free again.
+  is the torque, its target the last place it slipped to). Unscrewed past where it caught it is free again, and can
+  be started again (the run's peak angle is kept).
+- A filter found over the nipple's end without its thread having caught (the nipple's end inside the bore but outside
+  the bore's clearance, or past the crests' stop: only possible through the solver's give) is not on the thread: it
+  gets no stop and cannot catch until it is backed off the end.
 
 The wrench: a `Mechanism` with a mass (a floating base: the ratchet's handle and head), and one link, the drive with
 its adapter and the cap, on a hinge about the drive's axis. The ratchet is a stop: turned to tighten, the handle
@@ -50,15 +54,14 @@ import yamkit as kit
 
 FREE, ENGAGED, CROSSED = "free", "engaged", "crossed"
 START_TURN = math.radians(20.0)  # turned this far clockwise against the crests: the thread starts (or crosses)
-CREST_GAP = 0.00004  # m: engaged, the side stops keep the bore's crests at least this far off the nipple's root
+START_GIVE = 0.0001  # m: pressed on the crests: within this of their stop (contact give), or the turn does not count
 ON_SLACK = 0.00015  # m: contact give allowed on top of the bore's clearance when judging that the nipple's end is
 #                     inside the bore (the colliders, not this, keep it there)
-# The nipple's end found 0.3 mm or more inside the bore farther off its axis than the clearance plus ON_SLACK, or
-# inside the bore past the crests' stop: the filter was forced over it; it jams, as a crooked start does, and the
-# trial fails. Every state is either on the nipple, off it, or this.
+PITCH = (-1.65, 3.3)  # rad: the filter's pitch joint (upright on the bench is +pi/2; lying either way along x, 0 / pi)
+ROLL = (-1.65, 1.65)  # rad: its roll joint (lying on its side along y: +-pi/2)
 K_HOLD = 2000.0  # N*m/rad: the stick-slip hold's stiffness (0.5 degrees of give at 18 N*m)
 AX_K = 20000.0  # N/m: the thread's axial stiffness (a drive on top of the stop)
-CLICK = math.radians(3.0)  # the ratchet's 120 teeth
+CLICK = math.radians(3.0)  # the ratchet's 120 positions
 PAWL_DRAG = 0.2  # N*m
 
 
@@ -161,7 +164,7 @@ class LooseFilter(kit.Mechanism):
     filter_colliders: tuple = ()
     filter_mass: float = 0.25
     start: tuple = (0.0, 0.0, 0.05, 0.0, 0.0)
-    reach: tuple = ((-0.15, 0.10), (-0.10, 0.30), (-0.001, 0.25))
+    reach: tuple = ((-0.15, 0.35), (-0.50, 0.50), (-0.001, 0.47))
 
     def __post_init__(self):
         o = (0.0, 0.0, 0.0)
@@ -173,9 +176,9 @@ class LooseFilter(kit.Mechanism):
                      parent="f_up", law=_Free()),
             kit.Link("f_out", "prismatic", "Z", o, lower=al, upper=ah, start=out, mass=0.005, damping=0.0,
                      parent="f_side", law=_Free()),
-            kit.Link("f_pitch", "revolute", "Y", o, lower=-1.2, upper=2.2, start=pitch, mass=0.005, damping=0.0,
-                     parent="f_out", law=_Free()),
-            kit.Link("f_roll", "revolute", "X", o, lower=-1.2, upper=1.2, start=roll, mass=0.005, damping=0.0,
+            kit.Link("f_pitch", "revolute", "Y", o, lower=PITCH[0], upper=PITCH[1], start=pitch, mass=0.005,
+                     damping=0.0, parent="f_out", law=_Free()),
+            kit.Link("f_roll", "revolute", "X", o, lower=ROLL[0], upper=ROLL[1], start=roll, mass=0.005, damping=0.0,
                      parent="f_pitch", law=_Free()),
             kit.Link("filter", "revolute", "Z", o, lower=-60.0, upper=60.0, start=0.0, mass=self.filter_mass,
                      meshes=self.filter_meshes, colliders=self.filter_colliders, damping=0.0, parent="f_roll",
@@ -200,12 +203,12 @@ class FilterModel:
     turned: float = 0.0
     push: float = 0.0  # tightening turn against the crests (before the thread catches)
     anchor: float | None = None  # the spin joint's stick-slip target
-    came_off: bool = False  # unscrewed off the thread after it caught
+    came_off: bool = False  # unscrewed off the thread after it caught at some point (it may have been started again)
     crossed_tilt: float = 0.0
     on: bool = False  # the nipple's end inside the bore, against the threads' crests (not yet started)
     tilt0: float = 0.0  # the tilt (rad) and offset (m) it caught with: the engaged stops stay at least this wide
     lat0: float = 0.0
-    forced: bool = False  # forced over the nipple's end (see above ON_SLACK)
+    forced: bool = False  # over the nipple's end without having caught (not on the thread; see the docstring)
     peak_past: float = -1e9  # rad
     lock: dict = field(default_factory=dict)
 
@@ -237,13 +240,11 @@ class FilterModel:
             tip = tip_in_filter(J, th.nip_len)
             tr = math.hypot(tip[0], tip[1])
             inside = th.bore_z0 + 0.0003 < tip[2] < th.bore_z1 and tr < th.collar_r
-            if inside and (tr >= th.clearance + ON_SLACK or out < th.d0 - 0.0005):
-                self.state, self.crossed_tilt, self.forced = CROSSED, tilt, True
-                self.lock = dict(J)
-                return {n: (J[n], 2000.0, 0.0, 5.0, 1000.0, (J[n] - 1e-3, J[n] + 1e-3)) for n in CHAIN}
+            # over the nipple's end without having caught (outside the clearance, or past the crests): not on it
+            self.forced = inside and (tr >= th.clearance + ON_SLACK or out < th.d0 - 0.0005)
             # the nipple's end inside the bore (which only its colliders let happen within its clearance), and not
             # past the crests' stop
-            on = (tip[2] > th.bore_z0 and tr < th.clearance + ON_SLACK
+            on = (not self.forced and tip[2] > th.bore_z0 and tr < th.clearance + ON_SLACK
                   and out >= th.d0 - 0.0005)
             self.on = on
             if not on:
@@ -251,7 +252,7 @@ class FilterModel:
                 return free
             out_cmd = free["f_out"]
             free["f_out"] = (out_cmd[0], 0.0, 0.0, 0.01, 1000.0, (th.d0, 0.25))  # the crests: no closer than d0
-            if out <= th.d0 + 0.0008:
+            if out <= th.d0 + START_GIVE:  # pressed on the crests
                 self.push = max(self.push + tighten, 0.0)
             else:
                 self.push = 0.0
@@ -266,22 +267,23 @@ class FilterModel:
             return free
         # engaged
         self.turned += tighten
-        if self.turned < -math.radians(10.0):  # unscrewed past where the thread caught: loose again
-            self.state, self.came_off, self.turned, self.push = FREE, True, 0.0, 0.0
+        if self.turned < -math.radians(10.0):  # unscrewed past where the thread caught: loose again (it can be
+            self.state, self.came_off, self.turned, self.push = FREE, True, 0.0, 0.0  # started again)
             return free
         past = self.turned - self.seat
         self.peak_past = max(self.peak_past, past)
         d = max(th.d0 - th.pitch * self.turned / (2 * math.pi), -th.seat_travel)
         out_lim = (min(d, out) - 0.0003, max(d, out) + 0.0003)
         cmd = {"f_out": (d, AX_K, 0.0, 20.0, 400.0, out_lim)}
-        # the engaged flanks: no drive, a fixed stop at the threads' play, or at what it caught with if more (inside
-        # the bore's clearance and the cross-threading angle); nothing squares it but contact (the gasket on the land).
-        # The side stops sit at most 0.16 mm (clearance - CREST_GAP) off the axis, inside the bore's clearance: once
-        # the flanks have caught they carry the side load, and the crests do not bear on the nipple's root.
-        lat_lim = max(th.play_lat, min(self.lat0 + 1e-5, th.clearance - CREST_GAP))
-        tilt_lim = max(th.play_tilt, self.tilt0 + 1e-4)
-        for n, lim in (("f_up", lat_lim), ("f_side", lat_lim), ("f_pitch", tilt_lim), ("f_roll", tilt_lim)):
-            cmd[n] = (J[n], 0.0, 0.0, 0.05, 1000.0, (-lim, lim))
+        # the engaged flanks: round stops (no drive) about the axis at the flanks' play, or at the offset and tilt it
+        # caught with if larger, so nothing pulls it in; nothing squares it but contact (the gasket on the land). Each
+        # slide's stop is the circle's chord at the other slide's position, set each step (never inside where it is).
+        r_lat = max(th.play_lat, self.lat0 + 1e-5)
+        r_tilt = max(th.play_tilt, self.tilt0 + 1e-4)
+        for a_, b_, r in (("f_up", "f_side", r_lat), ("f_pitch", "f_roll", r_tilt)):
+            for n, other in ((a_, b_), (b_, a_)):
+                lim = max(math.sqrt(max(r * r - J[other] ** 2, 0.0)), abs(J[n]) if abs(J[n]) <= r else 0.0, 1e-6)
+                cmd[n] = (J[n], 0.0, 0.0, 0.05, 1000.0, (-lim, lim))
         tau = th.torque(past)
         if self.anchor is None:
             self.anchor = s

@@ -42,7 +42,7 @@ def start(tilt_deg=0.0, lat=0.0, out=None, turn_deg=60.0, step_deg=5.0, axis_off
     """A filter pressed against the threads' crests (or `out` from the land) and turned `turn_deg` clockwise; `lat` m
     off the axis at its gasket face (so its bore's entry is that far off the nipple's end)."""
     f = fk.FilterModel(0, TH)
-    J = dict(f_up=lat, f_side=0.0, f_out=TH.d0 + 0.0003 if out is None else out, f_pitch=math.radians(tilt_deg),
+    J = dict(f_up=lat, f_side=0.0, f_out=TH.d0 + 0.00005 if out is None else out, f_pitch=math.radians(tilt_deg),
              f_roll=0.0, filter=0.0)
     for _ in range(int(round(turn_deg / step_deg))):
         J["filter"] -= math.radians(step_deg)
@@ -57,86 +57,106 @@ def start(tilt_deg=0.0, lat=0.0, out=None, turn_deg=60.0, step_deg=5.0, axis_off
 
 
 f, _ = start(0.0)
-case("started square and centered: the thread catches", f.state, fk.ENGAGED)
+case("started square and centered, pressed on the crests: the thread catches", f.state, fk.ENGAGED)
 f, _ = start(2.4)
 case("2.4 degrees off: still catches", f.state, fk.ENGAGED)
 f, _ = start(3.0)
 case("3 degrees off and turned: cross-threaded", f.state, fk.CROSSED)
 f, _ = start(9.0)
-case("9 degrees off (the nipple's end not square in the bore): cross-threaded at the most, never caught square",
-     f.state != fk.ENGAGED, True)
-for mm, want in ((0.0, fk.ENGAGED), (0.1, fk.ENGAGED), (0.2, fk.ENGAGED), (0.5, fk.FREE), (1.0, fk.FREE),
-                 (2.0, fk.FREE), (6.0, fk.FREE)):
-    # outside the clearance the colliders leave the base plate on the nipple's end face
-    f, _ = start(0.0, lat=mm / 1000, out=None if want == fk.ENGAGED else TH.nip_len - TH.bore_z0)
-    case(f"{mm} mm off the axis, pushed and turned: "
-         + ("within the bore's 0.2 mm clearance, the thread catches" if want == fk.ENGAGED
-            else "outside it the base plate sits on the nipple's end: nothing catches"),
+case("9 degrees off (the nipple's end not square in the bore): never caught square", f.state != fk.ENGAGED, True)
+f, _ = start(0.0, out=TH.d0 + 0.0005)
+case("held 0.5 mm off the crests' stop (not pressed on) and turned: no catch, no pull-in", (f.state, f.on),
+     (fk.FREE, True))
+for mm, want in ((0.0, fk.ENGAGED), (0.1, fk.ENGAGED), (0.2, fk.ENGAGED)):
+    f, _ = start(0.0, lat=mm / 1000)
+    case(f"{mm} mm off the axis (placed by hand), pressed and turned: within the 0.2 mm clearance it catches",
          f.state, want)
-    case(f"  ({mm} mm off: the model reports it on the nipple only within the clearance)", f.on or
-         f.state == fk.ENGAGED, want == fk.ENGAGED)
-f, _ = start(0.0, lat=0.0004)
-case("0.4 mm off yet 3.8 mm over the nipple's end (forced): jammed, a fail",
-     (f.state, f.forced), (fk.CROSSED, True))
+for mm in (0.5, 1.0, 2.0, 6.0):
+    # placed by hand where the colliders leave it: the base plate on the nipple's end face (in the sim the colliders
+    # do the blocking; this checks the model's rule)
+    f, _ = start(0.0, lat=mm / 1000, out=TH.nip_len - TH.bore_z0)
+    case(f"{mm} mm off the axis (placed by hand, resting on the nipple's end) and turned: it does not go on, nothing "
+         "catches", (f.state, f.on), (fk.FREE, False))
+f, J = start(0.0, lat=0.0004)
+case("0.4 mm off yet over the nipple's end (only the solver's give could put it there): not on the thread, no catch",
+     (f.state, f.on, f.forced), (fk.FREE, False, True))
+J = dict(J, f_up=0.0, f_out=TH.d0 + 0.006)
+f.step(J)
+f2, _ = start(0.0)
+case("  backed off and started again square: catches (recoverable)", (f.forced, f2.state), (False, fk.ENGAGED))
 f = fk.FilterModel(0, TH)
 J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.006, f_pitch=0.0, f_roll=0.0, filter=0.0)
 f.step(J)
 J["f_out"] = TH.d0 - 0.0008  # shoved past the crests in one step, never turned
-f.step(J)
-case("cheat: shoved past the crests' stop in one control step: jammed, a fail (never threaded)",
-     (f.state, f.forced), (fk.CROSSED, True))
+for _ in range(10):
+    J["filter"] -= math.radians(5.0)
+    f.step(J)
+case("cheat: shoved past the crests' stop in one control step, then turned: not on the thread, never catches",
+     (f.state, f.forced), (fk.FREE, True))
 f, _ = start(0.0, out=TH.d0 + 0.006)
 case("held 6 mm short of the nipple and turned: nothing", f.state, fk.FREE)
 f, J = start(0.0, turn_deg=10.0)
 case("turned only 10 degrees against the crests: not caught yet", f.state, fk.FREE)
-f, J = start(1.5, lat=0.00015, turn_deg=30.0)
-case("caught 0.15 mm off and 1.5 degrees crooked: caught", f.state, fk.ENGAGED)
-cmd = f.step(J)
-case("  just caught: its side stop is where it caught, no closer",
-     round(cmd["f_up"][5][1] * 1e6) >= round(0.00015 * 0.95 * 1e6), True)
-case("  and no drive on the side slides or tilts (stiffness 0)",
-     [cmd[n][1] for n in ("f_up", "f_side", "f_pitch", "f_roll")], [0.0] * 4)
-f, J = start(1.5, lat=0.00015, turn_deg=420.0)
-cmd = f.step(J)
-case("  a turn on, its stops are still where it caught (0.15 mm, 1.5 degrees): nothing squeezes it square",
-     (round(cmd["f_up"][5][1] * 1e5), round(math.degrees(cmd["f_pitch"][5][1]), 1)), (16, 1.5))
-f, J = start(0.0, lat=0.0002, turn_deg=30.0)
-cmd = f.step(J)
-case("caught 0.2 mm off (on the bore's wall): side stops 0.16 mm off the axis, so the crests clear the nipple's root",
-     round(cmd["f_up"][5][1] * 1e6), 159)
+
+
+def stops(cmd):
+    return [cmd[n][5] for n in ("f_up", "f_side", "f_pitch", "f_roll")]
+
+
 f, J = start(0.0, turn_deg=420.0)
 cmd = f.step(J)
-case("  caught square: the engaged threads' play (0.10 mm, 0.36 degrees)",
-     (round(cmd["f_up"][5][1] * 1e6), round(math.degrees(cmd["f_pitch"][5][1]), 2)), (104, 0.36))
+case("caught square: round stops at the engaged flanks' play (0.104 mm, 0.36 degrees), no drive on them",
+     (round(cmd["f_up"][5][1] * 1e6), round(math.degrees(cmd["f_pitch"][5][1]), 2),
+      [cmd[n][1] for n in ("f_up", "f_side", "f_pitch", "f_roll")]), (104, 0.36, [0.0] * 4))
+d = TH.play_lat / math.sqrt(2)
+cmd = f.step(dict(J, f_up=d, f_side=d))
+case("  diagonal: at 45 degrees round the axis the side stops are the circle's chords (radial 0.104 mm, inside the "
+     "0.199 mm clearance; no square corner at 0.147 mm)",
+     round(math.hypot(cmd["f_up"][5][1], cmd["f_side"][5][1]) * 1e6), 104)
+f, J = start(1.0, lat=0.0002, turn_deg=30.0)
+case("caught 0.2 mm off and 1 degree crooked: caught", f.state, fk.ENGAGED)
+cmd = f.step(J)
+case("  its round stops are where it caught (0.20 mm, 1.0 degree): not clamped in, nothing pulls it in",
+     (round(cmd["f_up"][5][1] * 1e4), round(math.degrees(cmd["f_pitch"][5][1]), 1)), (2, 1.0))
+f, J = start(1.0, lat=0.0002, turn_deg=420.0)
+cmd = f.step(J)
+case("  a turn on, still there: nothing squeezes it square", (round(cmd["f_up"][5][1] * 1e4),
+                                                              round(math.degrees(cmd["f_pitch"][5][1]), 1)), (2, 1.0))
 f, J = start(0.0, turn_deg=3 * 360.0 + 60.0)
-case("three turns and 60 degrees on (the first 30 start the thread): 30 past contact", round(math.degrees(f.past), 3),
-     30.0)
+case("three turns and 60 degrees on (the first 30 start the thread): 30 past contact",
+     round(math.degrees(f.past), 3), 30.0)
 cmd = f.step(J)
 case("its axial target 30 past contact: 1/12 turn x 1.5 mm into the gasket", round(cmd["f_out"][0], 6), -0.000125)
 case("gasket torque at 270 past contact (N*m)", round(TH.torque(math.radians(270.0)), 3), 18.0)
-case("before contact it runs on at 0.3 N*m", TH.torque(-0.5), 0.3)
 case("the spin's drive is capped at the gasket's torque", round(cmd["filter"][4], 3), round(TH.torque(f.past), 3))
 f, J = start(0.0, turn_deg=90.0)
 for _ in range(30):
     J["filter"] += math.radians(10.0)
     f.step(J)
-case("unscrewed past where it caught: loose again, flagged", (f.state, f.came_off), (fk.FREE, True))
+case("unscrewed past where it caught: loose again", f.state, fk.FREE)
+J["f_out"] = TH.d0 + 0.00005
+for _ in range(12):
+    J["filter"] -= math.radians(5.0)
+    f.step(J)
+case("  and started again square: caught again (a recoverable mistake)", f.state, fk.ENGAGED)
 
 # cheats on the thread
 f = fk.FilterModel(0, TH)
-J = dict(f_up=0.0015, f_side=0.0, f_out=TH.d0 + 0.0003, f_pitch=0.0, f_roll=0.0, filter=0.0)
-f.step(J)
-case("cheat: shoved over the nipple's end 1.5 mm off its axis (forced): jammed, a fail",
-     (f.state, f.forced), (fk.CROSSED, True))
+J = dict(f_up=0.0015, f_side=0.0, f_out=TH.d0 + 0.00005, f_pitch=0.0, f_roll=0.0, filter=0.0)
+for _ in range(10):
+    J["filter"] -= math.radians(5.0)
+    f.step(J)
+case("cheat: shoved over the nipple's end 1.5 mm off its axis and turned: not on the thread, never catches",
+     (f.state, f.forced), (fk.FREE, True))
 f = fk.FilterModel(0, TH)
-J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.0003, f_pitch=0.0, f_roll=0.0, filter=0.0)
+J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.00005, f_pitch=0.0, f_roll=0.0, filter=0.0)
 for out in np.linspace(TH.d0 + 0.0003, TH.d0 - 0.0004, 40):  # shoved on hard, never turned
     J["f_out"] = float(out)
     cmd = f.step(J)
 case("cheat: pushed on hard without turning: not threaded, the crests' stop holds it at d0",
      (f.state, cmd["f_out"][5][0]), (fk.FREE, TH.d0))
 f = fk.FilterModel(0, TH)
-J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.0003, f_pitch=0.0, f_roll=0.0, filter=0.0)
+J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.00005, f_pitch=0.0, f_roll=0.0, filter=0.0)
 for _ in range(40):  # turned the wrong way (loosening) against the crests
     J["filter"] += math.radians(5.0)
     f.step(J)
@@ -152,6 +172,39 @@ for _ in range(80):  # spun where it stands on the bench
     Js["filter"] -= math.radians(10.0)
     f.step(Js)
 case("cheat: the filter spun on the bench, away from the nipple: nothing", f.state, fk.FREE)
+
+# -- no invisible walls: the free filter's joint ranges cover the bench and every way it can lie ----------------------
+lo_hi = {lk.name: (lk.lower, lk.upper) for lk in m.MOUNT.links}
+R0, P0 = m.R_BASE, np.array((m.X_LAND, m.Y_F, m.Z_F))
+
+
+def joints_for(world_pos, axis_world):
+    """The chain's (up, side, out, pitch, roll) for the gasket face at world_pos with its axis along axis_world."""
+    b = R0.T @ (np.asarray(world_pos, float) - P0)
+    a = R0.T @ (np.asarray(axis_world, float) / np.linalg.norm(axis_world))
+    roll = math.asin(max(-1.0, min(1.0, -a[1])))
+    pitch = math.atan2(a[0], a[2])
+    return dict(f_up=b[0], f_side=b[1], f_out=b[2], f_pitch=pitch, f_roll=roll)
+
+
+def inside(J):
+    return all(lo_hi[n][0] <= v <= lo_hi[n][1] for n, v in J.items())
+
+
+T = m.TOP
+poses = {"standing on its gasket": (0, 0, 1), "on its closed end": (0, 0, -1), "on its side, end toward the robot":
+         (-1, 0, 0), "on its side, end toward the engine": (1, 0, 0), "on its side, end to the left": (0, 1, 0),
+         "on its side, end to the right": (0, -1, 0)}
+for x in (0.05, 0.25, 0.40):
+    for y in (-0.40, 0.05, 0.45):
+        for name, ax in poses.items():
+            z = T + (m.CAN_R if ax[2] == 0 else (0.0 if ax[2] > 0 else m.CAN_H))
+            if not inside(joints_for((x, y, z), ax)):
+                case(f"the filter {name} at x {x}, y {y}: inside its joints' ranges", False, True)
+case("the filter lying any of 6 ways at 9 places across the bench the arms reach: inside its joints' ranges "
+     "(no invisible wall or support)", all(inside(joints_for((x, y, T + 0.04), ax)) for x in (0.05, 0.25, 0.40)
+                                           for y in (-0.40, 0.05, 0.45) for ax in poses.values()), True)
+case("lifted 40 cm above the bench: inside the ranges", inside(joints_for((0.25, 0.05, T + 0.40), (0, 0, 1))), True)
 
 # -- the ratchet ------------------------------------------------------------------------------------------------------
 r = fk.RatchetModel(0)
@@ -190,8 +243,11 @@ class Trial:
         self.fm.turned = self.fm.seat + math.radians(past)
         self.fm.peak_past = max(self.fm.peak_past, math.radians(past))
 
-    def step(self, past=None, L=None, R=None, tool_on=None, off=0.0):
-        """`off`: with the wrench on, its cup pulled this far back off the flutes along the filter's axis (m)."""
+    def step(self, past=None, L=None, R=None, tool_on=None, off=0.0, tool_at=None):
+        """`off`: with the wrench on, its cup pulled this far back off the flutes along the filter's axis (m);
+        `tool_at`: (origin, rotation) of a wrench put down somewhere (kept for later steps)."""
+        if tool_at is not None:
+            self.tool_at = tool_at
         if past is not None:
             self.set(past)
         self.L, self.R = L or self.L, R or self.R
@@ -202,7 +258,8 @@ class Trial:
             tp = AX + np.array((-m.CAN_H - 0.0005 - off, 0.0, 0.0))
             objs[m.TOOL], objs[m.CAP] = st(tp, m.R_MOUNT), st(tp, m.R_MOUNT)
         else:
-            objs[m.TOOL], objs[m.CAP] = st(m.TOOL_P0, m.R_FLAT), st(m.TOOL_P0, m.R_FLAT)
+            p_, r_ = getattr(self, "tool_at", (m.TOOL_P0, m.R_FLAT))
+            objs[m.TOOL], objs[m.CAP] = st(p_, r_), st(p_, r_)
         for g, (p, op, roll) in (("left_gripper", self.L), ("right_gripper", self.R)):
             objs[g] = st(p, m._rot_x(math.radians(roll)) @ m._rot_y(-90.0) @ m._td(0.0))
             kit._OPENING[g] = op
@@ -271,7 +328,9 @@ t = Trial(0.0)
 for p in range(5, 280, 5):
     t.step(past=float(p))
 case("turned with no hand on the can or the wrench: 0", finish(t), 0.0)
-case("by hand alone (the hand's own roll) to 275: 1.0", finish(hand_turn(Trial(0.0), 275.0)), 1.0)
+case("outcome-based: the angle (and the real trial's click check) reads the torque, not the tool: a hand's own roll "
+     "to 275 would score 1.0 (in the sim and on the rig the pads slip a few degrees past contact)",
+     finish(hand_turn(Trial(0.0), 275.0)), 1.0)
 t = Trial(0.0)
 for p in range(5, 280, 5):
     t.step(past=float(p), L=(ON_CAN, W, 0.0))  # closed on it, wrist not rolling
@@ -280,7 +339,7 @@ case("cross-threaded: 0", finish(Trial(0.0, state=fk.CROSSED)), 0.0)
 case("never threaded (left on the bench): 0", finish(Trial(0.0, state=fk.FREE)), 0.0)
 t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
 t.fm.came_off = True
-case("unscrewed off and back on at some point: 0", finish(t), 0.0)
+case("unscrewed off at some point and started again (a recoverable mistake), then tightened: 1.0", finish(t), 1.0)
 
 t = Trial(0.0, state=fk.FREE)
 t.step(tool_on=True, R=(GRIP, 0.2, 0.0))
@@ -304,21 +363,17 @@ case("  put down on its marks on the bench: 1.0", finish(t), 1.0)
 
 # gaming the catch rule (judged once, at 20 degrees of turn against the crests)
 f, J = start(0.0, turn_deg=60.0)
-lims = None
-same = True
-for k in range(200):  # wobbled hard after the catch: the joints are pushed past their stops, the stops do not move
+worst = 0.0
+for k in range(200):  # wobbled hard after the catch: pushed past its stops every way
     w = 0.001 if k % 2 else -0.001
-    J2 = dict(J, f_up=w, f_side=-w, f_pitch=10 * w, f_roll=-10 * w)
-    cmd = f.step(J2)
-    now = tuple(cmd[n][5] for n in ("f_up", "f_side", "f_pitch", "f_roll"))
-    same = same and (lims is None or now == lims)
-    lims = now
-case("wobbled after the catch: still on the thread, its stops fixed at the flanks' play (no drive on them)",
-     (f.state, same, round(lims[0][1] * 1e6), [cmd[n][1] for n in ("f_up", "f_side", "f_pitch", "f_roll")]),
-     (fk.ENGAGED, True, 104, [0.0] * 4))
+    cmd = f.step(dict(J, f_up=w, f_side=-w * (k % 3), f_pitch=10 * w, f_roll=-10 * w))
+    worst = max(worst, cmd["f_up"][5][1], cmd["f_side"][5][1])
+case("wobbled after the catch: still on the thread, its round stops never wider than the flanks' play (no drive)",
+     (f.state, worst <= TH.play_lat + 1e-5, [cmd[n][1] for n in ("f_up", "f_side", "f_pitch", "f_roll")]),
+     (fk.ENGAGED, True, [0.0] * 4))
 for tilt in (2.7, 3.5):
     f = fk.FilterModel(0, TH)
-    J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.0003, f_pitch=math.radians(tilt), f_roll=0.0, filter=0.0)
+    J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.00005, f_pitch=math.radians(tilt), f_roll=0.0, filter=0.0)
     ever = False
     for k in range(120):  # back and forth, 15 degrees each way, then on
         J["filter"] += math.radians(-5.0 if (k // 3) % 2 == 0 or k >= 90 else 5.0)
@@ -326,7 +381,7 @@ for tilt in (2.7, 3.5):
         ever = ever or f.state == fk.ENGAGED
     case(f"cheat: {tilt} degrees crooked, turned back and forth: never catches (cross-threads)", (ever, f.state),
          (False, fk.CROSSED))
-for lat_mm, out in ((0.36, TH.nip_len - TH.bore_z0), (0.36, TH.d0 + 0.0003)):
+for lat_mm, out in ((0.36, TH.nip_len - TH.bore_z0), (0.36, TH.d0 + 0.00005)):
     f = fk.FilterModel(0, TH)
     J = dict(f_up=lat_mm / 1000, f_side=0.0, f_out=out, f_pitch=0.0, f_roll=0.0, filter=0.0)
     ever = False
@@ -334,8 +389,27 @@ for lat_mm, out in ((0.36, TH.nip_len - TH.bore_z0), (0.36, TH.d0 + 0.0003)):
         J["filter"] += math.radians(-5.0 if (k // 3) % 2 == 0 else 5.0)
         f.step(J)
         ever = ever or f.state == fk.ENGAGED
-    where = "resting on the nipple's end" if out > TH.d0 + 0.001 else "shoved in over the end (forced: jams)"
+    where = "resting on the nipple's end" if out > TH.d0 + 0.001 else "shoved in over the end"
     case(f"cheat: {lat_mm} mm off (just past the clearance), {where}, turned back and forth: never catches",
          ever, False)
+
+t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
+t.step(tool_on=False, R=(HOME_R, 1.0, 0.0), tool_at=(np.array((0.34, 0.05, m.TOOL_P0[2])), m.R_FLAT))
+case("cheat: the wrench let go at the filter and fallen flat on the bench below it (not on its marks): 0.5", t.home(),
+     0.5)
+t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
+t.step(tool_on=False, R=(HOME_R, 1.0, 0.0), tool_at=(np.array(m.TOOL_P0) + (0, 0, 0.022), m._rot_x(math.pi) @ m.R_FLAT))
+case("cheat: dropped on its marks upside down (cup up): 0.5", t.home(), 0.5)
+t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
+t.step(tool_on=False, R=(HOME_R, 1.0, 0.0))
+for k in range(6):  # thrown onto its marks: still sliding
+    t.step(tool_at=(np.array(m.TOOL_P0) + (0.0, 0.004 * k, 0.0), m.R_FLAT))
+case("cheat: thrown onto its marks, still sliding: 0.5 while it moves", t.sc, 0.5)
+case("  once at rest there, flat, cup down: 1.0", t.home(), 1.0)
+
+
+def test_all():
+    """pytest: every case above passed."""
+    assert bad == 0
 
 print("all pass" if not bad else f"{bad} FAILED")

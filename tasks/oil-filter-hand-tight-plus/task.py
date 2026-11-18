@@ -4,7 +4,7 @@ frame's cross tube under it and the CVT intake duct beside it, as on the vehicle
 tool Kawasaki's torque figure assumes lies on the bench: a 65 mm, 14-flute cap-type filter wrench on a 24-inch
 ratchet. Fitting it is the engine maker's procedure: start the filter square on the thread by hand (started crooked it
 cross-threads and ruins the nipple's thread), spin it on until its gasket contacts the mount, then tighten it with the
-wrench to the specified 18 N*m, about three quarters of a turn past contact, and take the wrench off. Left at contact
+wrench to the specified 18 N*m, about three quarters of a turn past contact, and put the wrench back. Left at contact
 or a little past it, the filter can work loose under vibration and leak; cranked much past it, the gasket can be
 crushed and blow out under oil pressure.
 """
@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np  # noqa: E402
 import yamkit as kit  # noqa: E402
-import guardkit as gk  # noqa: E402  (after yamkit)
+import handkit as hk  # noqa: E402  (after yamkit)
 import filterkit as fk  # noqa: E402  (after yamkit)
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
 
@@ -92,12 +92,12 @@ FILTER_MASS = 0.25
 FLUTE_L = 0.014  # the fluted end the cap wrench fits over
 FLUTE_N = 14
 FLUTE_IN, FLUTE_W = 0.031, 0.005  # the flutes' roots (radius) and their width; their crests are the can's 33 mm
-# The thread: M20 x 1.5, right-handed; three turns (4.5 mm, an estimate; the rig measures it) from the first thread
-# catching to gasket contact. Before contact it runs on with about 0.3 N*m. Past contact the squeezed gasket resists
-# with a torque that rises linearly to Kawasaki's 18 N*m at three quarters of a turn (the common instruction: three
-# quarters of a turn past contact gives the specified torque) and on at the same slope (29 N*m at 1.25 turns); a hard
-# stop at 1.5 turns (the gasket flat). Kawasaki (Teryx4 750 owner's manual, torque table, p. 101): "Oil Filter 18 N*m
-# (1.8 kgf*m, 13 ft*lb)".
+# The thread: M20 x 1.5, right-handed; three turns (4.5 mm; the rig's count is taken when it is built) from the first
+# thread catching to gasket contact. Before contact it runs on with light friction (0.3 N*m). Past contact the squeezed
+# gasket resists with a torque that rises linearly to Kawasaki's 18 N*m at three quarters of a turn (the common
+# instruction: three quarters of a turn past contact gives the specified torque) and on at the same slope (29 N*m at
+# 1.25 turns); a hard stop at 1.5 turns (the gasket flat). Kawasaki (Teryx4 750 owner's manual, torque table, p. 101):
+# "Oil Filter 18 N*m (1.8 kgf*m, 13 ft*lb)".
 TORQUE_SPEC = 18.0
 THREAD = fk.Thread(pitch=0.0015, turns_to_seat=3.0, run_on=0.3, gasket_rate=TORQUE_SPEC / math.radians(270.0),
                    max_past=math.radians(540.0), root_r=NIP_ROOT_R, crest_r=BORE_R, bore_z0=BORE_Z0, bore_z1=BORE_Z1,
@@ -108,7 +108,7 @@ NIP_L = THREAD.nip_len  # the nipple stands 8.4 mm out of the land: its chamfere
 
 # Scoring: degrees past gasket contact.
 LOOSE, SNUG = 90.0, 180.0
-GOOD_LO, GOOD_HI = 240.0, 360.0
+GOOD_LO, GOOD_HI = 270.0, 360.0
 CRUSH = 450.0
 GRIP_SLACK = 45.0  # at most this much of the turning past contact done without a hand
 CARRY = 30.0  # a holding wrist's roll not yet matched by the filter, kept at most 30 degrees
@@ -222,7 +222,7 @@ def _mount():
     return fk.LooseFilter("mount", pos=(X_LAND, Y_F, Z_F), size=(0.08, 0.08, 0.08), mass=None, meshes=tuple(meshes),
                           colliders=cols, tilt_xyzw=_m_to_quat(R_BASE), thread=THREAD, filter_meshes=fm,
                           filter_colliders=fc, filter_mass=FILTER_MASS, start=FILTER_START,
-                          reach=((-0.14, 0.12), (-0.12, 0.30), (-0.001, 0.26)))
+                          reach=((-0.15, 0.35), (-0.50, 0.50), (-0.001, 0.47)))
 
 
 def _engine():
@@ -259,28 +259,28 @@ def _engine():
 # through a 1/2 to 3/8-inch adapter. A free body: the ratchet (handle and head) is the floating base; the drive (the
 # adapter and cap) turns on it about the drive's axis, held by the pawl one way. Its frame: origin on the drive's axis
 # at the cup's inside floor, z out of the cup's back (the cup opens toward -z), the handle along -x.
-# Dimensions: P = the maker's published figure; E = estimated (not published; measured on the rig).
-CUP_IN = 0.0334  # E: the cup's wall inside (radius), 0.4 mm over the filter's flute crests (P: 65 mm, 14 flutes)
-CUP_R = CUP_IN + 0.003  # E: a 3 mm wall
-CUP_DEPTH = 0.013  # E: the wall's depth (the filter's fluted end is 14 mm long)
-TEETH_D, TEETH_IN, TEETH_W = 0.012, 0.0315, 0.004  # E: the cup's 14 flutes, 12 mm deep, in to 31.5 mm, 4 mm wide
-CAP_END = 0.004  # E: the cup's end plate
-ADAPTER_L, ADAPTER_R = 0.0351, 0.0095  # P: GearWrench 81354, 1.38 in (35.1 mm) long; E: 19 mm across
+# Dimensions: P = the maker's published figure; R = the rig's part, measured when the rig is built.
+CUP_IN = 0.0334  # R: the cup's wall inside (radius), 0.4 mm over the filter's flute crests (P: 65 mm, 14 flutes)
+CUP_R = CUP_IN + 0.003  # R: a 3 mm wall
+CUP_DEPTH = 0.013  # R: the wall's depth (the filter's fluted end is 14 mm long)
+TEETH_D, TEETH_IN, TEETH_W = 0.012, 0.0315, 0.004  # R: the cup's 14 flutes, 12 mm deep, in to 31.5 mm, 4 mm wide
+CAP_END = 0.004  # R: the cup's end plate
+ADAPTER_L, ADAPTER_R = 0.0351, 0.0095  # P: GearWrench 81354, 1.38 in (35.1 mm) long; R: 19 mm across
 ADAPTER_IN_CAP = 0.0095  # E
 RATCHET_L = 0.6106  # P: GearWrench 81364XP, 24.04 in overall
-HEAD_W, HEAD_T = 0.0368, 0.0175  # P: its head 1.45 in wide, 0.69 in thick
-HANDLE_R, GRIP_L = 0.011, 0.15  # E: the round grip about 22 mm thick on its last 15 cm
+HEAD_W, HEAD_T = 0.0368, 0.0171  # P: its head 1.449 in wide, 0.674 in thick (GearWrench brochure)
+HANDLE_R, GRIP_L = 0.011, 0.15  # R: the round grip about 22 mm thick on its last 15 cm
 HEAD_BOT = CAP_END + ADAPTER_L - ADAPTER_IN_CAP
 HEAD_TOP = HEAD_BOT + HEAD_T
 HEAD_R = HEAD_W / 2
 HANDLE_Z = HEAD_BOT + HEAD_T / 2
 HANDLE_X = (-(RATCHET_L - HEAD_R), -HEAD_R)
-RATCHET_KG, ADAPTER_KG, CAP_KG = 1.361, 0.027, 0.060  # P: 3.000 lb; P: 0.06 lb; E: the steel cap
+RATCHET_KG, ADAPTER_KG, CAP_KG = 1.361, 0.027, 0.060  # P: 3.000 lb; P: 0.06 lb; R: the steel cap
 TOOL_MASS = RATCHET_KG + ADAPTER_KG + CAP_KG
 # the wrench lies flat on the bench, cup down, near the robot and right of the nipple's line, its handle toward the
 # robot's right: clear of the left arm, its hand and the filter on their way to the nipple and while they spin the
-# filter on (an FK sweep of the demo's recorded joint path keeps the arm 6 cm off it; ~/yam-eval/oil-final), within
-# both hands' reach for its pick
+# filter on (an FK sweep of the demo's recorded joint path keeps the arm about 6 cm off it), within both hands' reach
+# for its pick
 TOOL_P0 = (0.120, -0.020, TOP + CUP_DEPTH + 0.0015)
 R_FLAT = _rot_z(math.radians(90.0))  # local x -> +y (the handle toward -y), local z up
 R_MOUNT = _rot_y(-90.0) @ R_FLAT  # on the filter, handle level: local z -> -x (the cup opens toward the engine)
@@ -325,7 +325,7 @@ fk.register_ratchet("wrench", "cap")
 KEY = "mount/filter"
 TOOL, CAP = "wrench", "wrench/cap"
 GRIPPERS = ("left_gripper", "right_gripper")
-FILTER_SHAPE = gk.Ring(0.0, CAN_R, 0.0, CAN_H)  # in the filter's frame
+CAN_SHAPE = (hk.Cyl((0.0, 0.0, 0.0), (0.0, 0.0, 1.0), CAN_R, 0.0, CAN_H),)  # in the filter's frame
 
 
 def fmodel() -> fk.FilterModel:
@@ -362,47 +362,48 @@ def cap_seated(objects) -> bool:
             and float(np.dot(cr[:, 2], fa)) > math.cos(math.radians(5.0)))
 
 
+def _tool_shapes():
+    """The ratchet's head, handle and round grip (the wrench's own frame), and the cup (the cap's frame)."""
+    hl = HANDLE_X[1] - HANDLE_X[0]
+    base = (hk.Cyl((0.0, 0.0, HANDLE_Z), (0.0, 0.0, 1.0), HEAD_R, -HEAD_T / 2, HEAD_T / 2),
+            hk.Box(((HANDLE_X[1] + HANDLE_X[0] + GRIP_L) / 2, 0.0, HANDLE_Z), (hl - GRIP_L, 0.016, 0.012)),
+            hk.Cyl((HANDLE_X[0] + GRIP_L / 2, 0.0, HANDLE_Z), (1.0, 0.0, 0.0), HANDLE_R, -GRIP_L / 2, GRIP_L / 2))
+    cap = (hk.Cyl((0.0, 0.0, 0.0), (0.0, 0.0, 1.0), CUP_R, -CUP_DEPTH, CAP_END),)
+    return base, cap
+
+
+TOOL_SHAPES, CAP_SHAPES = _tool_shapes()
+
+
 def tool_holders(objects) -> set:
-    """Grippers holding the wrench: fingers under 60 % open, tool point within 3 cm of the handle's axis."""
+    """Grippers holding the wrench: fingers under 60 % open and both fingertips' collision hulls in contact (within
+    1 mm) with the ratchet's head, handle or grip."""
     if TOOL not in objects:
         return set()
-    p, r = _pose(objects, TOOL)
-    a = p + r @ np.array((HANDLE_X[0], 0.0, HANDLE_Z))
-    b = p + r @ np.array((HANDLE_X[1], 0.0, HANDLE_Z))
-    out = set()
-    for g in GRIPPERS:
-        if g not in objects or kit.opening(objects, g) >= 0.6:
-            continue
-        q = np.asarray(objects[g].pos, float)
-        u = float(np.clip(np.dot(q - a, b - a) / np.dot(b - a, b - a), 0.0, 1.0))
-        if np.linalg.norm(q - (a + u * (b - a))) < 0.03:
-            out.add(g)
-    return out
+    return {g for g in GRIPPERS if g in objects and kit.opening(objects, g) < 0.6
+            and hk.pinching(objects, g, TOOL, TOOL_SHAPES)}
+
+
+def tool_touched(objects) -> set:
+    """Grippers whose collision hulls touch the wrench anywhere (within 1 mm): its ratchet or its cap."""
+    if TOOL not in objects:
+        return set()
+    return {g for g in GRIPPERS if g in objects and (hk.touching(objects, g, TOOL, TOOL_SHAPES)
+                                                     or (CAP in objects and hk.touching(objects, g, CAP, CAP_SHAPES)))}
 
 
 HOLD_TIGHT, HOLD_LOOSE = 0.15, 0.03
 
 
 def filter_holders(objects) -> set:
-    """Grippers closed on the can: the opening stopped by its 66 mm (from 15 % of full closed below to 3 % above),
-    the tool point within 1.5 cm of its axis, from 1 cm above its gasket face to 1.5 cm past its end."""
+    """Grippers closed on the can: the opening stopped by its 66 mm (from 15 % of full closed below to 3 % above)
+    and both fingertips' collision hulls in contact (within 1 mm) with the can."""
     from yam_arena.constants import FINGER_OPEN
     if KEY not in objects:
         return set()
-    fp, fa = filter_axis(objects)
     w = 2 * CAN_R / (2 * abs(FINGER_OPEN))
-    out = set()
-    for g in GRIPPERS:
-        if g not in objects:
-            continue
-        op = kit.opening(objects, g)
-        if not (w - HOLD_TIGHT <= op <= w + HOLD_LOOSE):
-            continue
-        d = np.asarray(objects[g].pos, float) - fp
-        along = float(np.dot(d, fa))
-        if 0.010 <= along <= CAN_H + 0.015 and np.linalg.norm(d - along * fa) < 0.015:
-            out.add(g)
-    return out
+    return {g for g in GRIPPERS if g in objects and w - HOLD_TIGHT <= kit.opening(objects, g) <= w + HOLD_LOOSE
+            and hk.pinching(objects, g, KEY, CAN_SHAPE)}
 
 
 def _twist(q0, q1, axis):
@@ -423,6 +424,8 @@ class _History:
         self.last_quat = {}
         self.budget = {g: 0.0 for g in GRIPPERS}  # each holding gripper's wrist roll not yet matched by the filter
         self.unheld = 0.0  # new ground past contact gained with neither a holding hand nor the held wrench (degrees)
+        self.tool_last = None  # the cap's position at the last step, and whether it has since moved under STILL
+        self.tool_still = False
 
 
 _H = _History()
@@ -457,16 +460,21 @@ def _update(objects):
             _H.high = past
     _H.prev_holders = now
     _H.last_quat = quats
+    if CAP in objects:
+        cp = np.asarray(objects[CAP].pos, float)
+        _H.tool_still = _H.tool_last is not None and float(np.linalg.norm(cp - _H.tool_last)) / 0.05 < STILL
+        _H.tool_last = cp
 
 
 def _hand_on_filter(objects):
-    return bool(filter_holders(objects) or gk.touching(objects, KEY, FILTER_SHAPE))
+    """A gripper's collision hulls (palm or either finger) in contact with the can, within 1 mm."""
+    return any(hk.touching(objects, g, KEY, CAN_SHAPE) for g in GRIPPERS if g in objects)
 
 
 def _score(objects):
     fm = fmodel()
-    if fm.state == fk.CROSSED or fm.came_off or fm.state != fk.ENGAGED:
-        return 0.0  # cross-threaded, unscrewed off after it was started, or not on the thread
+    if fm.state != fk.ENGAGED:
+        return 0.0  # cross-threaded, or not on the thread (never started, or unscrewed off and not started again)
     past, peak = math.degrees(fm.past), math.degrees(fm.peak_past)
     if peak > CRUSH or past < LOOSE or _H.unheld > GRIP_SLACK:
         return 0.0
@@ -477,23 +485,27 @@ def _score(objects):
     else:
         s = 1.0
     if _hand_on_filter(objects) or not wrench_put_away(objects):
-        return min(s, 0.5)  # a hand still on the filter, or the wrench not yet put down on the bench, off the filter
+        return min(s, 0.5)  # a hand still on the filter, or the wrench not yet put back
     return s
 
 
-WRENCH_CLEAR = 0.10  # m: the cap's center at least this far from the center of the filter's end
-BENCH_REST = 0.045  # m: and at most this far above the bench (the cup lying on the bench, cup down or on its side)
+MARKS = 0.10  # m: the cup's center within this of its start marks (on the bench)
+BENCH_REST = 0.03  # m: the cup's floor at most this far above where it lies cup down on the bench
+FLAT = 15.0  # degrees: the wrench lying flat, cup down: its back within this of straight up
+STILL = 0.01  # m/s: at rest
 
 
 def wrench_put_away(objects) -> bool:
-    """The wrench put down off the filter: its cap's center at least WRENCH_CLEAR from the center of the filter's end
-    and within BENCH_REST of the bench, and no hand holding it."""
-    if CAP not in objects or KEY not in objects:
+    """The wrench put back: lying flat on the bench, cup down (its back within FLAT of straight up), its cup's center
+    within MARKS of its start marks and its floor within BENCH_REST of where it lies there, at rest (moving under
+    STILL between steps), and no gripper's collision hulls touching it."""
+    if CAP not in objects or TOOL not in objects:
         return True
-    fp, fa = filter_axis(objects)
-    cp = np.asarray(objects[CAP].pos, float)
-    return (float(np.linalg.norm(cp - (fp + fa * CAN_H))) >= WRENCH_CLEAR and cp[2] <= TOP + BENCH_REST
-            and not tool_holders(objects))
+    cp, cr = _pose(objects, CAP)
+    _, tr = _pose(objects, TOOL)
+    near = (math.hypot(cp[0] - TOOL_P0[0], cp[1] - TOOL_P0[1]) <= MARKS and cp[2] <= TOOL_P0[2] + BENCH_REST)
+    flat = float(tr[2, 2]) >= math.cos(math.radians(FLAT))
+    return near and flat and _H.tool_still and not tool_touched(objects)
 
 
 def _debug(msg):
@@ -531,14 +543,14 @@ def success(objects):
 
 def score(objects):
     """Angles are degrees past gasket contact. 0 if the filter was cross-threaded (its thread started with its axis more
-    than 2.6 degrees off the nipple's, or it was forced over the nipple's end), was unscrewed off the thread after it
-    was started, is not on the thread, was ever more than 450 degrees past contact, ends under 90 past contact, or if
-    more than 45 degrees of the new ground it gained past contact was turned neither by a holding hand's own wrist roll
-    (a gripper closed on the can, its roll about the filter's axis, at most 30 degrees ahead) nor by the wrench while
-    its cap was on the filter and a hand held it. Otherwise 0.25 for 90 to 180; 0.5 for 180 to 240, or if it was ever
-    past 360; 1.0 for 240 to 360 and never past 360. Capped at 0.5 while a hand is on the filter (closed on it, or
-    touching it within 2 mm), and until the wrench is put away: its cap's center at least 10 cm from the center of the
-    filter's end and within 4.5 cm of the bench, no hand holding it. Possible scores: 0, 0.25, 0.5, 1."""
+    than 2.6 degrees off the nipple's), is not on the thread (never started, or unscrewed off and not started again),
+    was ever more than 450 degrees past contact, ends under 90 past contact, or if more than 45 degrees of the new
+    ground it gained past contact was turned neither by a holding hand's own wrist roll (a gripper closed on the can,
+    both fingertips touching it, its roll about the filter's axis, at most 30 degrees ahead) nor by the wrench while its
+    cap was on the filter and a hand held it. Otherwise 0.25 for 90 to 180; 0.5 for 180 to 270, or if it was ever past
+    360; 1.0 for 270 to 360 (18 N*m and up) and never past 360. Capped at 0.5 while a gripper touches the filter, and
+    until the wrench is put back (see wrench_put_away). Touching is contact between the robot's own collision hulls and
+    the part, within 1 mm. Possible scores: 0, 0.25, 0.5, 1."""
     return _score(objects)
 
 
@@ -765,7 +777,8 @@ def _hand_phase(st):
         """Pushed on, the base plate against the nipple's end if the bore is not yet over it: up to PRESS_LOOKS
         looks a second apart, each reading where the bore's entry is and re-aiming it (gently: the plate is held
         on the end's face by the push), as a hand feels for the start; once the bore has gone over the nipple's end
-        the rest are skipped (decided as each starts)."""
+        that look centers it in the bore's clearance (within the 0.2 mm the colliders allow) and the rest are skipped
+        (decided as each starts)."""
         g = {"done": None}
 
         def keep(i):
@@ -777,6 +790,7 @@ def _hand_phase(st):
                     return st["last"]
                 if g["done"] is None and is_on():
                     g["done"] = i
+                    align(OUT_NEAR, 0.7, 0.0005)()  # on it: center the bore on the nipple before turning it
                 else:
                     align(OUT_NEAR, 0.5, 0.001)()
                 st["last"] = onto()
@@ -997,6 +1011,7 @@ def _wrench_phase(st):
     def check():  # is each hand on it? (read once, when this step starts)
         o = _obj()
         held = tool_holders(o) if o is not None else {"left_gripper", "right_gripper"}
+        _debug("wrench picked: holding %s" % sorted(held))
         st["regrip"] = [g.split("_")[0] for g in ("left_gripper", "right_gripper") if g not in held]
         return at_tool(fgrip)()
     add("wrench: check the grip", 0.1, check)
@@ -1043,27 +1058,43 @@ def _wrench_phase(st):
     st["tfix"] = np.zeros(3)
     st["trfix"] = np.eye(3)
     for k in range(7):
-        def center(square=k < 2, out=0.03 if k < 5 else 0.016):
-            """Where is the cap, and which way does it point? Aim it onto the filter's axis, and (the first two
-            looks) square it to it; the rest only center it (squaring it moves the hands), the last two with the
-            teeth 3.5 mm short of the flutes' ends (the cup clears the flutes by only 0.4 mm)."""
+        def center(square=k < 2, out=0.03 if k < 5 else 0.016, k=k):
+            """Where is the cap, and which way does it point? Aim it onto the filter's axis and to where it was sent
+            along it (the wrench can sit a few cm off in the hands), and (the first two looks) square it to the
+            filter; the rest only center it (squaring it moves the hands), the last two with the teeth 3.5 mm short
+            of the flutes' ends (the cup clears the flutes by only 0.4 mm)."""
             from yam_arena.urdf import axis_angle_matrix
             fp, fa, _ = _filter_now()
             o = _obj()
             if o is not None and CAP in o:
                 cp, cr = _pose(o, CAP)
-                off = cp - (fp + fa * (CAN_H + 0.0005))
-                st["tfix"] = st["tfix"] - 0.8 * np.clip(off - np.dot(off, fa) * fa, -0.01, 0.01)
+                off = cp - (fp + fa * (CAN_H + st.get("tout", 0.03) + 0.0005))  # from where it was sent
+                st["tfix"] = st["tfix"] - 0.8 * np.clip(off, -0.02, 0.02)
+                _debug("cap look %d: %.1f mm off the axis, %.1f mm along it from where it was sent, %.1f deg off "
+                       "square" % (k, 1000 * float(np.linalg.norm(off - np.dot(off, fa) * fa)),
+                                   1000 * float(np.dot(off, fa)),
+                                   math.degrees(math.acos(min(1.0, float(np.dot(cr[:, 2], fa)))))))
                 have, want = cr[:, 2], np.asarray(fa, float)  # the cap's axis out of its back: along the filter's
                 c = np.cross(have, want)
                 sn = float(np.linalg.norm(c))
                 if square and sn > 1e-6:  # (the cup goes on only within about 3 degrees)
                     st["trfix"] = axis_angle_matrix(c / sn, 0.8 * math.atan2(sn, float(np.dot(have, want)))) \
                         @ st["trfix"]
+            st["tout"] = out
             return on(out, True)()
         add("wrench: line the cap up" if k < 5 else "wrench: line the cap up closely", 1.2, center)
     add("wrench: cup over the flutes", 1.4, on(-0.002, False))
-    add("wrench: seated", 0.6, on(-0.002, False))
+
+    def seated():
+        o = _obj()
+        if o is not None and CAP in o:
+            fp, fa, _ = _filter_now()
+            cp, _ = _pose(o, CAP)
+            _debug("cap %s: its floor %.1f mm off the filter's end, past %.1f deg" % (
+                "seated" if cap_seated(o) else "NOT seated", 1000 * float(np.dot(cp - (fp + fa * CAN_H), fa)),
+                past_deg()))
+        return on(-0.002, False)()
+    add("wrench: seated", 0.6, seated)
 
     def regrip(finger, up):
         def f():
@@ -1100,6 +1131,8 @@ def _wrench_phase(st):
             if st["wstop"] is not None:
                 return
             st["p"] = past_deg()
+            _debug("stroke: past %.1f deg, cap %s" % (st["p"], "seated" if _obj() is not None and cap_seated(_obj())
+                                                      else "not seated"))
             _, r_tool, _ = _tool_now()
             hd = r_tool @ np.array((-1.0, 0.0, 0.0))
             st["a0"] = math.degrees(math.atan2(hd[2], -hd[1]))
