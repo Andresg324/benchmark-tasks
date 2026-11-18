@@ -1361,14 +1361,16 @@ def _wrench_phase(st):
         add(f"stroke {n + 1}: ratchet back", 0.7, back, lambda n=n: st["wstop"] is None or st["wstop"] > n)
 
     # back up to where the right hand can hold the handle as it carried it, and move it back to that grip
-    def back_up(right, dx=0.0, up=0.0):
+    def back_up(right, dx=0.0, up=0.0, finger=None):
         def f():
             pt, rt = pose_at(sum(SEAT_BAND) / 2)
             _CMD["tool"] = (pt, rt)
-            if right is None:  # the carrying grip
-                rt_, rr_ = _hand_on_tool("right", pt, rt)
+            if right is None:  # the carrying grip, on the handle where it is seen
+                ps, rs, _ = _tool_now()
+                rt_, rr_ = _hand_on_tool("right", ps, rs)
+                fin = finger if finger is not None else (F_GRIP if dx == 0.0 else FINGER_OPEN)
                 return {"left": (*_hand_on_tool("left", pt, rt, (LEFT_PRESS, 0, 0)), F_BEAM),
-                        "right": (rt_ + (dx, 0, up), rr_, F_GRIP if dx == 0.0 else FINGER_OPEN)}
+                        "right": (rt_ + (dx, 0, up), rr_, fin)}
             return {"left": (*_hand_on_tool("left", pt, rt, (LEFT_PRESS, 0, 0)), F_BEAM),
                     "right": (_hand_on_tool("right", pt, rt, top_down=True)[0] + (0, 0, up),
                               _hand_on_tool("right", pt, rt, top_down=True)[1], right)}
@@ -1377,7 +1379,19 @@ def _wrench_phase(st):
     add("wrench: right hand off", 0.7, back_up(FINGER_OPEN, up=0.035))
     add("wrench: right hand round to the carrying grip", 1.6, back_up(None, dx=-0.05))
     add("wrench: right hand onto the handle", 0.9, back_up(None, dx=-0.0001))
-    add("wrench: right hand grips", 0.7, back_up(None))
+    add("wrench: right hand grips", 1.2, back_up(None))
+    add("wrench: right hand grips", 0.3, back_up(None))  # the fingers close at most their full travel a second
+
+    def regrip_check():  # is the right hand holding the handle? (read once, as this step starts)
+        o = _obj()
+        st["right_ok"] = o is None or "right_gripper" in tool_holders(o)
+        _debug("right hand back on the handle: %s" % ("holding" if st["right_ok"] else "NOT holding: again"))
+        return back_up(None)()
+    add("wrench: right hand holding?", 0.1, regrip_check)
+    again_r = (lambda: not st.get("right_ok", True))
+    add("wrench: right hand opens, again", 0.6, back_up(None, dx=-0.03, finger=FINGER_OPEN), again_r)
+    add("wrench: right hand onto the handle, again", 0.9, back_up(None, dx=-0.0001), again_r)
+    add("wrench: right hand grips, again", 1.5, back_up(None), again_r)
 
     def away(out, lift=0.0, rock=0.0):  # straight off along the filter's axis, from where the hands hold it (the
         #                                 line-up's aim, less the strokes' push home), rocked a little as it comes
