@@ -1302,6 +1302,22 @@ def _wrench_phase(st):
             hd = r_tool @ np.array((-1.0, 0.0, 0.0))
             st["a0"] = math.degrees(math.atan2(hd[2], -hd[1]))
             st["len"] = max(min(st["a0"] - STROKE_DOWN, max(AIM_PAST - st["p"], 0.0) + TAKE_UP), 2.0)
+            keep_square()
+
+        def keep_square():  # as a mechanic keeps the cap square and pushed home: re-aim the hands from where it sits
+            from yam_arena.urdf import axis_angle_matrix
+            o = _obj()
+            if o is None or CAP not in o:
+                return
+            fp, fa, _ = _filter_now()
+            cp, cr = _pose(o, CAP)
+            have, want = cr[:, 2], np.asarray(fa, float)
+            c = np.cross(have, want)
+            sn = float(np.linalg.norm(c))
+            if sn > 1e-6:
+                st["trfix"] = axis_angle_matrix(c / sn, 0.5 * math.atan2(sn, float(np.dot(have, want)))) @ st["trfix"]
+            along = float(np.dot(cp - (fp + fa * CAN_H), fa))  # its floor off the filter's end: push it back home
+            st["tfix"] = st["tfix"] - 0.5 * float(np.clip(along, -0.003, 0.003)) * fa
 
         for k in range(1, sub + 1):
             def spec(k=k):
@@ -1377,6 +1393,10 @@ def _wrench_phase(st):
     add("wrench: hands up", 0.9, lay(FINGER_OPEN, 0.06))
 
     def clear():  # up and clear of the wrench, before heading home
+        o = _obj()
+        if o is not None and CAP in o:
+            _debug("wrench laid down: put away %s (let go %.1f mm over its rest; past %.1f deg)" % (
+                wrench_put_away(o), 1000 * _H.release_h, past_deg()))
         return {"left": ((0.25, 0.10, TOP + 0.20), _td(0.0), FINGER_OPEN),
                 "right": ((0.25, -0.30, TOP + 0.20), _td(0.0), FINGER_OPEN)}
     add("hands clear", 1.4, clear)
