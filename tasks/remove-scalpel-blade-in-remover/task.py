@@ -27,6 +27,7 @@ import gripkit  # noqa: E402
 import yamkit as kit  # noqa: E402
 import guardkit as gk  # noqa: E402
 import weldkit  # noqa: E402
+import yamgeom as yg  # noqa: E402  (the arm's collision hulls, read from the environment at run time)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN  # noqa: E402
 from yam_arena.demo import grip_rotation  # noqa: E402
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
@@ -256,13 +257,22 @@ def _rounded(hx, hy, r, n=4) -> list:
     return out
 
 
+def _rounded_box(lo, hi, r: float, subdivisions: int, look: kit.Look) -> kit.Mesh:
+    """A box lo..hi with round edges and corners of radius r, drawn: the convex hull of a sphere (trimesh icosphere,
+    `subdivisions` deep) of radius r inside each of its eight corners. Built here at start-up from these numbers."""
+    import trimesh
+
+    ball = trimesh.creation.icosphere(subdivisions=subdivisions).vertices * r
+    corners = [(x, y, z) for x in (lo[0] + r, hi[0] - r) for y in (lo[1] + r, hi[1] - r) for z in (lo[2] + r, hi[2] - r)]
+    hull = trimesh.convex.convex_hull(np.vstack([ball + np.asarray(c) for c in corners]))
+    return kit.Mesh(tuple(tuple(float(v) for v in q) for q in hull.vertices), tuple([3] * len(hull.faces)),
+                    tuple(int(i) for f in hull.faces for i in f), look)
+
+
 def _remover_body() -> kit.Mesh:
-    """The moulded body: a rounded box at the remover's 25 x 79.3 x 58 mm with 4 mm round edges (remover_look.npz: the
-    convex hull of eight 4 mm corner spheres, made with trimesh). Drawn only; the colliders are the boxes above."""
-    d = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), "remover_look.npz"))
-    pts, faces = d["points"].astype(float), d["faces"]
-    return kit.Mesh(tuple(tuple(float(v) for v in q) for q in pts), tuple([3] * len(faces)),
-                    tuple(int(i) for f in faces for i in f), REMOVER_LOOK)
+    """The moulded body: a rounded box at the remover's 25 x 79.3 x 58 mm with 4 mm round edges. Drawn only; the
+    colliders are the boxes above."""
+    return _rounded_box((-R_D / 2, -R_W / 2, 0.0), (R_D / 2, R_W / 2, R_H), 0.004, 3, REMOVER_LOOK)
 
 
 def _slot_face() -> kit.Mesh:
@@ -270,13 +280,6 @@ def _slot_face() -> kit.Mesh:
     m = _extrude(_rounded(SLOT_W / 2, SLOT_H / 2, 0.0015), -_Y2 - 0.0003, -_Y2 + 0.0002, SLOT_LOOK)
     pts = tuple((x, z, y + Z_SLOT) for x, y, z in m.points)  # the outline drawn in the end face's x-z plane
     return kit.Mesh(pts, m.counts, m.indices, SLOT_LOOK)
-
-
-def _look_mesh(key: str, look: kit.Look) -> kit.Mesh:
-    d = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), "remover_look.npz"))
-    pts, faces = d[f"{key}_points"].astype(float), d[f"{key}_faces"]
-    return kit.Mesh(tuple(tuple(float(v) for v in q) for q in pts), tuple([3] * len(faces)),
-                    tuple(int(i) for f in faces for i in f), look)
 
 
 _R_MESHES = (_remover_body(), _slot_face())
@@ -292,7 +295,8 @@ class _ButtonSpring:
 
 BUTTON = kit.Link(
     "button", "prismatic", "Z", anchor=(0.0, BTN_Y, R_H), lower=-BTN_TRAVEL, upper=0.0, start=0.0, mass=0.004,
-    meshes=(_look_mesh("button", BUTTON_LOOK),),  # a rounded cap (2 mm round edges)
+    meshes=(_rounded_box((-BTN[0] / 2, -BTN[1] / 2, BTN_PROUD - 0.004), (BTN[0] / 2, BTN[1] / 2, BTN_PROUD), 0.0018, 2,
+                         BUTTON_LOOK),),  # a rounded cap, 4 mm tall (its foot hidden in the top), 1.8 mm round edges
     colliders=(_cbox((-BTN[0] / 2, -BTN[1] / 2, 0.0), (BTN[0] / 2, BTN[1] / 2, BTN_PROUD)),
                _cbox((-BTN[0] / 2 + 0.001, -BTN[1] / 2 + 0.001, -BTN_STEM), (BTN[0] / 2 - 0.001, BTN[1] / 2 - 0.001, 0.0))),
     law=_ButtonSpring())
@@ -379,8 +383,8 @@ FRICTION = {"handle": SCALPEL_FRICTION, "blade": SCALPEL_FRICTION, "dish": DISH_
 
 # -- the scored thresholds -----------------------------------------------------------------------------------------------------
 TOUCH_TOL = 0.0006  # m: contact with the real 0.4 mm blade: an arm link's surface at 0.6 mm or less from it. Its
-# collision mesh is sampled with points about 0.5 mm apart (gaps under 1 mm), so a real touch reads under 0.5 mm, and
-# a 0.9 mm air gap is not a touch.
+# collision hulls are sampled with points 0.5 mm apart (yamgeom: every point of their surface within 0.45 mm of one), so
+# a real touch reads under 0.5 mm, and a 0.9 mm air gap is not a touch.
 DROP_SPEED = 0.5  # m/s: the scalpel, blade on, falling faster than this was dropped
 TRAY_SLACK = 0.002  # m: a part resting against the tray's inner wall may read 2 mm into it
 UPRIGHT_DEG = 10.0  # the remover stands upright at its place: tilted 10 degrees or less, its underside within 1 mm
@@ -489,25 +493,18 @@ def released(objects) -> bool:
             and gk.released_clear(objects, "remover", REMOVER_PARTS, RELEASE_MARGIN))
 
 
-# -- the arms' own shapes: every collision mesh from the upper arm (link3) to the fingertips, points about 0.5 mm apart --
-# (yam_links.npz: points in each link's own frame, from yam_arm.urdf's collision meshes; plus the closed fingertips
-# in the tool point's frame, for aiming a press). The simulator reports each link's pose every control step.
+# -- the arms' own shapes: the collision hulls the simulator collides, from the upper arm (link3) to the fingertips --
+# (yamgeom: read at run time from the environment's robot model, as surface points in each link's own frame; plus the
+# closed fingertips in the tool point's frame, for aiming a press). The simulator reports each link's pose every
+# control step.
 ARM_LINKS = ("link3", "link4", "link5", "gripper", "tip_left", "tip_right")
 ROBOTS = ("left_robot", "right_robot")
-_MESH: dict = {}
 LINK_POSES: dict = {}  # "left_robot/link5" -> (pos, R) in the env frame, this control step (empty offline)
 
 
-def mesh(name) -> np.ndarray:
-    if not _MESH:
-        d = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), "yam_links.npz"))
-        unit = float(d["unit"][0])  # points stored as int16 in 0.05 mm steps
-        for k in d.files:
-            if k == "unit":
-                continue
-            pts = d[k].astype(float) * unit
-            _MESH[k] = (pts, pts.mean(axis=0), float(np.linalg.norm(pts - pts.mean(axis=0), axis=1).max()))
-    return _MESH[name]
+def mesh(name) -> tuple:
+    """(points, centroid, radius) of a link's collision hulls, or of "tip_left_tcp" / "tip_right_tcp" (yamgeom)."""
+    return yg.cloud(name)
 
 
 def _box_gap(q, lo, hi) -> np.ndarray:
@@ -589,7 +586,7 @@ class Ledger:
         if on and any(abs(p[0]) <= T_W / 2 and abs(p[1]) <= T_L / 2 and p[2] <= T_H + 0.010
                       for p in (to_local(objects, "tray", to_world(objects, "blade", c)) for c in BLADE_PTS)):
             self.ruined = self.ruined or "scalpel put in the instrument tray with its blade on"
-        if LINK_POSES:  # the simulator: the arms' real collision meshes
+        if LINK_POSES:  # the simulator: the arms' collision hulls, posed as the simulator reports
             gap, who = arm_gap(objects)
             self.min_arm = min(getattr(self, "min_arm", math.inf), gap)
             if gap <= TOUCH_TOL:
@@ -851,16 +848,16 @@ def remover_top(y_local: float, past: float = 0.0) -> np.ndarray:
     """The left tool point (fingers closed, straight down) whose fingertips rest on the remover's top at y_local
     (`past` m pressed into it)."""
     target = np.array([REMOVER_POS[0], REMOVER_POS[1] + y_local, TOP + R_H - past])
-    W = tips_world(DOWN_Y, np.zeros(3))  # the real closed fingertips (yam_arm.urdf's meshes), tool point at 0
+    W = tips_world(DOWN_Y, np.zeros(3))  # the closed fingertips' collision hulls, tool point at 0
     zmin = W[:, 2].min()
     low = W[W[:, 2] <= zmin + 0.0005].mean(axis=0)  # where they first meet a flat top (probe p8: aimed by a box
     return target - low  # model of the tips, the real tapered tips stopped 3.9 mm high and 6.7 mm off the cap's middle)
 
 
 LEFT_LEAN = math.radians(float(os.environ.get("SCALPEL_LEFT_LEAN", "25")))
-# The left hand: fingers down, leaned back toward the robot by 25 degrees about y, closing along y. The real closed
-# fingertips then meet a flat top in a patch 12.4 mm along x and 8.4 mm along y (yam_arm.urdf's meshes), inside the
-# 20 x 14 mm button.
+# The left hand: fingers down, leaned back toward the robot by 25 degrees about y, closing along y. The closed
+# fingertips' collision hulls then reach their lowest 3.5 mm (the button's height) in a patch 13.0 mm along x and
+# 8.6 mm along y, inside the 20 x 14 mm button.
 DOWN_Y = frame((math.sin(LEFT_LEAN), 0, -math.cos(LEFT_LEAN)), (0, -1, 0))
 GRIP_R = frame((0, 0, -1), (1, 0, 0))  # the left hand taking the remover's body: straight down, closing across its depth
 R_GRIP_Y = 0.018  # m: the fingers' middle this far toward the far end from the remover's middle (clear of the button)

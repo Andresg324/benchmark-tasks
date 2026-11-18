@@ -281,6 +281,69 @@ def test_arm_contact_and_press():
     check(M.WELDS.state("lug"), "1.2 mm short of the stop (not seated): the press does not free the blade")
 
 
+def test_hand_boxes_hold_the_hulls():
+    """guardkit's gripper boxes (closed) are fitted at run time to the robot's collision hulls: every hull point of the
+    gripper and both fingertips lies in one of them."""
+    import yamgeom as yg
+    from yam_arena.constants import TCP_OFFSET
+
+    p = np.vstack([yg.points("gripper") - np.asarray(TCP_OFFSET), yg.tcp_points("tip_left"), yg.tcp_points("tip_right")])
+    inside = np.zeros(len(p), bool)
+    for bx in M.gk.hand_boxes(0.0):
+        inside |= np.all(np.abs(p - np.asarray(bx.center)) <= np.asarray(bx.size) / 2 + 1e-9, axis=1)
+    check(inside.all(), f"gripper hull points outside guardkit's boxes: {int((~inside).sum())} of {len(p)}")
+
+
+def _hull_lid_over_blade(o, link, gap):
+    """The pose (pos, R, world) of arm link `link` with a face of its collision hulls that bridges a pocket of its
+    visual mesh (yamgeom.proud_points) facing down onto the real blade's upper face, turned about the blade's normal
+    and lowered until its hulls are `gap` m over the blade: the turn that keeps the visual mesh farthest from the
+    blade, with the hulls' and the visual mesh's gaps (m)."""
+    import trimesh
+    import yamgeom as yg
+    from scipy.spatial.transform import Rotation
+
+    ob, Rb = M.pose(o, "blade")
+    lo, hi = np.array(M.B_RLO), np.array(M.B_RHI)
+    hull = yg.points(link)
+    vis, _ = trimesh.sample.sample_surface_even(trimesh.Trimesh(yg.visual_vertices(link), yg._visual_faces(link)),
+                                                200000, seed=0)
+    best = None
+    for q, n, _ in yg.proud_points(link):
+        for yaw in np.linspace(0.0, 2 * math.pi, 24, endpoint=False):
+            R = Rotation.from_euler("z", yaw).as_matrix() @ yg.turn_to(n, (0.0, 0.0, -1.0))  # in the blade's frame
+            pos = np.array([(lo[0] + hi[0]) / 2, 0.0, hi[2] + 0.01]) - R @ q
+            h = hull @ R.T + pos
+            over = np.all((h[:, :2] >= lo[:2]) & (h[:, :2] <= hi[:2]), axis=1)
+            if not over.any():
+                continue
+            pos = pos - np.array([0.0, 0.0, float((h[over, 2] - hi[2]).min()) - gap])
+            hg = float(M._box_gap(hull @ R.T + pos, lo, hi).min())
+            vg = float(M._box_gap(vis @ R.T + pos, lo, hi).min())
+            if best is None or vg > best[3]:
+                best = (ob + Rb @ pos, Rb @ R, hg, vg)
+    return best
+
+
+def test_hull_touch_visual_clear():
+    """Anti-gaming: contact is judged on the robot's collision hulls (from the environment, at run time), not its
+    visual meshes. A wrist or upper arm whose hulls come within 0.1 mm of the real blade, at a face that bridges a pocket
+    of its visual mesh, touches it (the trial is 0), though its visual mesh stays more than TOUCH_TOL (0.6 mm) clear of
+    the blade, so a check on the visual mesh would miss it."""
+    for link in ("link5", "link3"):
+        fresh()
+        o = world(handle=OUT)
+        pos, R, hg, vg = _hull_lid_over_blade(o, link, 0.0001)
+        M.LINK_POSES.clear()
+        M.LINK_POSES[f"right_robot/{link}"] = (pos, R)
+        try:
+            run([world(handle=OUT)])
+        finally:
+            M.LINK_POSES.clear()
+        check(link in M._L.ruined and hg <= 0.0001 + 1e-9 and vg > M.TOUCH_TOL + 0.0001,
+              f"{link}: hulls {hg * 1000:.2f} mm over the blade, visual mesh {vg * 1000:.1f} mm: a touch, 0")
+
+
 def test_redteam():
     """The red-team cases (Nov 17): each scores what the real act deserves."""
     # R1: the remover, blade inside, carried into the instrument tray with the bare handle: not at its place: 0.7 at most
@@ -337,7 +400,8 @@ def test_redteam():
 
 
 if __name__ == "__main__":
-    for t in (test_start, test_insert_pose, test_mechanism_and_tiers, test_no_catch_paths, test_hazards, test_gaming, test_arm_contact_and_press, test_redteam):
+    for t in (test_start, test_insert_pose, test_mechanism_and_tiers, test_no_catch_paths, test_hazards, test_gaming, test_arm_contact_and_press, test_redteam,
+              test_hand_boxes_hold_the_hulls, test_hull_touch_visual_clear):
         t()
     if (HERE / "task.json").exists() and (HERE / "README.md").exists():
         test_text()
