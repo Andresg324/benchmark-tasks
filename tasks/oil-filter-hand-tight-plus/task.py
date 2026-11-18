@@ -1333,6 +1333,7 @@ def _wrench_phase(st):
             along = float(np.dot(cp - (fp + fa * CAN_H), fa))  # its floor off the filter's end: push it back home
             if along > 0.0005:  # (home within half a millimeter: leave the aim alone)
                 st["tfix"] = st["tfix"] - float(min(along, 0.004)) * fa
+                st["push_in"] = st.get("push_in", 0.0) + float(min(along, 0.004))
 
         for k in range(1, sub + 1):
             def spec(k=k):
@@ -1371,15 +1372,18 @@ def _wrench_phase(st):
     add("wrench: right hand onto the handle", 0.9, back_up(None, dx=-0.0001))
     add("wrench: right hand grips", 0.7, back_up(None))
 
-    def away(out, lift=0.0):  # straight off along the filter's axis, from where the hands hold it (the line-up's aim)
+    def away(out, lift=0.0, rock=0.0):  # straight off along the filter's axis, from where the hands hold it (the
+        #                                 line-up's aim, less the strokes' push home), rocked a little as it comes
         def f():
             if lift:
                 _debug("cup pulled off: %s" % ("NOT off" if _obj() is not None and cap_seated(_obj()) else "off"))
-            pt, rt = _tool_pose_on(sum(SEAT_BAND) / 2, out, st.get("tfix", np.zeros(3)))
+            pt, rt = _tool_pose_on(sum(SEAT_BAND) / 2 + rock, out + st.get("push_in", 0.0),
+                                   st.get("tfix", np.zeros(3)))
             st["held1"] = (pt + np.array((0.0, 0.0, lift)), st.get("trfix", np.eye(3)) @ rt)
             return carried(*st["held1"])
         return f
-    add("wrench: pull the cup off", 1.2, away(0.035))
+    for k, (out_k, rock_k) in enumerate(((0.01, 2.0), (0.02, -2.0), (0.03, 2.0), (0.045, 0.0))):
+        add("wrench: pull the cup off, rocking it", 0.8, away(out_k, 0.0, rock_k))
     add("wrench: back from the filter", 1.0, away(0.07, 0.02))
     for k in range(1, TURN_STEPS + 1):  # the quarter turn back: the cup facing down again
         def unturn(k=k):
@@ -1462,9 +1466,9 @@ def demo():
     the gasket takes (plus 5 N*m), aimed past the handle by its arm's give, while the left presses the cap on (20 N);
     then swung back up with the ratchet clicking. Each stroke is sized from the filter's angle when it starts; they stop
     once it is 270 degrees past contact (18 N*m), after two strokes that turn it under 2 degrees, or after WRENCH_MAX
-    strokes. The right hand goes back to the grip it carried with, the cup is pulled straight off the flutes along the
-    filter's axis, the wrench turned back cup down and laid flat on the bench on its start marks; both let go, lift
-    clear and go home."""
+    strokes. The right hand goes back to the grip it carried with, the cup is pulled straight off (a centimeter at a
+    time, rocked 2 degrees either way) the flutes along the filter's axis, the wrench turned back cup down and laid flat
+    on the bench on its start marks; both let go, lift clear and go home."""
     st = {"stop": None, "gains": [], "wstop": None}
     left = _hand_phase(st)
     hand = list(left)
