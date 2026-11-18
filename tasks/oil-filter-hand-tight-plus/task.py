@@ -448,6 +448,7 @@ class _History:
         self.grasped = False  # touched without a break since a gripper held it
         self.was_grasped = False
         self.release_h = 0.0  # how high its cup's floor was over where it lies on the bench when last let go (m)
+        self.fell = False  # in the air with no gripper on it since a gripper last held it: dropped, not laid down
 
 
 _H = _History()
@@ -489,6 +490,12 @@ def _update(objects):
         cp = np.asarray(objects[CAP].pos, float)
         held = bool(tool_holders(objects))
         touched = held or bool(tool_touched(objects))
+        in_hand = held or any(hk.pinching(objects, g, CAP, CAP_SHAPES) for g in GRIPPERS if g in objects)
+        if in_hand:
+            _H.fell = False
+        elif (not touched and float(cp[2] - TOOL_P0[2]) > BENCH_REST and not cap_seated(objects)
+              and not _H.tool_still):
+            _H.fell = True  # in the air, no gripper on it: dropped
         _H.grasped = touched and (_H.grasped or held)  # in hand since a hold, without a break in contact
         if _H.touched and not touched and _H.was_grasped:  # let go: where from (a touch alone never counts)
             _H.release_h = float(cp[2] - TOOL_P0[2])
@@ -534,7 +541,8 @@ def wrench_put_away(objects) -> bool:
     """The wrench put back: laid down (let go from a hold with its cup's floor within BENCH_REST of where it lies on the
     bench), lying flat on the bench, cup down (its back within FLAT of straight up), its cup's center within MARKS of
     its start marks and its floor within BENCH_REST of where it lies there, at rest (moving under STILL between steps),
-    and no gripper's collision hulls touching it."""
+    and no gripper's collision hulls touching it; and it has not fallen (in the air, off the filter, with no gripper on
+    it) since it was last in hand."""
     if CAP not in objects or TOOL not in objects:
         return True
     cp, cr = _pose(objects, CAP)
@@ -542,7 +550,7 @@ def wrench_put_away(objects) -> bool:
     near = (math.hypot(cp[0] - TOOL_P0[0], cp[1] - TOOL_P0[1]) <= MARKS and cp[2] <= TOOL_P0[2] + BENCH_REST)
     flat = float(tr[2, 2]) >= math.cos(math.radians(FLAT))
     return (near and flat and _H.tool_still and not tool_touched(objects)
-            and _H.release_h <= BENCH_REST)
+            and _H.release_h <= BENCH_REST and not _H.fell)
 
 
 def _debug(msg):
@@ -942,7 +950,7 @@ PAD_BELOW = 0.006  # the pad tips this far below the handle's axis: the fingers 
 PAD_BELOW_GRIP = 0.006  # on the round grip, which lies on the bench: the pads reach past its middle, their tips 5 mm
 #                         off the bench (pressed on the bench, the tips' friction stalled the fingers 3.5 mm short)
 STROKE_UP, STROKE_DOWN = 6.0, -10.0  # each stroke swings the handle from 6 degrees above level to 10 below
-SEAT_BAND = (-1.0, 3.5)  # the handle's angle while the cup goes on (the right hand's reach with the handle carried)
+SEAT_BAND = (-1.0, 3.5)  # the handle's angle the line-up starts from, and where the cup is pulled off
 ALIGN_REACH = (-4.0, 25.0)  # the handle's angles both hands reach carrying it (a pitch of the flutes and more)
 STROKE_REACH = 4.0  # the handle at or below this before the right hand takes its top-down stroke grip
 SHARE_R = 1.0  # the right hand swings the handle; the left, on the head, keeps the cap pressed on

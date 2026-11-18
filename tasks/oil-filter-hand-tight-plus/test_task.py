@@ -366,7 +366,7 @@ for p in range(5, 280, 5):
     t.step(past=float(p))
 case("turned with no hand on the can or the wrench: 0", finish(t), 0.0)
 case("outcome-based: the angle (and the real trial's click check) reads the torque, not the tool: a hand's own roll "
-     "to 275 would score 1.0 (in the sim and on the rig the pads slip a few degrees past contact)",
+     "to 275 would score 1.0 (a pinch slips far short of 18 N·m)",
      finish(hand_turn(Trial(0.0), 275.0)), 1.0)
 t = Trial(0.0)
 for p in range(5, 280, 5):
@@ -477,6 +477,14 @@ _lay = (np.array(m.TOOL_P0), m.R_FLAT)
 t.step(tool_at=_lay)  # lands on its marks
 t.step(R=(tuple(m._hand_on_tool("right", *_lay)[0]), 1.0, 0.0))  # tapped with an open hand (a touch, no hold)
 case("cheat: dropped from 30 cm, then tapped on the bench with an open hand: still 0.5", t.home(), 0.5)
+t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
+t.step(tool_on=False, tool_at=_lay, R=(tuple(m._hand_on_tool("right", *_lay)[0]), 0.0, 0.0))
+t.home()
+t.step(tool_at=_up, R=(tuple(m._hand_on_tool("right", *_up)[0]), 1.0, 0.0))  # lifted 30 cm on an open hand
+t.step(R=(HOME_R, 1.0, 0.0))  # the hand leaves it in the air
+t.step(tool_at=(np.array(m.TOOL_P0) + (0.0, 0.0, 0.15), m.R_FLAT))  # falling
+t.step(tool_at=_lay)  # lands on its marks
+case("cheat: laid down, then lifted 30 cm on an open hand (no hold) and dropped on its marks: 0.5", t.home(), 0.5)
 
 
 # the demo's wrench carry: every hand pose of the lift and the quarter turn is within its arm's reach

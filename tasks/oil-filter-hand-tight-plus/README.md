@@ -102,7 +102,7 @@ when tightened past it.
 | 90 to 180 degrees past contact: sealing, but at most two thirds of the three-quarter turn | 0.25 |
 | 180 to 270 past contact (short of 18 N·m); or 270 or more after it was ever past 360 (past the most any instruction allows, not crushed) | 0.5 |
 | 270 to 360 and never past 360, but a hand still touching the filter, or the wrench not yet put back: not finished | 0.5 |
-| 270 to 360, never past 360, no hand touching the filter, and the wrench put back: laid down (let go from a hold with its cup within 3 cm of the bench), lying cup down (its back within 15 degrees of straight up), its cup's center within 10 cm of its start marks and within 3 cm of the bench, at rest (under 1 cm/s), no hand touching it. The task places Kawasaki's 18 N·m at three quarters of a turn past contact, and spin-on filter instructions commonly give three quarters to one turn | 1.0 |
+| 270 to 360, never past 360, no hand touching the filter, and the wrench put back: laid down (a release check: when contact ended after a hold, its cup was no more than 3 cm over its resting height, and it has not fallen through the air since), lying cup down (its back within 15 degrees of straight up), its cup's center within 10 cm of its start marks and within 3 cm of the bench, at rest (under 1 cm/s), no hand touching it. The task places Kawasaki's 18 N·m at three quarters of a turn past contact, and spin-on filter instructions commonly give three quarters to one turn | 1.0 |
 
 Where the arms end is not scored. Possible scores: 0, 0.25, 0.5, 1.0.
 
@@ -114,8 +114,7 @@ wrench's, held. Whatever neither turned is unheld; more than 45 degrees unheld s
 budget, so a second hand near the can or on it never voids the holder's turning (tested: a hand hovering open, both hands rolling, one steadying; two hands closed with neither rolling is still a swipe).
 
 A hand is still on the filter at the end when any part of the gripper touches the can. Turning the filter by hand
-past contact counts too: the score is outcome-based, read from the angle as a real trial reads the torque; in the demo
-and on the rig the pads slip a few degrees past contact. Unscrewing the filter off the thread is a recoverable mistake:
+past contact counts too: the score is outcome-based, read from the angle as a real trial reads the torque; in the demo the pads slipped PENDING_HAND degrees past contact; a pinch slips far short of 18 N·m (see Fidelity). Unscrewing the filter off the thread is a recoverable mistake:
 it can be started again (the run's peak angle is kept). `success()` is a full score held for 1 s. Each scene reset
 starts a new history.
 
@@ -157,7 +156,7 @@ robot and are what the rig reproduces:
 |---|---|---|---|
 | Filter | 66 mm across, 71 mm tall | as bought | KN-204/HF204 cross-reference listings (66 x 71 mm) |
 | Thread | M20 x 1.5, right-hand | the real nipple | K&N KN-204-1 / KN-204C listing (M20 x 1.5) |
-| Thread fit | nipple 6g at its maximum-material limits: crests 19.97 mm, root 18.13 mm; filter 6H crests 18.53 mm (middle of the band). The nipple's collider is its root cylinder; its end is flat at the root diameter (the small end of the ISO 4753 chamfer, which is drawn but not collided, so the bore must be centered within the clearance unaided: stricter than a real nipple, whose chamfer guides a bore about 1 mm off), and the crests' meeting point is a stop on the filter's axial slide. The filter's crests clear the nipple's end by 0.20 mm all round (0.12 mm at the tightest); pitch diameters' middles 0.197 mm apart | the real stud and filter | ISO 965-1/-2 (M20 x 1.5, 6H/6g); ISO 4753 (end chamfered to no more than the root diameter) |
+| Thread fit | nipple 6g at its maximum-material limits: crests 19.97 mm, root 18.13 mm; filter 6H crests 18.53 mm (middle of the band). The nipple's collider is its root cylinder; its end is flat at the root diameter (the small end of the ISO 4753 chamfer, which is drawn but not collided: its only effect, centering a bore already within the 0.20 mm clearance, is left to that clearance; any entry chamfer on the filter's threaded plate is not modeled, so the bore must be centered unaided), and the crests' meeting point is a stop on the filter's axial slide. The filter's crests clear the nipple's end by 0.20 mm all round (0.12 mm at the tightest); pitch diameters' middles 0.197 mm apart | the real stud and filter | ISO 965-1/-2 (M20 x 1.5, 6H/6g); ISO 4753 (end chamfered to no more than the root diameter) |
 | Turns from the first thread to gasket contact | 3 (4.5 mm) | the rig's stud set 8.4 mm past the land | from the nipple's length past the land, less the bore's 3 mm recess and the 0.92 mm chamfer |
 | Nipple's axis | level, pointing at the robot, 13 cm above the bench | ±5 mm, ±2 degrees | parts diagram (direction); height set for the robot |
 | Boss | 76 mm across, 8 mm proud of the case | ±2 mm | set for the robot |
@@ -171,8 +170,7 @@ robot and are what the rig reproduces:
 
 The filter is a free part. It sits on six joints with no drive from the nipple (three slides, two tilts and its spin)
 whose ranges cover the whole bench the arms reach and every way it can lie (standing on either end, on its side in any
-direction, lifted well clear), so it falls, tips, is picked up, carried and set down like a loose part; the joints are
-its coordinates, not a constraint. Its colliders are hollow where the nipple goes (a ring for the gasket; the threaded
+direction, lifted well clear), so it falls, tips, is picked up, carried and set down like a loose part; the joints are its coordinates, not a constraint (their limits lie off the bench's edges, and the pitch-roll pair is singular only lying exactly along y). Every part uses the environment's rubber-like friction (1.2 static, 1.0 dynamic), steel on steel included, where real dry steel is about 0.5-0.8 and oiled much less: the sim's cup grips the flutes and the bore drags on the nipple's end more than a real one. Its colliders are hollow where the nipple goes (a ring for the gasket; the threaded
 bore, 36 colliders at its thread's crests, 18.53 mm across; the base plate round it), and the nipple's collider is its
 root cylinder, 18.13 mm across, standing 8.4 mm out of the land, its end flat at that diameter.
 
@@ -212,14 +210,14 @@ ratchet's 120 positions), against a light drag. Dimensions (P: the maker's publi
 | | grip | 22 mm thick on the handle's last 15 cm | R |
 | Adapter, GearWrench 81354 | length, weight | 35.1 mm (1.38 in), 27 g | P |
 | Cap, Parts Unlimited 3801-0295 | across the flutes, flutes, drive | 65 mm, 14, 3/8 in | P |
+| Cap in the sim | teeth tips, wall inside | 63.0 mm, 66.8 mm | R: sized to this filter's 66 mm flute crests with 0.4 mm play |
 | | wall, depth, end plate, weight | 3 mm, 13 mm, 4 mm, 60 g | R |
 | All | mass | 1.448 kg | sum |
 
 The arms' strength. The YAM's servos are Damiao DM-J4340 on joints 1-3 (9 N·m rated, 27 N·m peak) and DM-J4310 on
 joints 4-6 (3 N·m rated, 7 N·m peak); the sim uses the peak limits (i2rt's yam_v1 config). The right hand swings the
 handle alone, 0.55 m out: at 18 N·m (plus the demo's 5 N·m margin) it aims about 42 N down the swing, while the left
-hand, on the head, only presses the cup on (20 N). Through each arm's Jacobian at the demo's hand positions (yam_v1 URDF, peak joint torques), each hand can push 30-45 N along the swing and well under that at rated torque, so the last strokes, a few seconds each,
-run the right arm above its rated torque, within its peak. In the demo the strokes took the filter to PENDING_PAST
+hand, on the head, only presses the cup on (20 N). Through the right arm's Jacobian at the demo's stroke poses (yam_v1 URDF masses, static), its 42 N push needs about 6.5 N·m on joint 2 and 5 N·m on joint 3, within the DM-J4340's rated 9 N·m; the wrist joints carry under 0.5 N·m. There it can push about 50 N within rated torque and about 95 N at peak. In the demo the strokes took the filter to PENDING_PAST
 degrees past contact (PENDING_NM N·m by the gasket's law). Pushing down, the hand bears on its fingers, and the arm's
 own weight helps.
 
@@ -319,7 +317,7 @@ Before each session:
 
 After each trial, read the outcome (see Scoring), then put the 1/4-inch click torque wrench, set to 18 N·m (159 in·lb), through its adapter in the cap's square drive and turn it clockwise: for 1.0 it must click before the can moves (the torque decides the top band; the witness line decides the others and the over-tightening limits).
 
-Safety: keep the e-stop within reach and stand 1 m clear of the handle's sweep (a 61 cm, 1.45 kg bar); the last strokes run the arms above their rated torque, so check the servos' temperatures between trials and rest the arms if any reads over the maker's limit.
+Safety: keep the e-stop within reach and stand 1 m clear of the handle's sweep (a 61 cm, 1.45 kg bar); the last strokes load the right arm near its rated torque, so check the servos' temperatures between trials and rest the arms if any reads over the maker's limit.
 
 Reset per trial (about 4 minutes):
 
