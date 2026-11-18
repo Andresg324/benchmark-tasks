@@ -938,7 +938,8 @@ PAD_BELOW_GRIP = 0.006  # on the round grip, which lies on the bench: the pads r
 #                         off the bench (pressed on the bench, the tips' friction stalled the fingers 3.5 mm short)
 STROKE_UP, STROKE_DOWN = 6.0, -10.0  # each stroke swings the handle from 6 degrees above level to 10 below
 SEAT_BAND = (-1.0, 3.5)  # the handle's angle while the cup goes on (the right hand's reach with the handle carried)
-ALIGN_REACH = (-4.0, 6.0)  # the handle's angles both hands reach, carrying it and in the stroke's top-down grip
+ALIGN_REACH = (-4.0, 25.0)  # the handle's angles both hands reach carrying it (a pitch of the flutes and more)
+STROKE_REACH = 4.0  # the handle at or below this before the right hand takes its top-down stroke grip
 SHARE_R = 1.0  # the right hand swings the handle; the left, on the head, keeps the cap pressed on
 MARGIN = 1.0  # N*m over what the gasket takes
 LEFT_PRESS = 8.0  # N: the left hand presses the cap onto the filter (toward the engine) while the right pushes
@@ -1260,6 +1261,13 @@ def _wrench_phase(st):
             return {"left": (*_hand_on_tool("left", p, r, (LEFT_PRESS, 0, 0)), F_BEAM),
                     "right": (rt + (0, 0, up), rr, finger)}
         return f
+    for k in range(1, 4):  # seated high: the first stroke, in the carrying grip, down to the stroke grip's reach
+        def first(k=k):
+            a0 = st["align"]
+            p, r = _tool_pose_on(a0 + (STROKE_REACH - 3.0 - a0) * k / 3, -0.002, st.get("tfix", np.zeros(3)))
+            st["last_w"] = carried(p, st.get("trfix", np.eye(3)) @ r)
+            return st["last_w"]
+        add("wrench: handle down to the stroke grip", 1.0, first, lambda: st.get("align", 0.0) > STROKE_REACH)
     add("wrench: right hand off", 0.7, lambda: {"left": (*_hand_on_tool("left", *_tool_now()[:2]), F_BEAM),
                                                  "right": (*_hand_on_tool("right", *_tool_now()[:2]), FINGER_OPEN)})
     add("wrench: right hand over the grip", 1.6, regrip(FINGER_OPEN, 0.035))
@@ -1411,14 +1419,15 @@ def demo():
     teeth meet the gaps, within the arms' reach, the first two also squaring it, then up to eight with its rim 3.5 mm
     short of the filter's end that square it and center its rim), and push the cup on gently while rocking it (the
     handle 3 degrees either way, the cup round a 0.6 mm circle), checking it is on and trying again, turning the handle
-    down and up while pressed so the teeth ride round to a gap (four tries at most). The right hand moves to a top-down
-    grip on the grip. Strokes: the handle swung down from 6 degrees above level to 10 below by the right hand, pushing
-    what the gasket takes (plus 1 N*m), aimed past the handle by its arm's give, while the left presses the cap on (8
-    N); then swung back up with the ratchet clicking. Each stroke is sized from the filter's angle when it starts; they
-    stop once it is 270 degrees past contact (18 N*m), after two strokes that turn it under 2 degrees, or after
-    WRENCH_MAX strokes. The right hand goes back to the grip it carried with, the cup is pulled straight off the flutes
-    along the filter's axis, the wrench turned back cup down and laid flat on the bench on its start marks; both let go,
-    lift clear and go home."""
+    down and up while pressed so the teeth ride round to a gap (four tries at most); if it went on with the handle high,
+    a first stroke in the carrying grip takes the handle down to STROKE_REACH. The right hand moves to a top-down grip
+    on the grip. Strokes: the handle swung down from 6 degrees above level to 10 below by the right hand, pushing what
+    the gasket takes (plus 1 N*m), aimed past the handle by its arm's give, while the left presses the cap on (8 N);
+    then swung back up with the ratchet clicking. Each stroke is sized from the filter's angle when it starts; they stop
+    once it is 270 degrees past contact (18 N*m), after two strokes that turn it under 2 degrees, or after WRENCH_MAX
+    strokes. The right hand goes back to the grip it carried with, the cup is pulled straight off the flutes along the
+    filter's axis, the wrench turned back cup down and laid flat on the bench on its start marks; both let go, lift
+    clear and go home."""
     st = {"stop": None, "gains": [], "wstop": None}
     left = _hand_phase(st)
     hand = list(left)
