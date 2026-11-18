@@ -30,7 +30,7 @@ C = TH.clearance
 case("the fit (ISO 965, 6H/6g mid-band): 0.20 mm all round between the filter's crests and the nipple's end",
      round(C * 1000, 2), 0.2)
 case("the cross-threading angle: half a pitch plus the flanks' play across the pitch diameter (degrees)",
-     round(math.degrees(TH.cross_tilt), 2), 2.62)
+     round(math.degrees(TH.cross_tilt), 1), 2.6)
 case("the nipple stands 8.42 mm out of the land (its chamfered end 0.92 mm into the bore at the catch)",
      round(TH.nip_len * 1000, 2), 8.42)
 case("the drawn and collider nipple is the real M20's root (18.13 mm), not a slimmer guide pin",
@@ -105,14 +105,14 @@ def stops(cmd):
 
 f, J = start(0.0, turn_deg=420.0)
 cmd = f.step(J)
-case("caught square: round stops at the engaged flanks' play (0.104 mm, 0.36 degrees), no drive on them",
+case("caught square: round stops at the engaged flanks' play (0.098 mm, 0.34 degrees), no drive on them",
      (round(cmd["f_up"][5][1] * 1e6), round(math.degrees(cmd["f_pitch"][5][1]), 2),
-      [cmd[n][1] for n in ("f_up", "f_side", "f_pitch", "f_roll")]), (104, 0.36, [0.0] * 4))
+      [cmd[n][1] for n in ("f_up", "f_side", "f_pitch", "f_roll")]), (98, 0.34, [0.0] * 4))
 d = TH.play_lat / math.sqrt(2)
 cmd = f.step(dict(J, f_up=d, f_side=d))
-case("  diagonal: at 45 degrees round the axis the side stops are the circle's chords (radial 0.104 mm, inside the "
-     "0.199 mm clearance; no square corner at 0.147 mm)",
-     round(math.hypot(cmd["f_up"][5][1], cmd["f_side"][5][1]) * 1e6), 104)
+case("  diagonal: at 45 degrees round the axis the side stops are the circle's chords (radial 0.098 mm, inside the "
+     "0.199 mm clearance; no square corner at 0.139 mm)",
+     round(math.hypot(cmd["f_up"][5][1], cmd["f_side"][5][1]) * 1e6), 98)
 f, J = start(1.0, lat=0.0002, turn_deg=30.0)
 case("caught 0.2 mm off and 1 degree crooked: caught", f.state, fk.ENGAGED)
 cmd = f.step(J)
@@ -247,9 +247,10 @@ class Trial:
         self.fm.turned = self.fm.seat + math.radians(past)
         self.fm.peak_past = max(self.fm.peak_past, math.radians(past))
 
-    def step(self, past=None, L=None, R=None, tool_on=None, off=0.0, tool_at=None):
+    def step(self, past=None, L=None, R=None, tool_on=None, off=0.0, tool_at=None, cap_still=False):
         """`off`: with the wrench on, its cup pulled this far back off the flutes along the filter's axis (m);
-        `tool_at`: (origin, rotation) of a wrench put down somewhere (kept for later steps)."""
+        `tool_at`: (origin, rotation) of a wrench put down somewhere (kept for later steps); `cap_still`: the cap
+        does not turn with the filter."""
         if tool_at is not None:
             self.tool_at = tool_at
         if past is not None:
@@ -260,7 +261,8 @@ class Trial:
         objs = {m.KEY: st(AX, m.R_BASE @ m._rot_z(-self.fm.turned))}
         if self.tool_on:
             tp = AX + np.array((-m.CAN_H - 0.0005 - off, 0.0, 0.0))
-            objs[m.TOOL], objs[m.CAP] = st(tp, m.R_MOUNT), st(tp, m.R_MOUNT)
+            spin = np.eye(3) if cap_still else m.R_BASE @ m._rot_z(-self.fm.turned) @ m.R_BASE.T  # turns with it
+            objs[m.TOOL], objs[m.CAP] = st(tp, m.R_MOUNT), st(tp, spin @ m.R_MOUNT)
         else:
             p_, r_ = getattr(self, "tool_at", (m.TOOL_P0, m.R_FLAT))
             objs[m.TOOL], objs[m.CAP] = st(p_, r_), st(p_, r_)
@@ -297,11 +299,12 @@ def hand_turn(t, to, rate=15.0, slip=0.0):
 GRIP = tuple(AX + np.array((-m.CAN_H - 0.04, -0.55, 0.0)))  # the right hand on the wrench's handle
 
 
-def wrench_turn(t, to, held=True, rate=5.0):
-    """The wrench seated on the filter turns it to `to`, a hand on its handle (or not)."""
-    t.step(tool_on=True, R=(GRIP, 0.2, 0.0) if held else (HOME_R, 1.0, 0.0), L=(HOME_L, 1.0, 0.0))
+def wrench_turn(t, to, held=True, rate=5.0, off=0.0, cap_still=False):
+    """The wrench seated on the filter (its cup `off` m back from fully on) turns it to `to`, a hand on its handle (or
+    not); `cap_still`: the cap does not turn with the filter."""
+    t.step(tool_on=True, R=(GRIP, 0.2, 0.0) if held else (HOME_R, 1.0, 0.0), L=(HOME_L, 1.0, 0.0), off=off)
     while t.fm.past < math.radians(to) - 1e-9:
-        t.step(past=min(to, math.degrees(t.fm.past) + rate))
+        t.step(past=min(to, math.degrees(t.fm.past) + rate), off=off, cap_still=cap_still)
     return t
 
 
@@ -313,6 +316,36 @@ def finish(t):
 t = hand_turn(Trial(0.0), 20.0)
 wrench_turn(t, 275.0)
 case("by hand to 20, the wrench to 275, the wrench off, let go: 1.0", finish(t), 1.0)
+
+# a second hand near the can, or on it (review TK-4CV45T: it must never void legitimate turning; swipes still caught)
+ON_CAN2 = tuple(AX + np.array((-m.GRASP_UP + 0.02, 0.0, 0.0)))  # a second grip on the can, 2 cm nearer its gasket
+NEAR_OPEN = tuple(AX + np.array((-m.GRASP_UP, 0.0, 0.06)))  # 6 cm above the can, open
+
+
+def turn_with(t, to, other, both=False, rate=15.0):
+    """The left hand rolls the can clockwise; the right is `other` (position, opening, roll), rolling too if `both`."""
+    roll = 0.0
+    while t.fm.past < math.radians(to) - 1e-9:
+        roll += rate
+        t.step(past=min(to, math.degrees(t.fm.past) + rate), L=(ON_CAN, W, roll),
+               R=(other[0], other[1], roll if both else other[2]))
+        if roll >= 150.0:
+            t.step(L=(ON_CAN, 1.0, roll), R=(other[0], 1.0 if both else other[1], roll if both else other[2]))
+            roll = 0.0
+            t.step(L=(ON_CAN, 1.0, roll), R=(other[0], 1.0 if both else other[1], 0.0))
+    return t
+
+
+case("the left turns it to 100 while the right hovers open 6 cm above the can: 0.25 (a nearby hand never voids it)",
+     finish(turn_with(Trial(0.0), 100.0, (NEAR_OPEN, 1.0, 0.0))), 0.25)
+case("both hands closed on the can, both wrists rolling with it, to 100: 0.25",
+     finish(turn_with(Trial(0.0), 100.0, (ON_CAN2, W, 0.0), both=True)), 0.25)
+case("the left rolls it to 100 while the right is closed on the can, steadying, wrist still: 0.25",
+     finish(turn_with(Trial(0.0), 100.0, (ON_CAN2, W, 0.0))), 0.25)
+t = Trial(0.0)
+for p in range(5, 280, 5):
+    t.step(past=float(p), L=(ON_CAN, W, 0.0), R=(ON_CAN2, W, 0.0))
+case("cheat: both hands closed on the can, neither wrist rolling, filter turned to 275 (a swipe): 0", finish(t), 0.0)
 t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
 case("the same, the wrench left on the filter: 0.5", t.step(R=(HOME_R, 1.0, 0.0)), 0.5)
 t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
@@ -358,12 +391,23 @@ for p in range(5, 300, 5):
 case("cheat: the filter twisted in the hand without the thread ever catching: 0", finish(t), 0.0)
 
 t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
-t.step(R=(HOME_R, 1.0, 0.0), off=0.006)  # the cup pulled 6 mm back: no longer seated, but still on the filter
-case("the wrench left resting on the filter (not seated, no hand on it): 0.5, not 1.0", t.home(), 0.5)
+t.step(R=(HOME_R, 1.0, 0.0), off=0.006)  # the cup pulled 6 mm back, still on the flutes
+case("the wrench left resting on the filter (no hand on it): 0.5, not 1.0", t.home(), 0.5)
+t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0, off=0.006)
+case("the wrench held with its cup 6 mm back from fully on (its teeth still about 6 mm over the flutes), to 275: 1.0",
+     finish(t), 1.0)
+t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0, off=0.0095)
+case("cheat: the cup 9.5 mm back (its teeth only 2.5 mm over the flutes' ends), the filter turned to 275: 0",
+     finish(t), 0.0)
+t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0, cap_still=True)
+case("cheat: the wrench held on the filter but its cap not turning with it (the filter turned some other way): 0",
+     finish(t), 0.0)
 t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
-t.step(R=(HOME_R, 1.0, 0.0), off=0.05)  # 5 cm off the filter's end, in the air: not on the bench
-case("the wrench pulled 5 cm off the filter but not put down on the bench: 0.5", t.home(), 0.5)
-case("  put down on its marks on the bench: 1.0", finish(t), 1.0)
+t.step(off=0.05)  # held, 5 cm off the filter's end, in the air: not on the bench
+case("the wrench pulled 5 cm off the filter but not put down on the bench: 0.5", t.step(L=(HOME_L, 1.0, 0.0)), 0.5)
+_lay = (np.array(m.TOOL_P0), m.R_FLAT)
+t.step(tool_on=False, tool_at=_lay, R=(tuple(m._hand_on_tool("right", *_lay)[0]), 0.0, 0.0))  # laid on its marks
+case("  laid on its marks on the bench and let go: 1.0", t.home(), 1.0)
 
 # gaming the catch rule (judged once, at 20 degrees of turn against the crests)
 f, J = start(0.0, turn_deg=60.0)
@@ -385,6 +429,17 @@ for tilt in (2.7, 3.5):
         ever = ever or f.state == fk.ENGAGED
     case(f"cheat: {tilt} degrees crooked, turned back and forth: never catches (cross-threads)", (ever, f.state),
          (False, fk.CROSSED))
+f = fk.FilterModel(0, TH)
+J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.00005, f_pitch=math.radians(5.0), f_roll=0.0, filter=0.0)
+for _ in range(19):  # pressed on the crests 5 degrees crooked and turned 19 degrees clockwise
+    J["filter"] -= math.radians(1.0)
+    f.step(J)
+J["f_pitch"] = 0.0  # squared up for the last degree
+for _ in range(3):
+    J["filter"] -= math.radians(1.0)
+    f.step(J)
+case("cheat: turned 19 degrees on the crests 5 degrees crooked, squared for the last degree: cross-threaded",
+     f.state, fk.CROSSED)
 for lat_mm, out in ((0.36, TH.nip_len - TH.bore_z0), (0.36, TH.d0 + 0.00005)):
     f = fk.FilterModel(0, TH)
     J = dict(f_up=lat_mm / 1000, f_side=0.0, f_out=out, f_pitch=0.0, f_roll=0.0, filter=0.0)
@@ -406,10 +461,19 @@ t.step(tool_on=False, R=(HOME_R, 1.0, 0.0), tool_at=(np.array(m.TOOL_P0) + (0, 0
 case("cheat: dropped on its marks upside down (cup up): 0.5", t.home(), 0.5)
 t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
 t.step(tool_on=False, R=(HOME_R, 1.0, 0.0))
-for k in range(6):  # thrown onto its marks: still sliding
+for k in range(6):  # let go low over its marks: still sliding into place
     t.step(tool_at=(np.array(m.TOOL_P0) + (0.0, 0.004 * k, 0.0), m.R_FLAT))
-case("cheat: thrown onto its marks, still sliding: 0.5 while it moves", t.sc, 0.5)
+case("cheat: let go low over its marks, still sliding: 0.5 while it moves", t.sc, 0.5)
 case("  once at rest there, flat, cup down: 1.0", t.home(), 1.0)
+t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
+_up = (np.array(m.TOOL_P0) + (0.0, 0.0, 0.30), m.R_FLAT)  # carried back cup down, 30 cm over its marks
+_h = m._hand_on_tool("right", *_up)[0]
+t.step(tool_on=False, tool_at=_up, R=(tuple(_h), 0.0, 0.0), L=(HOME_L, 1.0, 0.0))
+case("  (the hand on the lifted wrench touches it)", m.tool_touched(m._SEEN["objects"]) != set(), True)
+t.step(R=(HOME_R, 1.0, 0.0))  # let go in the air
+t.step(tool_at=(np.array(m.TOOL_P0), m.R_FLAT))  # it lands on its marks, flat, cup down
+case("cheat: dropped onto its marks from 30 cm (not laid down): 0.5 even at rest", t.home(), 0.5)
+
 
 # the demo's wrench carry: every hand pose of the lift and the quarter turn is within its arm's reach
 from yam_arena import ik as _ik  # noqa: E402

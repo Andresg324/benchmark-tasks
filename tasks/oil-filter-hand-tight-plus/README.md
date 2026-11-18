@@ -2,8 +2,7 @@
 
 A new spin-on oil filter (Kawasaki 16097-0007, the Teryx and Teryx4 750 filter) stands on the bench beside the engine. Its mount is
 where it is on the engine: the M20 x 1.5 nipple low on the front of the crankcase, its axis level and pointing at the
-robot, with the frame's lower cross tube under it and the CVT intake duct beside it, as on the vehicle with its bottom
-guard removed. A drip pan is under the engine. Beside the filter lies a tool to reach that torque: a 65 mm, 14-flute cap-type filter wrench on a 24-inch ratchet. "Fit the new oil filter." means the engine maker's
+robot, with access obstacles like those round it on the vehicle with its bottom guard removed: a frame cross tube under it and a duct beside it, their clearances set for the robot. A drip pan is under the engine. Beside the filter lies a tool for the engine maker's torque: a 65 mm, 14-flute cap-type filter wrench on a 24-inch ratchet. "Fit the new oil filter." means the engine maker's
 service procedure, which mechanics follow at every oil change: start the filter square on the thread by hand (a filter
 started crooked cross-threads and ruins the nipple's thread), spin it on until its gasket contacts the mount, then
 tighten it with the wrench to the specified torque, 18 N·m for this filter (about three quarters of a turn past
@@ -30,9 +29,9 @@ can crush the gasket, which can blow out under oil pressure.
 |---|---|
 | `task.py` | Scene, scorer (`score()`, `success()`) and scripted demo (`demo()`), for the `yam_arena` embodiment (Isaac Lab-Arena, bimanual YAM, `station` scene). Its docstrings explain every rule. |
 | `filterkit.py` | The loose filter and its thread, and the free wrench's ratchet. The filter is a free part on six undriven joints from its nipple (three slides, two tilts, its spin) whose ranges cover the whole bench and every way it can lie, and the thread's model (`FilterModel`) decides each control step whether it is loose, on the thread, or cross-threaded, and drives the thread when it is on: pitch, the run-on friction and the gasket's torque. The ratchet's pawl (`RatchetModel`) is a moving stop on the hinge between the ratchet and the cap. |
-| `handkit.py` | Contact checks on the robot's own collision hulls, loaded at run time from the competition environment (`yam_arena.analysis.link_hulls`; nothing robot-derived is shipped): whether a gripper touches the filter or the wrench, or pinches one between its fingertips, within 1 mm. |
+| `handkit.py` | Contact checks on the grippers' own collision hulls (palm and both fingers), loaded at run time from the competition environment (`yam_arena.analysis.link_hulls`; nothing robot-derived is shipped): whether a gripper touches the filter or the wrench, or pinches one between its fingertips, within 1 mm. |
 | `yamkit.py` | Spawns the modeled props and articulations (now with turned box colliders, for the flutes) and gives the scorer the grippers. It patches `yam_arena` in memory at import; no files change. |
-| `test_task.py` | Offline checks of the thread model's rules, with the filter placed by hand (centered and 0.1 and 0.2 mm off the axis it goes on and catches; placed 0.5, 1, 2 and 6 mm off, resting on the nipple's end as the colliders leave it, it does not go on; in the sim the colliders do the blocking,  tilts either side of 2.6 degrees; turned while held off the crests; round stops, diagonal included; short of the nipple; unscrewed and started again), the free filter's joint ranges (lying every way across the whole bench, its axis pointing any way, lifted 70 cm), the pawl and the scorer, with near misses and cheats (pushed on without turning, slowly or in one step; turned the wrong way; over the nipple's end off its axis; tilted or offset just past the limit and turned back and forth; wobbled after the catch; the wrench seated before the thread starts; the wrench left resting on the filter, held off it, dropped by the filter, dropped upside down, or still sliding; the start state; doing nothing). No simulator needed; also runs under pytest. |
+| `test_task.py` | Offline checks of the thread model's rules, with the filter placed by hand (centered and 0.1 and 0.2 mm off the axis it goes on and catches; placed 0.5, 1, 2 and 6 mm off, resting on the nipple's end as the colliders leave it, it does not go on; in the sim the colliders do the blocking; tilts either side of 2.6 degrees; turned 19 degrees crooked and squared for the last degree; turned while held off the crests; round stops, diagonal included; short of the nipple; unscrewed and started again), the demo's wrench carry (every hand pose IK-solved), the free filter's joint ranges (lying every way across the whole bench, its axis pointing any way, lifted 70 cm), the pawl and the scorer, with near misses and cheats (a second hand hovering, steadying or turning with the holder never voids the turning, two closed hands with neither rolling are a swipe; pushed on without turning, slowly or in one step; turned the wrong way; over the nipple's end off its axis; tilted or offset just past the limit and turned back and forth; wobbled after the catch; the wrench seated before the thread starts; the wrench held with its cup 6 mm back (credited) or 9.5 mm back (not), or on the filter but its cap not turning with it; the wrench left resting on the filter, held off it, dropped by the filter, dropped onto its marks from 30 cm, dropped upside down, or still sliding; the start state; doing nothing). No simulator needed; also runs under pytest. |
 | `task.json` | The task card. |
 
 ## Run a trial
@@ -60,7 +59,7 @@ cannot pivot it between the pads). It carries the filter out from the engine and
 point at it. It then reads where the center of the filter's threaded bore is and which way the filter points, and
 corrects both, five times 8 mm out, then
 again with the bore 1.5 mm short of the nipple's end (up to three looks, each held while the arm settles). It then
-pushes the filter on. The bore clears the nipple's end by only 0.2 mm and the arm sways about a millimeter, so the
+pushes the filter on. The bore clears the nipple's end by only 0.2 mm and the arm's position wanders by about a millimeter in the sim, so the
 base plate usually lands on the nipple's end face first: pressing there, the hand reads where the bore is each second
 and re-aims it a little, as a hand feels for the start, until the bore drops over the nipple's end (up to ten looks, a second apart); that look also centers the bore on the nipple within its clearance before the turn. If it never does, the hand backs off, lines it up again and retries (twice at most). It spins the filter on
 clockwise (seen from its end) in wrist rolls of up to 150 degrees, following the thread in, regripping between rolls.
@@ -100,23 +99,20 @@ when tightened past it.
 | Not on the thread at the end (left on the bench, dropped, pushed on without starting it, or unscrewed off and not started again) | 0 |
 | Tightened more than 450 degrees (1.25 turns) past contact at any point, even if backed off: the gasket is over-compressed and can roll out (read from the peak angle; the real gasket is checked afterwards) | 0, irreversible |
 | Ends under 90 degrees past contact, including at contact: it can work loose under vibration and leak | 0 |
-| More than 45 degrees of the turning past contact done neither by a holding hand's own wrist roll nor by the wrench while its cap was on the filter and a hand held it (knocked, swiped) | 0 |
+| More than 45 degrees of the turning past contact done neither by a holding hand's own wrist roll nor by the wrench while a hand held it and its cap was on the filter, turning with it (knocked, swiped) | 0 |
 | 90 to 180 degrees past contact: sealing, but at most two thirds of the three-quarter turn | 0.25 |
 | 180 to 270 past contact (short of 18 N·m); or 270 or more after it was ever past 360 (past the most any instruction allows, not crushed) | 0.5 |
 | 270 to 360 and never past 360, but a hand still touching the filter, or the wrench not yet put back: not finished | 0.5 |
-| 270 to 360, never past 360, no hand touching the filter, and the wrench put back: lying flat on the bench, cup down (its back within 15 degrees of straight up), its cup's center within 10 cm of its start marks, at rest, no hand touching it. Kawasaki's 18 N·m is three quarters of a turn past contact on this model, and spin-on filter instructions commonly give three quarters to one turn | 1.0 |
+| 270 to 360, never past 360, no hand touching the filter, and the wrench put back: laid down (let go with its cup within 3 cm of the bench), lying cup down (its back within 15 degrees of straight up), its cup's center within 10 cm of its start marks and within 3 cm of the bench, at rest (under 1 cm/s), no hand touching it. The task places Kawasaki's 18 N·m at three quarters of a turn past contact, and spin-on filter instructions commonly give three quarters to one turn | 1.0 |
 
 Where the arms end is not scored. Possible scores: 0, 0.25, 0.5, 1.0.
 
-Who turned it. Contact is real contact between the robot's own collision hulls (loaded at run time from the
-competition environment) and the part, within 1 mm. A gripper holds the filter when its fingers are closed on the can
+Who turned it. Contact is real contact between a gripper's own collision hulls (its palm and both fingers, loaded at run time from the competition environment) and the part, within 1 mm. A gripper holds the filter when its fingers are closed on the can
 (its opening from 15 % of full travel tighter than the can's 6.6 cm to 3 % looser) and both fingertips touch it. Each step a gripper holding the filter at either end of the step adds its
 own wrist roll about the filter's axis, clockwise seen from the filter's end, to its budget (kept at most 30 degrees
-ahead of the filter), and new ground past contact is credited from that budget. While the wrench's cap is seated on
-the filter (its axis within 3 mm and 5 degrees of the filter's, its floor within 4 mm of the filter's end) and a hand
-holds the wrench (fingers under 60 % open, both fingertips touching its head, handle or grip), the new ground is the
+ahead of the filter), and new ground past contact is credited from that budget. While the wrench's cap is on the filter (its axis within 3 mm and 8 degrees of the filter's, its 12 mm teeth at least 4 mm over the flutes, so its floor within 8 mm of the filter's end) and turning with it (at least 80 % of the filter's turn that step), and a hand holds the wrench (fingers under 60 % open, both fingertips touching its head, handle or grip), the new ground is the
 wrench's, held. Whatever neither turned is unheld; more than 45 degrees unheld scores 0. Each hand keeps its own
-budget, so a second hand near the can or on it never voids the holder's turning.
+budget, so a second hand near the can or on it never voids the holder's turning (tested: a hand hovering open, both hands rolling, one steadying; two hands closed with neither rolling is still a swipe).
 
 A hand is still on the filter at the end when any part of the gripper touches the can. Turning the filter by hand
 past contact counts too: the score is outcome-based, read from the angle as a real trial reads the torque; in the demo
@@ -127,7 +123,7 @@ starts a new history.
 Why these limits:
 - Cross-threading: a filter started crooked cross-threads, jams and damages the nipple's thread. 2.6 degrees is where
   the filter's first thread, tilted across the 19.03 mm pitch diameter, lands half a pitch (0.75 mm) plus the flanks'
-  0.12 mm axial play out on its far side, so that side drops into the next groove (geometry from the ISO 965 fit,
+  0.11 mm axial play out on its far side, so that side drops into the next groove (geometry from the ISO 965 fit,
   below; the rig checks it, below).
 - 270 to 360 degrees: 270 degrees past contact is Kawasaki's 18 N·m on the gasket's law, the same torque the real
   trial's click check reads; spin-on instructions commonly say "3/4 to 1 full turn" after the gasket contacts the base (GM service bulletin 90-216-6), the band's two ends.
@@ -163,15 +159,15 @@ robot and are what the rig reproduces:
 | Part | Sim | Real build tolerance | Source |
 |---|---|---|---|
 | Filter | 66 mm across, 71 mm tall | as bought | KN-204/HF204 cross-reference listings (66 x 71 mm) |
-| Thread | M20 x 1.5, right-hand | the real nipple | K&N KN-204 listing (M20 x 1.5) |
-| Thread fit | nipple 6g: crests 19.97 mm, root 18.13 mm; filter 6H: crests 18.53 mm. The nipple's collider is its root cylinder; its end is flat at the root diameter (the small end of the ISO 4753 chamfer), and the crests' meeting point is a stop on the filter's axial slide. The filter's crests clear the nipple's end by 0.20 mm all round (0.12-0.27 mm over both tolerance bands); pitch diameters 0.21 mm apart | the real stud and filter | ISO 965-1/-2 (M20 x 1.5, 6H/6g, middle of each band); ISO 4753 (end chamfered to no more than the root diameter) |
+| Thread | M20 x 1.5, right-hand | the real nipple | K&N KN-204-1 / KN-204C listing (M20 x 1.5) |
+| Thread fit | nipple 6g at its maximum-material limits: crests 19.97 mm, root 18.13 mm; filter 6H crests 18.53 mm (middle of the band). The nipple's collider is its root cylinder; its end is flat at the root diameter (the small end of the ISO 4753 chamfer, which is drawn but not collided, so the bore must be centered within the clearance unaided: stricter than a real nipple, whose chamfer guides a bore about 1 mm off), and the crests' meeting point is a stop on the filter's axial slide. The filter's crests clear the nipple's end by 0.20 mm all round (0.12 mm at the tightest); pitch diameters' middles 0.197 mm apart | the real stud and filter | ISO 965-1/-2 (M20 x 1.5, 6H/6g); ISO 4753 (end chamfered to no more than the root diameter) |
 | Turns from the first thread to gasket contact | 3 (4.5 mm) | the rig's stud set 8.4 mm past the land | from the nipple's length past the land, less the bore's 3 mm recess and the 0.92 mm chamfer |
 | Nipple's axis | level, pointing at the robot, 13 cm above the bench | ±5 mm, ±2 degrees | parts diagram (direction); height set for the robot |
 | Boss | 76 mm across, 8 mm proud of the case | ±2 mm | set for the robot |
 | Frame cross tube | 32 mm steel, 45 mm under the can | ±5 mm | set for the robot |
 | CVT intake duct | 60 mm, 30 mm from the can's side, on its right | ±5 mm | set for the robot |
 | Gasket's torque | rises linearly past contact to 18 N·m at 270 degrees, 29 N·m at 450 | the click check after the trial | Kawasaki Teryx4 750 owner's manual p. 101 (18 N·m); three quarters of a turn past contact (GM service bulletin 90-216-6: "3/4 to 1 full turn"), linear between and beyond |
-| Cross-thread angle | over 2.6 degrees | measure on the rig: tilt a real filter on the nipple until it no longer threads | derived: atan((0.75 + 0.12) / 19.03) from the fit above |
+| Cross-thread angle | over 2.6 degrees (the most during the starting turn) | the real stud and filter | derived: atan((0.75 + 0.11) / 19.03) from the fit above |
 | Going on the nipple | the bore over the nipple's end only within its 0.20 mm clearance; no capture | the real stud and filter | the fit above |
 | Crankcase front | 34 cm wide, 24 cm tall, its face 8 mm behind the gasket land | a plate or board at that face | set for the robot |
 | Room | 20-24 degrees C | 20-24 degrees C | lab practice (gasket rubber and oil film) |
@@ -188,10 +184,9 @@ root, the filter's 6H crests, 0.20 mm radial clearance, ISO 965) decide whether 
 robot must center it to within about 0.2 mm and square it itself; nothing draws it onto the axis. Off its axis by
 more than the clearance, the base plate lands on the nipple's end and stops there. With the nipple's end in the bore,
 the threads' crests stop the filter 4.5 mm out (a stop on its axial joint). Whether the started thread catches or
-cross-threads is judged once, when it has been turned 20 degrees clockwise while pressed on the crests, from its
-measured tilt against the same ISO clearances: within 2.6 degrees it catches; over that, where the first thread lands
+cross-threads is judged once, when it has been turned 20 degrees clockwise while pressed on the crests, from the most its axis was off the nipple's during that turn, against the same ISO clearances: within 2.6 degrees it catches; over that, where the first thread lands
 in the wrong groove, it cross-threads and jams. Past the catch the thread's run-down is an axial drive at the real
-1.5 mm pitch, with round stops (no drive) at the engaged flanks' play, 0.10 mm and 0.36 degrees about the axis, or at
+1.5 mm pitch, with round stops (no drive) at the engaged flanks' play, 0.10 mm and 0.34 degrees about the axis, or at
 the offset and tilt it caught with if those are larger, so nothing pulls it in; nothing squares it but contact, the
 gasket meeting the land. The flanks are not collision geometry. A filter that ends up over the nipple's end without
 its thread having caught (only the solver's give could put it there) is treated as not on the thread: it cannot catch
@@ -210,8 +205,7 @@ the drive's axis. Nothing ties it to the filter. Its cup has 14 flutes inside (4
 by contact. The cup stays on only while it is pushed over the filter's end, and it tilts, slides off and falls if it
 is not held there. The ratchet is a pawl: the hinge between the head and the cap has a moving stop. Turned to tighten,
 the handle drives the cap against it; turned back, the cap stays and the stop follows it down in 3-degree clicks (the
-ratchet's 120 positions), against a light drag. Dimensions (P: the maker's published figure; R: the rig's part,
-measured when the rig is built):
+ratchet's 120 positions), against a light drag. Dimensions (P: the maker's published figure; R: set to fit the published 65 mm, 14-flute size; the cup's wall, depth, teeth and weight are not published):
 
 | Part | Dimension | Sim | Source |
 |---|---|---|---|
@@ -267,8 +261,7 @@ Parts:
   ring (15-degree marks), motor oil for the gasket, shop towels, an oily-waste bag.
 
 Tools: use a drill with an 8.5 mm bit and a step drill bit that reaches 21 mm, a 30 mm wrench and a 30 mm 3/8-inch-drive socket for the M20
-nuts, a 3/8-inch-drive click torque wrench that covers 18 and 30 N·m (Pittsburgh Pro 63880, 5-80 ft·lb, Harbor
-Freight), a steel rule, a tape measure and a spirit level.
+nuts, a 3/8-inch-drive click torque wrench for the 30 N·m mount check (Pittsburgh Pro 63880, 5-80 ft·lb, Harbor Freight), a 1/4-inch-drive click torque wrench for the 18 N·m check, where 18 N·m (159 in·lb) sits high in its scale (Pittsburgh Pro 63881, 20-200 in·lb) with a 1/4- to 3/8-inch socket adapter, a steel rule, a tape measure and a spirit level.
 
 Build steps:
 
@@ -306,7 +299,7 @@ is built and before each session):
 | Nipple's axis | level, at x 45.5 (land), y 5, z 13, pointing at the robot | stud through the plate, set with a level | ±5 mm, ±2 degrees | parts diagram E1710 (direction); position set for the robot |
 | Engine face behind the land | 8 mm | 8 mm steel ring | ±1 mm | set for the robot |
 | Gasket land | 76 mm across | 76 mm steel ring | ±2 mm | set for the robot |
-| Nipple past the land | 8.4 mm, M20 x 1.5 (6g) | MMSPA-M20 stud, 16.4 mm proud of the plate, set by the nuts | ±1 mm | thread: K&N KN-204 listing (M20 x 1.5) |
+| Nipple past the land | 8.4 mm, M20 x 1.5 (6g) | MMSPA-M20 stud, 16.4 mm proud of the plate, set by the nuts | ±1 mm | thread: K&N KN-204-1 / KN-204C listing (M20 x 1.5) |
 | Engine face | 34 x 24 cm | plywood panel | ±1 cm | set for the robot |
 | Frame cross tube | 32 mm, top 45 mm under the can, x 41.8 | 1-inch rigid steel conduit, 33.4 mm | ±2 mm across, ±5 mm position | set for the robot |
 | Intake duct | 60 mm, 30 mm right of the can, x 42.8 | 2-inch Sch 40 PVC, 60.3 mm | ±5 mm | set for the robot |
@@ -327,17 +320,17 @@ Before each session:
 2. Have the covered gripper lift the filter and spin it a quarter turn on the stud: it turns without a slip.
 3. Check the clearances in the table.
 
-After each trial, read the outcome (see Scoring), then put the 3/8-inch click torque wrench, set to 18 N·m
-(13 ft·lb), in the cap's square drive and turn it clockwise: it must click before the can moves.
+After each trial, read the outcome (see Scoring), then put the 1/4-inch click torque wrench, set to 18 N·m (159 in·lb), through its adapter in the cap's square drive and turn it clockwise: for 1.0 it must click before the can moves (the torque decides the top band; the witness line decides the others and the over-tightening limits).
 
-Reset per trial (about 2 minutes):
+Safety: keep the e-stop within reach and stand 1 m clear of the handle's sweep (a 61 cm, 1.45 kg bar); the last strokes run the arms above their rated torque, so check the servos' temperatures between trials and rest the arms if any reads over the maker's limit.
+
+Reset per trial (about 4 minutes):
 
 1. Unscrew the filter. Wipe the stud, the land and the gasket, and re-oil the gasket lightly.
 2. Stand the filter on its gasket on its tape mark.
 3. Lay the wrench flat on its tape outline, cup down.
 4. Fit fresh glove covers; the used ones and the towel go in the oily-waste bag.
-5. Replace the filter if it went past a full turn or cross-threaded, and chase the stud's thread with an M20 x 1.5 die
-   if it cross-threaded.
+5. Replace the filter if it went past a full turn or cross-threaded, and after five trials past 180 degrees (the gasket takes a set; draw a new witness line at contact), and chase the stud's thread with an M20 x 1.5 die if it cross-threaded.
 
 Build time: about 2 hours.
 
@@ -349,6 +342,6 @@ ends); GM service bulletin 90-216-6 ("3/4 to 1 full turn" after gasket contact);
 brochure; Parts Unlimited 3801-0295 listing; Pittsburgh Pro 63880 listing; BLS Occupational Outlook Handbook and O*NET
 49-3023.00 (the category); Damiao DM-J4340 / DM-J4310 and i2rt's yam_v1 config (the arms).
 
-All code here was written for this task; no third-party code is included. No third-party assets are used: every shape
+All code here is original to this submission; no third-party code is included. No third-party assets are used: every shape
 is generated by `yamkit.py`, `filterkit.py` and `task.py`. The robot model and its collision hulls load at run time
 from the competition environment (arena revision 0059d02a) and are not redistributed.

@@ -64,17 +64,18 @@ def _qz_wxyz(a):  # a box turned `a` rad about its frame's z axis (USD orient: w
 X_LAND, Y_F, Z_F = 0.455, 0.05, TOP + 0.13
 BOSS_R, BOSS_L = 0.038, 0.008  # the machined boss the gasket seals on, 7.6 cm across, 8 mm proud of the case
 # The nipple's thread and the filter's, ISO 965-1/-2 M20 x 1.5, the general-purpose fit (6H internal on the filter,
-# 6g external on the nipple), in mm. Nipple (6g): major 19.732-19.968, pitch diameter 18.844-18.994, root 18.128 at
+# 6g external on the nipple), in mm. Nipple (6g): major 19.732-19.968, pitch diameter 18.854-18.994, root 18.128 at
 # most; ISO 4753: its end is chamfered (about 45 degrees) down to no more than the root diameter. Filter (6H): minor
-# (its crests) 18.376-18.676, pitch diameter 19.026-19.226. Modeled at the middle of each band: the filter's crests
-# (18.526) over the nipple's chamfered end (18.128) leave 0.20 mm all round (0.12 at the tightest, 0.27 at the
-# loosest); the pitch diameters, 0.207 mm (0.032 to 0.382).
+# (its crests) 18.376-18.676, pitch diameter 19.026-19.216. The nipple is modeled at its largest (maximum-material)
+# limits, the filter's crests at the middle of their band: the filter's crests (18.526) over the nipple's chamfered end
+# (18.128) leave 0.20 mm all round (0.12 at the tightest; more on a nipple with a smaller root); the pitch diameters'
+# middles are 0.197 mm apart (0.032 to 0.362).
 NIP_CREST_R = 0.019968 / 2  # the nipple's crests, drawn
 NIP_ROOT_R = 0.018128 / 2  # its root and its chamfered end: its collider
 BORE_R = 0.018526 / 2  # the filter's crests: the bore's colliders
 BORE_Z0, BORE_Z1 = 0.003, 0.0105  # the threaded bore, from the gasket's face (the filter's frame)
 LEAD = NIP_CREST_R - NIP_ROOT_R  # 0.92 mm: the chamfer, axially
-PD_CLEAR = (19.126 - 18.919) / 1000  # the pitch diameters' clearance (middles of the bands)
+PD_CLEAR = (19.121 - 18.924) / 1000  # the pitch diameters' clearance (middles of the bands)
 CASE_X0 = X_LAND + BOSS_L  # the crankcase's front face
 CASE = ((CASE_X0, CASE_X0 + 0.20), (Y_F - 0.17, Y_F + 0.17), (TOP, TOP + 0.24))  # its lower front (x, y, z spans)
 TUBE_R, TUBE_X = 0.016, 0.418  # the frame's lower cross tube (32 mm steel), across under the filter
@@ -258,7 +259,8 @@ def _engine():
 # through a 1/2 to 3/8-inch adapter. A free body: the ratchet (handle and head) is the floating base; the drive (the
 # adapter and cap) turns on it about the drive's axis, held by the pawl one way. Its frame: origin on the drive's axis
 # at the cup's inside floor, z out of the cup's back (the cup opens toward -z), the handle along -x.
-# Dimensions: P = the maker's published figure; R = the rig's part, measured when the rig is built.
+# Dimensions: P = the maker's published figure; R = set to fit the published 65 mm, 14-flute size (the cup's wall,
+# depth, teeth and weight are not published).
 CUP_IN = 0.0334  # R: the cup's wall inside (radius), 0.4 mm over the filter's flute crests (P: 65 mm, 14 flutes)
 CUP_R = CUP_IN + 0.003  # R: a 3 mm wall
 CUP_DEPTH = 0.013  # R: the wall's depth (the filter's fluted end is 14 mm long)
@@ -278,8 +280,7 @@ RATCHET_KG, ADAPTER_KG, CAP_KG = 1.361, 0.027, 0.060  # P: 3.000 lb; P: 0.06 lb;
 TOOL_MASS = RATCHET_KG + ADAPTER_KG + CAP_KG
 # the wrench lies flat on the bench, cup down, near the robot and right of the nipple's line, its handle toward the
 # robot's right: clear of the left arm, its hand and the filter on their way to the nipple and while they spin the
-# filter on (an FK sweep of the demo's recorded joint path keeps the arm about 6 cm off it), within both hands' reach
-# for its pick
+# filter on, and within both hands' reach for its pick
 TOOL_P0 = (0.120, -0.020, TOP + CUP_DEPTH + 0.0015)
 R_FLAT = _rot_z(math.radians(90.0))  # local x -> +y (the handle toward -y), local z up
 R_MOUNT = _rot_y(-90.0) @ R_FLAT  # on the filter, handle level: local z -> -x (the cup opens toward the engine)
@@ -347,9 +348,13 @@ def filter_axis(objects):
     return p, r[:, 2]
 
 
+TEETH_ON = 0.004  # m: the cap's teeth at least this far over the flutes (its floor within 8 mm of the filter's end)
+CAP_TILT = 8.0  # degrees
+
+
 def cap_seated(objects) -> bool:
-    """The cap down over the filter's fluted end: its axis within 3 mm and 5 degrees of the filter's, its floor
-    within 4 mm of the filter's end."""
+    """The cap on the filter's fluted end: its axis within 3 mm and CAP_TILT degrees of the filter's, its teeth at
+    least TEETH_ON over the flutes."""
     if CAP not in objects or KEY not in objects:
         return False
     fp, fa = filter_axis(objects)
@@ -357,8 +362,21 @@ def cap_seated(objects) -> bool:
     off = cp - (fp + fa * CAN_H)
     along = float(np.dot(off, fa))
     lateral = off - along * fa
-    return (float(np.linalg.norm(lateral)) < 0.003 and abs(along) < 0.004
-            and float(np.dot(cr[:, 2], fa)) > math.cos(math.radians(5.0)))
+    return (float(np.linalg.norm(lateral)) < 0.003 and -0.002 < along < TEETH_D - TEETH_ON
+            and float(np.dot(cr[:, 2], fa)) > math.cos(math.radians(CAP_TILT)))
+
+
+def _cap_fit(objects) -> str:
+    """OIL_DEBUG: the cap's fit on the filter (what cap_seated() judges) and who holds the wrench."""
+    if objects is None or CAP not in objects or KEY not in objects:
+        return ""
+    fp, fa = filter_axis(objects)
+    cp, cr = _pose(objects, CAP)
+    off = cp - (fp + fa * CAN_H)
+    along = float(np.dot(off, fa))
+    return " (%.1f mm off the axis, floor %.1f mm off the end, %.1f deg off square; held by %s)" % (
+        1000 * float(np.linalg.norm(off - along * fa)), 1000 * along,
+        math.degrees(math.acos(min(1.0, float(np.dot(cr[:, 2], fa))))), sorted(tool_holders(objects)))
 
 
 def _tool_shapes():
@@ -425,6 +443,10 @@ class _History:
         self.unheld = 0.0  # new ground past contact gained with neither a holding hand nor the held wrench (degrees)
         self.tool_last = None  # the cap's position at the last step, and whether it has since moved under STILL
         self.tool_still = False
+        self.cap_quat = None  # the cap's orientation at the last step
+        self.past_last = None  # the filter's angle past contact at the last step (degrees)
+        self.touched = False  # a gripper touching the wrench at the last step
+        self.release_h = 0.0  # how high its cup's floor was over where it lies on the bench when last let go (m)
 
 
 _H = _History()
@@ -447,10 +469,13 @@ def _update(objects):
             _H.budget[g] = 0.0
     if fm.state == fk.ENGAGED:
         past = math.degrees(fm.past)
+        prev = _H.past_last if _H.past_last is not None else past
         gain = max(past - _H.high, 0.0)
         if gain > 0:
-            if cap_seated(objects) and tool_holders(objects):
-                credit = gain  # turned by the wrench, held
+            cap_turn = (_twist(_H.cap_quat, objects[CAP].quat_xyzw, tighten)
+                        if CAP in objects and _H.cap_quat is not None else 0.0)
+            if cap_seated(objects) and tool_holders(objects) and cap_turn >= 0.8 * (past - prev):
+                credit = gain  # turned by the wrench (its cap turning with the filter), held
             else:
                 credit = min(gain, max([_H.budget[g] for g in holders] + [0.0]))
                 for g in holders:
@@ -459,8 +484,14 @@ def _update(objects):
             _H.high = past
     _H.prev_holders = now
     _H.last_quat = quats
+    _H.cap_quat = np.asarray(objects[CAP].quat_xyzw, float) if CAP in objects else None
+    _H.past_last = math.degrees(fm.past) if fm.state == fk.ENGAGED else None
     if CAP in objects:
         cp = np.asarray(objects[CAP].pos, float)
+        touched = bool(tool_touched(objects))
+        if _H.touched and not touched:
+            _H.release_h = float(cp[2] - TOOL_P0[2])
+        _H.touched = touched
         _H.tool_still = _H.tool_last is not None and float(np.linalg.norm(cp - _H.tool_last)) / 0.05 < STILL
         _H.tool_last = cp
 
@@ -495,16 +526,18 @@ STILL = 0.01  # m/s: at rest
 
 
 def wrench_put_away(objects) -> bool:
-    """The wrench put back: lying flat on the bench, cup down (its back within FLAT of straight up), its cup's center
-    within MARKS of its start marks and its floor within BENCH_REST of where it lies there, at rest (moving under
-    STILL between steps), and no gripper's collision hulls touching it."""
+    """The wrench put back: laid down (let go with its cup's floor within BENCH_REST of where it lies on the bench),
+    lying flat on the bench, cup down (its back within FLAT of straight up), its cup's center within MARKS of its
+    start marks and its floor within BENCH_REST of where it lies there, at rest (moving under STILL between steps),
+    and no gripper's collision hulls touching it."""
     if CAP not in objects or TOOL not in objects:
         return True
     cp, cr = _pose(objects, CAP)
     _, tr = _pose(objects, TOOL)
     near = (math.hypot(cp[0] - TOOL_P0[0], cp[1] - TOOL_P0[1]) <= MARKS and cp[2] <= TOOL_P0[2] + BENCH_REST)
     flat = float(tr[2, 2]) >= math.cos(math.radians(FLAT))
-    return near and flat and _H.tool_still and not tool_touched(objects)
+    return (near and flat and _H.tool_still and not tool_touched(objects)
+            and _H.release_h <= BENCH_REST)
 
 
 def _debug(msg):
@@ -542,14 +575,15 @@ def success(objects):
 
 def score(objects):
     """Angles are degrees past gasket contact. 0 if the filter was cross-threaded (its thread started with its axis more
-    than 2.6 degrees off the nipple's), is not on the thread (never started, or unscrewed off and not started again),
-    was ever more than 450 degrees past contact, ends under 90 past contact, or if more than 45 degrees of the new
-    ground it gained past contact was turned neither by a holding hand's own wrist roll (a gripper closed on the can,
-    both fingertips touching it, its roll about the filter's axis, at most 30 degrees ahead) nor by the wrench while its
-    cap was on the filter and a hand held it. Otherwise 0.25 for 90 to 180; 0.5 for 180 to 270, or if it was ever past
-    360; 1.0 for 270 to 360 (18 N*m and up) and never past 360. Capped at 0.5 while a gripper touches the filter, and
-    until the wrench is put back (see wrench_put_away). Touching is contact between the robot's own collision hulls and
-    the part, within 1 mm. Possible scores: 0, 0.25, 0.5, 1."""
+    than 2.6 degrees off the nipple's at any point of the starting turn), is not on the thread (never started, or
+    unscrewed off and not started again), was ever more than 450 degrees past contact, ends under 90 past contact, or if
+    more than 45 degrees of the new ground it gained past contact was turned neither by a holding hand's own wrist roll
+    (a gripper closed on the can, both fingertips touching it, its roll about the filter's axis, at most 30 degrees
+    ahead) nor by the wrench while a hand held it and its cap was on the filter (see cap_seated) turning with it.
+    Otherwise 0.25 for 90 to 180; 0.5 for 180 to 270, or 270 and up after it was ever past 360; 1.0 for 270 to 360 (18
+    N*m and up) and never past 360. Capped at 0.5 while a gripper touches the filter, and until the wrench is put back
+    (see wrench_put_away). Touching is contact between a gripper's own collision hulls (palm and both fingers) and the
+    part, within 1 mm. Possible scores: 0, 0.25, 0.5, 1."""
     return _score(objects)
 
 
@@ -1235,8 +1269,8 @@ def _wrench_phase(st):
             if st["wstop"] is not None:
                 return
             st["p"] = past_deg()
-            _debug("stroke: past %.1f deg, cap %s" % (st["p"], "seated" if _obj() is not None and cap_seated(_obj())
-                                                      else "not seated"))
+            _debug("stroke: past %.1f deg, cap %s%s" % (st["p"], "seated" if _obj() is not None and cap_seated(_obj())
+                                                        else "not seated", _cap_fit(_obj())))
             _, r_tool, _ = _tool_now()
             hd = r_tool @ np.array((-1.0, 0.0, 0.0))
             st["a0"] = math.degrees(math.atan2(hd[2], -hd[1]))
@@ -1341,13 +1375,13 @@ def demo():
     fingers closing along x so the filter cannot pivot between them), carries it out and across to the nipple and turns
     it to point at it, reads where its threaded bore is and which way it points and corrects both (five looks 8 mm out;
     up to three more 1.5 mm short of the nipple's end), and pushes it on. The bore clears the nipple's end by 0.2 mm and
-    the arm sways about a millimeter, so the base plate usually lands on the nipple's end first: pressing there, it
-    reads where the bore is each second and re-aims it until the bore drops over the end (up to ten looks; if never, it
-    backs off and tries again, twice at most). It spins the filter on clockwise (seen from its end) in wrist rolls of up
-    to 150 degrees, following the thread in and regripping between them, until a roll past gasket contact turns it under
-    8 degrees (the pads slipping: hand-tight); then it lets go and backs off. Reading where the wrench lies, it takes
-    the can again and turns the filter back up to a flute's width so the cap's teeth will meet the gaps between its
-    flutes at a handle angle the right arm reaches. The right arm waits at home.
+    the arm's position wanders by about a millimeter in the sim, so the base plate usually lands on the nipple's end
+    first: pressing there, it reads where the bore is each second and re-aims it until the bore drops over the end (up
+    to ten looks; if never, it backs off and tries again, twice at most). It spins the filter on clockwise (seen from
+    its end) in wrist rolls of up to 150 degrees, following the thread in and regripping between them, until a roll past
+    gasket contact turns it under 8 degrees (the pads slipping: hand-tight); then it lets go and backs off. Reading
+    where the wrench lies, it takes the can again and turns the filter back up to a flute's width so the cap's teeth
+    will meet the gaps between its flutes at a handle angle the right arm reaches. The right arm waits at home.
 
     Both arms: take the wrench where it lies flat, top-down, the left across the ratchet's head and the right on the
     grip 55 cm out (each hand checks it is holding, and tries once more if not: the left 8 mm lower, the right 4 mm

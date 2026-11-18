@@ -19,9 +19,10 @@ thread's crests (the internal minor diameter), 0.2 mm larger in radius. The flan
   at `d0` from the land, where the bore's first thread meets the nipple's first full thread (a stop on the axial
   slide); pushing harder does not take it further.
 - Started: turned clockwise (seen from its closed end) by START_TURN while pressed on the crests (within START_GIVE of
-  the stop). The catch is then judged once, from the measured tilt against the thread's cross-threading angle
-  (`Thread.cross_tilt`: the tilt at which the bore's first thread lands half a pitch, plus the flanks' play, out
-  across the pitch diameter, so its far side drops into the wrong groove). Within it the thread catches: from then on
+  the stop). The catch is then judged once, from the most its axis was off the nipple's while it was turned those
+  20 degrees, against the thread's cross-threading angle (`Thread.cross_tilt`: the tilt at which the bore's first
+  thread lands half a pitch, plus the flanks' play, out across the pitch diameter, so its far side drops into the
+  wrong groove). Within it the thread catches: from then on
   the axial slide is driven to pitch x turns (the helix), and the side slides and tilts are held by round stops (no
   drive) at the engaged flanks' play, or at the offset and tilt it caught with if those are larger, so nothing pulls
   it in; nothing squares it but contact, the gasket meeting the land. Tilted more, it is cross-threaded: it jams where
@@ -203,6 +204,7 @@ class FilterModel:
     s_last: float | None = None
     turned: float = 0.0
     push: float = 0.0  # tightening turn against the crests (before the thread catches)
+    push_tilt: float = 0.0  # the most its axis was off the nipple's while that turn was made (rad)
     anchor: float | None = None  # the spin joint's stick-slip target
     came_off: bool = False  # unscrewed off the thread after it caught at some point (it may have been started again)
     crossed_tilt: float = 0.0
@@ -249,27 +251,29 @@ class FilterModel:
                   and out >= th.d0 - 0.0005)
             self.on = on
             if not on:
-                self.push = 0.0
+                self.push, self.push_tilt = 0.0, 0.0
                 return free
             out_cmd = free["f_out"]
             free["f_out"] = (out_cmd[0], 0.0, 0.0, 0.01, 1000.0, (th.d0, 0.25))  # the crests: no closer than d0
             if out <= th.d0 + START_GIVE:  # pressed on the crests
                 self.push = max(self.push + tighten, 0.0)
+                self.push_tilt = max(self.push_tilt, tilt) if self.push > 0.0 else 0.0
             else:
-                self.push = 0.0
+                self.push, self.push_tilt = 0.0, 0.0
             if self.push >= START_TURN:
-                if tilt <= th.cross_tilt:
+                if self.push_tilt <= th.cross_tilt:
                     self.state, self.turned, self.anchor = ENGAGED, 0.0, s
                     self.tilt0, self.lat0 = tilt, lat
                 else:
-                    self.state, self.crossed_tilt = CROSSED, tilt
+                    self.state, self.crossed_tilt = CROSSED, self.push_tilt
                     self.lock = dict(J)
                     return {n: (J[n], 2000.0, 0.0, 5.0, 1000.0, (J[n] - 1e-3, J[n] + 1e-3)) for n in CHAIN}
             return free
         # engaged
         self.turned += tighten
         if self.turned < -math.radians(10.0):  # unscrewed past where the thread caught: loose again (it can be
-            self.state, self.came_off, self.turned, self.push = FREE, True, 0.0, 0.0  # started again)
+            #                                    started again)
+            self.state, self.came_off, self.turned, self.push, self.push_tilt = FREE, True, 0.0, 0.0, 0.0
             return free
         past = self.turned - self.seat
         self.peak_past = max(self.peak_past, past)

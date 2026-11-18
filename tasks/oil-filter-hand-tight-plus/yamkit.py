@@ -524,7 +524,7 @@ def _set_drive(art, j: int, target: float, stiffness: float, effort: float, damp
 
 
 def _set_limits(art, j: int, lo: float, hi: float) -> None:
-    """Narrow or restore a joint's limits in the running sim (from the hood-prop-rod task's Latch lock):
+    """Narrow or restore a joint's limits in the running sim:
     a hard stop holds where a drive does not."""
     import torch
 
