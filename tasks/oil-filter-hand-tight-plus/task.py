@@ -444,6 +444,9 @@ class _History:
         self.tool_last = None  # the cap's position at the last step, and whether it has since moved under STILL
         self.tool_still = False
         self.held = False  # a gripper holding the wrench at the last step
+        self.touched = False  # a gripper touching it at the last step
+        self.grasped = False  # touched without a break since a gripper held it
+        self.was_grasped = False
         self.release_h = 0.0  # how high its cup's floor was over where it lies on the bench when last let go (m)
 
 
@@ -485,9 +488,15 @@ def _update(objects):
     if CAP in objects:
         cp = np.asarray(objects[CAP].pos, float)
         held = bool(tool_holders(objects))
-        if _H.held and not held:
+        touched = held or bool(tool_touched(objects))
+        _H.grasped = touched and (_H.grasped or held)  # in hand since a hold, without a break in contact
+        if _H.touched and not touched and _H.was_grasped:  # let go: where from (a touch alone never counts)
             _H.release_h = float(cp[2] - TOOL_P0[2])
-        _H.held = held
+            _debug("wrench let go %.1f mm over its rest" % (1000 * _H.release_h))
+        if held != _H.held:
+            _debug("wrench %s, its cup %.1f mm over its rest" % ("held" if held else "no longer held",
+                                                                 1000 * float(cp[2] - TOOL_P0[2])))
+        _H.held, _H.touched, _H.was_grasped = held, touched, _H.grasped
         _H.tool_still = _H.tool_last is not None and float(np.linalg.norm(cp - _H.tool_last)) / 0.05 < STILL
         _H.tool_last = cp
 
@@ -1314,7 +1323,8 @@ def _wrench_phase(st):
             if sn > 1e-6:
                 st["trfix"] = axis_angle_matrix(c / sn, 0.5 * math.atan2(sn, float(np.dot(have, want)))) @ st["trfix"]
             along = float(np.dot(cp - (fp + fa * CAN_H), fa))  # its floor off the filter's end: push it back home
-            st["tfix"] = st["tfix"] - float(np.clip(along, -0.004, 0.004)) * fa
+            if along > 0.0005:  # (home within half a millimeter: leave the aim alone)
+                st["tfix"] = st["tfix"] - float(min(along, 0.004)) * fa
 
         for k in range(1, sub + 1):
             def spec(k=k):
