@@ -239,9 +239,9 @@ whole. Put the tray back empty.
 
 - Every file in this folder is the task's own code and text; there are no third-party files in it. The remover's drawn
   body and button cap are built at start-up in `task.py` (trimesh convex hulls of corner spheres).
-- The robot (the YAM model, its collision hulls and USD) and the simulator are loaded at run time from the competition
-  environment (yam-isaac-lab-arena revision 0059d02a, `yam_arena/assets/yam`) and are not included here. The arm and
-  gripper shapes the scorer checks are sampled from, or boxes fitted to, the robot's collision hulls from the
-  competition environment at run time (`yamgeom.py`, `guardkit.py`); nothing derived from them is stored in this
-  folder. Their terms are the environment's: the YAM model is I2RT Robotics' (MIT License), and the environment's
-  README states that it has no license yet.
+- The robot model and its collision hulls (the YAM model and its USD) and the simulator load at run time from the
+  competition environment (yam-isaac-lab-arena revision 0059d02a, `yam_arena/assets/yam`) and are not redistributed
+  here. The arm and gripper shapes the scorer checks, and the fingertip shape the demo aims the press with, are sampled
+  from, or boxes fitted to, those collision hulls at run time (`yamgeom.py`, `guardkit.py`); nothing derived from them
+  is stored in this folder. Their terms are the environment's: the YAM model is I2RT Robotics' (MIT License), and the
+  environment's README states that it has no license yet.

@@ -43,7 +43,6 @@ _DEBUG = int(os.environ.get("SCALPEL_DEBUG", "0") or 0)
 _TRACE = os.environ.get("SCALPEL_TRACE", "")  # print telemetry every N control steps (0: off)
 
 # -- looks --------------------------------------------------------------------------------------------------------------
-STEEL = kit.Look((0.72, 0.73, 0.75), 0.35, metallic=0.8)  # stainless
 HANDLE_LOOK = kit.Look((0.88, 0.89, 0.91), 0.25, metallic=0.35)  # the polished handle, drawn bright so it shows on video
 DISH_STEEL = kit.Look((0.78, 0.79, 0.81), 0.30, metallic=0.8)
 BLADE_LOOK = kit.Look((0.85, 0.86, 0.88), 0.15, metallic=0.9)  # the blade (bright steel)
@@ -856,8 +855,8 @@ def remover_top(y_local: float, past: float = 0.0) -> np.ndarray:
 
 LEFT_LEAN = math.radians(float(os.environ.get("SCALPEL_LEFT_LEAN", "25")))
 # The left hand: fingers down, leaned back toward the robot by 25 degrees about y, closing along y. The closed
-# fingertips' collision hulls then reach their lowest 3.5 mm (the button's height) in a patch 13.0 mm along x and
-# 8.6 mm along y, inside the 20 x 14 mm button.
+# fingertips' collision hulls then reach their lowest 3.5 mm (the button's height) in a patch inside the 20 x 14 mm
+# button.
 DOWN_Y = frame((math.sin(LEFT_LEAN), 0, -math.cos(LEFT_LEAN)), (0, -1, 0))
 GRIP_R = frame((0, 0, -1), (1, 0, 0))  # the left hand taking the remover's body: straight down, closing across its depth
 R_GRIP_Y = 0.018  # m: the fingers' middle this far toward the far end from the remover's middle (clear of the button)

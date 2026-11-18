@@ -172,9 +172,9 @@ CONTACT = 0.002  # m: touching: the shapes within 2 mm (the solver's resting gap
 @functools.lru_cache(maxsize=1)
 def _hand_fit() -> tuple:
     """(palm, ((side, (body, pad, tip, carriage)), ...)) with the gripper closed: the palm is the box around the
-    gripper link's hull points (102 x 65 x 74 mm); each finger's body, pad and tip hold its hull points in the
-    FINGER_SLABS on its own side of the tool point (24 x 68 x 46, 10 x 40 x 18 and 6 x 26 x 16 mm), and its carriage
-    the part that reaches across the tool point near the palm (48 x 26 x 20 mm), so every hull point is in a box."""
+    gripper link's hull points; each finger's body, pad and tip hold its hull points in the FINGER_SLABS on its own
+    side of the tool point, and its carriage the part that reaches across the tool point near the palm, so every hull
+    point is in a box. Fitted when first used, from the hulls the environment loads; no fitted number is stored."""
     import yamgeom as yg
     from yam_arena.constants import TCP_OFFSET
 
