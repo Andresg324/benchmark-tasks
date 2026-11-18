@@ -68,7 +68,7 @@ seconds). If it never does, the hand backs off, lines it up again and retries (t
 clockwise (seen from its end) in wrist rolls of up to 150 degrees, following the thread in, regripping between rolls.
 Once a roll past gasket contact turns the filter less than 8 degrees (the pads slipping: hand-tight) it lets go and
 backs off. Then, reading where the wrench lies, it takes the can again and turns the filter back up to a flute's
-width (12.7 degrees in this run), so that the cap's teeth will meet the gaps between the filter's flutes at a handle
+width (11.5 degrees in this run), so that the cap's teeth will meet the gaps between the filter's flutes at a handle
 angle the right arm reaches. The right arm waits at home meanwhile.
 
 With the wrench. Both hands take the wrench top-down where it lies flat: the left across the ratchet's head (on the
@@ -86,8 +86,9 @@ and they stop once it is 270 degrees past contact (where the gasket takes 18 N·
 less than 2 degrees. The right hand goes back to the grip it carried with, they pull the cup off, turn the wrench
 back cup down, lay it flat on the bench, let go, lift clear and go home.
 
-Result on this version: 1.0 in DEMO_STEPS steps (DEMO_S s): the thread caught 0.3 degrees off square; hand-tight 9.5
-degrees past contact; the wrench strokes took it to 270.9 degrees past contact (18.1 N·m).
+Result on this version: 1.0 in 2,926 steps (146 s): the thread caught 0.3 degrees off square; hand-tight 8.3
+degrees past contact, turned back 11.5 degrees for the cap; the wrench strokes took it to 259.6 degrees past contact
+(17.3 N·m).
 
 ## Scoring
 
@@ -143,9 +144,9 @@ and turn it clockwise: it must click before the can moves; if the can moves firs
 
 ## Runtime and seeds
 
-- Demo: 1.0 in DEMO_STEPS steps (DEMO_S s; the run ends 1 s after full credit is held).
+- Demo: 1.0 in 2,926 steps (146 s; the run ends 1 s after full credit is held).
 - Model run limit: 3,000 steps (2.5 minutes at 20 Hz).
-- Dream-1: 0 in 3,000 steps on this task.py.
+- Dream-1: pending on this task.py.
 - Seed 0, one fixed layout (`object_jitter=0`).
 
 ## Fidelity
@@ -194,7 +195,7 @@ no gain can come from forcing it. Before
 gasket contact it runs on with 0.3 N·m; past contact the squeezed gasket holds it where it is left and gives way only
 at the gasket's torque, either way (a stiff hold, 2,000 N·m/rad, whose drive is capped at that torque: stick-slip
 friction, not a spring). A hard stop at 1.5 turns past contact is the gasket squeezed flat. In the demo the hand,
-pinching at about 20 N a finger on the can's 33 mm radius, stopped turning it 9.5 degrees past contact (about
+pinching at about 20 N a finger on the can's 33 mm radius, stopped turning it 8.3 degrees past contact (about
 0.6 N·m); the rest needs the wrench, as on a real engine.
 
 The wrench is a free body: the ratchet (handle and head) floats, and the drive (adapter and cap) turns on it about
@@ -223,8 +224,8 @@ joints 4-6 (3 N·m rated, 7 N·m peak); the sim uses the peak limits (i2rt's yam
 handle alone, 0.55 m out: at 18 N·m (plus the demo's 1 N·m margin) it pushes about 35 N down the swing, while the left
 hand, on the head, only presses the cup on (8 N). A Jacobian study of the same ratchet at this reach puts each
 hand's push at 30-45 N at peak torque and well under that at rated torque, so the last strokes, a few seconds each,
-run the right arm above its rated torque, within its peak. In the demo the strokes took the filter to 270.9 degrees
-past contact (18.1 N·m). Pushing down, the
+run the right arm above its rated torque, within its peak. In the demo the strokes took the filter to 259.6 degrees
+past contact (17.3 N·m). Pushing down, the
 hand bears on its fingers, and the arm's own weight helps.
 
 No oil, gasket deformation or leak is simulated; the scorer reads the angle, and a real trial reads the same angle from
