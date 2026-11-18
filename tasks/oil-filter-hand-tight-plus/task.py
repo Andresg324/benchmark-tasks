@@ -481,6 +481,10 @@ def _update(objects):
                 for g in holders:
                     _H.budget[g] = max(_H.budget[g] - credit, 0.0)
             _H.unheld += gain - credit
+            if gain - credit > 0.05:
+                _debug("unheld %.2f deg (total %.1f) at %.1f deg past: cap seated %s, holders %s, cap turned %.2f of "
+                       "%.2f%s" % (gain - credit, _H.unheld, past, cap_seated(objects), sorted(tool_holders(objects)),
+                                   cap_turn, past - prev, _cap_fit(objects)))
             _H.high = past
     _H.prev_holders = now
     _H.last_quat = quats
@@ -942,7 +946,7 @@ ALIGN_REACH = (-4.0, 25.0)  # the handle's angles both hands reach carrying it (
 STROKE_REACH = 4.0  # the handle at or below this before the right hand takes its top-down stroke grip
 SHARE_R = 1.0  # the right hand swings the handle; the left, on the head, keeps the cap pressed on
 MARGIN = 1.0  # N*m over what the gasket takes
-LEFT_PRESS = 8.0  # N: the left hand presses the cap onto the filter (toward the engine) while the right pushes
+LEFT_PRESS = 20.0  # N: the left hand presses the cap onto the filter (toward the engine) while the right pushes
 DONE_PAST, AIM_PAST = 270.0, 282.0
 WRENCH_MAX = 26
 WRENCH_STALL = 2.0
@@ -1317,7 +1321,7 @@ def _wrench_phase(st):
             if sn > 1e-6:
                 st["trfix"] = axis_angle_matrix(c / sn, 0.5 * math.atan2(sn, float(np.dot(have, want)))) @ st["trfix"]
             along = float(np.dot(cp - (fp + fa * CAN_H), fa))  # its floor off the filter's end: push it back home
-            st["tfix"] = st["tfix"] - 0.5 * float(np.clip(along, -0.003, 0.003)) * fa
+            st["tfix"] = st["tfix"] - float(np.clip(along, -0.004, 0.004)) * fa
 
         for k in range(1, sub + 1):
             def spec(k=k):
@@ -1442,7 +1446,7 @@ def demo():
     down and up while pressed so the teeth ride round to a gap (four tries at most); if it went on with the handle high,
     a first stroke in the carrying grip takes the handle down to STROKE_REACH. The right hand moves to a top-down grip
     on the grip. Strokes: the handle swung down from 6 degrees above level to 10 below by the right hand, pushing what
-    the gasket takes (plus 1 N*m), aimed past the handle by its arm's give, while the left presses the cap on (8 N);
+    the gasket takes (plus 1 N*m), aimed past the handle by its arm's give, while the left presses the cap on (20 N);
     then swung back up with the ratchet clicking. Each stroke is sized from the filter's angle when it starts; they stop
     once it is 270 degrees past contact (18 N*m), after two strokes that turn it under 2 degrees, or after WRENCH_MAX
     strokes. The right hand goes back to the grip it carried with, the cup is pulled straight off the flutes along the

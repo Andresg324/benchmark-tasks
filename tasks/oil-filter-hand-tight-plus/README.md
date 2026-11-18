@@ -40,7 +40,7 @@ Scripted demo (reaches full score):
 
     inspect-robots run --embodiment yam_arena --policy yam_scripted -E task=tasks/oil-filter-hand-tight-plus/task.py \
       -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-      --instruction "Fit the new oil filter." --scorer task_score --max-steps 4200
+      --instruction "Fit the new oil filter." --scorer task_score --max-steps 5000
 
 Model run (Dream-1): the same command with `--policy dream`.
 
@@ -76,7 +76,7 @@ for this), read where the cap is, which way it points and where its teeth sit ag
 rocking it as a mechanic seats a cap wrench: the handle swung 3 degrees either way and the cup moved round a 0.6 mm
 circle, so the teeth and the rim find their way over the flutes. If the cup is not on (its teeth on the flutes' ends), they back it off, look again and push again while turning the handle down, up and down again, so the teeth ride round the flutes' ends to a gap (four tries at most). If the cup went on with the handle high, the hands make a first stroke in the carrying grip, down to where the right hand reaches its top-down grip. The right hand moves to a top-down grip on the grip. Then strokes: the right
 hand swings the handle down from 6 degrees above level to 10 below, pushing what the gasket takes (plus 1 N·m), aimed past the handle by its
-arm's give (J K^-1 J^T, the arm's joint stiffness), while the left presses the cup on (8 N toward the engine); then
+arm's give (J K^-1 J^T, the arm's joint stiffness), while the left presses the cup on (20 N toward the engine), and at each stroke's start both hands re-aim from where the cap sits, squaring it and pushing it home; then
 it swings the handle back up while the ratchet clicks. Each stroke is sized from the filter's angle when it starts,
 and they stop once it is 270 degrees past contact (where the gasket takes 18 N·m), after two strokes that turn it
 less than 2 degrees, or after 26 strokes. The right hand goes back to the grip it carried with; they pull the cup
@@ -139,7 +139,7 @@ the hands letting go. Then put the build's 1/4-inch-drive click torque wrench, s
 ## Runtime and seeds
 
 - Demo: 1.0 in PENDING_STEPS steps (PENDING_S s; the run ends 1 s after full credit is held).
-- Model run limit: 4,200 steps (3.5 minutes at 20 Hz). The demo needs about PENDING_STEPS steps
+- Model run limit: 5,000 steps (about 4.2 minutes at 20 Hz). The demo needs about PENDING_STEPS steps
   (threading the filter on, spinning it on three turns, the wrench strokes and putting the wrench back).
 - Dream-1: pending on this task.py.
 - Seed 0, one fixed layout (`object_jitter=0`).
@@ -218,7 +218,7 @@ ratchet's 120 positions), against a light drag. Dimensions (P: the maker's publi
 The arms' strength. The YAM's servos are Damiao DM-J4340 on joints 1-3 (9 N·m rated, 27 N·m peak) and DM-J4310 on
 joints 4-6 (3 N·m rated, 7 N·m peak); the sim uses the peak limits (i2rt's yam_v1 config). The right hand swings the
 handle alone, 0.55 m out: at 18 N·m (plus the demo's 1 N·m margin) it pushes about 35 N down the swing, while the left
-hand, on the head, only presses the cup on (8 N). Through each arm's Jacobian at the demo's hand positions (yam_v1 URDF, peak joint torques), each hand can push 30-45 N along the swing and well under that at rated torque, so the last strokes, a few seconds each,
+hand, on the head, only presses the cup on (20 N). Through each arm's Jacobian at the demo's hand positions (yam_v1 URDF, peak joint torques), each hand can push 30-45 N along the swing and well under that at rated torque, so the last strokes, a few seconds each,
 run the right arm above its rated torque, within its peak. In the demo the strokes took the filter to PENDING_PAST
 degrees past contact (PENDING_NM N·m by the gasket's law). Pushing down, the hand bears on its fingers, and the arm's
 own weight helps.
