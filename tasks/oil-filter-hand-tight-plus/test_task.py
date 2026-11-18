@@ -407,6 +407,24 @@ for k in range(6):  # thrown onto its marks: still sliding
 case("cheat: thrown onto its marks, still sliding: 0.5 while it moves", t.sc, 0.5)
 case("  once at rest there, flat, cup down: 1.0", t.home(), 1.0)
 
+# the demo's wrench carry: every hand pose of the lift and the quarter turn is within its arm's reach
+from yam_arena import ik as _ik  # noqa: E402
+from yam_arena.station import BASES as _BASES  # noqa: E402
+_p0 = np.array(m.TOOL_P0) + (0.0, 0.0, m.LIFT)
+_worst = 0.0
+for _k in range(m.TURN_STEPS + 1):
+    _pv = _p0 + m.R_FLAT @ np.array((0.0, 0.0, m.HANDLE_Z))
+    _rr = m._rot_y(-90.0 * _k / m.TURN_STEPS)
+    _pk = _pv + _rr @ (_p0 - _pv) + np.array(((m.TURN_X - _p0[0]) * _k / m.TURN_STEPS,
+                                             (m.Y_F - _p0[1]) * _k / m.TURN_STEPS, 0.0))
+    for _s in ("left", "right"):
+        _tcp, _rot = m._hand_on_tool(_s, _pk, _rr @ m.R_FLAT)
+        _, _pe, _re = _ik.solve(np.asarray(_tcp, float), _ik.matrix_to_quat_xyzw(_rot), None,
+                                base_pos=np.asarray(_BASES[_s]), iters=300)
+        _worst = max(_worst, 1000 * _pe + math.degrees(_re))
+case("demo: both hands' poses through the wrench's lift and quarter turn are reachable (IK within 1 mm + 1 degree)",
+     _worst < 1.0, True)
+
 
 def test_all():
     """pytest: every case above passed."""

@@ -73,7 +73,7 @@ angle the right arm reaches. The right arm waits at home meanwhile.
 
 With the wrench. Both hands take the wrench top-down where it lies flat: the left across the ratchet's head (on the
 drive's axis), the right on the round grip 55 cm out. Each hand checks that it is holding, and if not opens and tries
-once more 8 mm lower. They lift it 7 cm and turn it a quarter turn about the handle while bringing it across, so the
+once more 8 mm lower. They lift it 7 cm and turn it a quarter turn about the handle while carrying it out toward the engine and across, so the
 cup faces the engine. They hold it 3 cm in front of the filter's end with the handle at an angle the right arm can
 reach that lines the cap's teeth up with the gaps between the filter's flutes (the left hand set the filter's angle
 for this), read where the cap is and which way it points: five looks 3 cm out square it to the filter and bring it

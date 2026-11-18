@@ -916,6 +916,8 @@ PUSH_STEPS, PUSH_CIRCLE, PUSH_ROCK = 9, 0.0006, 3.0  # the push: rocked over 8 s
 CAP_FINE, CAP_FINE_MM, CAP_FINE_DEG, CAP_TRIES = 8, 0.3, 0.4, 3  # close looks at the cap (its rim to 0.3 mm off the
 #                                                                   axis and square to 0.4 degrees), tries at pushing
 LIFT = 0.07  # the wrench lifted this far before it is turned (the left arm's reach)
+TURN_X = 0.30  # the drive's axis carried out to this x while the cup turns to face the engine: both hands' grips stay
+#               within the arms' reach (nearer the bases, a hand pointing at the engine would need its wrist behind them)
 TAKE_UP = 4.0  # degrees of the stroke taken up before the filter turns (the flutes' play and the hold's give)
 W_SHARE = {"left": 0.5, "right": 0.5}  # each hand's share of the wrench's weight while carrying it
 
@@ -1010,7 +1012,8 @@ def _wrench_phase(st):
     add("wrench: over the handle", 2.0, at_tool(lambda s: FINGER_OPEN, 0.06))
     add("wrench: onto the handle", 1.4, at_tool(lambda s: FINGER_OPEN))
     add("wrench: onto the handle", 0.3, at_tool(lambda s: FINGER_OPEN))
-    add("wrench: grip the handle", 0.8, at_tool(fgrip))
+    add("wrench: grip the handle", 1.2, at_tool(fgrip))
+    add("wrench: grip the handle", 0.3, at_tool(fgrip))  # the fingers close at most their full travel a second
 
     def check():  # is each hand on it? (read once, when this step starts)
         o = _obj()
@@ -1035,7 +1038,7 @@ def _wrench_phase(st):
     missed = (lambda: bool(st.get("regrip", True)))
     add("wrench: open the hand that missed", 0.5, again(FINGER_OPEN, 0.01), missed)
     add("wrench: lower (the left) or raise (the right)", 0.6, again(FINGER_OPEN, -0.008), missed)
-    add("wrench: grip again", 0.8, again(None, -0.008), missed)
+    add("wrench: grip again", 1.5, again(None, -0.008), missed)
 
     def carried(p, r):
         _CMD["tool"] = (p, r)
@@ -1047,12 +1050,13 @@ def _wrench_phase(st):
         st["held0"] = (p + np.array((0.0, 0.0, LIFT)), r)
         return carried(*st["held0"])
     add("wrench: lift", 1.4, lifted)
-    for k in range(1, TURN_STEPS + 1):  # a quarter turn about the handle: the cup from facing down to the engine
+    for k in range(1, TURN_STEPS + 1):  # a quarter turn about the handle: the cup from facing down to the engine,
+        #                                 carried out toward it and over to the filter's side as it turns
         def turn(k=k):
             p0, r0 = st["held0"]
             pivot = p0 + r0 @ np.array((0.0, 0.0, HANDLE_Z))
             rr = _rot_y(-90.0 * k / TURN_STEPS)
-            shift = np.array((0.0, (Y_F - p0[1]) * k / TURN_STEPS, 0.0))  # and over to the filter's side
+            shift = np.array(((TURN_X - p0[0]) * k / TURN_STEPS, (Y_F - p0[1]) * k / TURN_STEPS, 0.0))  # out, over
             return carried(pivot + rr @ (p0 - pivot) + shift, rr @ r0)
         add("wrench: turn the cup to the filter", 0.8, turn)
 
@@ -1348,7 +1352,7 @@ def demo():
 
     Both arms: take the wrench where it lies flat, top-down, the left across the ratchet's head and the right on the
     grip 55 cm out (each hand checks it is holding, and tries once more if not: the left 8 mm lower, the right 4 mm
-    higher), lift it 7 cm and turn it a quarter turn about the handle while bringing it across, so the cup faces the
+    higher), lift it 7 cm and turn it a quarter turn about the handle while carrying it out toward the engine and across, so the cup faces the
     engine, hold it in front of the filter with the handle at an angle the right arm reaches that lines the cap's teeth
     up with the filter's flutes, read where the cap is and which way it points (five looks 3 cm out that square it and
     bring it to where it is sent, then up to eight with its teeth 3.5 mm short of the flutes that square it and center
