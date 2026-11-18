@@ -340,6 +340,85 @@ def test_cord_touch():
     check(float(m._H.cord), 1.0, "a wrist link down on the cord: touching it")
 
 
+def test_shapes_hold_the_hulls():
+    """The scorer's gripper boxes (guardkit, closed) and forearm and wrist boxes (task.py link_boxes) are fitted at run
+    time to the robot's collision hulls from the environment: every hull point lies in one of them."""
+    import yamgeom as yg
+    from yam_arena.constants import TCP_OFFSET
+
+    def held(p, boxes):
+        inside = np.zeros(len(p), bool)
+        for bx in boxes:
+            inside |= np.all(np.abs(p - np.asarray(bx.center)) <= np.asarray(bx.size) / 2 + 1e-9, axis=1)
+        return int((~inside).sum())
+
+    hand = np.vstack([yg.points("gripper") - np.asarray(TCP_OFFSET), yg.tcp_points("tip_left"), yg.tcp_points("tip_right")])
+    out = held(hand, m.gk.hand_boxes(0.0)) + sum(held(yg.points(ln), bx) for ln, bx in m.link_boxes().items())
+    check(float(out == 0), 1.0, f"collision-hull points outside the scorer's boxes: {out}")
+
+
+def _hull_lid_on(seg_a, seg_b, r, link):
+    """A link brought down onto a cylinder of radius r along seg_a..seg_b with a face of its collision hulls that
+    bridges a pocket of its visual mesh (yamgeom.proud_points) facing down, turned about the vertical, until its hulls
+    reach 0.2 mm into the cylinder: the pose (pos, quat_xyzw) that keeps its visual mesh farthest clear of the
+    cylinder, that clearance and the hulls' own gap (m, negative: into it)."""
+    import trimesh
+    import yamgeom as yg
+    from scipy.spatial.transform import Rotation
+
+    a, b = np.asarray(seg_a, float), np.asarray(seg_b, float)
+    mid, u, L = (a + b) / 2, (b - a) / np.linalg.norm(b - a), float(np.linalg.norm(b - a))
+
+    def gap(w):  # the points' least distance from the cylinder's surface
+        t = np.clip((w - a) @ u, 0.0, L)
+        return float(np.linalg.norm(w - (a + t[:, None] * u), axis=1).min() - r)
+
+    hull = yg.points(link)
+
+    def drop(w):  # how far the points can come down before the lowest meets the cylinder's top (m; inf: none over it)
+        t = (w - a) @ u
+        side = w - (a + np.clip(t, 0.0, L)[:, None] * u)
+        h = np.hypot(side[:, 0] * u[1] - side[:, 1] * u[0], 0.0)  # horizontal distance across the axis
+        over = (t >= 0.0) & (t <= L) & (h < r)
+        return float((side[over, 2] - np.sqrt(r * r - h[over] ** 2)).min()) if over.any() else math.inf
+
+    vis, _ = trimesh.sample.sample_surface_even(trimesh.Trimesh(yg.visual_vertices(link), yg._visual_faces(link)),
+                                                200000, seed=0)
+    best = None
+    for q, n, _ in yg.proud_points(link):
+        for yaw in np.linspace(0.0, 2 * math.pi, 24, endpoint=False):
+            R = Rotation.from_euler("z", yaw).as_matrix() @ yg.turn_to(n, (0.0, 0.0, -1.0))
+            pos = mid + np.array([0.0, 0.0, r + 0.01]) - R @ q  # the face 1 cm over the cylinder's top ...
+            d = drop(hull @ R.T + pos)
+            if not math.isfinite(d):
+                continue
+            pos = pos - np.array([0.0, 0.0, d + 0.0002])  # ... then down until the hulls reach 0.2 mm into it
+            clear = gap(vis @ R.T + pos)
+            if best is None or clear > best[2]:
+                best = (pos, Rotation.from_matrix(R).as_quat(), clear)
+    pos, quat, clear = best
+    R = Rotation.from_quat(quat).as_matrix()
+    return pos, quat, clear, gap(yg.points(link) @ R.T + pos)
+
+
+def test_hull_touch_on_cord():
+    """Anti-gaming: the scorer's arm shapes come from the robot's collision hulls, not its visual meshes. A forearm
+    pressing 0.2 mm onto the cord with hull faces that bridge a pocket of its visual mesh is a touch, though the visual
+    mesh stays a millimetre or more clear of the cord."""
+    for link in ("link3",):  # the forearm: its hulls bridge pockets wide enough for the 3 mm cord
+        t = Trial()
+        t.rest(2)
+        eye = m.to_world(t.j, m.EYE)
+        a = (float(eye[0]), float(eye[1]), m.TOP + m.Z_MID)
+        b = (float(m.PULLEY[0]), float(m.PULLEY[1]), m.TOP + m.Z_MID)
+        pos, quat, clear, into = _hull_lid_on(a, b, m.CORD_R, link)
+        t.extra = {f"right_{link}": st(tuple(pos), q=tuple(quat))}
+        t.step()
+        check(float(m._H.cord and clear >= 0.001 and -0.0003 <= into <= 0.0), 1.0,
+              f"{link}'s collision hulls {-into * 1000:.2f} mm into the cord, its visual mesh {clear * 1000:.1f} mm "
+              f"clear of it: touching")
+
+
 def test_demo_plan_offline():
     """The demo's plan from the real start (the board assumed to follow the pads exactly): carried square from where it
     lies onto the pin (carry_path), pivoted about the pin from that braced pose until the curve meets the bearing (the

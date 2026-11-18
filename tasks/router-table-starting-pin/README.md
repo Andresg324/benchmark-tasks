@@ -52,10 +52,11 @@ Coordinates in cm from the midpoint between the two arm bases, x forward, y to t
 | Starting pin | steel, 6.4 mm across (0.25 in), 3 cm tall, in the plate | x 33.75, y 1 |
 | Pin guard | clear polycarbonate shield 10 cm across, 6.4 mm thick, its underside 3.8 cm (1-1/2 in) above the table, centered over the bit, on an aluminum arm (3 x 0.8 cm) from an aluminum post (2.5 x 4 cm, 5.3 cm tall); after the Bench Dog ProGuard (1-1/2 in stock clearance under the guard); solid | shield over the bit; post at x 43, y 6 |
 | Board | cherry, 25 x 15 cm, 1.27 cm thick (0.5 in), 250 g; one long side band-sawn to a 30 cm radius (2.7 cm of bow), toward the bit; a free body on the table's planed wooden top, mu 0.25 sliding / 0.3 at rest; a screw eye in its trailing end face at mid-thickness, 1 cm in from the curve | square to the table: curve's ends at (29.5, -19.4) and (29.5, 5.6); back corners (17.2, -19.4) and (17.2, 5.6); 2.2 cm off the pin, 3.4 cm from the bit's axis |
-| Drag | a cord from the board's screw eye, level, round a first pulley 13 cm past the table's right end, through a cam cleat and over a second pulley clamped at the bench's right edge, down to a 0.300 kg weight hanging free below that edge: 3.0 N toward the first pulley while the cord is taut, none once the cleat holds it (Resistance) | first pulley at x 36, y -40; second pulley at x 56, y -66, just past the bench's edge |
+| Drag | a cord from the board's screw eye, level, through a cam cleat and over one pulley clamped at the bench's right edge, down to a 0.300 kg weight hanging free below that edge: 3.0 N toward the pulley while the cord is taut, none once the cleat holds it (Resistance) | pulley at x 36, y -66, just past the bench's right edge; cleat 5 cm before it on the cord's run |
 
-Mechanism (`task.py`, built with `yamkit.py` and `guardkit.py`, local copies; `guardkit.py` gives the
-grippers' palm and finger shapes used by the touching checks, and the local `yamkit.py` gives the arms' forearm and
+Mechanism (`task.py`, built with `yamkit.py`, `guardkit.py` and `yamgeom.py`, local copies; `yamgeom.py` reads the
+robot's collision hulls from the competition environment at run time, `guardkit.py` fits the grippers' palm and finger
+shapes used by the touching checks to them, and the local `yamkit.py` gives the arms' forearm and
 wrist link poses; `cutting_force.py` and `arm_load.py` compute the drag's 3 N and the arms' load):
 
 - The board is a free rigid body, 250 g, lying on the table. It has no joints and no lock: nothing holds it on the
@@ -85,9 +86,9 @@ wrist link poses; `cutting_force.py` and `arm_load.py` compute the drag's 3 N an
   disc.
 - The traced stretch is drawn as a blue band on the board's top along the curve (visual only; the real trace is on
   the edge, 3.2-8.0 mm up). The drag's rig is drawn as it is built: the cord as an orange line from the screw eye
-  round the first pulley, through the cleat and over the second pulley at the bench's edge, down to the bag of washers
-  hanging below the edge with its tape flag; the bag rises as the board draws cord out. The drawing is in place from
-  the first frame; the force itself acts at the eye, toward the first pulley.
+  through the cleat and over the pulley at the bench's edge, down to the bag of washers hanging below the edge with
+  its tape flag; the bag rises as the board draws cord out. The drawing is in place from the first frame; the force
+  itself acts at the eye, toward the pulley.
 
 ## Scoring (whole-run history, recorded each step by `success()`)
 
@@ -144,16 +145,16 @@ Why these numbers, and how a real trial reads each one (the rig and filming are 
 - 7.6 cm: router-table manuals' three-inch rule for hands near a bit. It is a hazard zone, not a stand-in for
   contact: a hand that close to a spinning bit can be carried into the cutter by a slip or a grab, so being there is
   the fault. 5 cm above the table is well above the bearing's screw (1.9 cm) and the board's top (1.4 cm), so arms
-  passing high over it are fine. The check is on the gripper's whole shape (palm, finger bodies, pads and tips, boxes
-  fitted to the YAM's collision meshes, at their present opening), not on a tool point, so a finger can't enter the
-  zone while the tool point stays out. The arms' forearm and wrist links count too, as boxes round their collision
-  pieces. Real trial: the 3 in circle drawn round the bearing; the top video shows whether any part of a gripper or
+  passing high over it are fine. The check is on the gripper's whole shape (palm, finger bodies, pads, tips and
+  carriages, boxes fitted at run time to the robot's collision hulls, at their present opening), not on a tool point,
+  so a finger can't enter the zone while the tool point stays out. The arms' forearm and wrist links count too, as
+  boxes round slabs of their collision hulls. Real trial: the 3 in circle drawn round the bearing; the top video shows whether any part of a gripper or
   an arm crossed it below a 5 cm block standing beside it.
-- Touching the board: the gripper's own shape (its palm and both fingers, as boxes fitted to the YAM's collision
-  meshes, at the fingers' present opening) within the solver's resting gap plus the boxes' fit to the meshes of the
-  board (guardkit `CONTACT`), so a hand resting on the board counts and one hovering above it does not. A
-  forearm or wrist on the board counts the same. Real trial: the side view at the end shows whether any gripper or
-  arm is on the board.
+- Touching the board: the gripper's own shape (its palm and both fingers, as boxes fitted to its collision hulls, at
+  the fingers' present opening) within 2 mm of the board (guardkit `CONTACT`: the solver's resting gap plus the
+  boxes' fit to the hulls), so a hand resting on the board counts and one hovering above it does not. A forearm or
+  wrist on the board counts the same. Real trial: the side view at the end shows whether any gripper or arm is on the
+  board.
 - The cord: a gripper, forearm or wrist whose shape meets the 3 mm cord's straight run from the screw eye to the
   pulley is touching it. Real trial: the top and side videos show nothing touching the cord.
 
@@ -176,8 +177,8 @@ rising (Real-world build).
 The sim applies the rig's drag, and the rig's drag is sized to the real cut:
 
 - Law (task.py `drag_load`, the same on the rig): a cord tied to the screw eye in the board's trailing end runs level
-  round a pulley at x 36, y -40 (13 cm past the table's right end), through a cam cleat and over a second pulley at
-  the bench's right edge, down to a 0.300 kg weight hanging free below the edge (2.94 N), trimmed with the pulley's and cleat's drag to 3.0 N at the board. The force is 3.0 N at the eye, along
+  through a cam cleat and over a pulley clamped at the bench's right edge (x 36, y -66), down to a 0.300 kg weight
+  hanging free below the edge (2.94 N), trimmed with the pulley's and cleat's drag to 3.0 N at the board. The force is 3.0 N at the eye, along
   the cord toward the pulley, whenever the cord is taut, and 0 when it is slack. Fed right to left, the board moves
   away from the pulley, draws cord and lifts the weight; held still there by the hands, it still carries the weight
   (3.0 N). Let go or drawn back toward the pulley, it lets the cord run back until the cleat's cams grip: the cams let a
@@ -190,9 +191,9 @@ The sim applies the rig's drag, and the rig's drag is sized to the real cut:
   the board is fed along the bearing. A board brought in some other way meets the drag wherever it draws that much
   cord, in the sim and on the rig alike; a board that drew cord out first (carried away from the pulley, then back)
   meets a slack cord over the feed and traces nothing.
-- Direction: along the scripted feed the cord stays within 7.6 degrees of the feed direction at the bearing, so
-  2.97-3.00 N acts against the feed. Its share across the feed is between 0.2 N onto and 0.4 N off the bearing (the
-  cord's own geometry, the same on the rig as in the sim); the hands' plan pushes 1-3.5 N onto the bearing. The cord
+- Direction: along the scripted feed the cord stays within 9.7 degrees of the feed direction at the bearing, so
+  2.96-2.99 N acts against the feed. Its share across the feed is 0.2-0.5 N off the bearing (the cord's own geometry,
+  the same on the rig as in the sim); the hands' plan pushes 1-3.5 N onto the bearing. The cord
   runs from the eye in the board's trailing end to the pulley, and the hands' plan balances the turn its line puts on
   the board.
 - Where 3 N comes from: the pass's mean cutting force against the feed (`python cutting_force.py` prints the
@@ -231,8 +232,8 @@ the midpoint between the arm bases (x forward, y to the robot's left, table top 
   91259A series), with a 1/8 in long and a 1/4 in long nylon spacer (1/4 in ID, 3/8 in OD, McMaster-Carr 94639A
   series), a washer and a 10-24 nylon-insert nut.
 - Pin guard: a Bench Dog ProGuard.
-- Drag: two Everbilt 1-1/2 in single fixed pulleys, a Harken 150 Micro Cam-Matic cam cleat, 1/8 in (3 mm) braided
-  cord, 2x4 offcuts, a small screw eye per board, an S-hook and a quart zip-top bag filled with steel washers (or
+- Drag: an Everbilt 1-1/2 in single fixed pulley, a Harken 150 Micro Cam-Matic cam cleat, 1/8 in (3 mm) braided
+  cord, a 2x4 offcut, a C-clamp, a small screw eye per board, an S-hook and a quart zip-top bag filled with steel washers (or
   sand) to 0.300 kg.
 - Trace: Dykem Hi-Spot Blue spotting paste, mineral spirits and rags to wipe it off.
 - Boards: three planed hardwood boards, each 25 x 15 cm and 0.5 in (12.7 mm) thick, about 250 g (the sim's board at
@@ -262,16 +263,15 @@ protractor, a combination square, a steel rule and a 1/8 in drill bit as a heigh
    rides the bearing.
 4. Drill a 1/4 in hole 5 cm right of the bit's axis (x 33.75, y 1) and press the dowel pin in, standing 3 cm tall.
 5. Screw the Bench Dog ProGuard to the top, its shield 1-1/2 in above the table over the bit's axis.
-6. Screw the first pulley flat onto a 2x4 offcut, its axle upright, and set the offcut on the bench at x 36, y -40
-   (13 cm past the slab's right end), stacked on offcuts so the sheave's groove is level with the cord's attachment on
-   the board. Screw the cam cleat to it just past the sheave, on the cord's run toward the bench's edge. Screw the
-   second pulley to another 2x4 offcut, its axle level, and C-clamp that offcut to the bench's right edge at x 56, the
-   sheave overhanging the edge (y -66) at the same height. Set the cleat so the cord runs freely as the weight rises
-   and grips as soon as it would drop. Wrap a strip of bright tape round the cord just above the weight, in view of
+6. Screw the pulley to a 2x4 offcut, its axle level and across the cord's run, and C-clamp the offcut to the bench's
+   right edge at x 36, the sheave overhanging the edge (y -66) with the top of its groove level with the cord's
+   attachment on the board (shim the offcut if needed). Screw the cam cleat to the offcut 5 cm before the sheave, on
+   the cord's run from the board. Set the cleat so the cord runs freely as the weight rises and grips as soon as it
+   would drop. Wrap a strip of bright tape round the cord just above the weight, in view of
    the side camera.
 7. Fill the zip-top bag with washers to 0.300 kg (0.300 x 9.81 = 2.94 N) and hang it on the S-hook from the cord,
-   which runs from the board round the first pulley, through the cleat, over the second pulley and straight down.
-   The bag hangs free below the bench's edge, at least 35 cm below the second pulley, so the 28 cm of cord a whole
+   which runs from the board through the cleat, over the pulley and straight down.
+   The bag hangs free below the bench's edge, at least 35 cm below the pulley, so the 28 cm of cord a whole
    feed draws out (the demo's run) never lifts it to the sheave.
 8. Trim the drag: hook the hanging scale to the cord's board end and draw it slowly away from the pulley. It reads
    the weight plus the pulley's and cleat's drag. Add or take out washers until it reads 0.305-0.310 kg, which is
@@ -338,8 +338,8 @@ lasts a trial and the band records the stretch the bearing passed over.
 | Bearing axis | the bit's axis (x 33, y 6 cm) | 1 mm | shoulder screw in a hole drilled there |
 | Drag at the board | 3.0 N toward the pulley while the cord is taut, 0 once it runs back past the catch | 0.05 N, set on the hanging scale | task.py `CORD_N`, `drag_load`; 0.300 kg weight; the model's mean cutting force against the feed for this pass: 3.0-3.1 N at the demo's 0.3 m/min feed (Curti et al. 2021, cutting_force.py) |
 | Cleat catch | the cams grip as the cord starts back | task.py `CATCH`, steel rule on a pencil mark | task.py `CATCH` |
-| Pulley | x 36, y -40 cm, sheave groove level with the screw eye | 1 cm | task.py `PULLEY`; the cord within 7.6 degrees of the feed along it |
-| Second pulley | x 56, y -66 cm, at the cord's height, overhanging the bench's right edge | 2 cm | the cord runs on from the first pulley to the weight; the pull's direction at the board is set by the first |
+| Pulley | x 36, y -66 cm, overhanging the bench's right edge, top of its groove level with the screw eye | 1 cm | task.py `PULLEY`; the cord within 9.7 degrees of the feed along it |
+| Cleat | on the pulley's offcut, 5 cm before the sheave on the cord's run | 1 cm | holds the weight once the cord runs back (task.py `CATCH`) |
 | Screw eye | trailing end face, mid-thickness, 1 cm in from the curve | 2 mm | task.py `EYE` |
 | Cord set snug | braced on the pin, curve's leading end on the bearing | as set by hand | task.py `SNUG` |
 | Table friction | mu 0.25 sliding, 0.30 at rest, planed wood on the planed wooden top | tilt angle 14-17 degrees (paste wax if steeper) | Engineering ToolBox, clean dry wood on wood 0.25-0.5; task.py `MU_TABLE` |
@@ -353,8 +353,12 @@ Build time: about 2 hours, plus cutting the boards.
 
 ## Sources and licenses
 
-- The forearm and wrist shapes the scorer checks (task.py `LINK_BOXES`) are boxes taken from I2RT's YAM visual meshes
-  of those links, as the yam_arena package ships them (I2RT Robotics, MIT License; a copy is in `LICENSE.i2rt`).
-- The gripper shapes (palm, fingers, pads, tips) come from the shared `guardkit.py`.
+- Every file in this folder is the task's own code and text; there are no third-party files in it.
+- The robot (the YAM model, its collision hulls and USD) and the simulator are loaded at run time from the competition
+  environment (yam-isaac-lab-arena revision 0059d02a, `yam_arena/assets/yam`) and are not included here. The forearm,
+  wrist and gripper shapes the scorer checks are boxes fitted at run time (`yamgeom.py`, `guardkit.py`, task.py
+  `link_boxes`) to the robot's collision hulls from the competition environment; nothing derived from them is stored
+  in this folder. Their terms are the environment's: the YAM model is I2RT Robotics' (MIT License), and the
+  environment's README states that it has no license yet.
 - The cutting-force model: Curti et al. (2021), Eur. J. Wood Prod. 79:667-678, doi:10.1007/s00107-021-01667-5
   (`cutting_force.py`). Cherry's density: AHEC. Wood-on-wood friction: Engineering ToolBox.

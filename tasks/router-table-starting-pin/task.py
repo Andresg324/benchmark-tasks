@@ -10,6 +10,7 @@ the cutter's first bite on an unsupported edge can grab the board and throw it, 
 """
 
 import dataclasses
+import functools
 import math
 import os
 import sys
@@ -19,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np  # noqa: E402
 import yamkit as kit  # noqa: E402  (spawns the modeled table, bit and board; nothing on disk changes)
 import guardkit as gk  # noqa: E402  (after yamkit)
+import yamgeom as yg  # noqa: E402  (the arm's collision hulls, read from the environment at run time)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN, PAD_TIP_PAST_TCP  # noqa: E402
 from yam_arena.demo import Waypoint  # noqa: E402
 from yam_arena.task_file import TABLE_TOP, ObjectState  # noqa: E402
@@ -162,7 +164,7 @@ WHOLE = N_BINS - 2  # full credit: all but two of the curve's 129 2 mm stretches
 MOST = 0.180  # m: 18 cm, 70% of the 25.8 cm curve: most of it, as from a start a few cm in from the leading end
 HALFWAY = MOST / 2  # m: 9 cm: real progress round the bearing
 HANDS = 0.076  # m: the three-inch rule of router-table manuals for hands near a bit: no part of either gripper (its
-#                own shape: palm, finger bodies, pads and tips, boxes after the YAM's collision meshes, at their
+#                own shape: palm, finger bodies, pads, tips and carriages, boxes around its collision hulls, at their
 #                present opening) may touch the zone within 3 in (7.6 cm) of the bit's axis, up to HANDS_LOW above the
 #                table. The zone is the hazard itself, since a slip or a grab carries a hand that close into the cutter.
 HANDS_LOW = 0.05  # m: the zone's height above the table top (the bit and the board's top are below 1.4 cm)
@@ -549,7 +551,7 @@ def _cord_gap(objects, J):
             if d < best[0]:
                 best = (d, g)
     for side in ("left", "right"):
-        for ln, boxes in LINK_BOXES.items():
+        for ln, boxes in link_boxes().items():
             st = objects.get(f"{side}_{ln}")
             if st is None:
                 continue
@@ -651,29 +653,28 @@ _ZONE_AT = ObjectState(pos=np.array([BIT[0], BIT[1], TOP]), quat_xyzw=np.array([
 
 
 # The arms' forearm and wrist links count as well as the grippers: yamkit gives their frames as objects
-# "<side>_<link>" (link3: the forearm, link4 and link5: the wrist), and each link's shape is its visual mesh in
-# slabs, each as the box that holds it (so the check errs toward touching).
-LINK_BOXES = {  # each link's visual mesh (yam_arm.urdf assets/linkN.stl, I2RT, MIT), cut into slabs along its
-    #                longest side, each slab as the box that holds the mesh's surface in it, in the link's frame
-    "link3": (
-        gk.Block((-0.0600, -0.0349, -0.2480), (0.0570, 0.0658, 0.0508)),
-        gk.Block((-0.0600, -0.0344, -0.1972), (0.0570, 0.0667, 0.0508)),
-        gk.Block((-0.0608, -0.0334, -0.1464), (0.0544, 0.0529, 0.0508)),
-        gk.Block((-0.0608, -0.0334, -0.0956), (0.0544, 0.0526, 0.0508)),
-        gk.Block((-0.0332, -0.0349, -0.0447), (0.1160, 0.0899, 0.0508)),
-        gk.Block((-0.0299, -0.0349, 0.0061), (0.1227, 0.0899, 0.0508)),
-    ),
-    "link4": (
-        gk.Block((-0.0694, 0.0339, -0.0824), (0.0577, 0.0566, 0.0399)),
-        gk.Block((-0.0404, 0.0333, -0.0424), (0.1157, 0.0795, 0.0399)),
-        gk.Block((-0.0001, 0.0300, -0.0025), (0.0352, 0.0860, 0.0399)),
-    ),
-    "link5": (
-        gk.Block((0.0345, -0.0000, -0.0241), (0.0690, 0.0570, 0.0230)),
-        gk.Block((0.0345, -0.0000, -0.0011), (0.0690, 0.0570, 0.0230)),
-        gk.Block((0.0345, -0.0000, 0.0220), (0.0690, 0.0570, 0.0230)),
-    ),
-}
+# "<side>_<link>" (link3: the forearm, link4 and link5: the wrist). Each link's shape is its collision hulls from the
+# competition environment (yamgeom, read at run time), cut into LINK_SLABS slabs along the link's longest side, each
+# slab as the box that holds the hulls' surface in it, in the link's frame (so the check errs toward touching).
+LINK_SLABS = {"link3": 6, "link4": 3, "link5": 3}
+
+
+@functools.lru_cache(maxsize=1)
+def link_boxes() -> dict:
+    """{link: (gk.Block, ...)}: each link's hull points (yamgeom) in LINK_SLABS[link] equal slabs along its longest
+    side, each slab's points in a box."""
+    out = {}
+    for ln, n in LINK_SLABS.items():
+        p = yg.points(ln)
+        ax = int(np.argmax(np.ptp(p, axis=0)))
+        cuts = np.linspace(p[:, ax].min(), p[:, ax].max(), n + 1)
+        boxes = []
+        for a, b in zip(cuts[:-1], cuts[1:]):
+            lo, hi = [None] * 3, [None] * 3
+            lo[ax], hi[ax] = a, b
+            boxes.append(gk.Block(*yg.box(p, lo, hi)))
+        out[ln] = tuple(boxes)
+    return out
 
 
 def links_touching(objects, obj, parts, tol, bound=None):
@@ -684,7 +685,7 @@ def links_touching(objects, obj, parts, tol, bound=None):
     parts = parts if isinstance(parts, (list, tuple)) else (parts,)
     out = []
     for side in ("left", "right"):
-        for ln, boxes in LINK_BOXES.items():
+        for ln, boxes in link_boxes().items():
             s = objects.get(f"{side}_{ln}")
             if s is None:
                 continue
@@ -717,7 +718,7 @@ def in_zone(objects):
 
 # The drag's cord, from the screw eye to the pulley at the eye's height, 3 mm thick. A hand or arm touching it could
 # hold, pinch or pull it and take the drag off the board, so touching it (its shape meeting the cord's) scores 0. The
-# grippers' and links' boxes already hold their meshes, so no extra tolerance is added. On the rig: no gripper or arm
+# grippers' and links' boxes already hold their hulls, so no extra tolerance is added. On the rig: no gripper or arm
 # touches the cord, in the top and side videos.
 CORD_R = 0.0015  # m: the braided cord's radius
 CORD_TOL = 0.0  # m
@@ -738,8 +739,8 @@ def traced_cm():
     return 100.0 * BIN * int(_H.traced.sum())
 
 
-# A hand on the board (gk.touching): a gripper's own shape (palm and both fingers, boxes after the YAM's collision
-# meshes, at their present opening) within gk.CONTACT (2 mm: the solver's resting gap plus the box fit) of the board.
+# A hand on the board (gk.touching): a gripper's own shape (palm and both fingers, boxes around its collision
+# hulls, at their present opening) within gk.CONTACT (2 mm: the solver's resting gap plus the box fit) of the board.
 # The board, in its own frame (z at mid-thickness): the body behind the curve as one box, and the curved cap as 2.5 mm
 # strips, each out to the curve at the strip's middle (within 0.6 mm of the true curve).
 _STRIP = 0.0025
@@ -863,8 +864,8 @@ def _markers():
 
 
 def _draw(J, traced=None, lift=None):
-    """Draw the traced band (`traced`, the trial's by default), the cord from the screw eye to the first pulley, and
-    the cord's drop from the edge pulley to the hanging weight, raised `lift` m by the cord drawn out (by default as
+    """Draw the traced band (`traced`, the trial's by default), the cord from the screw eye to the pulley, and the
+    cord's drop from the pulley to the hanging weight, raised `lift` m by the cord drawn out (by default as
     much as the cleat holds out)."""
     if "isaaclab" not in sys.modules:
         return

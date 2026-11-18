@@ -10,6 +10,7 @@ follows the object however it lies.
         part is not touching it.
 """
 
+import functools
 from dataclasses import dataclass
 import numpy as np
 import yamkit as kit
@@ -95,21 +96,42 @@ def _dist_local_any(part, p) -> float:
 
 
 # The YAM gripper's own shape in its tool-point frame (x: the fingers' closing axis, z: the approach, toward the pad
-# tips), as boxes fitted to the collision meshes the simulator uses (yam.urdf collision/gripper, tip_left, tip_right):
-# the palm, and for each finger its body, its pad and its narrower tip. `o` is each finger's inner face's distance
-# from the tool point: 0 closed, 47 mm fully open (the pads open 94 mm apart).
-PALM = Block((0.0, 0.0, -0.1075), (0.102, 0.065, 0.074))
+# tips), as boxes fitted at run time to the robot's collision hulls from the competition environment (yamgeom,
+# yam_arm.urdf's gripper, tip_left and tip_right): the palm, and for each finger its body, its pad and its narrower
+# tip, and its carriage. `o` is each finger's inner face's distance from the tool point: 0 closed, 47 mm fully open.
+FINGER_SLABS = ((None, -0.021), (-0.021, -0.003), (-0.003, None))  # m along z: the finger's body, pad and tip
 
 
 CONTACT = 0.002  # m: touching: the shapes within 2 mm (the solver's resting gap plus the box fit to the meshes)
 
 
+@functools.lru_cache(maxsize=1)
+def _hand_fit() -> tuple:
+    """(palm, ((side, (body, pad, tip, carriage)), ...)) with the gripper closed: the palm is the box around the
+    gripper link's hull points (102 x 65 x 74 mm); each finger's body, pad and tip hold its hull points in the
+    FINGER_SLABS on its own side of the tool point (24 x 68 x 46, 10 x 40 x 18 and 6 x 26 x 16 mm), and its carriage
+    the part that reaches across the tool point near the palm (48 x 26 x 20 mm), so every hull point is in a box."""
+    import yamgeom as yg
+    from yam_arena.constants import TCP_OFFSET
+
+    palm = Block(*yg.box(yg.points("gripper") - np.asarray(TCP_OFFSET, float)))
+    fingers = []
+    for tip in ("tip_left", "tip_right"):
+        p = yg.tcp_points(tip)
+        s = 1.0 if yg.box(p, (None, None, FINGER_SLABS[2][0]))[0][0] > 0 else -1.0  # the side its tip is on
+        own = p[p[:, 0] * s >= 0.0]
+        boxes = [yg.box(own, (None, None, lo), (None, None, hi)) for lo, hi in FINGER_SLABS]
+        if (p[:, 0] * s < 0.0).any():
+            boxes.append(yg.box(p[p[:, 0] * s < 0.0]))  # the carriage
+        fingers.append((s, tuple(boxes)))
+    return palm, tuple(sorted(fingers))
+
+
 def hand_boxes(o: float) -> list:
-    out = [PALM]
-    for s in (-1.0, 1.0):
-        out += [Block((s * (o + 0.012), 0.0, -0.051), (0.024, 0.068, 0.060)),  # finger body, 6 cm long
-                Block((s * (o + 0.005), 0.0, -0.012), (0.010, 0.040, 0.018)),  # pad, 1 cm thick, 4 cm wide
-                Block((s * (o + 0.0032), 0.0, 0.0049), (0.0064, 0.0264, 0.0158))]  # tip, to 12.8 mm past the TCP
+    palm, fingers = _hand_fit()
+    out = [palm]
+    for s, boxes in fingers:
+        out += [Block((c[0] + s * o, c[1], c[2]), size) for c, size in boxes]
     return out
 
 
