@@ -916,8 +916,9 @@ PUSH_STEPS, PUSH_CIRCLE, PUSH_ROCK = 9, 0.0006, 3.0  # the push: rocked over 8 s
 CAP_FINE, CAP_FINE_MM, CAP_FINE_DEG, CAP_TRIES = 8, 0.3, 0.4, 3  # close looks at the cap (its rim to 0.3 mm off the
 #                                                                   axis and square to 0.4 degrees), tries at pushing
 LIFT = 0.07  # the wrench lifted this far before it is turned (the left arm's reach)
-TURN_X = 0.30  # the drive's axis carried out to this x while the cup turns to face the engine: both hands' grips stay
-#               within the arms' reach (nearer the bases, a hand pointing at the engine would need its wrist behind them)
+TURN_X = 0.30  # the drive's axis carried out to this x while the cup turns to face the engine: both hands' grips
+#               stay within the arms' reach (nearer the bases, a hand pointing at the engine needs its wrist behind
+#               them)
 TAKE_UP = 4.0  # degrees of the stroke taken up before the filter turns (the flutes' play and the hold's give)
 W_SHARE = {"left": 0.5, "right": 0.5}  # each hand's share of the wrench's weight while carrying it
 
@@ -1352,19 +1353,19 @@ def demo():
 
     Both arms: take the wrench where it lies flat, top-down, the left across the ratchet's head and the right on the
     grip 55 cm out (each hand checks it is holding, and tries once more if not: the left 8 mm lower, the right 4 mm
-    higher), lift it 7 cm and turn it a quarter turn about the handle while carrying it out toward the engine and across, so the cup faces the
-    engine, hold it in front of the filter with the handle at an angle the right arm reaches that lines the cap's teeth
-    up with the filter's flutes, read where the cap is and which way it points (five looks 3 cm out that square it and
-    bring it to where it is sent, then up to eight with its teeth 3.5 mm short of the flutes that square it and center
-    its rim), and push the cup on gently while rocking it (the handle 3 degrees either way, the cup round a 0.6 mm
-    circle), checking it is on and trying again (three tries at most). The right hand moves to a top-down grip on the
-    grip. Strokes: the handle swung down from 6 degrees above level to 10 below by the right hand, pushing what the
-    gasket takes (plus 1 N*m), aimed past the handle by its arm's give, while the left presses the cap on (8 N); then
-    swung back up with the ratchet clicking. Each stroke is sized from the filter's angle when it starts; they stop once
-    it is 270 degrees past contact (18 N*m), after two strokes that turn it under 2 degrees, or after WRENCH_MAX
-    strokes. The right hand goes back to the grip it carried with, the cup is pulled straight off the flutes along the
-    filter's axis, the wrench turned back cup down and laid flat on the bench on its start marks; both let go, lift
-    clear and go home."""
+    higher), lift it 7 cm and turn it a quarter turn about the handle while carrying it out toward the engine and
+    across, so the cup faces the engine, hold it in front of the filter with the handle at an angle the right arm
+    reaches that lines the cap's teeth up with the filter's flutes, read where the cap is and which way it points (five
+    looks 3 cm out that square it and bring it to where it is sent, then up to eight with its teeth 3.5 mm short of the
+    flutes that square it and center its rim), and push the cup on gently while rocking it (the handle 3 degrees either
+    way, the cup round a 0.6 mm circle), checking it is on and trying again (three tries at most). The right hand moves
+    to a top-down grip on the grip. Strokes: the handle swung down from 6 degrees above level to 10 below by the right
+    hand, pushing what the gasket takes (plus 1 N*m), aimed past the handle by its arm's give, while the left presses
+    the cap on (8 N); then swung back up with the ratchet clicking. Each stroke is sized from the filter's angle when it
+    starts; they stop once it is 270 degrees past contact (18 N*m), after two strokes that turn it under 2 degrees, or
+    after WRENCH_MAX strokes. The right hand goes back to the grip it carried with, the cup is pulled straight off the
+    flutes along the filter's axis, the wrench turned back cup down and laid flat on the bench on its start marks; both
+    let go, lift clear and go home."""
     st = {"stop": None, "gains": [], "wstop": None}
     left = _hand_phase(st)
     hand = list(left)
