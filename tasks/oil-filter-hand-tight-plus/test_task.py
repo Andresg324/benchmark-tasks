@@ -186,7 +186,8 @@ class Trial:
         self.fm.turned = self.fm.seat + math.radians(past)
         self.fm.peak_past = max(self.fm.peak_past, math.radians(past))
 
-    def step(self, past=None, L=None, R=None, tool_on=None):
+    def step(self, past=None, L=None, R=None, tool_on=None, off=0.0):
+        """`off`: with the wrench on, its cup pulled this far back off the flutes along the filter's axis (m)."""
         if past is not None:
             self.set(past)
         self.L, self.R = L or self.L, R or self.R
@@ -194,7 +195,7 @@ class Trial:
             self.tool_on = tool_on
         objs = {m.KEY: st(AX, m.R_BASE @ m._rot_z(-self.fm.turned))}
         if self.tool_on:
-            tp = AX + np.array((-m.CAN_H - 0.0005, 0.0, 0.0))
+            tp = AX + np.array((-m.CAN_H - 0.0005 - off, 0.0, 0.0))
             objs[m.TOOL], objs[m.CAP] = st(tp, m.R_MOUNT), st(tp, m.R_MOUNT)
         else:
             objs[m.TOOL], objs[m.CAP] = st(m.TOOL_P0, m.R_FLAT), st(m.TOOL_P0, m.R_FLAT)
@@ -288,5 +289,49 @@ t = Trial(0.0, state=fk.FREE)
 for p in range(5, 300, 5):
     t.step(L=(ON_CAN, W, float(p % 150)))  # the hand rolls the can but the thread never caught
 case("cheat: the filter twisted in the hand without the thread ever catching: 0", finish(t), 0.0)
+
+t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
+t.step(R=(HOME_R, 1.0, 0.0), off=0.006)  # the cup pulled 6 mm back: no longer seated, but still on the filter
+case("the wrench left resting on the filter (not seated, no hand on it): 0.5, not 1.0", t.home(), 0.5)
+t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
+t.step(R=(HOME_R, 1.0, 0.0), off=0.05)  # 5 cm off the filter's end, in the air: not on the bench
+case("the wrench pulled 5 cm off the filter but not put down on the bench: 0.5", t.home(), 0.5)
+case("  put down on its marks on the bench: 1.0", finish(t), 1.0)
+
+# gaming the catch rule (judged once, at 20 degrees of turn against the crests)
+f, J = start(0.0, turn_deg=60.0)
+lims = None
+same = True
+for k in range(200):  # wobbled hard after the catch: the joints are pushed past their stops, the stops do not move
+    w = 0.001 if k % 2 else -0.001
+    J2 = dict(J, f_up=w, f_side=-w, f_pitch=10 * w, f_roll=-10 * w)
+    cmd = f.step(J2)
+    now = tuple(cmd[n][5] for n in ("f_up", "f_side", "f_pitch", "f_roll"))
+    same = same and (lims is None or now == lims)
+    lims = now
+case("wobbled after the catch: still on the thread, its stops fixed at the flanks' play (no drive on them)",
+     (f.state, same, round(lims[0][1] * 1e6), [cmd[n][1] for n in ("f_up", "f_side", "f_pitch", "f_roll")]),
+     (fk.ENGAGED, True, 104, [0.0] * 4))
+for tilt in (2.7, 3.5):
+    f = fk.FilterModel(0, TH)
+    J = dict(f_up=0.0, f_side=0.0, f_out=TH.d0 + 0.0003, f_pitch=math.radians(tilt), f_roll=0.0, filter=0.0)
+    ever = False
+    for k in range(120):  # back and forth, 15 degrees each way, then on
+        J["filter"] += math.radians(-5.0 if (k // 3) % 2 == 0 or k >= 90 else 5.0)
+        f.step(J)
+        ever = ever or f.state == fk.ENGAGED
+    case(f"cheat: {tilt} degrees crooked, turned back and forth: never catches (cross-threads)", (ever, f.state),
+         (False, fk.CROSSED))
+for lat_mm, out in ((0.36, TH.nip_len - TH.bore_z0), (0.36, TH.d0 + 0.0003)):
+    f = fk.FilterModel(0, TH)
+    J = dict(f_up=lat_mm / 1000, f_side=0.0, f_out=out, f_pitch=0.0, f_roll=0.0, filter=0.0)
+    ever = False
+    for k in range(120):
+        J["filter"] += math.radians(-5.0 if (k // 3) % 2 == 0 else 5.0)
+        f.step(J)
+        ever = ever or f.state == fk.ENGAGED
+    where = "resting on the nipple's end" if out > TH.d0 + 0.001 else "shoved in over the end (forced: jams)"
+    case(f"cheat: {lat_mm} mm off (just past the clearance), {where}, turned back and forth: never catches",
+         ever, False)
 
 print("all pass" if not bad else f"{bad} FAILED")

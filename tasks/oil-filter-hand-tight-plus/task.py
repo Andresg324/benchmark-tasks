@@ -277,9 +277,11 @@ HANDLE_Z = HEAD_BOT + HEAD_T / 2
 HANDLE_X = (-(RATCHET_L - HEAD_R), -HEAD_R)
 RATCHET_KG, ADAPTER_KG, CAP_KG = 1.361, 0.027, 0.060  # P: 3.000 lb; P: 0.06 lb; E: the steel cap
 TOOL_MASS = RATCHET_KG + ADAPTER_KG + CAP_KG
-# the wrench lies flat on the bench, cup down, in front of the mount (clear of the left arm's way to it), its handle
-# toward the robot's right
-TOOL_P0 = (0.300, 0.140, TOP + CUP_DEPTH + 0.0015)
+# the wrench lies flat on the bench, cup down, near the robot and right of the nipple's line, its handle toward the
+# robot's right: clear of the left arm, its hand and the filter on their way to the nipple and while they spin the
+# filter on (an FK sweep of the demo's recorded joint path keeps the arm 6 cm off it; ~/yam-eval/oil-final), within
+# both hands' reach for its pick
+TOOL_P0 = (0.120, -0.020, TOP + CUP_DEPTH + 0.0015)
 R_FLAT = _rot_z(math.radians(90.0))  # local x -> +y (the handle toward -y), local z up
 R_MOUNT = _rot_y(-90.0) @ R_FLAT  # on the filter, handle level: local z -> -x (the cup opens toward the engine)
 
@@ -474,16 +476,57 @@ def _score(objects):
         s = 0.5
     else:
         s = 1.0
-    if _hand_on_filter(objects) or cap_seated(objects) or tool_holders(objects):
-        return min(s, 0.5)  # a hand still on the filter, the wrench still on it or still in a hand
+    if _hand_on_filter(objects) or not wrench_put_away(objects):
+        return min(s, 0.5)  # a hand still on the filter, or the wrench not yet put down on the bench, off the filter
     return s
+
+
+WRENCH_CLEAR = 0.10  # m: the cap's center at least this far from the center of the filter's end
+BENCH_REST = 0.045  # m: and at most this far above the bench (the cup lying on the bench, cup down or on its side)
+
+
+def wrench_put_away(objects) -> bool:
+    """The wrench put down off the filter: its cap's center at least WRENCH_CLEAR from the center of the filter's end
+    and within BENCH_REST of the bench, and no hand holding it."""
+    if CAP not in objects or KEY not in objects:
+        return True
+    fp, fa = filter_axis(objects)
+    cp = np.asarray(objects[CAP].pos, float)
+    return (float(np.linalg.norm(cp - (fp + fa * CAN_H))) >= WRENCH_CLEAR and cp[2] <= TOP + BENCH_REST
+            and not tool_holders(objects))
+
+
+def _debug(msg):
+    """OIL_DEBUG=1: print-only lines for the README's figures (no effect on the trial)."""
+    if os.environ.get("OIL_DEBUG"):
+        print("OIL_DEBUG " + msg, flush=True)
+
+
+def _debug_step(objects, sc):
+    if not os.environ.get("OIL_DEBUG"):
+        return
+    d = _SEEN.setdefault("debug", {})
+    if d.get("episode") != kit.episode():
+        d.clear()
+        d.update(episode=kit.episode(), step=0)
+    d["step"] += 1
+    fm = fmodel()
+    if fm.state == fk.ENGAGED and "caught" not in d:
+        d["caught"] = d["step"]
+        _debug("catch step=%d tilt=%.2f deg offset=%.3f mm" % (d["step"], math.degrees(fm.tilt0), 1000 * fm.lat0))
+    if fm.state == fk.ENGAGED and (sc == 1.0 or d["step"] % 200 == 0):
+        _debug("%s step=%d past=%.1f deg peak=%.1f deg torque=%.2f N*m (model) score=%s" % (
+            "full" if sc == 1.0 else "status", d["step"], past_deg(), math.degrees(fm.peak_past),
+            THREAD.torque(fm.past), sc))
 
 
 def success(objects):
     """Full score (see score()), held 1 s. Called first each step, so it also records the history."""
     _update(objects)
     _SEEN["objects"] = objects
-    return _score(objects) == 1.0
+    sc = _score(objects)
+    _debug_step(objects, sc)
+    return sc == 1.0
 
 
 def score(objects):
@@ -494,8 +537,8 @@ def score(objects):
     (a gripper closed on the can, its roll about the filter's axis, at most 30 degrees ahead) nor by the wrench while
     its cap was on the filter and a hand held it. Otherwise 0.25 for 90 to 180; 0.5 for 180 to 240, or if it was ever
     past 360; 1.0 for 240 to 360 and never past 360. Capped at 0.5 while a hand is on the filter (closed on it, or
-    touching it within 2 mm), and while the wrench's cap is on the filter or a hand holds the wrench. Possible scores:
-    0, 0.25, 0.5, 1."""
+    touching it within 2 mm), and until the wrench is put away: its cap's center at least 10 cm from the center of the
+    filter's end and within 4.5 cm of the bench, no hand holding it. Possible scores: 0, 0.25, 0.5, 1."""
     return _score(objects)
 
 
@@ -819,6 +862,9 @@ def _hand_phase(st):
         return st["phase"]
 
     def phasing():
+        if st["stop"] is not None and "debug_logged" not in st:
+            st["debug_logged"] = True
+            _debug("hand-tight past=%.1f deg, turned back %.1f deg for the cap" % (past_deg(), phase()))
         return phase() > 1.5
 
     def at(roll, dx, finger):
@@ -1118,12 +1164,17 @@ def _wrench_phase(st):
             pivot = p0 + r0 @ np.array((0.0, 0.0, HANDLE_Z))
             rr = _rot_y(90.0)
             p, r = pivot + rr @ (p0 - pivot), rr @ r0
-            p = np.array((p[0], p[1], TOP + CUP_DEPTH + 0.003 + up))
+            p = np.array((TOOL_P0[0], TOOL_P0[1], TOP + CUP_DEPTH + 0.003 + up))  # back on its start marks
             _CMD["tool"] = (p, r)
             return {s_: (np.asarray(_hand_on_tool(s_, p, r)[0]) + (0, 0, up), _hand_on_tool(s_, p, r)[1],
                          finger if finger is not None else fgrip(s_)) for s_ in ("left", "right")}
         return f
-    add("wrench: lay it on the bench", 1.6, lay(None))
+    def over_marks():  # carried across, cup down (as `lay` turns it), 4 cm over its start marks
+        _, r0 = st["held1"]
+        p = np.array((TOOL_P0[0], TOOL_P0[1], TOP + CUP_DEPTH + 0.003 + 0.04))
+        return carried(p, _rot_y(90.0) @ r0)
+    add("wrench: over its marks", 1.8, over_marks)
+    add("wrench: lay it on the bench", 1.2, lay(None))
     add("wrench: let go", 0.7, lay(FINGER_OPEN))
     add("wrench: hands up", 0.9, lay(FINGER_OPEN, 0.06))
 
@@ -1172,8 +1223,9 @@ def demo():
     gasket takes (plus 1 N*m), aimed past the handle by its arm's give, while the left presses the cap on (8 N); then
     swung back up with the ratchet clicking. Each stroke is sized from the filter's angle when it starts; they stop once
     it is 270 degrees past contact (18 N*m), after two strokes that turn it under 2 degrees, or after WRENCH_MAX
-    strokes. The right hand goes back to the grip it carried with, the cup is pulled off, the wrench turned back cup
-    down and laid flat on the bench; both let go, lift clear and go home."""
+    strokes. The right hand goes back to the grip it carried with, the cup is pulled straight off the flutes along the
+    filter's axis, the wrench turned back cup down and laid flat on the bench on its start marks; both let go, lift
+    clear and go home."""
     st = {"stop": None, "gains": [], "wstop": None}
     left = _hand_phase(st)
     hand = list(left)
