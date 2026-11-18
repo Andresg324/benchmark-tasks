@@ -666,7 +666,7 @@ GRASP_UP = CAN_H - 0.025 + 0.013  # the tool point this far along the axis from 
 #                                   the closed end)
 SPIN_FROM, SPIN_TO, SPIN_STEP = -60.0, 90.0, 15.0  # each stroke rolls the wrist from -60 to +90 about +x (tightening)
 HAND_STALL = 8.0  # a stroke past contact that turns it less than this: hand-tight
-SPIN_MAX = 12
+SPIN_MAX = 20  # strokes at most (each up to 150 degrees; three turns to contact need about 9 when the pads do not slip)
 CARRY_X = 0.38  # the filter is carried across here, clear of the crankcase, the cross tube and the wrench
 PHASE_ROLL = 30.0  # the wrist's roll when it takes the can again to set the flutes
 PRESS = 0.0015  # the hand aims 1.5 mm past where the threads' crests meet (the arm's give presses it on)

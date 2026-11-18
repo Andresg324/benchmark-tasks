@@ -193,7 +193,9 @@ cross-threads is then judged once, when it has been turned 20 degrees clockwise 
 tilt against the same ISO clearances: within 2.6 degrees it catches; over that, where the first thread lands in the
 wrong groove, it cross-threads and jams. Past the catch the thread's run-down is an axial drive at the real 1.5 mm
 pitch, with fixed stops (no drive) at the flanks' play, 0.10 mm and 0.36 degrees, or at the offset and tilt it caught
-with if those are larger; nothing squares it but contact, the gasket meeting the land. Turning resistance follows the
+with if those are larger (the side stops at most 0.16 mm off the axis, inside the bore's clearance, so the crests do
+not bear on the nipple's root once the flanks carry the load); nothing squares it but contact, the gasket meeting the
+land. Turning resistance follows the
 torque law below. The flanks are not collision geometry.
 jams. Forced over the nipple's end (the nipple's end 0.3 mm or more inside the bore and more than 0.35 mm off its
 axis, or past the crests' stop), the filter jams and the trial fails. Before

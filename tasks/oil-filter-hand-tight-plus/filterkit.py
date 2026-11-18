@@ -50,6 +50,7 @@ import yamkit as kit
 
 FREE, ENGAGED, CROSSED = "free", "engaged", "crossed"
 START_TURN = math.radians(20.0)  # turned this far clockwise against the crests: the thread starts (or crosses)
+CREST_GAP = 0.00004  # m: engaged, the side stops keep the bore's crests at least this far off the nipple's root
 ON_SLACK = 0.00015  # m: contact give allowed on top of the bore's clearance when judging that the nipple's end is
 #                     inside the bore (the colliders, not this, keep it there)
 # The nipple's end found 0.3 mm or more inside the bore farther off its axis than the clearance plus ON_SLACK, or
@@ -274,8 +275,10 @@ class FilterModel:
         out_lim = (min(d, out) - 0.0003, max(d, out) + 0.0003)
         cmd = {"f_out": (d, AX_K, 0.0, 20.0, 400.0, out_lim)}
         # the engaged flanks: no drive, a fixed stop at the threads' play, or at what it caught with if more (inside
-        # the bore's clearance and the cross-threading angle); nothing squares it but contact (the gasket on the land)
-        lat_lim = max(th.play_lat, self.lat0 + 1e-5)
+        # the bore's clearance and the cross-threading angle); nothing squares it but contact (the gasket on the land).
+        # The side stops sit at most 0.16 mm (clearance - CREST_GAP) off the axis, inside the bore's clearance: once
+        # the flanks have caught they carry the side load, and the crests do not bear on the nipple's root.
+        lat_lim = max(th.play_lat, min(self.lat0 + 1e-5, th.clearance - CREST_GAP))
         tilt_lim = max(th.play_tilt, self.tilt0 + 1e-4)
         for n, lim in (("f_up", lat_lim), ("f_side", lat_lim), ("f_pitch", tilt_lim), ("f_roll", tilt_lim)):
             cmd[n] = (J[n], 0.0, 0.0, 0.05, 1000.0, (-lim, lim))

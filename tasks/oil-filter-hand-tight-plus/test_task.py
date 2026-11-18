@@ -100,6 +100,10 @@ f, J = start(1.5, lat=0.00015, turn_deg=420.0)
 cmd = f.step(J)
 case("  a turn on, its stops are still where it caught (0.15 mm, 1.5 degrees): nothing squeezes it square",
      (round(cmd["f_up"][5][1] * 1e5), round(math.degrees(cmd["f_pitch"][5][1]), 1)), (16, 1.5))
+f, J = start(0.0, lat=0.0002, turn_deg=30.0)
+cmd = f.step(J)
+case("caught 0.2 mm off (on the bore's wall): side stops 0.16 mm off the axis, so the crests clear the nipple's root",
+     round(cmd["f_up"][5][1] * 1e6), 159)
 f, J = start(0.0, turn_deg=420.0)
 cmd = f.step(J)
 case("  caught square: the engaged threads' play (0.10 mm, 0.36 degrees)",
