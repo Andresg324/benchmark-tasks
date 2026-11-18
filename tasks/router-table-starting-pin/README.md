@@ -1,4 +1,4 @@
-# Rout a curved edge on a router table: brace the board on the starting pin and pivot it onto the bearing before feeding
+# Rout a curved edge on a router table, bracing the board on the starting pin and pivoting it onto the bearing first
 
 A router table carries a bearing-guided rabbeting bit and a steel starting pin in its insert plate, 5 cm to the
 bit's right. A cherry board with one long edge band-sawn to a gentle curve lies on the table to the right of the
@@ -15,7 +15,7 @@ on a failed run: no cutter is present and nothing spins or cuts. At the bit's pl
 own bearing's size turns on a fixed shoulder screw, with the 1.25 in cutter's circle painted round it. The cut's
 resistance is a one-way hanging-weight drag on a cord to the board's trailing end: a constant 3.0 N against the
 feed, matched to the mean cutting force against the feed that the Curti et al. (2021) model gives for this pass at
-the demo's feed (Resistance). The pass is read from the stretch of edge
+a slow, steady feed (3.0-3.5 N at 0.3-1 m/min; Resistance). The pass is read from the stretch of edge
 the bearing touched while the drag pulled, in the scorer's 2 mm pieces; on the rig the bearing is coated in blue
 spotting paste, so the edge itself records that stretch, read on the board after the trial along with the top
 video.
@@ -32,11 +32,11 @@ Scripted demo:
 Model run (Dream-1): the same command with `--policy dream`. Render the videos of a run with
 `inspect-robots video <log.json>`.
 
-Scripted demo (both arms): both hands press on the square-set board and carry it onto the pin, turning it 14 degrees. One hand then pushes it about the pin into the bit, pressing it onto the pin and along it; before that hand lets go, the other presses near the board's trailing end (hand-over), so the board is never left free, and the two hands bring the curve onto the bearing, still against the pin. The demo plans the pivot from the board's pose as the carry leaves it on the pin, and the change of places from where the board stops. Then both hands press near the back edge, at least 10 cm apart and clear of the 3 in zone, and carry the board round the bearing right to left against the drag and the table's friction, in two stretches with one hand-over-hand regrip while the board is at rest (the second stretch planned from where the board stops in the sim, 2 cm of curve behind the hands' plan); as a pair they also turn it, the couple that keeps the curve on the bearing. They carry it on past the bit, ease off and lift. Each hand is aimed past its pads by the arm's give there (J K^-1 J^T from the YAM's servo stiffness). Sim result on this version: 1.0 in 2,279 steps (25.6 cm of the 25.8 cm curve traced, 128 of its 129 2 mm pieces, no grab, no part of a gripper, wrist or forearm in the 3 in zone, nothing touching the cord).
+Scripted demo (both arms): both hands press on the square-set board and carry it onto the pin, turning it 14 degrees. One hand then pushes it about the pin into the bit, pressing it onto the pin and along it; before that hand lets go, the other presses near the board's trailing end (hand-over), so the board is never left free, and the two hands bring the curve onto the bearing, still against the pin. The demo plans the pivot from the board's pose as the carry leaves it on the pin, and the change of places from where the board stops. Then both hands press near the back edge, at least 10 cm apart and clear of the 3 in zone, and carry the board round the bearing right to left against the drag and the table's friction, in two stretches with one hand-over-hand regrip while the board is at rest; as a pair they also turn it, the couple that keeps the curve on the bearing. They carry it on past the bit, ease off and lift. Each hand is aimed past its pads by the arm's give there (J K^-1 J^T from the YAM's servo stiffness). Sim result on this version: 1.0 in 2,279 steps (25.6 cm of the 25.8 cm curve traced, 128 of its 129 2 mm pieces, no grab, no part of a gripper, wrist or forearm in the 3 in zone, nothing touching the cord).
 
 ### Forces in the demo
 
-The demo plans each hand's push from the drag the sim applies (the cord's 3.0 N at the board's screw eye, toward the pulley), the table's friction under the pads and the board, and 1-3.5 N onto the bearing: at most 7.4 N of push per hand in the feed, under an 8 N press in the first stretch and 12 N in the second, and 3.5 N onto the pin plus 1.5 N along it under a 6 N press in the pivot. These are well within the YAM. Its shoulder and elbow joints are Damiao DM-J4340 servos (9 N*m rated, 27 N*m peak) and its wrist joints DM-J4310 (3 N*m rated, 7 N*m peak), the same limits the sim's arm model uses. Worked through the arm's Jacobian from its URDF at every tenth step of the planned feed, with the torque that holds the arm up (the URDF's link masses) included, each hand's planned push and press take at most 72% of the rated, continuous joint torque and 30% of the peak (`python arm_load.py`, the one method behind these figures: 4.7 and 4.1 N of push in the first stretch, 6.8 and 7.4 N in the second). The shipped demo moves 1 N of the right hand's share to the left in the first stretch to even the split, and 0.5 N of the left hand's share to the right in the second, where the pair pushes 3.5 N onto the bearing and both hands press 12 N, with the left pads 4 cm in from the board's leading end. At an 8 N press the left pads crept off that end, and at 2 N onto the bearing the curve drifted 2-3 mm off it late in the feed.
+The demo plans each hand's push from the drag the sim applies (the cord's 3.0 N at the board's screw eye, toward the pulley), the table's friction under the pads and the board, and 1-3.5 N onto the bearing: at most 7.4 N of push per hand in the feed, under an 8 N press in the first stretch and 12 N in the second, and 3.5 N onto the pin plus 1.5 N along it under a 6 N press in the pivot. These are well within the YAM. Its shoulder and elbow joints are Damiao DM-J4340 servos (9 N*m rated, 27 N*m peak) and its wrist joints DM-J4310 (3 N*m rated, 7 N*m peak), the same limits the sim's arm model uses. Worked through the arm's Jacobian from its URDF at every tenth step of the planned feed, with the torque that holds the arm up (the URDF's link masses) included, each hand's planned push and press take at most 72% of the rated, continuous joint torque and 30% of the peak (`python arm_load.py`, the one method behind these figures: 4.7 and 4.1 N of push in the first stretch, 6.8 and 7.4 N in the second).
 Offline scorer tests: `python test_task.py` (prints "all pass"). Runtime per trial: 2,400 steps at most (2 minutes at
 20 Hz); seed 0, object jitter 0, one fixed layout.
 
@@ -46,9 +46,9 @@ Coordinates in cm from the midpoint between the two arm bases, x forward, y to t
 
 | Object | What it is | Where |
 |---|---|---|
-| Router table top | the robot's table, a light gray area 40 x 62 cm | x 9 to 49, y -27 to 35 |
+| Router table top | the robot's table, a planed wooden slab drawn in a light finish (light gray), 40 x 62 cm | x 9 to 49, y -27 to 35 |
 | Insert plate | its outline, 23.5 x 30 cm (9.25 x 11.75 in), drawn black, centered on the bit | x 21.3 to 44.8, y -9 to 21 |
-| Bit stand-in | no cutter: the 3/8 in rabbeting bit's 0.5 in ball bearing (1.27 cm across), from 3.4 to 8.2 mm above the table, turning freely on a fixed 1/4 in shoulder screw between 3/8 in nylon spacers, the screw's head 19 mm up; the bit's 1.25 in (3.18 cm) cutter circle painted round it, and the 3 in circle drawn. The bit it stands for turns counterclockwise seen from above, so work is fed right to left | axis x 33, y 6 |
+| Bit stand-in | no cutter: the 3/8 in rabbeting bit's 0.5 in ball bearing (1.27 cm across), from 3.4 to 8.2 mm above the table, turning freely on a fixed 1/4 in shoulder screw between nylon spacers (drawn 3/8 in across), the screw's head 19 mm up; the bit's 1.25 in (3.18 cm) cutter circle painted round it, and the 3 in circle drawn. The bit it stands for turns counterclockwise seen from above, so work is fed right to left | axis x 33, y 6 |
 | Starting pin | steel, 6.4 mm across (0.25 in), 3 cm tall, in the plate | x 33.75, y 1 |
 | Pin guard | clear polycarbonate shield 10 cm across, 6.4 mm thick, its underside 3.8 cm (1-1/2 in) above the table, centered over the bit, on an aluminum arm (3 x 0.8 cm) from an aluminum post (2.5 x 4 cm, 5.3 cm tall); after the Bench Dog ProGuard (1-1/2 in stock clearance under the guard); solid | shield over the bit; post at x 43, y 6 |
 | Board | cherry, 25 x 15 cm, 1.27 cm thick (0.5 in), 250 g; one long side band-sawn to a 30 cm radius (2.7 cm of bow), toward the bit; a free body on the table's planed wooden top, mu 0.25 sliding / 0.3 at rest; a screw eye in its trailing end face at mid-thickness, 1 cm in from the curve | square to the table: curve's ends at (29.5, -19.4) and (29.5, 5.6); back corners (17.2, -19.4) and (17.2, 5.6); 2.2 cm off the pin, 3.4 cm from the bit's axis |
@@ -65,7 +65,7 @@ wrist link poses; `cutting_force.py` and `arm_load.py` compute the drag's 3 N an
   (local yamkit addition `Collider.friction`: a per-collider PhysX material with "min" combining, so the board's own
   material doesn't raise it). The top is planed wood, in the sim as on the rig, so the pair is wood on wood: 0.25 lies in
   the range for clean, dry wood on wood (0.25-0.5, Engineering ToolBox, "Friction - friction coefficients") and
-  suits smooth planed faces. The rig's tilt test (build step 10) checks it: a test board must start sliding at 14-17
+  suits smooth planed faces. The rig's tilt test (build step 11) checks it: a test board must start sliding at 14-17
   degrees.
   Pressing down therefore costs push: each newton of press adds about 0.25 N of friction to feed against.
 - The board starts square to the table, as it is set down, 2.2 cm from the pin and 3.4 cm from the bit's axis. The
@@ -77,7 +77,7 @@ wrist link poses; `cutting_force.py` and `arm_load.py` compute the drag's 3 N an
   board's curve collider is 26 chord boxes 1 cm long, each within 0.04 mm of the true curve (local yamkit addition:
   yawed box colliders).
 - The drag is a force on the board's body at its screw eye, every control step (Resistance): 3.0 N along the cord
-  toward the pulley while the cord is taut, 0 once the board has let it run back past the cleat's catch (task.py `CATCH`)
+  toward the pulley while the cord is taut, 0 once the board has let it run back past the cleat's 3 mm catch (task.py `CATCH`)
   and the cleat holds it.
 - The plate's overhead pin guard is modeled as in the real trial: a clear polycarbonate shield over the bit, 38 mm
   above the table, on an aluminum arm and post at the plate's far side. Its colliders are solid (the whole disc), so
@@ -85,7 +85,7 @@ wrist link poses; `cutting_force.py` and `arm_load.py` compute the drag's 3 N an
   shield as its gray 3 mm rim, so the top camera sees the bearing and the trace through it, as through the real clear
   disc.
 - The traced stretch is drawn as a blue band on the board's top along the curve (visual only; the real trace is on
-  the edge, 3.2-8.0 mm up). The drag's rig is drawn as it is built: the cord as an orange line from the screw eye
+  the edge, 3.6-8.3 mm up). The drag's rig is drawn as it is built: the cord as an orange line from the screw eye
   through the cleat and over the pulley at the bench's edge, down to the bag of washers hanging below the edge with
   its tape flag; the bag rises as the board draws cord out. The drawing is in place from the first frame; the force
   itself acts at the eye, toward the pulley.
@@ -125,7 +125,7 @@ Why these numbers, and how a real trial reads each one (the rig and filming are 
 - Contact is contact, at the pin and at the bearing: the gap is within the solver's resting tolerance (task.py
   `TOUCH`); PhysX rests the board pressed 0.03-0.06 mm into a collider (measured in the demo's run). A reading deeper
   into either (`DEEP`) comes only from a board lifted over it and doesn't count, nor does a board that is not lying
-  flat (`FLAT_UP`, `FLAT_TILT`). Braced entry: the board must be turning about the pin as it crosses the cutter
+  flat: its middle at most 1 mm above where it rests and tipped at most 2 deg (`FLAT_UP`, `FLAT_TILT`). Braced entry: the board must be turning about the pin as it crosses the cutter
   circle, with the pin's place on the board staying put (`PIVOT_TURN`, `PIVOT_SLIP`). Real trial: the top
   video shows the board flat against the pin, with no gap, and turning about it as its edge crosses the painted
   circle; the blue band, which only contact leaves, shows where the edge touched the bearing.
@@ -182,7 +182,7 @@ The sim applies the rig's drag, and the rig's drag is sized to the real cut:
   the cord toward the pulley, whenever the cord is taut, and 0 when it is slack. Fed right to left, the board moves
   away from the pulley, draws cord and lifts the weight; held still there by the hands, it still carries the weight
   (3.0 N). Let go or drawn back toward the pulley, it lets the cord run back until the cleat's cams grip: the cams let a
-  little cord back before they hold (task.py `CATCH`; build step 8 checks the cleat against it). The cleat then holds the weight, the cord is slack and the board is free, so a board left at rest feels no
+  little cord back before they hold (3 mm, task.py `CATCH`; build step 9 checks the cleat against it). The cleat then holds the weight, the cord is slack and the board is free, so a board left at rest feels no
   pull. The cord takes hold again only once the board draws out past where the cams gripped. In the sim the force is
   set each control step (20 Hz) from the board's pose, and a 2 mm piece counts only while it pulls.
 - Where it takes hold: the cord is set snug with the board braced on the pin and turned in until the curve's leading
@@ -204,9 +204,8 @@ The sim applies the rig's drag, and the rig's drag is sized to the real cut:
   Int functions of the grain angle at the mean chip position. For this pass (black cherry at 561 kg/m3; a 1.25 in
   two-flute cutter at 18,000 rpm, Freud's maximum speed for 1-1/4 in bits; 9.5 mm wide as set by the bearing;
   3.2 mm high), with the grain at 10-60 degrees to the cut at the mean chip position along this curve, the model
-  gives 3.0-3.1 N against the feed at the demo's 0.3 m/min feed. The cord applies a constant 3.0 N against the
-  feed, matched to the Curti et al. (2021) model's mean cutting force for this pass at the demo's feed (3.0-3.1 N;
-  cutting_force.py).
+  gives 3.0-3.5 N against the feed at 0.3-1 m/min. The cord applies a constant 3.0 N against
+  the feed, matched to the Curti et al. (2021) model's mean cutting force for this pass at a slow, steady feed (3.0-3.5 N at 0.3-1 m/min, cutting_force.py).
 - Why 1/8 in high. Router makers' manuals cap one pass at 1/8 in: Ridgid R2900, "do not exceed 1/8 in. depth of cut
   in a single pass, regardless of the bit size or the softness or condition of the workpiece"; Ryobi RE180PL, cuts "at a
   depth not exceeding 1/8 in. (3.2 mm)", deeper ones in several passes. Woodworking guidance (Woodcraft, Fine
@@ -225,18 +224,23 @@ the midpoint between the arm bases (x forward, y to the robot's left, table top 
 ### Parts
 
 - Top: a flat wooden slab with a smooth planed face, at least 40 x 62 cm (the sim's table) and 3/4 in (19 mm)
-  thick, raised on two 2x4 offcuts so the nut under the bearing's screw clears the bench.
+  thick, laid directly on the bench, as in the sim, where the router top is the robot's own table: the nut under
+  the bearing's screw sits in a recess cut in the slab's underside.
+- Arm pads: two pieces of 3/4 in plywood, each a little larger than an arm's base, and 1/8 in hardboard shims.
 - Starting pin: a 1/4 in x 1-1/2 in steel dowel pin.
-- Bit stand-in: an R188-2Z shielded ball bearing (1/4 in bore, 1/2 in across, 3/16 in tall: the size of the
-  rabbeting bit's own bearing) on a 1/4 in shoulder x 1 in alloy steel shoulder screw (10-24 thread, McMaster-Carr
-  91259A series), with a 1/8 in long and a 1/4 in long nylon spacer (1/4 in ID, 3/8 in OD, McMaster-Carr 94639A
-  series), a washer and a 10-24 nylon-insert nut.
+- Bit stand-in: an R188-2Z shielded ball bearing with an extended inner ring (McMaster-Carr 57155K387: 440C, no
+  flange, 1/4 in bore, 1/2 in across, 3/16 in wide: the size of the rabbeting bit's own bearing) on a 1/4 in
+  shoulder x 7/8 in alloy steel shoulder screw (10-24 thread, 3/8 in of thread, McMaster-Carr 91259A series), with
+  a 1/8 in long and a 1/4 in long nylon spacer (1/4 in ID, 3/8 in OD, McMaster-Carr 94639A series), a No. 10 flat
+  washer and a 10-24 nylon-insert nut. The inner ring is 0.2188 in (5.56 mm) long, so it stands about 0.4 mm proud
+  of the shields on each side: the 3/8 in spacers bear on the ring's ends and
+  stay 0.4 mm clear of the shields.
 - Pin guard: a Bench Dog ProGuard.
 - Drag: an Everbilt 1-1/2 in single fixed pulley, a Harken 150 Micro Cam-Matic cam cleat, 1/8 in (3 mm) braided
   cord, a 2x4 offcut, a C-clamp, a small screw eye per board, an S-hook and a quart zip-top bag filled with steel washers (or
   sand) to 0.300 kg.
 - Trace: Dykem Hi-Spot Blue spotting paste, mineral spirits and rags to wipe it off.
-- Boards: three planed hardwood boards, each 25 x 15 cm and 0.5 in (12.7 mm) thick, about 250 g (the sim's board at
+- Boards: three planed cherry boards, each 25 x 15 cm and 0.5 in (12.7 mm) thick, about 250 g (the sim's board at
   task.py's 561 kg/m3), one long side cut to a 30 cm radius (2.7 cm of bow, 25.8 cm of curve). Nothing cuts them, so
   they are reused: the paste is wiped off the edge after each trial.
 - Small items: wood screws, a printed paper strip ruled in 2 mm pieces, a pencil, bright tape, white paint for the
@@ -244,48 +248,59 @@ the midpoint between the arm bases (x forward, y to the robot's left, table top 
 
 ### Tools
 
-Use a drill with a 1/4 in bit, three C-clamps, a band saw, a digital hanging scale reading in 5 g steps (a postal or fishing scale), a kitchen scale, a
+Use a drill with a 1/4 in bit and a 3/4 in Forstner bit, a hex key and a 3/8 in nut driver, three C-clamps, a band saw, a digital hanging scale reading in 5 g steps (a postal or fishing scale), a kitchen scale, a
 protractor, a combination square, a steel rule and a 1/8 in drill bit as a height gauge.
 
 ### Build steps
 
-1. Clamp the wooden slab to the bench with the two C-clamps. Mark the sim's 40 x 62 cm table area (x 9 to 49,
-   y -27 to 35) and the 23.5 x 30 cm insert plate's outline on it. One flat surface serves for both, as the
-   sim's plate shares the table's friction surface.
-2. Drill a 1/4 in hole at the bit's axis (x 33, y 6). Stack the 1/8 in spacer on the table, then the bearing, then
-   the 1/4 in spacer under the screw's head, and fix the shoulder screw through the hole with the washer and the
-   nylon-insert nut under the top. The bearing now spans 3.2 to 8.0 mm above the table (the sim's 3.4 to 8.2 mm
-   within 0.2 mm): check it with the 1/8 in drill bit's shank laid on the table. The screw head's underside is
-   14.3 mm up, above the board's 12.7 mm top, and the spacers and the 3/8 in head sit inside the bearing's 1/2 in, so
-   the board's edge touches only the bearing, which turns freely on its clamped inner ring.
-3. Paint the bit's 1-1/4 in cutter circle on the top round the screw, and draw a 3 in circle round it for scoring.
-   Below the bearing only the 3/8 in spacer stands, as in the sim: the board's edge passes into the cutter circle and
+1. Mark the sim's 40 x 62 cm table area (x 9 to 49, y -27 to 35) and the 23.5 x 30 cm insert plate's outline on
+   the slab's face. One flat surface serves for both, as the sim's plate shares the table's friction surface.
+2. Drill a 1/4 in hole through the slab at the bit's axis (x 33, y 6). From the underside, bore a 3/4 in Forstner
+   recess on that hole, 11 mm deep, leaving 8 mm of wood under the top. Stack on the top the 1/8 in spacer, the
+   bearing and the 1/4 in spacer under the screw's head, pass the shoulder screw down through them and the hole,
+   and tighten the No. 10 washer and the nylon-insert nut on it in the recess. The stack is 15.1 mm (3.2 + 5.6 +
+   6.4 mm, the inner ring's full length), so the 7/8 in (22.2 mm) shoulder ends 7.1 mm into the slab, 0.9 mm above
+   the recess floor, and the nut clamps the stack; its 3/8 in thread then ends 16.7 mm down, 1.4 mm past the nut's
+   top (about 6 mm tall over the 1.2 mm washer) and 2.4 mm above the slab's underside, so nothing stands below the
+   slab. The bearing's outer ring now spans 3.6 to 8.3 mm above the table (3.2 mm of spacer plus 0.4 mm of inner
+   ring, then 4.8 mm of bearing), within 0.2 mm of the sim's 3.4 to 8.2 mm: a 1/8 in drill bit's shank laid on the
+   table slides under it with a hair of light showing. Spin the bearing by finger: it must turn freely with the nut
+   tight (a spacer bearing on a shield drags). The screw head's underside is 15.1 mm up, above the board's 12.7 mm
+   top, and the spacers and the 3/8 in head sit inside the bearing's 1/2 in, so the board's edge touches only the
+   bearing, which turns freely on its clamped inner ring. Lay the slab face up directly on the bench at the sim's
+   place and clamp it with two C-clamps.
+3. Set each arm base on a plywood pad and shim it with hardboard so the bases' mounting plane stands 2.5 mm above
+   the slab's top, as in the sim (arm bases at z 0.750 m, the router top at 0.7475 m): a 3/4 in pad (18-19 mm)
+   with one 1/8 in shim gives 21-22 mm against the slab's 19 mm. Check with the steel rule on a straightedge laid
+   from the slab across each base, and fix each base through its pad to the bench as it is mounted now.
+4. Paint the bit's 1-1/4 in cutter circle on the top round the screw, and draw a 3 in circle round it for scoring.
+   Below the bearing only the 1/8 in spacer and the inner ring's end stand, as in the sim: the board's edge passes into the cutter circle and
    rides the bearing.
-4. Drill a 1/4 in hole 5 cm right of the bit's axis (x 33.75, y 1) and press the dowel pin in, standing 3 cm tall.
-5. Screw the Bench Dog ProGuard to the top, its shield 1-1/2 in above the table over the bit's axis.
-6. Screw the pulley to a 2x4 offcut, its axle level and across the cord's run, and C-clamp the offcut to the bench's
+5. Drill a 1/4 in hole 5 cm right of the bit's axis (x 33.75, y 1) and press the dowel pin in, standing 3 cm tall.
+6. Screw the Bench Dog ProGuard to the top, its shield 1-1/2 in above the table over the bit's axis.
+7. Screw the pulley to a 2x4 offcut, its axle level and across the cord's run, and C-clamp the offcut to the bench's
    right edge at x 36, the sheave overhanging the edge (y -66) with the top of its groove level with the cord's
    attachment on the board (shim the offcut if needed). Screw the cam cleat to the offcut 5 cm before the sheave, on
    the cord's run from the board. Set the cleat so the cord runs freely as the weight rises and grips as soon as it
    would drop. Wrap a strip of bright tape round the cord just above the weight, in view of
    the side camera.
-7. Fill the zip-top bag with washers to 0.300 kg (0.300 x 9.81 = 2.94 N) and hang it on the S-hook from the cord,
+8. Fill the zip-top bag with washers to 0.300 kg (0.300 x 9.81 = 2.94 N) and hang it on the S-hook from the cord,
    which runs from the board through the cleat, over the pulley and straight down.
    The bag hangs free below the bench's edge, at least 35 cm below the pulley, so the 28 cm of cord a whole
    feed draws out (the demo's run) never lifts it to the sheave.
-8. Trim the drag: hook the hanging scale to the cord's board end and draw it slowly away from the pulley. It reads
+9. Trim the drag: hook the hanging scale to the cord's board end and draw it slowly away from the pulley. It reads
    the weight plus the pulley's and cleat's drag. Add or take out washers until it reads 0.305-0.310 kg, which is
    3.0 +/- 0.05 N at the board: the sim's 3.0 N (task.py `CORD_N`). Then pencil-mark the cord at the cleat's jaws,
-   draw it out 2 cm and let go: the mark must stop within task.py's `CATCH` of where it was released, read with
-   the steel rule; if it runs back further, clean or replace the cleat.
-9. Cut the boards, once: band-saw each board to 25 x 15 cm and one long side to a 30 cm radius from one template, within
+   draw it out 2 cm and let go: the mark must stop within 3 mm (task.py `CATCH`) of where it was released, read
+   with the steel rule; if it runs back further, clean or replace the cleat.
+10. Cut the boards, once: band-saw each board to 25 x 15 cm and one long side to a 30 cm radius from one template, within
    1 mm of the template line; weigh each on the kitchen scale (225-275 g). Pencil-mark the curved edge every
    centimeter, and turn a screw eye into the board's trailing end face at mid-thickness, 1 cm in from the curve. Keep
    the boards in the room a day before use.
-10. Check the table friction: tilt a test board on an offcut of the same slab until it slides, reading the
+11. Check the table friction: tilt a test board on an offcut of the same slab until it slides, reading the
     angle with the protractor (mu 0.25 is 14 degrees, 0.30 is 16.7). It must start sliding at 14-17 degrees; if it
     holds steeper, rub a thin coat of paste wax into the top, buff it and test again.
-11. Run the trace check below, with the arms switched off, before the first robot trial.
+12. Run the trace check below, with the arms switched off, before the first robot trial.
 
 ### Per trial
 
@@ -302,13 +317,13 @@ protractor, a combination square, a steel rule and a 1/8 in drill bit as a heigh
 ### The blue trace
 
 The paste on the bearing's rim stays wet and transfers where it touches. Wherever the board's edge rode the bearing
-it carries a blue band 3.2-8.0 mm up the edge, so the edge itself records the stretch the bearing passed over, which
+it carries a blue band 3.6-8.3 mm up the edge, so the edge itself records the stretch the bearing passed over, which
 is what the scorer counts (the curve touching the bearing; the paste too needs contact).
 
 Reading the trace, after the trial:
 
 - Lay the paper strip ruled in 2 mm pieces along the curved edge from its leading end (the same 129 pieces the
-  scorer uses) and check each piece for blue between 3.2 and 8.0 mm up the edge (the combination square set to those
+  scorer uses) and check each piece for blue between 3.6 and 8.3 mm up the edge (the combination square set to those
   heights).
 - A piece counts as traced when the blue band crosses it and the top video shows that stretch was fed right to left
   in a pass begun braced on the pin. Blue left by a climb or by a pass begun off the pin does not count; a pass begun
@@ -333,17 +348,19 @@ lasts a trial and the band records the stretch the bearing passed over.
 
 | Quantity | Value | Tolerance | Source |
 |---|---|---|---|
-| Stand-in bearing | 12.7 mm across, 4.8 mm tall | catalog size | R188-2Z (1/4 x 1/2 x 3/16 in); the bit's bearing is 1/2 in across |
-| Bearing height above the table | 3.2 to 8.0 mm | 0.2 mm below the sim's 3.4 to 8.2 mm | 1/8 in nylon spacer under it, checked with a 1/8 in drill-bit shank |
+| Stand-in bearing | 12.7 mm across, 4.8 mm tall, inner ring 5.6 mm long | catalog size | McMaster-Carr 57155K387, R188-2Z with an extended inner ring; the bit's bearing is 12.7 mm across |
+| Bearing height above the table | outer ring 3.6 to 8.3 mm (sim 3.4 to 8.2 mm) | 0.2 mm | 1/8 in nylon spacer plus 0.4 mm of extended inner ring under it, checked with a 1/8 in drill-bit shank |
+| Slab | 3/4 in (19 mm) thick, laid directly on the bench | flat on the bench | the sim's router top is the robot's own table |
+| Arm bases | mounting plane 2.5 mm above the slab's top | 1 mm | 3/4 in plywood pads with 1/8 in hardboard shims; sim arm bases at z 0.750 m, router top 0.7475 m |
 | Bearing axis | the bit's axis (x 33, y 6 cm) | 1 mm | shoulder screw in a hole drilled there |
-| Drag at the board | 3.0 N toward the pulley while the cord is taut, 0 once it runs back past the catch | 0.05 N, set on the hanging scale | task.py `CORD_N`, `drag_load`; 0.300 kg weight; the model's mean cutting force against the feed for this pass: 3.0-3.1 N at the demo's 0.3 m/min feed (Curti et al. 2021, cutting_force.py) |
-| Cleat catch | the cams grip as the cord starts back | task.py `CATCH`, steel rule on a pencil mark | task.py `CATCH` |
+| Drag at the board | 3.0 N toward the pulley while the cord is taut, 0 once it runs back past the catch | 0.05 N, set on the hanging scale | task.py `CORD_N`, `drag_load`; 0.300 kg weight; the model's mean cutting force against the feed for this pass at a slow, steady feed (3.0-3.5 N at 0.3-1 m/min, cutting_force.py) (Curti et al. 2021) |
+| Cleat catch | the cams grip within 3 mm as the cord starts back | 3 mm, steel rule on a pencil mark | task.py `CATCH` |
 | Pulley | x 36, y -66 cm, overhanging the bench's right edge, top of its groove level with the screw eye | 1 cm | task.py `PULLEY`; the cord within 9.7 degrees of the feed along it |
 | Cleat | on the pulley's offcut, 5 cm before the sheave on the cord's run | 1 cm | holds the weight once the cord runs back (task.py `CATCH`) |
 | Screw eye | trailing end face, mid-thickness, 1 cm in from the curve | 2 mm | task.py `EYE` |
 | Cord set snug | braced on the pin, curve's leading end on the bearing | as set by hand | task.py `SNUG` |
 | Table friction | mu 0.25 sliding, 0.30 at rest, planed wood on the planed wooden top | tilt angle 14-17 degrees (paste wax if steeper) | Engineering ToolBox, clean dry wood on wood 0.25-0.5; task.py `MU_TABLE` |
-| Board | planed hardwood, 25 x 15 x 1.27 cm, 250 g, reused | 1 mm; mass to 10% | one band-saw template; task.py's density, 561 kg/m3 at 12% moisture |
+| Board | planed cherry, 25 x 15 x 1.27 cm, 250 g, reused | 1 mm; mass to 10% | one band-saw template; task.py's density, 561 kg/m3 at 12% moisture |
 | Curve | 30 cm radius, 25.8 cm long | within 1 mm of the template | band-sawn to the template line |
 | Starting pin | 0.25 in steel, 5 cm right of the bit's axis, 3 cm tall | 1 mm | dowel pin pressed into a drilled hole |
 | Pin guard | underside 1-1/2 in above the table | as set by the maker | Bench Dog ProGuard |
