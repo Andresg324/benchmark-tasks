@@ -2,16 +2,16 @@
 
 The filter is a free part: a yamkit `Mechanism` fixed at the nipple whose filter link sits on six joints with no drive
 (three slides, then two tilts and the spin about its own axis), so it falls, tips, is carried and set down like any
-loose part. Its joints are the chain's coordinates, not a constraint: the filter can be anywhere within reach, at any
-tilt up to well past lying on its side. The base frame has its z axis along the nipple, pointing out of the engine,
-with the origin at the center of the gasket land; the filter's own frame has its origin on its axis at the gasket's
-face, its z axis toward the closed end.
+loose part. Its joints are the chain's coordinates, not a constraint: the filter can be anywhere within reach, pitched
+from -69 to 126 degrees (upright on the bench is 90) and rolled up to 69 degrees either way. The base frame has its z
+axis along the nipple, pointing out of the engine, with the origin at the center of the gasket land; the filter's own
+frame has its origin on its axis at the gasket's face, its z axis toward the closed end.
 
 The thread (FilterModel, one control step at a time). The fit is the real one (the numbers are the task's, from
 ISO 965 for M20 x 1.5 6H/6g): the nipple's collider is its root cylinder (its thread's minor diameter, to which its
 end is chamfered), the filter's threaded bore is a ring of colliders at its thread's crests (the internal minor
-diameter), 0.2 mm larger in radius. Nothing pulls the filter toward the nipple: the colliders alone decide whether it
-goes on.
+diameter), 0.2 mm larger in radius. Before the thread catches nothing drives the filter: the colliders alone decide
+whether it goes on. Once caught, the thread is an axial drive (the helix, 1.5 mm a turn).
 - Free: no drive on any joint. Off the axis by more than the bore's clearance, the base plate meets the nipple's end
   face and stops there; it goes over the nipple's end only when the robot has centered it within that clearance (and
   squared it enough for the bore to clear the end).
@@ -50,11 +50,11 @@ import yamkit as kit
 
 FREE, ENGAGED, CROSSED = "free", "engaged", "crossed"
 START_TURN = math.radians(20.0)  # turned this far clockwise against the crests: the thread starts (or crosses)
-ON_SLACK = 0.00015  # m: the solver's penetration allowed on top of the bore's clearance when judging that the nipple's
-#                     end is inside the bore (the colliders, not this, keep it there)
+ON_SLACK = 0.00015  # m: contact give allowed on top of the bore's clearance when judging that the nipple's end is
+#                     inside the bore (the colliders, not this, keep it there)
 # The nipple's end found 0.3 mm or more inside the bore farther off its axis than the clearance plus ON_SLACK, or
-# inside the bore past the crests' stop: the filter was forced over it (a solver penetration, not a real fit); it
-# jams, as a crooked start does, and the trial fails. Every state is either on the nipple, off it, or this.
+# inside the bore past the crests' stop: the filter was forced over it; it jams, as a crooked start does, and the
+# trial fails. Every state is either on the nipple, off it, or this.
 K_HOLD = 2000.0  # N*m/rad: the stick-slip hold's stiffness (0.5 degrees of give at 18 N*m)
 AX_K = 20000.0  # N/m: the thread's axial stiffness (a drive on top of the stop)
 CLICK = math.radians(3.0)  # the ratchet's 120 teeth
@@ -202,7 +202,7 @@ class FilterModel:
     came_off: bool = False  # unscrewed off the thread after it caught
     crossed_tilt: float = 0.0
     on: bool = False  # the nipple's end inside the bore, against the threads' crests (not yet started)
-    tilt0: float = 0.0  # the tilt (rad) and offset (m) it caught with: the flanks take them out over the first turn
+    tilt0: float = 0.0  # the tilt (rad) and offset (m) it caught with: the engaged stops stay at least this wide
     lat0: float = 0.0
     forced: bool = False  # forced over the nipple's end (see above ON_SLACK)
     peak_past: float = -1e9  # rad
