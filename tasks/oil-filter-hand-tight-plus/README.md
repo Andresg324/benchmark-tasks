@@ -103,7 +103,7 @@ when tightened past it.
 | 90 to 180 degrees past contact: sealing, but at most two thirds of the three-quarter turn | 0.25 |
 | 180 to 270 past contact (short of 18 N·m); or 270 or more after it was ever past 360 (past the most any instruction allows, not crushed) | 0.5 |
 | 270 to 360 and never past 360, but a hand still touching the filter, or the wrench not yet put back: not finished | 0.5 |
-| 270 to 360, never past 360, no hand touching the filter, and the wrench put back: laid down (let go with its cup within 3 cm of the bench), lying cup down (its back within 15 degrees of straight up), its cup's center within 10 cm of its start marks and within 3 cm of the bench, at rest (under 1 cm/s), no hand touching it. The task places Kawasaki's 18 N·m at three quarters of a turn past contact, and spin-on filter instructions commonly give three quarters to one turn | 1.0 |
+| 270 to 360, never past 360, no hand touching the filter, and the wrench put back: laid down (let go from a hold with its cup within 3 cm of the bench), lying cup down (its back within 15 degrees of straight up), its cup's center within 10 cm of its start marks and within 3 cm of the bench, at rest (under 1 cm/s), no hand touching it. The task places Kawasaki's 18 N·m at three quarters of a turn past contact, and spin-on filter instructions commonly give three quarters to one turn | 1.0 |
 
 Where the arms end is not scored. Possible scores: 0, 0.25, 0.5, 1.0.
 
@@ -135,9 +135,7 @@ In a real trial: before the trial, spin the filter on to gasket contact, draw a 
 boss, and take the filter off; tape a printed protractor ring (15-degree marks) round the boss. Afterwards read the
 line against the ring, counting whole turns from the video. Watch the video for a crooked start (the filter jams
 within a turn, or the can sits visibly askew; check the nipple's thread with the filter off), for a swipe, and for
-the hands letting go. Then put the build's 3/8-inch-drive click torque wrench, set to 18 N·m (13 ft·lb), in the cap's
-square drive and turn it clockwise: it must click before the can moves; if the can moves first, the trial scores at
-most 0.5. The sim's full-credit band starts at the same 18 N·m.
+the hands letting go. Then put the build's 1/4-inch-drive click torque wrench, set to 18 N·m (159 in·lb), through its adapter in the cap's square drive and turn it clockwise: the torque decides the top band, so for 1.0 it must click before the can moves (if the can moves first, at most 0.5); the witness line decides the lower bands and the over-tightening limits. The sim's full-credit band starts where the task's gasket law reaches 18 N·m.
 
 ## Runtime and seeds
 
@@ -339,7 +337,7 @@ Build time: about 2 hours.
 Sources: Kawasaki Teryx4 750 owner's manual, torque table p. 101 (oil filter 18 N·m) and pp. 100-101 (access);
 Kawasaki parts diagram E1710 (KRT750, "Oil Pump/Oil Filter"); ISO 965-1/-2 (M20 x 1.5, 6H/6g) and ISO 4753 (thread
 ends); GM service bulletin 90-216-6 ("3/4 to 1 full turn" after gasket contact); K&N KN-204 listing (M20 x 1.5, cross-reference to 16097-0007); GearWrench 81364XP and 81354 listings and
-brochure; Parts Unlimited 3801-0295 listing; Pittsburgh Pro 63880 listing; BLS Occupational Outlook Handbook and O*NET
+brochure; Parts Unlimited 3801-0295 listing; Pittsburgh Pro 63880 and 63881 listings; BLS Occupational Outlook Handbook and O*NET
 49-3023.00 (the category); Damiao DM-J4340 / DM-J4310 and i2rt's yam_v1 config (the arms).
 
 All code here is original to this submission; no third-party code is included. No third-party assets are used: every shape

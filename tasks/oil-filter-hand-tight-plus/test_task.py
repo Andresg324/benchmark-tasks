@@ -469,10 +469,17 @@ t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
 _up = (np.array(m.TOOL_P0) + (0.0, 0.0, 0.30), m.R_FLAT)  # carried back cup down, 30 cm over its marks
 _h = m._hand_on_tool("right", *_up)[0]
 t.step(tool_on=False, tool_at=_up, R=(tuple(_h), 0.0, 0.0), L=(HOME_L, 1.0, 0.0))
-case("  (the hand on the lifted wrench touches it)", m.tool_touched(m._SEEN["objects"]) != set(), True)
+case("  (the hand on the lifted wrench holds it)", m.tool_holders(m._SEEN["objects"]) != set(), True)
 t.step(R=(HOME_R, 1.0, 0.0))  # let go in the air
 t.step(tool_at=(np.array(m.TOOL_P0), m.R_FLAT))  # it lands on its marks, flat, cup down
 case("cheat: dropped onto its marks from 30 cm (not laid down): 0.5 even at rest", t.home(), 0.5)
+t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
+t.step(tool_on=False, tool_at=_up, R=(tuple(m._hand_on_tool("right", *_up)[0]), 0.0, 0.0), L=(HOME_L, 1.0, 0.0))
+t.step(R=(HOME_R, 1.0, 0.0))  # let go in the air
+_lay = (np.array(m.TOOL_P0), m.R_FLAT)
+t.step(tool_at=_lay)  # lands on its marks
+t.step(R=(tuple(m._hand_on_tool("right", *_lay)[0]), 1.0, 0.0))  # tapped with an open hand (a touch, no hold)
+case("cheat: dropped from 30 cm, then tapped on the bench with an open hand: still 0.5", t.home(), 0.5)
 
 
 # the demo's wrench carry: every hand pose of the lift and the quarter turn is within its arm's reach

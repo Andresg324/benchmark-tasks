@@ -445,7 +445,7 @@ class _History:
         self.tool_still = False
         self.cap_quat = None  # the cap's orientation at the last step
         self.past_last = None  # the filter's angle past contact at the last step (degrees)
-        self.touched = False  # a gripper touching the wrench at the last step
+        self.held = False  # a gripper holding the wrench at the last step
         self.release_h = 0.0  # how high its cup's floor was over where it lies on the bench when last let go (m)
 
 
@@ -474,7 +474,7 @@ def _update(objects):
         if gain > 0:
             cap_turn = (_twist(_H.cap_quat, objects[CAP].quat_xyzw, tighten)
                         if CAP in objects and _H.cap_quat is not None else 0.0)
-            if cap_seated(objects) and tool_holders(objects) and cap_turn >= 0.8 * (past - prev):
+            if cap_seated(objects) and tool_holders(objects) and cap_turn >= 0.8 * (past - prev) - 0.2:
                 credit = gain  # turned by the wrench (its cap turning with the filter), held
             else:
                 credit = min(gain, max([_H.budget[g] for g in holders] + [0.0]))
@@ -488,10 +488,10 @@ def _update(objects):
     _H.past_last = math.degrees(fm.past) if fm.state == fk.ENGAGED else None
     if CAP in objects:
         cp = np.asarray(objects[CAP].pos, float)
-        touched = bool(tool_touched(objects))
-        if _H.touched and not touched:
+        held = bool(tool_holders(objects))
+        if _H.held and not held:
             _H.release_h = float(cp[2] - TOOL_P0[2])
-        _H.touched = touched
+        _H.held = held
         _H.tool_still = _H.tool_last is not None and float(np.linalg.norm(cp - _H.tool_last)) / 0.05 < STILL
         _H.tool_last = cp
 
@@ -526,9 +526,9 @@ STILL = 0.01  # m/s: at rest
 
 
 def wrench_put_away(objects) -> bool:
-    """The wrench put back: laid down (let go with its cup's floor within BENCH_REST of where it lies on the bench),
-    lying flat on the bench, cup down (its back within FLAT of straight up), its cup's center within MARKS of its
-    start marks and its floor within BENCH_REST of where it lies there, at rest (moving under STILL between steps),
+    """The wrench put back: laid down (let go from a hold with its cup's floor within BENCH_REST of where it lies on the
+    bench), lying flat on the bench, cup down (its back within FLAT of straight up), its cup's center within MARKS of
+    its start marks and its floor within BENCH_REST of where it lies there, at rest (moving under STILL between steps),
     and no gripper's collision hulls touching it."""
     if CAP not in objects or TOOL not in objects:
         return True
@@ -1199,7 +1199,7 @@ def _wrench_phase(st):
             if o is not None and CAP in o:
                 fp, fa, _ = _filter_now()
                 cp, _ = _pose(o, CAP)
-                ok = cap_seated(o)
+                ok = cap_seated(o) and float(np.dot(cp - (fp + fa * CAN_H), fa)) <= 0.003  # fully on, not just on
                 cmd = st["last_w"]
                 got = {s_: np.asarray(o[f"{s_}_gripper"].pos, float) for s_ in ("left", "right")
                        if f"{s_}_gripper" in o}
