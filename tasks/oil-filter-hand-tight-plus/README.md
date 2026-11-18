@@ -76,9 +76,12 @@ drive's axis), the right on the round grip 55 cm out. Each hand checks that it i
 once more 8 mm lower. They lift it 7 cm and turn it a quarter turn about the handle while bringing it across, so the
 cup faces the engine. They hold it 3 cm in front of the filter's end with the handle at an angle the right arm can
 reach that lines the cap's teeth up with the gaps between the filter's flutes (the left hand set the filter's angle
-for this), read where the cap is and which way it points: twice they square it to the filter and center it, three
-times more they center it, then twice again with its teeth 3.5 mm short of the flutes (the cup clears them by 0.4 mm),
-and push the cup over the fluted end. The right hand moves to a top-down grip on the grip. Then strokes: the right
+for this), read where the cap is and which way it points: five looks 3 cm out square it to the filter and bring it
+to where it is sent, then up to eight close looks with its teeth 3.5 mm short of the flutes square it and center its
+rim (the cup clears the flutes by only 0.4 mm). Then they push the cup on gently, aimed only 2 mm past the seat, while
+rocking it as a mechanic seats a cap wrench: the handle swung 3 degrees either way and the cup moved round a 0.6 mm
+circle, so the teeth and the rim find their way over the flutes. If the cup is not on, they back it off, look again
+and push again (three tries at most). The right hand moves to a top-down grip on the grip. Then strokes: the right
 hand swings the handle down from 6 degrees above level to 10 below, pushing what the gasket takes (plus 1 N·m), aimed past the handle by its
 arm's give (J K^-1 J^T from the servos' stiffness), while the left presses the cup on (8 N toward the engine); then
 it swings the handle back up while the ratchet clicks. Each stroke is sized from the filter's angle when it starts,
