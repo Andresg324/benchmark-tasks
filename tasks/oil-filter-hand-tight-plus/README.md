@@ -79,7 +79,7 @@ hand swings the handle down from 6 degrees above level to 10 below, pushing what
 arm's give (J K^-1 J^T, the arm's joint stiffness), while the left presses the cup on (20 N toward the engine), and at each stroke's start both hands re-aim from where the cap sits, squaring it and pushing it home; then
 it swings the handle back up while the ratchet clicks. Each stroke is sized from the filter's angle when it starts,
 and they stop once it is 270 degrees past contact (where the gasket takes 18 N·m), after two strokes that turn it
-less than 2 degrees, or after 40 strokes. The right hand goes back to the grip it carried with; they pull the cup straight off the flutes along the filter's axis, a centimeter at a time while rocking the handle 2 degrees either way, turn the wrench back cup down, carry it to its start marks, lay it
+less than 2 degrees, or after 40 strokes. The right hand goes back to the grip it carried with, on the handle where it is seen, checks it is holding and if not opens and tries once more; they pull the cup straight off the flutes along the filter's axis, a centimeter or so at a time while rocking the handle 2 degrees either way, turn the wrench back cup down, carry it to its start marks, lay it
 flat on the bench there, let go, lift clear and go home.
 
 Result on this version: 1.0 in PENDING_STEPS steps (PENDING_S s): the thread caught PENDING_CATCH degrees off square;
