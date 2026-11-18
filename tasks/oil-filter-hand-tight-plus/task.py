@@ -911,7 +911,8 @@ DONE_PAST, AIM_PAST = 270.0, 282.0
 WRENCH_MAX = 26
 WRENCH_STALL = 2.0
 TURN_STEPS = 4
-CAP_FINE, CAP_FINE_MM, CAP_TRIES = 6, 0.4, 3  # close looks at the cap (to 0.4 mm off the axis), tries at pushing it on
+CAP_FINE, CAP_FINE_MM, CAP_FINE_DEG, CAP_TRIES = 8, 0.2, 0.4, 3  # close looks at the cap (its rim to 0.2 mm off the
+#                                                                   axis and square to 0.4 degrees), tries at pushing
 LIFT = 0.07  # the wrench lifted this far before it is turned (the left arm's reach)
 TAKE_UP = 4.0  # degrees of the stroke taken up before the filter turns (the flutes' play and the hold's give)
 W_SHARE = {"left": 0.5, "right": 0.5}  # each hand's share of the wrench's weight while carrying it
@@ -1012,7 +1013,10 @@ def _wrench_phase(st):
     def check():  # is each hand on it? (read once, when this step starts)
         o = _obj()
         held = tool_holders(o) if o is not None else {"left_gripper", "right_gripper"}
-        _debug("wrench picked: holding %s" % sorted(held))
+        if o is not None:
+            gaps = {g: {k: round(1000 * v, 1) for k, v in hk.gap(o, g, TOOL, TOOL_SHAPES).items()} for g in GRIPPERS}
+            _debug("wrench picked: holding %s; hull gaps to it (mm) %s; openings %s" % (
+                sorted(held), gaps, {g: round(kit.opening(o, g), 2) for g in GRIPPERS}))
         st["regrip"] = [g.split("_")[0] for g in ("left_gripper", "right_gripper") if g not in held]
         return at_tool(fgrip)()
     add("wrench: check the grip", 0.1, check)
@@ -1068,16 +1072,18 @@ def _wrench_phase(st):
         if o is None or CAP not in o:
             return 0.0, 0.0
         cp, cr = _pose(o, CAP)
-        off = cp - (fp + fa * (CAN_H + st.get("tout", 0.03) + 0.0005))  # from where it was sent
-        lat = 1000 * float(np.linalg.norm(off - np.dot(off, fa) * fa))
+        off = cp - (fp + fa * (CAN_H + st.get("tout", 0.03) + 0.0005))  # the floor, from where it was sent
+        rim = cp - cr[:, 2] * CUP_DEPTH  # the rim's center (the cup opens toward -z): it is what must clear the flutes
+        rim_off = rim - (fp + fa * float(np.dot(rim - fp, fa)))
+        lat = 1000 * float(np.linalg.norm(rim_off))
         along = 1000 * float(np.dot(off, fa))
-        st["tfix"] = st["tfix"] - gain * np.clip(off, -clip, clip)
+        st["tfix"] = st["tfix"] - gain * np.clip(rim_off + float(np.dot(off, fa)) * fa, -clip, clip)
         rel = rf.T @ cr  # the cap in the filter's frame: its turn about the axis, as flute pitches
         turn = math.degrees(math.atan2(rel[1, 0], rel[0, 0])) % (360.0 / FLUTE_N)
-        _debug("cap look %s: %.1f mm off the axis, %.1f mm along it from where it was sent, %.1f deg off square, "
-               "cap at %.1f deg into a flute pitch" % (tag, lat, along,
-                                                       math.degrees(math.acos(min(1.0, float(np.dot(cr[:, 2], fa))))),
-                                                       turn))
+        ang = math.degrees(math.acos(min(1.0, float(np.dot(cr[:, 2], fa)))))
+        st["cap_ang"] = ang
+        _debug("cap look %s: rim %.2f mm off the axis, %.1f mm along it from where it was sent, %.2f deg off square, "
+               "cap at %.1f deg into a flute pitch" % (tag, lat, along, ang, turn))
         have, want = cr[:, 2], np.asarray(fa, float)  # the cap's axis out of its back: along the filter's
         c = np.cross(have, want)
         sn = float(np.linalg.norm(c))
@@ -1096,15 +1102,17 @@ def _wrench_phase(st):
         add("wrench: line the cap up", 1.2, coarse_cap(k))
 
     def fine_cap(attempt, i):
-        """Close looks, the teeth 3.5 mm short of the flutes' ends (the cup clears the flutes by 0.4 mm): until the cap
-        is within CAP_FINE_MM of the axis and 2 mm of where it is sent (decided as each look starts)."""
+        """Close looks, the teeth 3.5 mm short of the flutes' ends (the cup clears the flutes by 0.4 mm): squaring and
+        centering it until its rim is within CAP_FINE_MM of the axis, it is square within CAP_FINE_DEG and within 2 mm
+        of where it is sent (decided as each look starts)."""
         g = st.setdefault("capfine", {})
 
         def f():
             if not keep_fine(attempt, i)():
                 return st["last_w"]
-            lat, along = look_cap(f"{attempt}.{i}", False, 0.7, 0.01)
-            if g.get(attempt) is None and i > 0 and lat <= CAP_FINE_MM and abs(along) <= 2.0:
+            lat, along = look_cap(f"{attempt}.{i}", True, 0.7, 0.01)
+            if (g.get(attempt) is None and i > 0 and lat <= CAP_FINE_MM and abs(along) <= 2.0
+                    and st.get("cap_ang", 9.0) <= CAP_FINE_DEG):
                 g[attempt] = i
             st["tout"] = 0.016
             st["last_w"] = on(0.016, False)()
@@ -1140,9 +1148,16 @@ def _wrench_phase(st):
                 fp, fa, _ = _filter_now()
                 cp, _ = _pose(o, CAP)
                 ok = cap_seated(o)
-                _debug("cap %s (try %d): its floor %.1f mm off the filter's end, past %.1f deg" % (
-                    "seated" if ok else "NOT seated", attempt + 1, 1000 * float(np.dot(cp - (fp + fa * CAN_H), fa)),
-                    past_deg()))
+                cmd = st["last_w"]
+                got = {s_: np.asarray(o[f"{s_}_gripper"].pos, float) for s_ in ("left", "right")
+                       if f"{s_}_gripper" in o}
+                _debug("cap %s (try %d): its floor %.1f mm off the filter's end, %.2f deg off square, past %.1f deg; "
+                       "hands commanded vs reached (mm): %s" % (
+                           "seated" if ok else "NOT seated", attempt + 1,
+                           1000 * float(np.dot(cp - (fp + fa * CAN_H), fa)),
+                           math.degrees(math.acos(min(1.0, float(np.dot(_pose(o, CAP)[1][:, 2], fa))))), past_deg(),
+                           {s_: [round(1000 * float(v), 1) for v in got[s_] - np.asarray(cmd[s_][0], float)]
+                            for s_ in got}))
             st[f"seated{attempt}"] = ok
             return st["last_w"]
         return f
