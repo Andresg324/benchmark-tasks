@@ -911,6 +911,7 @@ DONE_PAST, AIM_PAST = 270.0, 282.0
 WRENCH_MAX = 26
 WRENCH_STALL = 2.0
 TURN_STEPS = 4
+CAP_FINE, CAP_FINE_MM, CAP_TRIES = 6, 0.4, 3  # close looks at the cap (to 0.4 mm off the axis), tries at pushing it on
 LIFT = 0.07  # the wrench lifted this far before it is turned (the left arm's reach)
 TAKE_UP = 4.0  # degrees of the stroke taken up before the filter turns (the flutes' play and the hold's give)
 W_SHARE = {"left": 0.5, "right": 0.5}  # each hand's share of the wrench's weight while carrying it
@@ -1057,44 +1058,112 @@ def _wrench_phase(st):
     add("wrench: the cup in front of the filter", 2.2, on(0.03, True))
     st["tfix"] = np.zeros(3)
     st["trfix"] = np.eye(3)
-    for k in range(7):
-        def center(square=k < 2, out=0.03 if k < 5 else 0.016, k=k):
-            """Where is the cap, and which way does it point? Aim it onto the filter's axis and to where it was sent
-            along it (the wrench can sit a few cm off in the hands), and (the first two looks) square it to the
-            filter; the rest only center it (squaring it moves the hands), the last two with the teeth 3.5 mm short
-            of the flutes' ends (the cup clears the flutes by only 0.4 mm)."""
-            from yam_arena.urdf import axis_angle_matrix
-            fp, fa, _ = _filter_now()
-            o = _obj()
-            if o is not None and CAP in o:
-                cp, cr = _pose(o, CAP)
-                off = cp - (fp + fa * (CAN_H + st.get("tout", 0.03) + 0.0005))  # from where it was sent
-                st["tfix"] = st["tfix"] - 0.8 * np.clip(off, -0.02, 0.02)
-                _debug("cap look %d: %.1f mm off the axis, %.1f mm along it from where it was sent, %.1f deg off "
-                       "square" % (k, 1000 * float(np.linalg.norm(off - np.dot(off, fa) * fa)),
-                                   1000 * float(np.dot(off, fa)),
-                                   math.degrees(math.acos(min(1.0, float(np.dot(cr[:, 2], fa)))))))
-                have, want = cr[:, 2], np.asarray(fa, float)  # the cap's axis out of its back: along the filter's
-                c = np.cross(have, want)
-                sn = float(np.linalg.norm(c))
-                if square and sn > 1e-6:  # (the cup goes on only within about 3 degrees)
-                    st["trfix"] = axis_angle_matrix(c / sn, 0.8 * math.atan2(sn, float(np.dot(have, want)))) \
-                        @ st["trfix"]
-            st["tout"] = out
-            return on(out, True)()
-        add("wrench: line the cap up" if k < 5 else "wrench: line the cap up closely", 1.2, center)
-    add("wrench: cup over the flutes", 1.4, on(-0.002, False))
-
-    def seated():
+    def look_cap(tag, square, gain=0.8, clip=0.03):
+        """Where is the cap, and which way does it point? Aim it onto the filter's axis and to where it was sent
+        along it (the wrench can sit a few cm off in the hands), and (if `square`) square it to the filter. Returns
+        (mm off the axis, mm along it from where it was sent)."""
+        from yam_arena.urdf import axis_angle_matrix
+        fp, fa, rf = _filter_now()
         o = _obj()
-        if o is not None and CAP in o:
-            fp, fa, _ = _filter_now()
-            cp, _ = _pose(o, CAP)
-            _debug("cap %s: its floor %.1f mm off the filter's end, past %.1f deg" % (
-                "seated" if cap_seated(o) else "NOT seated", 1000 * float(np.dot(cp - (fp + fa * CAN_H), fa)),
-                past_deg()))
-        return on(-0.002, False)()
-    add("wrench: seated", 0.6, seated)
+        if o is None or CAP not in o:
+            return 0.0, 0.0
+        cp, cr = _pose(o, CAP)
+        off = cp - (fp + fa * (CAN_H + st.get("tout", 0.03) + 0.0005))  # from where it was sent
+        lat = 1000 * float(np.linalg.norm(off - np.dot(off, fa) * fa))
+        along = 1000 * float(np.dot(off, fa))
+        st["tfix"] = st["tfix"] - gain * np.clip(off, -clip, clip)
+        rel = rf.T @ cr  # the cap in the filter's frame: its turn about the axis, as flute pitches
+        turn = math.degrees(math.atan2(rel[1, 0], rel[0, 0])) % (360.0 / FLUTE_N)
+        _debug("cap look %s: %.1f mm off the axis, %.1f mm along it from where it was sent, %.1f deg off square, "
+               "cap at %.1f deg into a flute pitch" % (tag, lat, along,
+                                                       math.degrees(math.acos(min(1.0, float(np.dot(cr[:, 2], fa))))),
+                                                       turn))
+        have, want = cr[:, 2], np.asarray(fa, float)  # the cap's axis out of its back: along the filter's
+        c = np.cross(have, want)
+        sn = float(np.linalg.norm(c))
+        if square and sn > 1e-6:  # (the cup goes on only within about 3 degrees)
+            st["trfix"] = axis_angle_matrix(c / sn, 0.8 * math.atan2(sn, float(np.dot(have, want)))) @ st["trfix"]
+        return lat, along
+
+    def coarse_cap(k):
+        def f():
+            look_cap(str(k), k < 2)
+            st["tout"] = 0.03
+            st["last_w"] = on(0.03, True)()
+            return st["last_w"]
+        return f
+    for k in range(5):  # 3 cm out: square it (twice), and bring it to where it is sent
+        add("wrench: line the cap up", 1.2, coarse_cap(k))
+
+    def fine_cap(attempt, i):
+        """Close looks, the teeth 3.5 mm short of the flutes' ends (the cup clears the flutes by 0.4 mm): until the cap
+        is within CAP_FINE_MM of the axis and 2 mm of where it is sent (decided as each look starts)."""
+        g = st.setdefault("capfine", {})
+
+        def f():
+            if not keep_fine(attempt, i)():
+                return st["last_w"]
+            lat, along = look_cap(f"{attempt}.{i}", False, 0.7, 0.01)
+            if g.get(attempt) is None and i > 0 and lat <= CAP_FINE_MM and abs(along) <= 2.0:
+                g[attempt] = i
+            st["tout"] = 0.016
+            st["last_w"] = on(0.016, False)()
+            return st["last_w"]
+        return f
+
+    def keep_fine(attempt, i):
+        def k():
+            if attempt > 0 and st.get(f"seated{attempt - 1}", True):
+                return False  # the cup went on at the last try
+            done = st.get("capfine", {}).get(attempt)
+            return done is None or i <= done
+        return k
+
+    def tried(attempt):
+        return attempt == 0 or not st.get(f"seated{attempt - 1}", True)
+
+    def push(attempt):
+        def f():
+            if not tried(attempt):
+                return st["last_w"]
+            st["last_w"] = on(-0.002, False)()
+            return st["last_w"]
+        return f
+
+    def seated(attempt):
+        def f():
+            if not tried(attempt):
+                return st["last_w"]
+            o = _obj()
+            ok = True
+            if o is not None and CAP in o:
+                fp, fa, _ = _filter_now()
+                cp, _ = _pose(o, CAP)
+                ok = cap_seated(o)
+                _debug("cap %s (try %d): its floor %.1f mm off the filter's end, past %.1f deg" % (
+                    "seated" if ok else "NOT seated", attempt + 1, 1000 * float(np.dot(cp - (fp + fa * CAN_H), fa)),
+                    past_deg()))
+            st[f"seated{attempt}"] = ok
+            return st["last_w"]
+        return f
+
+    def back_off(attempt):
+        def f():
+            if not tried(attempt):
+                return st["last_w"]
+            st["tout"] = 0.016
+            st["last_w"] = on(0.016, False)()
+            return st["last_w"]
+        return f
+
+    for attempt in range(CAP_TRIES):
+        go = (lambda attempt=attempt: tried(attempt))
+        if attempt > 0:
+            add("wrench: not on: back the cup off", 0.8, back_off(attempt), go)
+        for i in range(CAP_FINE):
+            add("wrench: line the cap up closely", 1.2, fine_cap(attempt, i), keep_fine(attempt, i))
+        add("wrench: cup over the flutes", 1.4, push(attempt), go)
+        add("wrench: seated", 0.6, seated(attempt), go)
 
     def regrip(finger, up):
         def f():
