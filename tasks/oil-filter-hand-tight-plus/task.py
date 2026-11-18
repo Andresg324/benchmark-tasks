@@ -503,6 +503,13 @@ def _update(objects):
         if held != _H.held:
             _debug("wrench %s, its cup %.1f mm over its rest" % ("held" if held else "no longer held",
                                                                  1000 * float(cp[2] - TOOL_P0[2])))
+        if os.environ.get("OIL_DEBUG"):
+            who = (tuple(sorted(tool_holders(objects))), tuple(sorted(tool_touched(objects))))
+            if who != _SEEN.get("who"):
+                _SEEN["who"] = who
+                _debug("wrench held by %s, touched by %s, cup %.1f mm over its rest, cap %s" % (
+                    list(who[0]), list(who[1]), 1000 * float(cp[2] - TOOL_P0[2]),
+                    "on" if cap_seated(objects) else "off"))
         _H.held, _H.touched, _H.was_grasped = held, touched, _H.grasped
         _H.tool_still = _H.tool_last is not None and float(np.linalg.norm(cp - _H.tool_last)) / 0.05 < STILL
         _H.tool_last = cp
