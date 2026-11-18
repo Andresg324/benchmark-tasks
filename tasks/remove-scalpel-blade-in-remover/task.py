@@ -382,8 +382,8 @@ FRICTION = {"handle": SCALPEL_FRICTION, "blade": SCALPEL_FRICTION, "dish": DISH_
 
 # -- the scored thresholds -----------------------------------------------------------------------------------------------------
 TOUCH_TOL = 0.0006  # m: contact with the real 0.4 mm blade: an arm link's surface at 0.6 mm or less from it. Its
-# collision hulls are sampled with points 0.5 mm apart (yamgeom: every point of their surface within 0.45 mm of one), so
-# a real touch reads under 0.5 mm, and a 0.9 mm air gap is not a touch.
+# collision hulls are sampled with points 0.5 mm apart (yamgeom: every point of their surface within about 0.5 mm of one,
+# tested), so a touch reads about 0.5 mm or less, under the threshold, and a 0.9 mm air gap is not a touch.
 DROP_SPEED = 0.5  # m/s: the scalpel, blade on, falling faster than this was dropped
 TRAY_SLACK = 0.002  # m: a part resting against the tray's inner wall may read 2 mm into it
 UPRIGHT_DEG = 10.0  # the remover stands upright at its place: tilted 10 degrees or less, its underside within 1 mm
@@ -506,6 +506,10 @@ def mesh(name) -> tuple:
     return yg.cloud(name)
 
 
+if "isaaclab" in sys.modules:  # in the simulator: read and check the hulls as the task loads, not in a trial's step
+    yg.warm(ARM_LINKS)
+
+
 def _box_gap(q, lo, hi) -> np.ndarray:
     """Distance (m) from points q (in a box's frame) to the box lo..hi (0 inside)."""
     return np.linalg.norm(np.maximum(np.maximum(np.asarray(lo) - q, q - np.asarray(hi)), 0.0), axis=1)
@@ -518,10 +522,13 @@ def arm_gap(objects, poses=None, upto: float = 0.05) -> tuple:
     centre = ob + Rb @ ((np.array(B_RLO) + np.array(B_RHI)) / 2)
     best, who = math.inf, ""
     for key, (o, R) in poses.items():
-        pts, c, r = mesh(key.split("/")[1])
+        _, c, r = mesh(key.split("/")[1])
         if float(np.linalg.norm(o + R @ c - centre)) - r > upto:
             continue
-        q = ((o + pts @ R.T) - ob) @ Rb
+        q = yg.near(key.split("/")[1], lambda x, o=o, R=R: ((o + x @ R.T) - ob) @ Rb,  # in the blade's frame, only
+                    lambda x: _box_gap(x, B_RLO, B_RHI), upto)  # the 1 cm cells of points that can be within `upto`
+        if not len(q):
+            continue
         g = float(_box_gap(q, B_RLO, B_RHI).min())
         if g < best:
             best, who = g, key
@@ -586,7 +593,7 @@ class Ledger:
                       for p in (to_local(objects, "tray", to_world(objects, "blade", c)) for c in BLADE_PTS)):
             self.ruined = self.ruined or "scalpel put in the instrument tray with its blade on"
         if LINK_POSES:  # the simulator: the arms' collision hulls, posed as the simulator reports
-            gap, who = arm_gap(objects)
+            gap, who = arm_gap(objects, upto=0.01)  # exact up to 1 cm, enough for TOUCH_TOL and the debug log
             self.min_arm = min(getattr(self, "min_arm", math.inf), gap)
             if gap <= TOUCH_TOL:
                 self.ruined = self.ruined or f"the robot ({who}) touched the blade"
@@ -850,13 +857,13 @@ def remover_top(y_local: float, past: float = 0.0) -> np.ndarray:
     W = tips_world(DOWN_Y, np.zeros(3))  # the closed fingertips' collision hulls, tool point at 0
     zmin = W[:, 2].min()
     low = W[W[:, 2] <= zmin + 0.0005].mean(axis=0)  # where they first meet a flat top (probe p8: aimed by a box
-    return target - low  # model of the tips, the real tapered tips stopped 3.9 mm high and 6.7 mm off the cap's middle)
+    return target - low  # model of the tips, the tapered tips' collision shapes stopped 3.9 mm high and 6.7 mm off the cap's middle)
 
 
 LEFT_LEAN = math.radians(float(os.environ.get("SCALPEL_LEFT_LEAN", "25")))
 # The left hand: fingers down, leaned back toward the robot by 25 degrees about y, closing along y. The closed
-# fingertips' collision hulls then reach their lowest 3.5 mm (the button's height) in a patch inside the 20 x 14 mm
-# button.
+# fingertips' collision hulls then meet a flat top in a patch inside the 20 x 14 mm button: their lowest 3.5 mm (the
+# button's height) lies within it.
 DOWN_Y = frame((math.sin(LEFT_LEAN), 0, -math.cos(LEFT_LEAN)), (0, -1, 0))
 GRIP_R = frame((0, 0, -1), (1, 0, 0))  # the left hand taking the remover's body: straight down, closing across its depth
 R_GRIP_Y = 0.018  # m: the fingers' middle this far toward the far end from the remover's middle (clear of the button)

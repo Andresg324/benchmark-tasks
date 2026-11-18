@@ -165,8 +165,9 @@ def band(width: float, squeeze: float = BAND, over: float = OVER) -> tuple:
 # yam_arm.urdf's gripper, tip_left and tip_right): the palm, and for each finger its body, its pad and its narrower
 # tip, and its carriage. `o` is each finger's inner face's distance from the tool point: 0 closed, 47 mm fully open.
 FINGER_SLABS = ((None, -0.021), (-0.021, -0.003), (-0.003, None))  # m along z: the finger's body, pad and tip
+# (the split heights are our choice; with any split every hull point stays inside a box, as test_task.py checks)
 FAR = 0.02  # m: hand_gap computes gaps up to this exactly
-CONTACT = 0.002  # m: touching: the shapes within 2 mm (the solver's resting gap plus the box fit to the meshes)
+CONTACT = 0.002  # m: touching: the shapes within 2 mm (the solver's resting gap)
 
 
 @functools.lru_cache(maxsize=1)

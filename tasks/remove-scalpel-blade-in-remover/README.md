@@ -99,7 +99,7 @@ the button is on top, over the blade at the stop.
 
 | Hazard (any time, latched 0) | Rule |
 |---|---|
-| The robot on the blade | contact: the real shape of any arm link, upper arm (link3) to fingertips, at 0.6 mm or less from the real 0.4 mm blade (the robot's collision hulls from the competition environment, sampled at run time with points 0.5 mm apart, so a real touch reads under 0.5 mm) |
+| The robot on the blade | contact: the collision shape of any arm link, upper arm (link3) to fingertips, at 0.6 mm or less from the real 0.4 mm blade (the robot's collision hulls from the competition environment, sampled at run time with points 0.5 mm apart, so a touch reads about 0.5 mm or less, under the 0.6 mm threshold) |
 | A drop | the scalpel, blade on, falling faster than 0.5 m/s, or more than 1 cm below the table top |
 | The bladed scalpel in the tray | any corner of the blade, still on the handle, inside the tray's outline from above and under 1 cm over its rim |
 
@@ -165,7 +165,7 @@ apart over the remover.
 | Release | lets go of the remover, which stands where it was | |
 | Lay down | home | carries it over the tray, lowers it close to the floor, lets go, goes home |
 
-The press is aimed with the YAM's real fingertip shapes (their lowest part lies inside the button's top) and is
+The press is aimed with the YAM's fingertip collision shapes (their lowest part lies inside the button's top) and is
 commanded past the cap's top as a force target: the hand stops on the bottomed button.
 
 `DEMO_IDLE_ARM` (left or right) drops one arm's plan. `SCALPEL_DEBUG=N` prints telemetry every N control steps;
@@ -239,9 +239,9 @@ whole. Put the tray back empty.
 
 - Every file in this folder is the task's own code and text; there are no third-party files in it. The remover's drawn
   body and button cap are built at start-up in `task.py` (trimesh convex hulls of corner spheres).
-- The robot model and its collision hulls (the YAM model and its USD) and the simulator load at run time from the
-  competition environment (yam-isaac-lab-arena revision 0059d02a, `yam_arena/assets/yam`) and are not redistributed
-  here. The arm and gripper shapes the scorer checks, and the fingertip shape the demo aims the press with, are sampled
-  from, or boxes fitted to, those collision hulls at run time (`yamgeom.py`, `guardkit.py`); nothing derived from them
-  is stored in this folder. Their terms are the environment's: the YAM model is I2RT Robotics' (MIT License), and the
-  environment's README states that it has no license yet.
+- The robot model and its collision hulls (the YAM URDF, its hulls and USD, `yam_arena/assets/yam`) load at run time
+  from the competition environment (yam-isaac-lab-arena revision 0059d02a), and the simulator is the environment's
+  Isaac Sim; neither is redistributed here. The arm and gripper shapes the scorer checks, and the fingertip shape the
+  demo aims the press with, are sampled from, or boxes fitted to, those collision hulls at run time (`yamgeom.py`,
+  `guardkit.py`); nothing derived from them is stored in this folder. Their terms are the environment's: the YAM model
+  is I2RT Robotics' (MIT License), and the environment's README states that it has no license yet.

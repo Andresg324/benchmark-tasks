@@ -8,16 +8,19 @@ converted from the same URDF; check() confirms the two agree). PhysX cooks a hul
     yg.points(link): surface points (n x 3, m, the link's own frame) of the link's hulls, in rows at most SPACING
         (0.5 mm) apart on each face and at most SPACING apart along each row, less the points inside another hull of
         the same link (never the nearest to anything outside the link). Measured on links 3-5, the gripper and both
-        fingertips: every point of the hulls' outer surface lies within 0.45 mm of one (0.30 mm at the 99th
-        percentile).
+        fingertips: every point of the hulls' outer surface lies within about 0.5 mm of one (at most 0.51 mm, near
+        the seams between overlapping hulls; 0.30 mm at the 99th percentile).
     yg.tcp_points(tip): the same for "tip_left" / "tip_right" with the gripper closed, in the tool point's frame (the
         gripper's frame moved by yam_arena.constants.TCP_OFFSET).
     yg.cloud(name): (points, centroid, radius about it) of a link or of "<tip>_tcp", for culling.
+    yg.near(name, place, gap, cutoff): the placed points of cloud(name) that can lie within cutoff of an object (whole
+        1 cm cells of points left out only when they cannot), so a contact check scans the few cells near it.
     yg.box(points, lo, hi): (center, size) of the axis-aligned box around the points within lo..hi.
     yg.proud_points, yg.visual_vertices, yg.turn_to: test aids (where the hulls bridge pockets of the visual mesh).
 
-Points are built on first use, one link at a time (a few seconds each), and cached under the system temp folder,
-keyed by a hash of the hulls' vertices and planes and of this module's settings; the cache is never part of the task.
+Points are built on first use, one link at a time (a few seconds each), and cached under the system temp folder (a
+folder per user), keyed by a hash of the hulls' vertices and planes and of this module's code; a cached array that is
+not a finite (n, 3) array of points on the hulls is built again. The cache is never part of the task.
 """
 
 from __future__ import annotations
@@ -139,27 +142,47 @@ def _build(link: str) -> np.ndarray:
 
 def _key(link: str) -> str:
     h = hashlib.sha256(f"{_VERSION} {SPACING} {INSIDE} {link}".encode())
+    with open(__file__, "rb") as f:
+        h.update(f.read())  # this module's code: an edited copy never loads points another copy built
     for v, _, planes in hulls(link):
         h.update(np.round(v, 9).tobytes())
         h.update(np.round(planes, 9).tobytes())
     return h.hexdigest()[:24]
 
 
+def _valid(link: str, p) -> bool:
+    """A cached array is a finite (n, 3) float array of at least 1,000 points, a spread sample of which lies on the
+    link's hulls (on a face of one hull, to 1 micrometre)."""
+    if not (isinstance(p, np.ndarray) and p.ndim == 2 and p.shape[1] == 3 and len(p) >= 1000
+            and np.issubdtype(p.dtype, np.floating) and np.isfinite(p).all()):
+        return False
+    q = p[:: max(1, len(p) // 200)]
+    on = np.zeros(len(q), bool)
+    for _, _, planes in hulls(link):
+        s = (q @ planes[:, :3].T - planes[:, 3]).max(axis=1)
+        on |= np.abs(s) <= 1e-6
+    return bool(on.all())
+
+
 @functools.lru_cache(maxsize=None)
 def points(link: str) -> np.ndarray:
     """Surface points (m, the link's frame) of the link's collision hulls (see the module doc)."""
-    path = os.path.join(tempfile.gettempdir(), "yamgeom_cache", f"{link}_{_key(link)}.npy")
+    user = os.getuid() if hasattr(os, "getuid") else "user"
+    path = os.path.join(tempfile.gettempdir(), f"yamgeom_cache_{user}", f"{link}_{_key(link)}.npy")
     try:
         out = np.load(path)
+        if not _valid(link, out):
+            raise ValueError(path)
     except (OSError, ValueError):
         out = _build(link)
+        tmp = f"{path}.{os.getpid()}.tmp.npy"
         try:
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            tmp = f"{path}.{os.getpid()}.tmp.npy"
+            os.makedirs(os.path.dirname(path), mode=0o700, exist_ok=True)
             np.save(tmp, out)
             os.replace(tmp, path)
         except OSError:
-            pass  # no cache: built again next time
+            if os.path.exists(tmp):
+                os.remove(tmp)  # no cache: built again next time
     out.setflags(write=False)
     return out
 
@@ -191,6 +214,42 @@ def cloud(name: str) -> tuple:
     p = tcp_points(name[:-4]) if name.endswith("_tcp") else points(name)
     c = p.mean(axis=0)
     return p, c, float(np.linalg.norm(p - c, axis=1).max())
+
+
+CELL = 0.01  # m: near()'s cells
+
+
+@functools.lru_cache(maxsize=None)
+def _cells(name: str) -> tuple:
+    """cloud(name)'s points grouped by CELL cube: (points in cell order, cell starts, cell ends, cell centres, radii)."""
+    p = cloud(name)[0]
+    k = np.floor(p / CELL).astype(np.int64)
+    order = np.lexsort((k[:, 2], k[:, 1], k[:, 0]))
+    p, k = p[order], k[order]
+    starts = np.r_[0, np.nonzero(np.any(np.diff(k, axis=0) != 0, axis=1))[0] + 1]
+    ends = np.r_[starts[1:], len(p)]
+    centres = np.add.reduceat(p, starts, axis=0) / (ends - starts)[:, None]
+    radii = np.maximum.reduceat(np.linalg.norm(p - np.repeat(centres, ends - starts, axis=0), axis=1), starts)
+    return p, starts, ends, centres, radii
+
+
+def warm(names) -> None:
+    """Read and check the hulls and build near()'s cells for `names` now (at load), not inside a trial's step."""
+    for name in names:
+        _cells(name)
+
+
+def near(name: str, place, gap, cutoff: float) -> np.ndarray:
+    """The points of cloud(name) moved by `place` (points -> points, a rigid motion) that can lie within `cutoff` of
+    an object, for a `gap` (placed points -> m) that grows no faster than the distance (a distance to a convex shape,
+    or the least of several): a cell is left out only when gap(its centre) minus its radius is over `cutoff`, so the
+    least gap over the returned points equals the least over all of them whenever that is `cutoff` or less. Empty if
+    no cell can be that close."""
+    p, starts, ends, centres, radii = _cells(name)
+    keep = np.nonzero(gap(place(centres)) - radii <= cutoff)[0]
+    if not len(keep):
+        return np.zeros((0, 3))
+    return place(np.concatenate([p[starts[i]:ends[i]] for i in keep]))
 
 
 def box(pts, lo=(None, None, None), hi=(None, None, None)) -> tuple:

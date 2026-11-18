@@ -249,8 +249,8 @@ def test_gaming():
 
 
 def test_arm_contact_and_press():
-    """Every arm link's real shape (upper arm to fingertips) is checked for contact with the blade; the press, aimed
-    with the real fingertips, lands inside the button."""
+    """Every arm link's collision shape (upper arm to fingertips) is checked for contact with the blade; the press,
+    aimed with the fingertips' collision shapes, lands inside the button."""
     fresh()
     o = world(handle=OUT)  # the scalpel held level, out of the slot
     ob, Rb = M.pose(o, "blade")
@@ -292,6 +292,32 @@ def test_hand_boxes_hold_the_hulls():
     for bx in M.gk.hand_boxes(0.0):
         inside |= np.all(np.abs(p - np.asarray(bx.center)) <= np.asarray(bx.size) / 2 + 1e-9, axis=1)
     check(inside.all(), f"gripper hull points outside guardkit's boxes: {int((~inside).sum())} of {len(p)}")
+
+
+def test_hull_samples_cover_the_surface():
+    """The contact threshold leans on the sampling: random points on the outer surface of the wrist's and a fingertip's
+    collision hulls (area-weighted, none inside another hull of the link) all lie closer to a sample point than
+    TOUCH_TOL, so a real touch reads under the threshold."""
+    import yamgeom as yg
+    from scipy.spatial import cKDTree
+
+    rng = np.random.default_rng(0)
+    for link in ("link5", "tip_left"):
+        hs = yg.hulls(link)
+        found = []
+        for i, (_, tri, _) in enumerate(hs):
+            a = np.linalg.norm(np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0]), axis=1) / 2
+            k = rng.choice(len(tri), 3000, p=a / a.sum())
+            r = np.sqrt(rng.random(3000))[:, None]
+            w = rng.random(3000)[:, None]
+            p = tri[k, 0] * (1 - r) + tri[k, 1] * r * (1 - w) + tri[k, 2] * r * w
+            for j, (_, _, planes) in enumerate(hs):
+                if j != i:
+                    p = p[(p @ planes[:, :3].T - planes[:, 3]).max(axis=1) > -2e-5]
+            found.append(p)
+        d = cKDTree(yg.points(link)).query(np.vstack(found))[0]
+        check(d.max() < M.TOUCH_TOL, f"{link}: every surface point within {d.max() * 1000:.2f} mm of a sample "
+                                     f"(99th percentile {np.percentile(d, 99) * 1000:.2f} mm), under TOUCH_TOL")
 
 
 def _hull_lid_over_blade(o, link, gap):
@@ -401,7 +427,7 @@ def test_redteam():
 
 if __name__ == "__main__":
     for t in (test_start, test_insert_pose, test_mechanism_and_tiers, test_no_catch_paths, test_hazards, test_gaming, test_arm_contact_and_press, test_redteam,
-              test_hand_boxes_hold_the_hulls, test_hull_touch_visual_clear):
+              test_hand_boxes_hold_the_hulls, test_hull_touch_visual_clear, test_hull_samples_cover_the_surface):
         t()
     if (HERE / "task.json").exists() and (HERE / "README.md").exists():
         test_text()
