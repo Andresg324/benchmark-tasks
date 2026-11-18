@@ -946,7 +946,7 @@ SEAT_BAND = (-1.0, 3.5)  # the handle's angle while the cup goes on (the right h
 ALIGN_REACH = (-4.0, 25.0)  # the handle's angles both hands reach carrying it (a pitch of the flutes and more)
 STROKE_REACH = 4.0  # the handle at or below this before the right hand takes its top-down stroke grip
 SHARE_R = 1.0  # the right hand swings the handle; the left, on the head, keeps the cap pressed on
-MARGIN = 1.0  # N*m over what the gasket takes
+MARGIN = 5.0  # N*m over what the gasket takes (the arm falls short of its aim near the end)
 LEFT_PRESS = 20.0  # N: the left hand presses the cap onto the filter (toward the engine) while the right pushes
 DONE_PAST, AIM_PAST = 270.0, 282.0
 WRENCH_MAX = 40
@@ -1449,7 +1449,7 @@ def demo():
     down and up while pressed so the teeth ride round to a gap (four tries at most); if it went on with the handle high,
     a first stroke in the carrying grip takes the handle down to STROKE_REACH. The right hand moves to a top-down grip
     on the grip. Strokes: the handle swung down from 6 degrees above level to 10 below by the right hand, pushing what
-    the gasket takes (plus 1 N*m), aimed past the handle by its arm's give, while the left presses the cap on (20 N);
+    the gasket takes (plus 5 N*m), aimed past the handle by its arm's give, while the left presses the cap on (20 N);
     then swung back up with the ratchet clicking. Each stroke is sized from the filter's angle when it starts; they stop
     once it is 270 degrees past contact (18 N*m), after two strokes that turn it under 2 degrees, or after WRENCH_MAX
     strokes. The right hand goes back to the grip it carried with, the cup is pulled straight off the flutes along the

@@ -75,7 +75,7 @@ reach that lines the cap's teeth up with the gaps between the filter's flutes (t
 for this), read where the cap is, which way it points and where its teeth sit against the flutes: five looks 3 cm out bring it to where it is sent and turn the handle so the teeth meet the gaps (within the arms' reach) (the first two also square it to the filter), then up to eight close looks with its rim 3.5 mm short of the filter's end square it and center its rim (the cup clears the flutes by only 0.4 mm). Then they push the cup on gently, aimed only 2 mm past the seat, while
 rocking it as a mechanic seats a cap wrench: the handle swung 3 degrees either way and the cup moved round a 0.6 mm
 circle, so the teeth and the rim find their way over the flutes. If the cup is not on (its teeth on the flutes' ends), they back it off, look again and push again while turning the handle down, up and down again, so the teeth ride round the flutes' ends to a gap (four tries at most). If the cup went on with the handle high, the hands make a first stroke in the carrying grip, down to where the right hand reaches its top-down grip. The right hand moves to a top-down grip on the grip. Then strokes: the right
-hand swings the handle down from 6 degrees above level to 10 below, pushing what the gasket takes (plus 1 N·m), aimed past the handle by its
+hand swings the handle down from 6 degrees above level to 10 below, pushing what the gasket takes (plus 5 N·m), aimed past the handle by its
 arm's give (J K^-1 J^T, the arm's joint stiffness), while the left presses the cup on (20 N toward the engine), and at each stroke's start both hands re-aim from where the cap sits, squaring it and pushing it home; then
 it swings the handle back up while the ratchet clicks. Each stroke is sized from the filter's angle when it starts,
 and they stop once it is 270 degrees past contact (where the gasket takes 18 N·m), after two strokes that turn it
@@ -217,7 +217,7 @@ ratchet's 120 positions), against a light drag. Dimensions (P: the maker's publi
 
 The arms' strength. The YAM's servos are Damiao DM-J4340 on joints 1-3 (9 N·m rated, 27 N·m peak) and DM-J4310 on
 joints 4-6 (3 N·m rated, 7 N·m peak); the sim uses the peak limits (i2rt's yam_v1 config). The right hand swings the
-handle alone, 0.55 m out: at 18 N·m (plus the demo's 1 N·m margin) it pushes about 35 N down the swing, while the left
+handle alone, 0.55 m out: at 18 N·m (plus the demo's 5 N·m margin) it aims about 42 N down the swing, while the left
 hand, on the head, only presses the cup on (20 N). Through each arm's Jacobian at the demo's hand positions (yam_v1 URDF, peak joint torques), each hand can push 30-45 N along the swing and well under that at rated torque, so the last strokes, a few seconds each,
 run the right arm above its rated torque, within its peak. In the demo the strokes took the filter to PENDING_PAST
 degrees past contact (PENDING_NM N·m by the gasket's law). Pushing down, the hand bears on its fingers, and the arm's
