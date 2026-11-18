@@ -940,7 +940,7 @@ SHARE_R = 1.0  # the right hand swings the handle; the left, on the head, keeps 
 MARGIN = 1.0  # N*m over what the gasket takes
 LEFT_PRESS = 20.0  # N: the left hand presses the cap onto the filter (toward the engine) while the right pushes
 DONE_PAST, AIM_PAST = 270.0, 282.0
-WRENCH_MAX = 26
+WRENCH_MAX = 40
 WRENCH_STALL = 2.0
 TURN_STEPS = 4
 PUSH_STEPS, PUSH_CIRCLE, PUSH_ROCK = 9, 0.0006, 3.0  # the push: rocked over 8 steps, 0.6 mm round, 3 degrees
@@ -1298,6 +1298,7 @@ def _wrench_phase(st):
             hd = r_tool @ np.array((-1.0, 0.0, 0.0))
             st["a0"] = math.degrees(math.atan2(hd[2], -hd[1]))
             st["len"] = max(min(st["a0"] - STROKE_DOWN, max(AIM_PAST - st["p"], 0.0) + TAKE_UP), 2.0)
+            _debug("  the handle at %.1f deg, swung %.1f" % (st["a0"], st["len"]))
             keep_square()
 
         def keep_square():  # as a mechanic keeps the cap square and pushed home: re-aim the hands from where it sits
