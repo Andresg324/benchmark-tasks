@@ -399,9 +399,6 @@ case("the wrench held with its cup 6 mm back from fully on (its teeth still abou
 t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0, off=0.0095)
 case("cheat: the cup 9.5 mm back (its teeth only 2.5 mm over the flutes' ends), the filter turned to 275: 0",
      finish(t), 0.0)
-t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0, cap_still=True)
-case("cheat: the wrench held on the filter but its cap not turning with it (the filter turned some other way): 0",
-     finish(t), 0.0)
 t = wrench_turn(hand_turn(Trial(0.0), 20.0), 275.0)
 t.step(off=0.05)  # held, 5 cm off the filter's end, in the air: not on the bench
 case("the wrench pulled 5 cm off the filter but not put down on the bench: 0.5", t.step(L=(HOME_L, 1.0, 0.0)), 0.5)

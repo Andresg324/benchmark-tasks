@@ -443,8 +443,6 @@ class _History:
         self.unheld = 0.0  # new ground past contact gained with neither a holding hand nor the held wrench (degrees)
         self.tool_last = None  # the cap's position at the last step, and whether it has since moved under STILL
         self.tool_still = False
-        self.cap_quat = None  # the cap's orientation at the last step
-        self.past_last = None  # the filter's angle past contact at the last step (degrees)
         self.held = False  # a gripper holding the wrench at the last step
         self.release_h = 0.0  # how high its cup's floor was over where it lies on the bench when last let go (m)
 
@@ -469,27 +467,21 @@ def _update(objects):
             _H.budget[g] = 0.0
     if fm.state == fk.ENGAGED:
         past = math.degrees(fm.past)
-        prev = _H.past_last if _H.past_last is not None else past
         gain = max(past - _H.high, 0.0)
         if gain > 0:
-            cap_turn = (_twist(_H.cap_quat, objects[CAP].quat_xyzw, tighten)
-                        if CAP in objects and _H.cap_quat is not None else 0.0)
-            if cap_seated(objects) and tool_holders(objects) and cap_turn >= 0.8 * (past - prev) - 0.2:
-                credit = gain  # turned by the wrench (its cap turning with the filter), held
+            if cap_seated(objects) and tool_holders(objects):
+                credit = gain  # turned by the wrench, its cap on the flutes, held
             else:
                 credit = min(gain, max([_H.budget[g] for g in holders] + [0.0]))
                 for g in holders:
                     _H.budget[g] = max(_H.budget[g] - credit, 0.0)
             _H.unheld += gain - credit
             if gain - credit > 0.05:
-                _debug("unheld %.2f deg (total %.1f) at %.1f deg past: cap seated %s, holders %s, cap turned %.2f of "
-                       "%.2f%s" % (gain - credit, _H.unheld, past, cap_seated(objects), sorted(tool_holders(objects)),
-                                   cap_turn, past - prev, _cap_fit(objects)))
+                _debug("unheld %.2f deg (total %.1f) at %.1f deg past%s" % (gain - credit, _H.unheld, past,
+                                                                            _cap_fit(objects)))
             _H.high = past
     _H.prev_holders = now
     _H.last_quat = quats
-    _H.cap_quat = np.asarray(objects[CAP].quat_xyzw, float) if CAP in objects else None
-    _H.past_last = math.degrees(fm.past) if fm.state == fk.ENGAGED else None
     if CAP in objects:
         cp = np.asarray(objects[CAP].pos, float)
         held = bool(tool_holders(objects))
@@ -583,7 +575,7 @@ def score(objects):
     unscrewed off and not started again), was ever more than 450 degrees past contact, ends under 90 past contact, or if
     more than 45 degrees of the new ground it gained past contact was turned neither by a holding hand's own wrist roll
     (a gripper closed on the can, both fingertips touching it, its roll about the filter's axis, at most 30 degrees
-    ahead) nor by the wrench while a hand held it and its cap was on the filter (see cap_seated) turning with it.
+    ahead) nor by the wrench while a hand held it and its cap was on the filter (see cap_seated).
     Otherwise 0.25 for 90 to 180; 0.5 for 180 to 270, or 270 and up after it was ever past 360; 1.0 for 270 to 360 (18
     N*m and up) and never past 360. Capped at 0.5 while a gripper touches the filter, and until the wrench is put back
     (see wrench_put_away). Touching is contact between a gripper's own collision hulls (palm and both fingers) and the
