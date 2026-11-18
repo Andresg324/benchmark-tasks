@@ -195,16 +195,20 @@ T = m.TOP
 poses = {"standing on its gasket": (0, 0, 1), "on its closed end": (0, 0, -1), "on its side, end toward the robot":
          (-1, 0, 0), "on its side, end toward the engine": (1, 0, 0), "on its side, end to the left": (0, 1, 0),
          "on its side, end to the right": (0, -1, 0)}
-for x in (0.05, 0.25, 0.40):
-    for y in (-0.40, 0.05, 0.45):
+for x in (-0.15, 0.25, 0.72):
+    for y in (-0.62, 0.05, 0.62):
         for name, ax in poses.items():
             z = T + (m.CAN_R if ax[2] == 0 else (0.0 if ax[2] > 0 else m.CAN_H))
             if not inside(joints_for((x, y, z), ax)):
                 case(f"the filter {name} at x {x}, y {y}: inside its joints' ranges", False, True)
-case("the filter lying any of 6 ways at 9 places across the bench the arms reach: inside its joints' ranges "
-     "(no invisible wall or support)", all(inside(joints_for((x, y, T + 0.04), ax)) for x in (0.05, 0.25, 0.40)
-                                           for y in (-0.40, 0.05, 0.45) for ax in poses.values()), True)
-case("lifted 40 cm above the bench: inside the ranges", inside(joints_for((0.25, 0.05, T + 0.40), (0, 0, 1))), True)
+case("the filter lying any of 6 ways at 9 places across the whole bench: inside its joints' ranges "
+     "(no invisible wall or support)", all(inside(joints_for((x, y, T + 0.04), ax)) for x in (-0.15, 0.25, 0.72)
+                                           for y in (-0.62, 0.05, 0.62) for ax in poses.values()), True)
+case("its axis pointing any way (a 5-degree grid over every direction): inside its pitch and roll ranges",
+     all(inside(joints_for((0.25, 0.05, T + 0.04), (math.cos(e) * math.cos(az), math.cos(e) * math.sin(az),
+                                                    math.sin(e))))
+         for e in np.radians(np.arange(-90, 91, 5)) for az in np.radians(np.arange(0, 360, 5))), True)
+case("lifted 70 cm above the bench: inside the ranges", inside(joints_for((0.25, 0.05, T + 0.70), (0, 0, 1))), True)
 
 # -- the ratchet ------------------------------------------------------------------------------------------------------
 r = fk.RatchetModel(0)
@@ -418,11 +422,12 @@ for _k in range(m.TURN_STEPS + 1):
     _pk = _pv + _rr @ (_p0 - _pv) + np.array(((m.TURN_X - _p0[0]) * _k / m.TURN_STEPS,
                                              (m.Y_F - _p0[1]) * _k / m.TURN_STEPS, 0.0))
     for _s in ("left", "right"):
-        _tcp, _rot = m._hand_on_tool(_s, _pk, _rr @ m.R_FLAT)
+        _tcp, _rot = m._hand_on_tool(_s, _pk, _rr @ m.R_FLAT, (0.0, 0.0, m.W_SHARE[_s] * m.TOOL_MASS * 9.81))
         _, _pe, _re = _ik.solve(np.asarray(_tcp, float), _ik.matrix_to_quat_xyzw(_rot), None,
                                 base_pos=np.asarray(_BASES[_s]), iters=300)
         _worst = max(_worst, 1000 * _pe + math.degrees(_re))
-case("demo: both hands' poses through the wrench's lift and quarter turn are reachable (IK within 1 mm + 1 degree)",
+case("demo: both hands' poses through the wrench's lift and quarter turn are reachable, aimed up by the arms' give "
+     "under the wrench's weight (IK within 1 mm + 1 degree)",
      _worst < 1.0, True)
 
 

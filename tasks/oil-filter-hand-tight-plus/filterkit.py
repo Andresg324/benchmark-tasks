@@ -57,7 +57,8 @@ START_TURN = math.radians(20.0)  # turned this far clockwise against the crests:
 START_GIVE = 0.0001  # m: pressed on the crests: within this of their stop (contact give), or the turn does not count
 ON_SLACK = 0.00015  # m: contact give allowed on top of the bore's clearance when judging that the nipple's end is
 #                     inside the bore (the colliders, not this, keep it there)
-PITCH = (-1.65, 3.3)  # rad: the filter's pitch joint (upright on the bench is +pi/2; lying either way along x, 0 / pi)
+PITCH = (-math.pi - 0.3, math.pi + 0.3)  # rad: the filter's pitch joint, all the way round (upright on the bench is
+#                                           +pi/2; lying either way along x, 0 / pi)
 ROLL = (-1.65, 1.65)  # rad: its roll joint (lying on its side along y: +-pi/2)
 K_HOLD = 2000.0  # N*m/rad: the stick-slip hold's stiffness (0.5 degrees of give at 18 N*m)
 AX_K = 20000.0  # N/m: the thread's axial stiffness (a drive on top of the stop)
@@ -164,7 +165,7 @@ class LooseFilter(kit.Mechanism):
     filter_colliders: tuple = ()
     filter_mass: float = 0.25
     start: tuple = (0.0, 0.0, 0.05, 0.0, 0.0)
-    reach: tuple = ((-0.15, 0.35), (-0.50, 0.50), (-0.001, 0.47))
+    reach: tuple = ((-0.15, 0.75), (-0.75, 0.75), (-0.30, 0.80))
 
     def __post_init__(self):
         o = (0.0, 0.0, 0.0)

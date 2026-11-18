@@ -1,12 +1,11 @@
 """A new spin-on oil filter (Kawasaki 16097-0007, the Teryx and Teryx4 750 filter) stands on the bench beside its
 mount: the M20 x 1.5 nipple low on the front of the crankcase, its axis level and pointing at the robot, with the
-frame's cross tube under it and the CVT intake duct beside it, as on the vehicle with its bottom guard removed. The
-tool Kawasaki's torque figure assumes lies on the bench: a 65 mm, 14-flute cap-type filter wrench on a 24-inch
-ratchet. Fitting it is the engine maker's procedure: start the filter square on the thread by hand (started crooked it
-cross-threads and ruins the nipple's thread), spin it on until its gasket contacts the mount, then tighten it with the
-wrench to the specified 18 N*m, about three quarters of a turn past contact, and put the wrench back. Left at contact
-or a little past it, the filter can work loose under vibration and leak; cranked much past it, the gasket can be
-crushed and blow out under oil pressure.
+frame's cross tube under it and the CVT intake duct beside it, as on the vehicle with its bottom guard removed. A
+cap-type filter wrench (65 mm, 14 flutes) on a 24-inch ratchet lies on the bench. Fitting it is the engine maker's
+procedure: start the filter square on the thread by hand (started crooked it cross-threads and ruins the nipple's
+thread), spin it on until its gasket contacts the mount, then tighten it with the wrench to the specified 18 N*m, about
+three quarters of a turn past contact, and put the wrench back. Left at contact or a little past it, the filter can work
+loose under vibration and leak; cranked much past it, the gasket can be crushed and blow out under oil pressure.
 """
 
 import math
@@ -92,12 +91,12 @@ FILTER_MASS = 0.25
 FLUTE_L = 0.014  # the fluted end the cap wrench fits over
 FLUTE_N = 14
 FLUTE_IN, FLUTE_W = 0.031, 0.005  # the flutes' roots (radius) and their width; their crests are the can's 33 mm
-# The thread: M20 x 1.5, right-handed; three turns (4.5 mm; the rig's count is taken when it is built) from the first
-# thread catching to gasket contact. Before contact it runs on with light friction (0.3 N*m). Past contact the squeezed
-# gasket resists with a torque that rises linearly to Kawasaki's 18 N*m at three quarters of a turn (the common
-# instruction: three quarters of a turn past contact gives the specified torque) and on at the same slope (29 N*m at
-# 1.25 turns); a hard stop at 1.5 turns (the gasket flat). Kawasaki (Teryx4 750 owner's manual, torque table, p. 101):
-# "Oil Filter 18 N*m (1.8 kgf*m, 13 ft*lb)".
+# The thread: M20 x 1.5, right-handed; three turns (4.5 mm: the nipple's 8.4 mm past the land, less the bore's 3 mm
+# recess and the 0.92 mm chamfer) from the first thread catching to gasket contact. Before contact it runs on with light
+# friction (0.3 N*m). Past contact the squeezed gasket resists with a torque that rises linearly to Kawasaki's 18 N*m at
+# three quarters of a turn (the low end of the common instruction, "3/4 to 1 full turn" after contact: GM service
+# bulletin 90-216-6) and on at the same slope (29 N*m at 1.25 turns); a hard stop at 1.5 turns (the gasket flat).
+# Kawasaki (Teryx4 750 owner's manual, torque table, p. 101): "Oil Filter 18 N*m (1.8 kgf*m, 13 ft*lb)".
 TORQUE_SPEC = 18.0
 THREAD = fk.Thread(pitch=0.0015, turns_to_seat=3.0, run_on=0.3, gasket_rate=TORQUE_SPEC / math.radians(270.0),
                    max_past=math.radians(540.0), root_r=NIP_ROOT_R, crest_r=BORE_R, bore_z0=BORE_Z0, bore_z1=BORE_Z1,
@@ -222,7 +221,7 @@ def _mount():
     return fk.LooseFilter("mount", pos=(X_LAND, Y_F, Z_F), size=(0.08, 0.08, 0.08), mass=None, meshes=tuple(meshes),
                           colliders=cols, tilt_xyzw=_m_to_quat(R_BASE), thread=THREAD, filter_meshes=fm,
                           filter_colliders=fc, filter_mass=FILTER_MASS, start=FILTER_START,
-                          reach=((-0.15, 0.35), (-0.50, 0.50), (-0.001, 0.47)))
+                          reach=((-0.15, 0.75), (-0.75, 0.75), (-0.30, 0.80)))
 
 
 def _engine():
@@ -266,7 +265,7 @@ CUP_DEPTH = 0.013  # R: the wall's depth (the filter's fluted end is 14 mm long)
 TEETH_D, TEETH_IN, TEETH_W = 0.012, 0.0315, 0.004  # R: the cup's 14 flutes, 12 mm deep, in to 31.5 mm, 4 mm wide
 CAP_END = 0.004  # R: the cup's end plate
 ADAPTER_L, ADAPTER_R = 0.0351, 0.0095  # P: GearWrench 81354, 1.38 in (35.1 mm) long; R: 19 mm across
-ADAPTER_IN_CAP = 0.0095  # E
+ADAPTER_IN_CAP = 0.0095  # R: the adapter's square in the cap's drive
 RATCHET_L = 0.6106  # P: GearWrench 81364XP, 24.04 in overall
 HEAD_W, HEAD_T = 0.0368, 0.0171  # P: its head 1.449 in wide, 0.674 in thick (GearWrench brochure)
 HANDLE_R, GRIP_L = 0.011, 0.15  # R: the round grip about 22 mm thick on its last 15 cm
@@ -723,7 +722,7 @@ def _hand_phase(st):
             from yam_arena.urdf import axis_angle_matrix
             p, a, _ = _filter_now()
             b = p + BORE_Z0 * np.asarray(a, float)  # the bore's entry, where the nipple's end goes in
-            # (the arm sags 2-3 cm under the filter in this pose: the aim takes it up, at most 4 cm)
+            # (the aim takes up where the hand actually holds it, at most 4 cm)
             st["fix"][0] = float(np.clip(st["fix"][0] - gain * np.clip(b[1] - Y_F, -clip, clip), -0.04, 0.04))
             st["fix"][1] = float(np.clip(st["fix"][1] - gain * np.clip(b[2] - Z_F, -clip, clip), -0.04, 0.04))
             want, have = np.array((-1.0, 0.0, 0.0)), np.asarray(a, float)  # its axis to the closed end: -x
@@ -919,7 +918,7 @@ LIFT = 0.07  # the wrench lifted this far before it is turned (the left arm's re
 TURN_X = 0.30  # the drive's axis carried out to this x while the cup turns to face the engine: both hands' grips
 #               stay within the arms' reach (nearer the bases, a hand pointing at the engine needs its wrist behind
 #               them)
-TAKE_UP = 4.0  # degrees of the stroke taken up before the filter turns (the flutes' play and the hold's give)
+TAKE_UP = 4.0  # degrees of the stroke taken up before the filter turns (the hold's give and some of the cap's play)
 W_SHARE = {"left": 0.5, "right": 0.5}  # each hand's share of the wrench's weight while carrying it
 
 
@@ -1106,11 +1105,11 @@ def _wrench_phase(st):
             st["last_w"] = on(0.03, True)()
             return st["last_w"]
         return f
-    for k in range(5):  # 3 cm out: square it (twice), and bring it to where it is sent
+    for k in range(5):  # 3 cm out: bring it to where it is sent (the first two also square it)
         add("wrench: line the cap up", 1.2, coarse_cap(k))
 
     def fine_cap(attempt, i):
-        """Close looks, the teeth 3.5 mm short of the flutes' ends (the cup clears the flutes by 0.4 mm): squaring and
+        """Close looks, the rim 3.5 mm short of the filter's end (the cup clears the flutes by 0.4 mm): squaring and
         centering it until its rim is within CAP_FINE_MM of the axis, it is square within CAP_FINE_DEG and within 2 mm
         of where it is sent (decided as each look starts)."""
         g = st.setdefault("capfine", {})
@@ -1339,33 +1338,32 @@ def demo():
     """Closed loop on the filter's thread and the wrench's pose, as a mechanic feels and sees them.
 
     Left arm: picks the filter up off the bench by its closed end (top-down, the pads 2.5 cm in from its end, the
-    fingers closing along x so the filter cannot pivot between them), carries it out and across to the nipple and
-    turns it to point at it, reads where its threaded bore is and which way it points and corrects both (five looks
-    8 mm out: the arm sags 2-3 cm under the filter in this pose; up to three more 1.5 mm short of the nipple's end),
-    and pushes it on. The bore clears the nipple's end by 0.2 mm and the arm sways about a millimeter, so the base
-    plate usually lands on the nipple's end first: pressing there, it reads where the bore is each second and re-aims
-    it until the bore drops over the end (up to ten looks; if never, it backs off and tries again, twice at most). It
-    spins the filter on clockwise (seen from its end) in wrist rolls of up to 150 degrees, following the thread in and
-    regripping between them, until a roll past gasket contact turns it under 8 degrees (the pads slipping:
-    hand-tight); then it lets go and backs off. Reading where the wrench lies, it takes the can again and turns the
-    filter back up to a flute's width so the cap's teeth will meet the gaps between its flutes at a handle angle the
-    right arm reaches. The right arm waits at home.
+    fingers closing along x so the filter cannot pivot between them), carries it out and across to the nipple and turns
+    it to point at it, reads where its threaded bore is and which way it points and corrects both (five looks 8 mm out;
+    up to three more 1.5 mm short of the nipple's end), and pushes it on. The bore clears the nipple's end by 0.2 mm and
+    the arm sways about a millimeter, so the base plate usually lands on the nipple's end first: pressing there, it
+    reads where the bore is each second and re-aims it until the bore drops over the end (up to ten looks; if never, it
+    backs off and tries again, twice at most). It spins the filter on clockwise (seen from its end) in wrist rolls of up
+    to 150 degrees, following the thread in and regripping between them, until a roll past gasket contact turns it under
+    8 degrees (the pads slipping: hand-tight); then it lets go and backs off. Reading where the wrench lies, it takes
+    the can again and turns the filter back up to a flute's width so the cap's teeth will meet the gaps between its
+    flutes at a handle angle the right arm reaches. The right arm waits at home.
 
     Both arms: take the wrench where it lies flat, top-down, the left across the ratchet's head and the right on the
     grip 55 cm out (each hand checks it is holding, and tries once more if not: the left 8 mm lower, the right 4 mm
     higher), lift it 7 cm and turn it a quarter turn about the handle while carrying it out toward the engine and
     across, so the cup faces the engine, hold it in front of the filter with the handle at an angle the right arm
     reaches that lines the cap's teeth up with the filter's flutes, read where the cap is and which way it points (five
-    looks 3 cm out that square it and bring it to where it is sent, then up to eight with its teeth 3.5 mm short of the
-    flutes that square it and center its rim), and push the cup on gently while rocking it (the handle 3 degrees either
-    way, the cup round a 0.6 mm circle), checking it is on and trying again (three tries at most). The right hand moves
-    to a top-down grip on the grip. Strokes: the handle swung down from 6 degrees above level to 10 below by the right
-    hand, pushing what the gasket takes (plus 1 N*m), aimed past the handle by its arm's give, while the left presses
-    the cap on (8 N); then swung back up with the ratchet clicking. Each stroke is sized from the filter's angle when it
-    starts; they stop once it is 270 degrees past contact (18 N*m), after two strokes that turn it under 2 degrees, or
-    after WRENCH_MAX strokes. The right hand goes back to the grip it carried with, the cup is pulled straight off the
-    flutes along the filter's axis, the wrench turned back cup down and laid flat on the bench on its start marks; both
-    let go, lift clear and go home."""
+    looks 3 cm out that bring it to where it is sent, the first two also squaring it, then up to eight with its rim 3.5
+    mm short of the filter's end that square it and center its rim), and push the cup on gently while rocking it (the
+    handle 3 degrees either way, the cup round a 0.6 mm circle), checking it is on and trying again (three tries at
+    most). The right hand moves to a top-down grip on the grip. Strokes: the handle swung down from 6 degrees above
+    level to 10 below by the right hand, pushing what the gasket takes (plus 1 N*m), aimed past the handle by its arm's
+    give, while the left presses the cap on (8 N); then swung back up with the ratchet clicking. Each stroke is sized
+    from the filter's angle when it starts; they stop once it is 270 degrees past contact (18 N*m), after two strokes
+    that turn it under 2 degrees, or after WRENCH_MAX strokes. The right hand goes back to the grip it carried with, the
+    cup is pulled straight off the flutes along the filter's axis, the wrench turned back cup down and laid flat on the
+    bench on its start marks; both let go, lift clear and go home."""
     st = {"stop": None, "gains": [], "wstop": None}
     left = _hand_phase(st)
     hand = list(left)
