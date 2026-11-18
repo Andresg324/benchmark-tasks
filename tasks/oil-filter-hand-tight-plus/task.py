@@ -1363,10 +1363,12 @@ def _wrench_phase(st):
     add("wrench: right hand onto the handle", 0.9, back_up(None, dx=-0.0001))
     add("wrench: right hand grips", 0.7, back_up(None))
 
-    def away(out, lift=0.0):
+    def away(out, lift=0.0):  # straight off along the filter's axis, from where the hands hold it (the line-up's aim)
         def f():
-            pt, rt = _tool_pose_on(sum(SEAT_BAND) / 2, out)
-            st["held1"] = (pt + np.array((0.0, 0.0, lift)), rt)
+            if lift:
+                _debug("cup pulled off: %s" % ("NOT off" if _obj() is not None and cap_seated(_obj()) else "off"))
+            pt, rt = _tool_pose_on(sum(SEAT_BAND) / 2, out, st.get("tfix", np.zeros(3)))
+            st["held1"] = (pt + np.array((0.0, 0.0, lift)), st.get("trfix", np.eye(3)) @ rt)
             return carried(*st["held1"])
         return f
     add("wrench: pull the cup off", 1.2, away(0.035))
