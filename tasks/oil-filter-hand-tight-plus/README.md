@@ -65,7 +65,7 @@ and re-aims it a little, as a hand feels for the start, until the bore drops ove
 clockwise (seen from its end) in wrist rolls of up to 150 degrees, following the thread in, regripping between rolls.
 Once a roll past gasket contact turns the filter less than 8 degrees (the pads slipping: hand-tight) it lets go and
 backs off. Then, reading where the wrench lies, it takes the can again and turns the filter back up to a flute's
-width (PENDING_BACK degrees in this run), so that the cap's teeth will meet the gaps between the filter's flutes at a handle
+width (6.2 degrees in this run), so that the cap's teeth will meet the gaps between the filter's flutes at a handle
 angle the right arm reaches. The right arm waits at home meanwhile.
 
 With the wrench. Both hands take the wrench top-down where it lies flat: the left across the ratchet's head (on the
@@ -82,9 +82,9 @@ and they stop once it is 270 degrees past contact (where the gasket takes 18 N·
 less than 2 degrees, or after 40 strokes. The right hand goes back to the grip it carried with, on the handle where it is seen, checks it is holding and if not opens and tries once more; they pull the cup straight off the flutes along the filter's axis, a centimeter or so at a time while rocking the handle 2 degrees either way, turn the wrench back cup down, carry it to its start marks, lay it
 flat on the bench there, let go, lift clear and go home.
 
-Result on this version: 1.0 in PENDING_STEPS steps (PENDING_S s): the thread caught PENDING_CATCH degrees off square;
-hand-tight PENDING_HAND degrees past contact, turned back PENDING_BACK degrees for the cap; the wrench strokes took it
-to PENDING_PAST degrees past contact (PENDING_NM N·m by the gasket's law).
+Result on this version: 1.0 in 4,307 steps (215 s): the thread caught 0.12 degrees off square;
+hand-tight 11.5 degrees past contact, turned back 6.2 degrees for the cap; the wrench strokes took it
+to 274.5 degrees past contact (18.3 N·m by the gasket's law).
 
 ## Scoring
 
@@ -113,7 +113,7 @@ wrench's, held. The scorer does not check that the wrench's handle itself turned
 budget, so a second hand near the can or on it never voids the holder's turning (tested: a hand hovering open, both hands rolling, one steadying; two hands closed with neither rolling is still a swipe).
 
 A hand is still on the filter at the end when any part of the gripper touches the can. Turning the filter by hand
-past contact counts too: the score is outcome-based, read from the angle as a real trial reads the torque; in the demo the pads slipped PENDING_HAND degrees past contact; a pinch slips far short of 18 N·m (see Fidelity). Unscrewing the filter off the thread is a recoverable mistake:
+past contact counts too: the score is outcome-based, read from the angle as a real trial reads the torque; in the demo the pads slipped 11.5 degrees past contact; a pinch slips far short of 18 N·m (see Fidelity). Unscrewing the filter off the thread is a recoverable mistake:
 it can be started again (the run's peak angle is kept). `success()` is a full score held for 1 s. Each scene reset
 starts a new history.
 
@@ -136,8 +136,8 @@ the hands letting go. Then put the build's 1/4-inch-drive click torque wrench, s
 
 ## Runtime and seeds
 
-- Demo: 1.0 in PENDING_STEPS steps (PENDING_S s; the run ends 1 s after full credit is held).
-- Model run limit: 5,000 steps (about 4.2 minutes at 20 Hz). The demo needs about PENDING_STEPS steps
+- Demo: 1.0 in 4,307 steps (215 s; the run ends 1 s after full credit is held).
+- Model run limit: 5,000 steps (about 4.2 minutes at 20 Hz). The demo needs about 4,307 steps
   (threading the filter on, spinning it on three turns, the wrench strokes and putting the wrench back).
 - Dream-1: pending on this task.py.
 - Seed 0, one fixed layout (`object_jitter=0`).
@@ -189,7 +189,7 @@ until it is backed off. Unscrewed past where it caught, it is loose again and ca
 Turning resistance follows the gasket's law: before contact it runs on freely with light friction; past contact the
 squeezed gasket holds it where it is left and gives way only at the gasket's torque, either way (a stiff stick-slip
 hold capped at that torque, not a spring). A hard stop at 1.5 turns past contact is the gasket squeezed flat. In the
-demo the hand, pinching at about 20 N a finger on the can's 33 mm radius, stopped turning it PENDING_HAND degrees past
+demo the hand, pinching at about 20 N a finger on the can's 33 mm radius, stopped turning it 11.5 degrees past
 contact; the rest needs the wrench, as on a real engine.
 
 The wrench is a free body: the ratchet (handle and head) floats, and the drive (adapter and cap) turns on it about
@@ -216,8 +216,8 @@ ratchet's 120 positions), against a light drag. Dimensions (P: the maker's publi
 The arms' strength. The YAM's servos are Damiao DM-J4340 on joints 1-3 (9 N·m rated, 27 N·m peak) and DM-J4310 on
 joints 4-6 (3 N·m rated, 7 N·m peak); the sim uses the peak limits (i2rt's yam_v1 config). The right hand swings the
 handle alone, 0.55 m out: at 18 N·m (plus the demo's 5 N·m margin) it aims about 42 N down the swing, while the left
-hand, on the head, only presses the cup on (20 N). Through the right arm's Jacobian at the demo's stroke poses (yam_v1 URDF masses, static), its 42 N push needs about 6.5 N·m on joint 2 and 5 N·m on joint 3, within the DM-J4340's rated 9 N·m; the wrist joints carry under 0.5 N·m. There it can push about 50 N within rated torque and about 95 N at peak. In the demo the strokes took the filter to PENDING_PAST
-degrees past contact (PENDING_NM N·m by the gasket's law). Pushing down, the hand bears on its fingers, and the arm's
+hand, on the head, only presses the cup on (20 N). Through the right arm's Jacobian at the demo's stroke poses (yam_v1 URDF masses, static), its 42 N push needs about 6.5 N·m on joint 2 and 5 N·m on joint 3, within the DM-J4340's rated 9 N·m; the wrist joints carry under 0.5 N·m. There it can push about 50 N within rated torque and about 95 N at peak. In the demo the strokes took the filter to 274.5
+degrees past contact (18.3 N·m by the gasket's law). Pushing down, the hand bears on its fingers, and the arm's
 own weight helps.
 
 No oil, gasket deformation or leak is simulated; the scorer reads the angle, and a real trial reads the same angle from
