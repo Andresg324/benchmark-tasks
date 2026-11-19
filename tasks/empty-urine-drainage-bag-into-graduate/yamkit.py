@@ -2,7 +2,7 @@
 
 A yam_arena task file declares boxes, cylinders and spheres. This module adds `Prop`, a `Box` that yam_arena's checks
 accept, which spawns instead from a USD file written at start-up: visible meshes (boxes, cylinders and lathed shapes,
-each with its own color) and separate invisible colliders (boxes and cylinders). The visible meshes are what the
+each with its own color) and separate invisible colliders (boxes, cylinders, spheres and convex hulls). The visible meshes are what the
 cameras see. The colliders are what the physics and the grippers touch; keep the visible shape close to them.
 
 Importing this module also gives score() and success() the two grippers. Next to the task's objects, `objects` then
@@ -10,7 +10,7 @@ holds "left_gripper" and "right_gripper": an ObjectState whose `pos` is the tool
 finger pads), whose `quat_xyzw` is the gripper's orientation, and whose `low` and `high` span from the tool point to the
 pad tips. `opening(objects, side)` is how far the fingers are open, from 0 (closed) to 1 (fully open).
 
-Mechanisms (Kit A): `Mechanism` is a `Prop` whose meshes and colliders are a base (fixed to the world unless it has a
+Mechanisms: `Mechanism` is a `Prop` whose meshes and colliders are a base (fixed to the world unless it has a
 mass), with `links` that move on hinges or slides (`Link`: kind "revolute" or "prismatic", axis, anchor, limits, start,
 spring and rest, damping, friction, `floating` for a counterweighted part, optional `Latch`). Scorers then get
 `objects["name"]` for the base, `objects["name/link"]` for each link, and `joint(objects, "name/link")` for the joint's
@@ -58,7 +58,7 @@ class Look:
 
 @dataclass(frozen=True)
 class Mesh:
-    """Triangles and quads in the prop's own frame (metres), with one look."""
+    """Triangles and quads in the prop's own frame (meters), with one look."""
 
     points: tuple
     counts: tuple
@@ -144,16 +144,21 @@ def band(path, width: float, thickness: float, look: Look, normal=(1, 0, 0)) -> 
 
 @dataclass(frozen=True)
 class Collider:
-    """An invisible box (`size`) or cylinder (`radius`, `height`, along `axis`) collider in the prop's frame. (`axis`
-    "X", "Y" or "Z"; default "Z".)"""
+    """An invisible box (`size`), cylinder (`radius`, `height`, along `axis`) or sphere (`radius`, `sphere=True`)
+    collider in the prop's frame. (`axis` "X", "Y" or "Z"; default "Z".)"""
 
     center: tuple
     size: tuple | None = None
     radius: float = 0.0
     height: float = 0.0
     axis: str = "Z"
-    hull: tuple | None = None  # flatness task: convex-hull mesh collider, points relative to `center` (a wedge) ...
+    hull: tuple | None = None  # a convex-hull mesh collider, points relative to `center` (a wedge, a panel) ...
     faces: tuple = ()  # ... and its triangles (indices into `hull`), so no hull library is needed at start-up
+    sphere: bool = False  # a sphere of `radius` (a hinge's knuckle, so a bent chain of cylinders has no gap)
+    # (static, dynamic[, combine]) friction of this collider's own surface; combine is PhysX's rule with the other
+    # surface's ("min" by default: the lower of the two, e.g. a plastic sleeve). None = the mechanism's `material`, or
+    # the scene's material for the object
+    material: tuple | None = None
 
     def extent(self, k: int) -> float:
         """Half-size along axis k (0, 1, 2) of the prop's frame, from `center`."""
@@ -161,6 +166,8 @@ class Collider:
             return max(abs(p[k]) for p in self.hull)
         if self.size is not None:
             return self.size[k] / 2
+        if self.sphere:
+            return self.radius
         return self.height / 2 if "XYZ"[k] == self.axis.upper() else self.radius
 
     @property
@@ -234,7 +241,7 @@ def _usda(prop: Prop) -> str:
                        f"        double3 xformOp:translate = {_fmt(c.center)}\n"
                        '        uniform token[] xformOpOrder = ["xformOp:translate"]\n    }\n')
             continue
-        kind = "Cube" if c.size is not None else "Cylinder"
+        kind = "Cube" if c.size is not None else "Sphere" if c.sphere else "Cylinder"
         out.append(f'    def {kind} "C{i}" (\n        prepend apiSchemas = ["PhysicsCollisionAPI"]\n    )\n    {{\n'
                    f'        uniform token purpose = "guide"\n')
         if c.size is not None:
@@ -242,6 +249,10 @@ def _usda(prop: Prop) -> str:
                        f"        double3 xformOp:translate = {_fmt(c.center)}\n"
                        f"        float3 xformOp:scale = {_fmt(c.size)}\n"
                        '        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]\n')
+        elif c.sphere:
+            out.append(f"        double radius = {c.radius}\n"
+                       f"        double3 xformOp:translate = {_fmt(c.center)}\n"
+                       '        uniform token[] xformOpOrder = ["xformOp:translate"]\n')
         else:
             out.append(f'        uniform token axis = "{c.axis.upper()}"\n        double radius = {c.radius}\n'
                        f"        double height = {c.height}\n"
@@ -271,7 +282,7 @@ def _quat_mul(a, b):
             aw * bz + ax * by - ay * bx + az * bw, aw * bw - ax * bx - ay * by - az * bz)
 
 
-# -- mechanisms: parts on hinges and slides (Kit A) ------------------------------------------
+# -- mechanisms: parts on hinges and slides ------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -297,7 +308,7 @@ class Link:
     with every joint at 0), and the axis turns with the parent.
 
     `spring` (N·m/rad or N/m) pulls the joint toward `rest` (default `start`); `damping` resists speed; `friction` is
-    the joint's static friction. `floating=True` turns gravity off for the link, as a counterweight would (a fume-hood
+    the joint's static friction. `floating=True` turns gravity off for the link, as a counterweight would (a balanced window
     sash stays where it is left). `latch` adds a catch (see `Latch`). `stay` (N/m or N·m/rad) holds the part where it was at
 the last control step, so it stays where it is left but gives way to a push, like a friction hinge or a balanced sash
 (PhysX joint damping alone barely slows these light parts). `drag` (N·s/m or N·m·s/rad) is a force against the joint's
@@ -340,6 +351,15 @@ class Mechanism(Prop):
     the link's origin, at its anchor), and the joint through `joint(objects, "name/link")`."""
 
     links: tuple = field(default=())
+    # the mechanism's own parts collide with each other (a spout against the bag's sleeve); `no_collide` lists the
+    # (body, body) pairs that must not (bodies overlapping at a joint), "base" or a link's name
+    self_collide: bool = False
+    no_collide: tuple = ()
+    # (static, dynamic[, combine]) friction for every collider of the mechanism without its own `material`. When set,
+    # the scene's own material is not bound on spawn (Isaac's spawner would bind it over every collider, overriding
+    # the per-collider materials written in the USD)
+    material: tuple | None = None
+    contact_offset: float | None = None  # m: PhysX contact offset of every collider (rest offset 0); None = default
 
 
 @dataclass(frozen=True)
@@ -380,10 +400,35 @@ def joint(objects, key: str) -> JointState:
     return _JOINTS[key]
 
 
-def _body_usda(name: str, translate, mass, meshes, colliders, looks, floating=False, indent="    ") -> list[str]:
+def _mat(c, default=None):
+    """A collider's (static, dynamic, combine) friction, or None."""
+    m = c.material if c.material is not None else default
+    if m is None:
+        return None
+    return (float(m[0]), float(m[1]), m[2] if len(m) > 2 else "min")
+
+
+def _phys_materials(colliders, default=None) -> list:
+    """The distinct (static, dynamic, combine) frictions the colliders use."""
+    return list(dict.fromkeys(_mat(c, default) for c in colliders if _mat(c, default) is not None))
+
+
+def _phys_material_usda(mats, indent="        ") -> list[str]:
     i2 = indent + "    "
-    out = [f'{indent}def Xform "{name}" (\n{i2}prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI", '
-           f'"PhysxRigidBodyAPI"]\n{indent})\n{indent}{{\n',
+    return [f'{indent}def Material "P{i}" (\n{i2}prepend apiSchemas = ["PhysicsMaterialAPI", "PhysxMaterialAPI"]\n'
+            f'{indent})\n{indent}{{\n{i2}float physics:staticFriction = {m[0]}\n{i2}float physics:dynamicFriction = '
+            f'{m[1]}\n{i2}float physics:restitution = 0\n{i2}uniform token physxMaterial:frictionCombineMode = "{m[2]}"\n'
+            f'{indent}}}\n' for i, m in enumerate(mats)]
+
+
+def _body_usda(name: str, translate, mass, meshes, colliders, looks, floating=False, indent="    ", mats=(),
+               filtered=(), default_mat=None, contact_offset=None) -> list[str]:
+    i2 = indent + "    "
+    apis = '"PhysicsRigidBodyAPI", "PhysicsMassAPI", "PhysxRigidBodyAPI"' + (', "PhysicsFilteredPairsAPI"'
+                                                                              if filtered else "")
+    out = [f'{indent}def Xform "{name}" (\n{i2}prepend apiSchemas = [{apis}]\n{indent})\n{indent}{{\n',
+           *([f"{i2}rel physics:filteredPairs = [{', '.join(f'</Root/{b}>' for b in filtered)}]\n"] if filtered
+             else []),
            # a body with no collider gets a small explicit inertia (1 cm radius of gyration), since
            # PhysX can't compute one from shapes (an intermediate link of a chain, a needle with no collider). It goes
            # before the mass so that a kit inserting its own inertia after the mass line (ringkit) still wins.
@@ -401,13 +446,34 @@ def _body_usda(name: str, translate, mass, meshes, colliders, looks, floating=Fa
                    f'{i2}    uniform bool doubleSided = 1\n'
                    f'{i2}    rel material:binding = </Root/Looks/M{looks.index(m.look)}>\n{i2}}}\n')
     for i, c in enumerate(colliders):
-        kind = "Cube" if c.size is not None else "Cylinder"
-        out.append(f'{i2}def {kind} "C{i}" (\n{i2}    prepend apiSchemas = ["PhysicsCollisionAPI"]\n{i2})\n{i2}{{\n'
-                   f'{i2}    uniform token purpose = "guide"\n')
+        m = _mat(c, default_mat)
+        bind = m is not None and m in mats
+        extra = (', "MaterialBindingAPI"' if bind else "") + (', "PhysxCollisionAPI"' if contact_offset else "")
+        binding = f'{i2}    rel material:binding:physics = </Root/Looks/P{list(mats).index(m)}>\n' if bind else ""
+        if contact_offset:
+            binding += (f"{i2}    float physxCollision:contactOffset = {contact_offset}\n"
+                        f"{i2}    float physxCollision:restOffset = 0\n")
+        if c.hull is not None:  # a convex mesh collider (PhysX cooks the hull of the points)
+            out.append(f'{i2}def Mesh "C{i}" (\n{i2}    prepend apiSchemas = ["PhysicsCollisionAPI", '
+                       f'"PhysicsMeshCollisionAPI"{extra}]\n{i2})\n{i2}{{\n'
+                       f'{i2}    uniform token purpose = "guide"\n{binding}'
+                       f'{i2}    uniform token physics:approximation = "convexHull"\n'
+                       f'{i2}    point3f[] points = [{", ".join(_fmt(p) for p in c.hull)}]\n'
+                       f'{i2}    int[] faceVertexCounts = [{", ".join(["3"] * len(c.hull_faces))}]\n'
+                       f'{i2}    int[] faceVertexIndices = [{", ".join(str(j) for f in c.hull_faces for j in f)}]\n'
+                       f"{i2}    double3 xformOp:translate = {_fmt(c.center)}\n"
+                       f'{i2}    uniform token[] xformOpOrder = ["xformOp:translate"]\n{i2}}}\n')
+            continue
+        kind = "Cube" if c.size is not None else "Sphere" if c.sphere else "Cylinder"
+        out.append(f'{i2}def {kind} "C{i}" (\n{i2}    prepend apiSchemas = ["PhysicsCollisionAPI"{extra}]\n{i2})\n'
+                   f'{i2}{{\n{i2}    uniform token purpose = "guide"\n{binding}')
         if c.size is not None:
             out.append(f"{i2}    double size = 1\n{i2}    double3 xformOp:translate = {_fmt(c.center)}\n"
                        f"{i2}    float3 xformOp:scale = {_fmt(c.size)}\n"
                        f'{i2}    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]\n')
+        elif c.sphere:
+            out.append(f"{i2}    double radius = {c.radius}\n{i2}    double3 xformOp:translate = {_fmt(c.center)}\n"
+                       f'{i2}    uniform token[] xformOpOrder = ["xformOp:translate"]\n')
         else:
             out.append(f'{i2}    uniform token axis = "{c.axis.upper()}"\n{i2}    double radius = {c.radius}\n'
                        f"{i2}    double height = {c.height}\n{i2}    double3 xformOp:translate = {_fmt(c.center)}\n"
@@ -424,7 +490,7 @@ def _mech_usda(mech: Mechanism) -> str:
     looks = list(dict.fromkeys(m.look for m in meshes))
     out = ['#usda 1.0\n(\n    defaultPrim = "Root"\n    metersPerUnit = 1\n    upAxis = "Z"\n)\n',
            'def Xform "Root" (\n    prepend apiSchemas = ["PhysicsArticulationRootAPI", "PhysxArticulationAPI"]\n)\n{\n',
-           "    bool physxArticulation:enabledSelfCollisions = 0\n",
+           f"    bool physxArticulation:enabledSelfCollisions = {1 if mech.self_collide else 0}\n",
            "    int physxArticulation:solverPositionIterationCount = 32\n",
            "    int physxArticulation:solverVelocityIterationCount = 4\n",
            # never sleep: a sleeping articulation ignores effort targets, so laws and springs stop acting on it
@@ -442,12 +508,20 @@ def _mech_usda(mech: Mechanism) -> str:
                    f'                float inputs:metallic = {lk.metallic}\n'
                    f'                float inputs:opacity = {lk.opacity}\n'
                    f'                token outputs:surface\n            }}\n        }}\n')
+    mats = _phys_materials(list(mech.colliders) + [c for lk in mech.links for c in lk.colliders], mech.material)
+    out += _phys_material_usda(mats)
     out.append("    }\n")
-    out += _body_usda("base", (0, 0, 0), mech.mass if mech.mass is not None else 1.0, mech.meshes, mech.colliders, looks)
+
+    def filtered(body):
+        return [b for pair in mech.no_collide for b in pair if body in pair and b != body]
+
+    out += _body_usda("base", (0, 0, 0), mech.mass if mech.mass is not None else 1.0, mech.meshes, mech.colliders, looks,
+                      mats=mats, filtered=filtered("base"), default_mat=mech.material, contact_offset=mech.contact_offset)
     if mech.mass is None:
         out.append('    def PhysicsFixedJoint "root_joint"\n    {\n        rel physics:body1 = </Root/base>\n    }\n')
     for lk in mech.links:
-        out += _body_usda(lk.name, lk.anchor, lk.mass, lk.meshes, lk.colliders, looks, floating=lk.floating)
+        out += _body_usda(lk.name, lk.anchor, lk.mass, lk.meshes, lk.colliders, looks, floating=lk.floating, mats=mats,
+                          filtered=filtered(lk.name), default_mat=mech.material, contact_offset=mech.contact_offset)
         kind = {"revolute": "PhysicsRevoluteJoint", "prismatic": "PhysicsPrismaticJoint"}[lk.kind]
         scale = math.degrees(1.0) if lk.kind == "revolute" else 1.0  # USD hinge limits are in degrees
         lin = "angular" if lk.kind == "revolute" else "linear"
@@ -520,7 +594,7 @@ def _mech_object(scene, spec: Mechanism):
     return _MechObject(name=spec.name, usd_path=_write_text(spec.name, _mech_usda(spec)),
                        object_type=scene.ObjectType.ARTICULATION,
                        initial_pose=scene.Pose(position_xyz=tuple(float(v) for v in spec.pos), rotation_xyzw=tuple(float(v) for v in _quat_mul(yaw, spec.tilt_xyzw))),
-                       spawn_cfg_addon={"physics_material": scene._grippy()})
+                       spawn_cfg_addon={} if spec.material is not None else {"physics_material": scene._grippy()})
 
 
 def _set_drive(art, j: int, target: float, stiffness: float, effort: float, damping: float | None = None) -> None:
@@ -536,7 +610,7 @@ def _set_drive(art, j: int, target: float, stiffness: float, effort: float, damp
 
 
 def _set_limits(art, j: int, lo: float, hi: float) -> None:
-    """Narrow or restore a joint's limits in the running sim (from the hood-prop-rod task's Latch lock):
+    """Narrow or restore a joint's limits in the running sim (a Latch lock):
     a hard stop holds where a drive does not."""
     import torch
 

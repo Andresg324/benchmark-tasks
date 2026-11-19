@@ -1,4 +1,4 @@
-"""guardkit: shared scoring guards for the holes reviewers kept finding (Nov 11). Import after yamkit:
+"""guardkit: shared scoring guards (hands on parts, grips, releases, latched events, swept motions). Import after yamkit:
     import guardkit as gk
 
 Parts are shapes in an object's own frame (origin at objects[obj].pos, turning with its quat), so a check follows the
@@ -20,12 +20,12 @@ both call them; pass a fresh objects dict per step in offline tests):
     FLIP = gk.Latch(steps=2)                 -> FLIP.feed(o, cond): an irreversible event, 2 steps in a row confirm it
     ONE = gk.Latch(steps=3, total=True)      -> counts steps in all: swapping hands every 2 steps doesn't dodge it
     HOME = gk.ArmsHome()                     -> HOME.feed(o) every step; HOME.home(o): back at the start pose, still
-                                                (reviewers penalize scoring arm-home: do not use it in a score)
+                                                (a pose check, not a task outcome: do not use it in a score)
     SW = gk.Sweep()                          -> SW.crossed(o, "knife", tip, test, obj="board"): tests the points
                                                 between last step's and this step's tip (fast motions)
 Typical end-of-run rule: full credit only if no gripper is gk.touching(...) the object and not FAIL.on.
-Reviewers reject proximity-as-violation ("within 4 cm scores zero even if it is not touching"): judge a hand on an
-object by touching() or a real grip (grip_on), never by a distance zone alone.
+Judge a hand on an object by touching() or a real grip (grip_on), never by a distance zone alone (a hand 4 cm off a
+part is not touching it).
 Ship only the helpers a task uses: trim the task's copy of this file.
 Scored geometry is the thing a real gauge reads (the pipe's own slope, the deck's center): put that in the task.
 """
