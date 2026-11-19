@@ -186,9 +186,9 @@ each mean matches within 0.02 g.
 
 Open loop, both arms, as a person does it: the left hand holds the tube and the right turns the cap. The left takes
 the lying tube from above, lightly across its body (a holding grip, under the paste's yield), and lifts it level with
-the cap toward the robot. The right comes in pointing forward, closes on the cap and unscrews it counterclockwise
+the cap toward the robot, over the brush. The right comes in pointing forward, closes on the cap and unscrews it counterclockwise
 (seen from the cap's top), half a turn per wrist stroke, following the thread; between strokes it opens, turns back and
-closes again, 1.25 turns in all. It draws the cap straight off and holds it. The left turns the tube nozzle-down over
+closes again, 1.25 turns in all. It draws the cap straight off and holds it aside, out of the left arm's way. The left turns the tube nozzle-down over
 the brush, the nozzle 4 mm above the bristles, squeezes 1.75 mm a side for 1.2 s, eases to the holding grip for 1.5 s,
 lifts off and brings the tube back level. The right puts the cap back on the neck and screws it on clockwise in the
 same strokes, a little past the seat, lets go and backs away. The left lays the capped tube down, lets go and lifts
@@ -215,9 +215,9 @@ tube and brush let go on the counter with the arms off them. No force gauge and 
 A low-cost setup: the robot and a phone aside, every item is a common household or hobby item.
 
 **Setup marks** (once). From the midpoint between the arm bases, x forward, y to the robot's left:
-- Brush: a tape outline of the brush lying on its back, the bristle field's middle at x 300 mm, y -70 mm (within
+- Brush: a tape outline of the brush lying on its back, the bristle field's middle at x 300 mm, y +20 mm (within
   5 mm), its long axis along x, head away from the robot.
-- Tube: a tape outline of the capped tube lying on its side along x, its body's middle at x 300 mm, y +20 mm (within
+- Tube: a tape outline of the capped tube lying on its side along x, its body's middle at x 300 mm, y +110 mm (within
   5 mm), cap toward the robot, the rolled end flat on the counter.
 
 **Starting state** (each trial). Keep the room, the paste and the scale at 20-24 C (a paste's yield stress changes
@@ -244,7 +244,8 @@ confirms the grip.
    the tube and brush were let go resting on the counter (not tossed), and the 1 s of stillness.
 
 **Safety.** Only a toothbrush and toothpaste are used: nothing sharp, hot or heavy. The brush is never used in a
-mouth; discard or wash each dosed brush.
+mouth; discard or wash each dosed brush. The operator keeps a hand on the robot's stop and stops the trial if an arm drives into the
+counter, the other arm or the tube.
 
 **Tolerances**
 
@@ -266,7 +267,7 @@ mouth; discard or wash each dosed brush.
 | Nozzle bore | 7.5 mm [M] | caliper | US 9567138 (0.28-0.32 in) |
 | Brush | 151 mm long; head 26 x 12 mm; bristle field 20 x 9 mm, 9 mm tall; 14 g [M] | caliper, scale | no published dimensions for this SKU |
 | Fill | 50 to 70 g of paste | scale | reset rule above |
-| Setup marks | brush at (300, -70) mm, tube at (300, +20) mm, within 5 mm | tape measure, rule | the simulator's start |
+| Setup marks | brush at (300, +20) mm, tube at (300, +110) mm, within 5 mm | tape measure, rule | the simulator's start |
 | Room temperature | 20-24 C | room thermometer | keeps the paste's yield stress steady between trials |
 
 [M] = measured on the trial object before the first trial; until then the value given is the simulation's. No [M] item

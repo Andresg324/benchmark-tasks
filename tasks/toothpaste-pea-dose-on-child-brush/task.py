@@ -53,7 +53,7 @@ BRUSH_PARTS_BOX = (((0.0, 0.0, -BRISTLE[2] / 2), BRISTLE),
                    ((-(HEAD[0] + NECK[0]) / 2, 0.0, _FLOOR + NECK[2] / 2), NECK),
                    ((-HEAD[0] / 2 - NECK[0] - HANDLE[0] / 2, 0.0, _FLOOR + HANDLE[2] / 2), HANDLE))
 BRUSH_G = 14.0  # g
-BRUSH_START = (0.300, -0.070, TOP - _FLOOR)  # the bristle top's middle, 14 mm above the counter, head away from the robot
+BRUSH_START = (0.300, 0.020, TOP - _FLOOR)  # the bristle top's middle, 14 mm above the counter, head away from the robot
 BRUSH = kit.Prop(
     "brush", pos=BRUSH_START, mass=BRUSH_G / 1000, size=(0.151, HANDLE[1], -_FLOOR),
     meshes=(kit.box(*BRUSH_PARTS_BOX[0], kit.Look((0.95, 0.95, 0.97), 0.8)),
@@ -161,7 +161,8 @@ _BAND = ck.colliders([_axis_x(np.asarray(ck.prism(BODY_R / math.cos(math.pi / ck
 
 # The tube lies on its side along x, the cap toward the robot, the rolled end flat on the counter.
 R_LIE = np.eye(3)
-TUBE_XY = (0.300, 0.020)
+TUBE_XY = (0.300, 0.110)
+WORK_XY = (0.300, 0.020)  # where the tube is held level while the cap is turned (over the brush, 11.5 cm up)
 SPAWN_GAP = 0.0001  # m: the tube spawns this far over the counter, and the neck's tip this far off the cap's seat
 
 
@@ -554,26 +555,36 @@ FINGERS: dict = {}  # "right_robot" -> (joint7, joint8), for the probe log
 
 
 def _read_links(base) -> None:
-    """Every arm link's pose (env frame) at this control step, into LINK_POSES (and the finger joints, for the log)."""
+    """Every arm link's pose (env frame) at this control step, into LINK_POSES (and the finger joints, for the log).
+    A missing arm or link, or finger pads left without their rubber, stops the trial: the contact checks and the grip
+    would otherwise pass silently."""
     origin = base.scene.env_origins[0].detach().cpu().numpy()
     for robot in ROBOTS:
         try:
             art = base.scene[robot]
-        except KeyError:
-            continue
+        except KeyError as e:
+            raise RuntimeError(f"toothpaste: no {robot} in the scene for the contact checks") from e
         names = list(art.body_names)
         P = getattr(art.data.body_pos_w, "torch", art.data.body_pos_w)[0].detach().cpu().numpy().astype(float)
         Q = getattr(art.data.body_quat_w, "torch", art.data.body_quat_w)[0].detach().cpu().numpy().astype(float)
+        missing = [link for link in ARM_LINKS if link not in names]
+        if missing:
+            raise RuntimeError(f"toothpaste: {robot} has no link(s) {missing} for the contact checks")
         for link in ARM_LINKS:
-            if link in names:
-                i = names.index(link)
-                LINK_POSES[f"{robot}/{link}"] = (P[i] - origin, rotm(Q[i]))
-        try:
-            jn = list(art.joint_names)
-            q = getattr(art.data.joint_pos, "torch", art.data.joint_pos)[0].detach().cpu().numpy()
-            FINGERS[robot] = (float(q[jn.index("joint7")]), float(q[jn.index("joint8")]))
-        except (ValueError, AttributeError):
-            pass
+            i = names.index(link)
+            LINK_POSES[f"{robot}/{link}"] = (P[i] - origin, rotm(Q[i]))
+        jn = list(art.joint_names)
+        q = getattr(art.data.joint_pos, "torch", art.data.joint_pos)[0].detach().cpu().numpy()
+        FINGERS[robot] = (float(q[jn.index("joint7")]), float(q[jn.index("joint8")]))
+    if gripkit._STATE.get("bound", 0) < 0:
+        raise RuntimeError("toothpaste: the finger pads' rubber material could not be bound")
+    if not _READ_ONCE:
+        _READ_ONCE.append(1)
+        print(f"toothpaste: contact checks on {len(LINK_POSES)} arm links; pad shapes with rubber: "
+              f"{gripkit._STATE.get('bound')}", file=sys.stderr, flush=True)
+
+
+_READ_ONCE: list = []
 
 
 kit.STATE_HOOKS.append(_read_links)
@@ -774,6 +785,7 @@ PRESS = 0.0003  # m: each stroke aims the cap this far into the thread (the arm'
 STEP_DEG = 90.0  # waypoints along a stroke (each a smooth start and stop)
 STROKE_S = 3.5  # s per half turn
 DRAW_OFF = 0.025  # m: the cap drawn straight back off the neck once free
+CAP_PARK = (0.240, -0.140, TOP + 0.160)  # where the right holds the cap while the left doses (on the right's own side)
 K_FINGER = 5000.0  # N/m: the YAM finger's position servo (yam_arena GRIPPER stiffness), in series with the wall
 PITCH_FWD = -math.pi / 2  # a hand pointing forward (+x)
 
@@ -798,7 +810,7 @@ def tube_grip(push: float) -> float:
 
 def work_tube():
     """The tube's pose (origin, rotation) held level at the work height, where it was picked up."""
-    return np.array([TUBE_XY[0], TUBE_XY[1], WORK_Z]), R_LIE
+    return np.array([WORK_XY[0], WORK_XY[1], WORK_Z]), R_LIE
 
 
 def cap_tcp(turned_deg: float, back: float = 0.0) -> tuple:
@@ -897,6 +909,7 @@ def demo():
     wps, yaw, turned = strokes(UNSCREW_DEG, +1.0, YAW_LO, 0.0, cap_hold, "unscrew")
     right += wps
     right.append(_tw(1.5, cap_tcp(turned, back=DRAW_OFF), cap_hold, "draw the cap off", yaw, PITCH_FWD))
+    right.append(_tw(2.5, CAP_PARK, cap_hold, "hold the cap aside, out of the left arm's way", yaw, PITCH_FWD))
     _hold(left, _t(right) - _t(left), "hold it while the cap comes off")
     # left: nozzle-down over the bristles, dose, back level
     bx, by, bz = BRUSH_START
@@ -922,7 +935,8 @@ def demo():
              _tw(0.5, work, hold, "hold it")]
     _hold(right, _t(left) - _t(right), "hold the cap while the tube is away")
     # right: cap back on the neck, screwed on
-    right += [_tw(1.5, cap_tcp(turned, back=0.003), cap_hold, "cap to the neck", yaw, PITCH_FWD),
+    right += [_tw(2.5, cap_tcp(turned, back=DRAW_OFF), cap_hold, "back in front of the neck", yaw, PITCH_FWD),
+              _tw(1.5, cap_tcp(turned, back=0.003), cap_hold, "cap to the neck", yaw, PITCH_FWD),
               _tw(1.0, cap_tcp(turned), cap_hold, "onto the thread", yaw, PITCH_FWD),
               _tw(0.3, cap_tcp(turned), cap_hold, "settle", yaw, PITCH_FWD)]
     _hold(left, _t(right) - _t(left), "hold it while the cap goes back on")

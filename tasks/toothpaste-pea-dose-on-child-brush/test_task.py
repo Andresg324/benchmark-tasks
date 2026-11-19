@@ -219,7 +219,7 @@ def dosed():
 
 
 # -- the thread ----------------------------------------------------------------------------------------------------------
-def _overlap_depth(phi_deg, rise, off=(0.0, 0.0)):
+def _overlap_depth(phi_deg, rise, off=(0.0, 0.0), tilt_deg=0.0):
     """Deepest overlap (m; <= 0: none) between any cap hull and any neck hull, the cap turned phi and risen `rise` off
     its seat (neck frame), by linear programming on the hulls' face planes (the largest ball inside both)."""
     from scipy.optimize import linprog
@@ -230,7 +230,7 @@ def _overlap_depth(phi_deg, rise, off=(0.0, 0.0)):
         cap = [np.asarray(p, float) for p in ck.cap_point_sets()]
         _CACHE["hulls"] = (neck, [ConvexHull(p).equations for p in neck], cap, [ConvexHull(p).equations for p in cap])
     neck, NE, cap, CE = _CACHE["hulls"]
-    R = rz(math.radians(phi_deg))
+    R = rz(math.radians(phi_deg)) @ rx(math.radians(tilt_deg))  # tilted about its mouth's middle
     t = np.array([off[0], off[1], ck.SEAT_Z + rise])
     worst = -1.0
     for j, pc in enumerate(cap):
@@ -265,6 +265,10 @@ def test_thread():
         return max(_overlap_depth(ph, pr + dz) for dz in np.linspace(0.0005, 0.005, 10)) > 1e-5
 
     check(blocked(360.0), "after one full turn a straight pull is still blocked")
+    for tilt in (3.0, 6.0):  # started crooked (cross-threaded): it cannot sit down on its seat
+        deep = min(_overlap_depth(ph, 0.0, tilt_deg=tilt) for ph in (0.0, 90.0, 180.0, 270.0))
+        check(deep > 1e-5, f"a cap tilted {tilt:.0f} degrees cannot reach its seat at any turn: its ridges and bore hit "
+              f"the neck ({deep * 1000:.2f} mm)")
     free = next(ph for ph in range(360, 540, 15) if not blocked(ph))
     check(360 < free <= M.UNSCREW_DEG - 30, f"the cap pulls free after {free} degrees of turn (the demo turns "
           f"{M.UNSCREW_DEG:.0f})")
