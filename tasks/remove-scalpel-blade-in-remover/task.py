@@ -598,8 +598,10 @@ class Ledger:
             self.min_arm = min(getattr(self, "min_arm", math.inf), gap)
             if gap <= TOUCH_TOL:
                 self.ruined = self.ruined or f"the robot ({who}) touched the blade"
+        elif _IN_SIM["on"]:  # in the simulator the hull check never falls back to the box model
+            raise RuntimeError("[scalpel] blade contact: no arm link poses read from the simulator")
         elif "left_gripper" in objects and gk.touching(objects, "blade", BLADE_PARTS, TOUCH_TOL):
-            self.ruined = self.ruined or "a gripper touched the blade"  # offline: no link poses, the box model
+            self.ruined = self.ruined or "a gripper touched the blade"  # offline (the tests): no link poses, boxes
         if "left_gripper" in objects:
             if _DEBUG:
                 self.min_gap = min(self.min_gap, *(gk.hand_gap(objects, g, "blade", BLADE_PARTS, 0.05)
@@ -688,7 +690,7 @@ def score(objects):
 
 
 # -- the simulator hooks: welded bodies' spawners, the record step and the welds each control step ------------------------------
-_IN_SIM = {"on": False}
+_IN_SIM = {"on": False, "told": False}  # on: running in the simulator (set where the per-step read is installed)
 
 
 def _spawner(name):
@@ -736,20 +738,30 @@ def _patch(scene) -> None:
 
 
 def _read_links(base) -> None:
-    """Every arm link's pose (env frame) this control step, into LINK_POSES."""
+    """Every arm link's pose (env frame) this control step, into LINK_POSES. A robot or link the simulator does not
+    have is an error: the blade-contact check never runs on part of the arms, or on the box model, in a run."""
     origin = base.scene.env_origins[0].detach().cpu().numpy()
     for robot in ROBOTS:
         try:
             art = base.scene[robot]
-        except KeyError:
-            continue
+        except KeyError as e:
+            raise RuntimeError(f"[scalpel] blade contact: no robot {robot!r} in the scene") from e
         names = list(art.body_names)
+        missing = [link for link in ARM_LINKS if link not in names]
+        if missing:
+            raise RuntimeError(f"[scalpel] blade contact: {robot} has no link(s) {missing} (bodies {names})")
         P = getattr(art.data.body_pos_w, "torch", art.data.body_pos_w)[0].detach().cpu().numpy().astype(float)
         Q = getattr(art.data.body_quat_w, "torch", art.data.body_quat_w)[0].detach().cpu().numpy().astype(float)
         for link in ARM_LINKS:
-            if link in names:
-                i = names.index(link)
-                LINK_POSES[f"{robot}/{link}"] = (P[i] - origin, weldkit._rot(Q[i]))
+            i = names.index(link)
+            LINK_POSES[f"{robot}/{link}"] = (P[i] - origin, weldkit._rot(Q[i]))
+    want = {f"{r}/{k}" for r in ROBOTS for k in ARM_LINKS}
+    if set(LINK_POSES) != want:
+        raise RuntimeError(f"[scalpel] blade contact: link poses {sorted(LINK_POSES)} != {sorted(want)}")
+    if not _IN_SIM["told"]:
+        _IN_SIM["told"] = True
+        print(f"[scalpel] blade contact: {len(LINK_POSES)} link poses from the sim, hull check on", file=sys.stderr,
+              flush=True)
 
 
 def _watch_resets(base) -> None:

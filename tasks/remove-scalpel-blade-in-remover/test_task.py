@@ -399,6 +399,73 @@ def test_end_on_touch_at_blade_ends():
                   f"{gap * 1000:.2f} mm: a touch, 0")
 
 
+class _Arr:
+    """A stand-in for a simulator tensor: .detach().cpu().numpy()."""
+
+    def __init__(self, a):
+        self.a = np.asarray(a, float)
+
+    def __getitem__(self, i):
+        return _Arr(self.a[i])
+
+    def detach(self):
+        return self
+
+    def cpu(self):
+        return self
+
+    def numpy(self):
+        return self.a
+
+
+class _Art:
+    def __init__(self, names):
+        self.body_names = list(names)
+        self.data = type("D", (), {"body_pos_w": _Arr(np.zeros((1, len(names), 3))),
+                                   "body_quat_w": _Arr(np.tile([0.0, 0.0, 0.0, 1.0], (1, len(names), 1)))})()
+
+
+class _Base:
+    def __init__(self, arts):
+        self.scene = type("S", (dict,), {})(arts)
+        self.scene.env_origins = _Arr(np.zeros((1, 3)))
+
+
+def test_sim_link_read_is_strict():
+    """In the simulator the blade-contact check reads all 12 arm-link poses (6 links x 2 arms) or stops with an error:
+    a missing robot or link, or no poses at all, never leaves links unchecked or falls back to the box model."""
+    full = ["base", "link1", "link2"] + list(M.ARM_LINKS)
+    M.LINK_POSES.clear()
+    M._read_links(_Base({r: _Art(full) for r in M.ROBOTS}))
+    check(set(M.LINK_POSES) == {f"{r}/{k}" for r in M.ROBOTS for k in M.ARM_LINKS},
+          f"{len(M.LINK_POSES)} link poses read, all of them")
+    for arts, what in (({M.ROBOTS[0]: _Art(full)}, "a robot missing"),
+                       ({r: _Art([n for n in full if n != "tip_right"]) for r in M.ROBOTS}, "tip_right missing"),
+                       ({M.ROBOTS[0]: _Art(full), M.ROBOTS[1]: _Art([n for n in full if n != "link4"])},
+                        "one arm's link4 missing")):
+        M.LINK_POSES.clear()
+        try:
+            M._read_links(_Base(arts))
+            raised = ""
+        except RuntimeError as e:
+            raised = str(e)
+        check(raised.startswith("[scalpel] blade contact:"), f"{what}: raises ({raised[:70]}), never skips")
+    M.LINK_POSES.clear()
+    fresh()
+    M._IN_SIM["on"] = True
+    try:
+        run([world(handle=OUT)])
+        raised = False
+    except RuntimeError:
+        raised = True
+    finally:
+        M._IN_SIM["on"] = False
+    check(raised, "in the sim, no link poses: raises, never the box model")
+    fresh()
+    run([world(handle=OUT)])
+    check(True, "offline (the tests only): the box model runs with no link poses")
+
+
 def test_redteam():
     """The red-team cases (Nov 17): each scores what the real act deserves."""
     # R1: the remover, blade inside, carried into the instrument tray with the bare handle: not at its place: 0.7 at most
@@ -457,7 +524,7 @@ def test_redteam():
 if __name__ == "__main__":
     for t in (test_start, test_insert_pose, test_mechanism_and_tiers, test_no_catch_paths, test_hazards, test_gaming, test_arm_contact_and_press, test_redteam,
               test_hand_boxes_hold_the_hulls, test_hull_touch_visual_clear, test_hull_samples_cover_the_surface,
-              test_end_on_touch_at_blade_ends):
+              test_end_on_touch_at_blade_ends, test_sim_link_read_is_strict):
         t()
     if (HERE / "task.json").exists() and (HERE / "README.md").exists():
         test_text()
