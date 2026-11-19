@@ -80,7 +80,7 @@ simulation it is read only from the cap's own pose on the neck: its turn about t
 turn, on the thread's last turn (within half the 1.5 mm pitch of its seat), its axis within 2 degrees and 0.6 mm of
 the neck's. A cap set on without turning, a cap a turn or more short, a cap part way down (also when pushed down into
 the thread's play) and a crooked cap each score at most 0.5. In the real trial a tester turns the cap clockwise by
-hand after the trial; it must stop within an eighth of a turn.
+hand after the trial; it must stop within an eighth of a turn and sit square on the shoulder.
 
 **Why 0.15 to 0.35 g.** The CDC defines a pea-sized amount as 0.25 g. Children of 40-48 months told to use a pea
 dosed 0.256 g on average (range 0.035-0.620 g, n = 28; den Besten,
@@ -123,17 +123,18 @@ remove foil seal" (Target, TCIN 1001365458, UPC 037000951438): a screw cap on a 
   0.03 mm inside the true helix. The ridges run out to nothing over their last 45 degrees, as a molded thread starts.
   The cap's bore is a ring of 32 convex wedges with a lead-in at its mouth; its top is one convex disc. The neck's core
   is one convex cylinder with a separate chamfered tip, the shoulder one convex cone; no hull has more than 64 points.
-- **Clearances (not published for a molded tube neck).** The cap stands 0.4 mm off the neck's crest and 0.3 mm off
-  its root, which leaves 0.35 mm of axial play between the flanks. The neck carries 2.25 turns of thread and the cap
-  1.25, so the cap frees after about 1.1 turns (`test_thread`: the cap's and the neck's hulls never overlap seated or
-  along the helix, and a straight pull is blocked until then). The trial cap is checked by counting its turns from
-  seated to free.
+- **Clearances.** Molded tube necks carry no standard thread clearance. The cap stands 0.4 mm off the neck's crest
+  and 0.3 mm off its root, which leaves 0.35 mm of axial play between the flanks. The neck carries 2.25 turns of
+  thread and the cap 1.25, so the cap frees after about 1.1 turns (`test_thread`: the cap's and the neck's hulls
+  never overlap seated or along the helix, and a straight pull is blocked until then). The trial cap is checked by
+  counting its turns from seated to free.
 - **Nothing holds the cap but contact.** No joint, spring, capture zone or snap acts between the cap and the tube.
   Fully on, the cap's inner top face rests on the neck's tip: the stop is that contact. A hand screwing it on turns
-  until its grip slips.
+  until its grip slips. The cap body runs 32 position and 8 velocity solver iterations (the arms run 32 position
+  iterations); this adds no force, friction or capture.
 - **The cap.** A 35 mm polypropylene screw cap on the 15 mm neck (Amcor "35mm Screw Cap": 35 mm, neck 15 mm, PP, for
-  tubes with a removable foil seal). Its height and mass are not listed: 20.8 mm and 4.4 g are those of the same
-  maker's 35 mm screw-on closure for this neck finish; its inertia is that of a thin-walled cup of that size and mass.
+  tubes with a removable foil seal). Its height and mass are those of the same maker's 35 mm screw-on closure for
+  this neck finish, 20.8 mm and 4.4 g; its inertia is that of a thin-walled cup of that size and mass.
   Both are measured on the trial cap.
 - **Friction.** The cap is polypropylene and the tube's laminate and neck polyethylene: polyethylene on polyethylene,
   clean and dry, 0.2 (Engineering ToolBox, "Friction - Coefficients for Common Materials and Surfaces"), on every
@@ -236,8 +237,8 @@ confirms the grip.
 **Measure.**
 1. Before: weigh the brush (B0) and the tube with its cap (T0).
 2. Run the trial, recording video from above and from the robot's side.
-3. Cap check: turn the cap clockwise by hand; it must stop within an eighth of a turn (mark the cap and the tube's
-   shoulder with a pen line first to read the turn). A cap left off or loose fails this check.
+3. Cap check: turn the cap clockwise by hand; it must stop within an eighth of a turn and sit square on the shoulder
+   (mark the cap and the tube's shoulder with a pen line first to read the turn). A cap left off or loose fails this check.
 4. Photograph the brush head from straight above beside the rule.
 5. Wipe any paste off the brush outside the bristle field and weigh the brush (B1): on the bristles = B1 - B0.
 6. Weigh the tube with its cap, unwiped (T1): dispensed = T0 - T1; off the bristles = dispensed - (B1 - B0).
@@ -256,7 +257,7 @@ counter, the other arm or the tube.
 | Smear band | 0.05 to 0.15 g | scale | rice-grain smear about 0.1 g (Smiles for Life) |
 | Too much | 0.35 to 0.70 g (0.25); over 0.70 g scores 0 | scale | half and full loads in MMWR 2019;68(4); 0.70 g is about 3 peas (our cut) |
 | Off the bristles | at most 0.05 g | scale | 5 counts of the 0.01 g scale |
-| Cap screwed fully on | stops within an eighth of a turn (45 degrees) when turned clockwise by hand | pen mark on cap and shoulder | design choice: a cap that still turns is not closed |
+| Cap screwed fully on | stops within an eighth of a turn (45 degrees) when turned clockwise by hand, and sits square | pen mark on cap and shoulder | design choice: a cap that still turns is not closed |
 | Arms off the tube, cap and brush | no contact at the end (in simulation every link at least 5 mm clear) | video | design choice: a held cap is not a closed one |
 | Bristle angle at the end | within 45 degrees of up | video frame | design choice: dab on top |
 | Stillness | under 1 cm/s for 1 s | video | the score is read once nothing is moving |
