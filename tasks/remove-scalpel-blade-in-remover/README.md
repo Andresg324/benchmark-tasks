@@ -122,8 +122,9 @@ the button is on top, over the blade at the stop.
 Possible scores: 0, 0.4, 0.7, 1.0. Partial credit is given only for safe states: every scored state has the blade
 already inside the remover. Success: 1.0 held for 2 s.
 
-**Real trial, scored on the outcome.** Both grippers wear bright blue nitrile finger covers so that a touch on the
-bright steel blade is plain on the wrist and side videos. Side and top videos judge the hazards (a finger or any
+**Real trial, scored on the outcome.** Both grippers wear the dark cut-resistant finger covers of the Safety
+section below, so a touch on the bright steel blade is plain on the wrist and side videos; a touch of a cover counts
+as a touch of the robot. Side and top videos judge the hazards (a finger or any
 part of an arm on the blade, a drop, the bladed scalpel in the tray). At the end: the handle's fitting is bare, the blade is seen through the remover's slot,
 the remover stands, and a top photo shows the handle inside the tray.
 
@@ -187,13 +188,30 @@ commanded past the cap's top as a force target: the hand stops on the bottomed b
 ## Real-world build and reset
 
 A low-cost setup: a Swann-Morton No. 3 handle, a box of Swann-Morton No. 10 blades, a Feather 2990 disposable blade
-remover, a 250 mm stainless kidney dish, a 10 x 6-1/2 x 3/4 in stainless instrument tray, and a needle holder for
-fitting blades. New blades stand in for used ones. Tape marks for the dish, the remover and the tray.
+remover, a 250 mm stainless kidney dish, a 10 x 6-1/2 x 3/4 in stainless instrument tray, a needle holder for
+fitting blades, and a pair of PIP MaxiCut Ultra 44-4745D cut-resistant gloves, size XL, for the finger covers.
+New blades stand in for used ones. Tape marks for the dish, the remover and the tray.
 
 Reset: fit a new blade with the needle holder, never by hand (grip the blade's back edge, slide
 its slot onto the fitting until it clicks home), and lay the scalpel in the dish as set up. Stand the remover back
 on its marks; it holds 150 to 300 blades, so it serves many trials, and when full it goes into a sharps container
 whole. Put the tray back empty.
+
+## Safety in the real trial: cut-resistant finger covers
+
+The real No. 10 blade stays in the trial, because the remover's slot and catch are made for it and the skill is
+taking a real blade off. To keep a slip of the hand from cutting the shared gripper pads, each of the four YAM
+fingertips wears a finger cut from a PIP MaxiCut Ultra 44-4745D glove: ANSI/ISEA 105 cut level A4, EN 388 4343D, a
+15-gauge seamless knit with a nitrile MicroFoam coating on the palm and fingers [12]. Cut the index and middle
+fingers off both gloves of an XL pair at their base, pull one over each fingertip with the coated side on the pad
+face, and hold it with a turn of electrical tape on the finger above the pad. The covers stay on for every trial and
+are swapped for a new pair when a cover shows a cut. They are cut-resistant, not cut-proof, so the scoring still
+treats any touch of the blade as a failure.
+
+Once per session, with the covers on and before the first trial: close one gripper on the handle near its tail and
+lift the scalpel, blade on, clear of the dish and hold it level for 5 s without slipping; close a gripper's
+fingertips and press the remover's button fully down; pinch the remover's body across its 25 mm depth and slide it
+2 cm along the table with no slip in the fingers. If any of these slips, fit new covers and repeat.
 
 ## Sizes and sources
 
@@ -209,6 +227,7 @@ whole. Put the tray back empty.
 | Kidney dish 250 mm: 250 x 140 x 35 mm | KLS Martin 56-673-25-01 listing | [7] |
 | Instrument tray 10 x 6-1/2 x 3/4 in | Sklar listing | [8] |
 | Friction: steel on steel 0.5 to 0.8 static, 0.42 kinetic; polyethylene on steel 0.2 | Engineering ToolBox | [9] |
+| Finger covers: ANSI cut level A4, EN 388 4343D, 15-gauge knit, nitrile MicroFoam on palm and fingers, sizes XS to 2XL | PIP MaxiCut Ultra 44-4745D listings | [12] |
 
 1. https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.1030
 2. Jagger J, Berguer R, Phillips EK, Parker G, Gomaa AE. Increase in sharps injuries in surgical settings versus
@@ -224,6 +243,8 @@ whole. Put the tray back empty.
 9. https://www.engineeringtoolbox.com/friction-coefficients-d_778.html
 10. https://www.osha.gov/laws-regs/standardinterpretations/2005-12-22-0
 11. https://www.osha.gov/laws-regs/standardinterpretations/2008-11-21-0
+12. https://fullsource.com/pip-44-4745d and
+    https://safetyservicesinc.com/pip-maxicut-ultra-44-4745d-seamless-knit-engineered-yarn-with-premium-nitrile-coated-microfoam-grip-on-palm-fingers-touchscreen-compatible/
 
 ## Files
 
@@ -239,9 +260,16 @@ whole. Put the tray back empty.
 
 - Every file in this folder is the task's own code and text; there are no third-party files in it. The remover's drawn
   body and button cap are built at start-up in `task.py` (trimesh convex hulls of corner spheres).
-- The robot model and its collision hulls (the YAM URDF, its hulls and USD, `yam_arena/assets/yam`) load at run time
-  from the competition environment (yam-isaac-lab-arena revision 0059d02a), and the simulator is the environment's
-  Isaac Sim; neither is redistributed here. The arm and gripper shapes the scorer checks, and the fingertip shape the
-  demo aims the press with, are sampled from, or boxes fitted to, those collision hulls at run time (`yamgeom.py`,
-  `guardkit.py`); nothing derived from them is stored in this folder. Their terms are the environment's: the YAM model
-  is I2RT Robotics' (MIT License), and the environment's README states that it has no license yet.
+- The arm collision geometry. Earlier versions shipped `yam_links.npz`, points sampled from the YAM's collision
+  meshes; it and `LICENSE.i2rt` are removed, and nothing derived from the robot model is stored in this folder now.
+  The scorer and the demo read the same collision hulls at run time from the competition environment,
+  yam-isaac-lab-arena revision 0059d02a (`yam_arena/assets/yam/collision`, through `yam_arena.analysis.link_hulls`),
+  and sample their surfaces at start-up (`yamgeom.py`, `guardkit.py`; the samples are cached in the system
+  temp folder, never in the task).
+  - Source: those hulls are convex pieces that YAM-inspect-Isaac cut with CoACD from the link meshes of I2RT
+    Robotics' YAM model (github.com/i2rt-robotics/i2rt, commit 120c3c81, as the environment's `SOURCE_COMMIT`
+    records); the environment ships them unchanged.
+  - License: the YAM model is under the MIT License, Copyright (c) I2RT Robotics (`yam_arena/assets/yam/LICENSE.i2rt`
+    in the environment). The environment's README states that the environment has no license yet and that
+    YAM-inspect-Isaac, which made the hulls, has none. The URDF, hulls, USD and the simulator (the environment's
+    Isaac Sim) are used where they are installed and are not redistributed here.
