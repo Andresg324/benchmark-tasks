@@ -565,7 +565,8 @@ def test_demo_plan():
     def at(seq, lab):
         return sum(w.duration for w in seq[:[w.label for w in seq].index(lab) + 1])
 
-    check(at(plan["right"], "draw the cap off") <= at(plan["left"], "squeeze") <= at(plan["right"], "onto the neck, pressed lightly"),
+    check(at(plan["right"], "draw the cap off") <= at(plan["left"], "squeeze")
+          <= at(plan["right"], "onto the neck, pressed lightly"),
           "unscrew, dose, then screw back on")
     check("grip the cap" in rl and "grip the body" in ll, "the left holds the tube and the right turns the cap")
     _, _, turned = M.strokes(M.UNSCREW_DEG, +1.0, M.YAW_LO, 0.0, 0.0, "x")

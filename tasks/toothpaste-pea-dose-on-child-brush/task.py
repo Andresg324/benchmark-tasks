@@ -763,8 +763,8 @@ _TILES = _Tiles()
 # holds it. The left turns the tube nozzle-down over the brush lying on the counter, the nozzle 4 mm above the
 # bristles, squeezes 1.75 mm a side for 1.2 s, eases to the holding grip, waits 1.5 s for the flow to die, lifts off and
 # brings the tube back level. The right puts the cap back on the neck, pressing it on lightly, and screws it on
-# clockwise in the same strokes, a little past the seat (the grips slip once it is tight), lets go and backs away; the left lays the capped tube down,
-# lets go and lifts clear.
+# clockwise in the same strokes, a little past the seat (the grips slip once it is tight), lets go and backs away; the
+# left lays the capped tube down, lets go and lifts clear.
 HOLD_PUSH = 0.0004  # m a side: holds the tube (2.2 N a side, 1.0 kPa inside, under the 1.44 kPa yield)
 FIRM_PUSH = 0.0006  # m a side: a firmer hold while the cap is on and seals the nozzle (nothing can flow); eased to the
 # light hold before the cap comes free. Squeezed much harder, the narrow sprung wall panels let the tube squirt out of the
