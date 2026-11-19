@@ -199,6 +199,7 @@ class Prop(Box):
     max_depenetration: float | None = None  # m/s: PhysX's cap on the speed it uses to undo an overlap; None = default
     inertia: tuple | None = None  # kg m^2: principal moments about the center of mass (prop axes); None = from colliders
     com: tuple | None = None  # m: center of mass in the prop's frame; None = from the colliders (uniform density)
+    solver_iterations: tuple | None = None  # (position, velocity) PhysX solver iterations for this body; None = default
 
 
 def _linear(c: float) -> float:
@@ -842,9 +843,14 @@ def _patch(scene) -> None:
         else:
             if spec.contact_offset is None:  # else each collider's offsets are written in the USD
                 addon.update(collision_props=scene._contact_props())
+            rp = {}
             if spec.max_depenetration is not None:
-                addon.update(rigid_props=scene.PhysxRigidBodyPropertiesCfg(
-                    max_depenetration_velocity=float(spec.max_depenetration)))
+                rp["max_depenetration_velocity"] = float(spec.max_depenetration)
+            if spec.solver_iterations is not None:
+                rp["solver_position_iteration_count"] = int(spec.solver_iterations[0])
+                rp["solver_velocity_iteration_count"] = int(spec.solver_iterations[1])
+            if rp:
+                addon.update(rigid_props=scene.PhysxRigidBodyPropertiesCfg(**rp))
         return scene.Object(
             name=spec.name,
             usd_path=_write(spec),

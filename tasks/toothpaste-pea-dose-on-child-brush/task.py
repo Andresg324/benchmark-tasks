@@ -201,7 +201,7 @@ CAP = kit.Prop(
     size=(2 * ck.R_CAP, 2 * ck.R_CAP, ck.H_CAP),
     meshes=(kit.lathe(_CAP_PROFILE, CAP_LOOK, n=48),),
     colliders=ck.colliders(ck.cap_point_sets()),
-    material=PLASTIC, contact_offset=CONTACT_OFFSET, max_depenetration=0.1)
+    material=PLASTIC, contact_offset=CONTACT_OFFSET, max_depenetration=0.1, solver_iterations=(32, 8))
 
 OBJECTS = [BRUSH, TUBE, CAP]
 gripkit.use_rubber_pads()  # the YAM's finger pads are rubber-faced
@@ -777,9 +777,11 @@ NOZZLE_GAP = 0.004  # m: the nozzle's mouth over the bristle top while squeezing
 GRIP_X = 0.0  # m: the left holds the tube across its center of mass (the body's middle): a two-finger pinch turns
 # freely about its closing line, so an offset lets the tube's weight swing it (25 mm off swings it tens of degrees)
 WORK_Z = TOP + 0.130  # height of the tube's axis while the cap is turned
+HELD_DZ = -0.0019  # m: the held tube sits this much under the left's command (the arm gives under its load); the
+# right aims at the cap where it really is, so its fingers close on it centered
 CAP_GRIP_Z = 0.010  # m: the right's tool point on the cap's axis, this far in from its mouth (the fingertips then stop
 # 3 mm short of the mouth, clear of the tube's shoulder)
-CAP_SQUEEZE = 0.003  # m a side: the right closes this far past the cap's side (about 15 N a finger on the rigid cap)
+CAP_SQUEEZE = 0.0015  # m a side: the right closes this far past the cap's side (about 7.5 N a finger on the rigid cap)
 CAP_OPEN = 0.010  # m: the right's pads stand this far off the cap's side when open between strokes
 YAW_LO, YAW_HI = -math.pi / 2, math.pi / 2  # the right wrist's stroke about its pointing axis
 UNSCREW_DEG = 450.0  # turns from seated to past free (capkit's thread frees after about 400 degrees)
@@ -822,7 +824,7 @@ def cap_tcp(turned_deg: float, back: float = 0.0) -> tuple:
     o, R = work_tube()
     co, cR = seated_cap_in_tube(0.0)
     axis = R @ cR[:, 2]  # the cap's axis, out of its top (world -x)
-    p = o + R @ co + axis * (CAP_GRIP_Z + ck.PITCH * turned_deg / 360.0 - PRESS + back)
+    p = o + R @ co + axis * (CAP_GRIP_Z + ck.PITCH * turned_deg / 360.0 - PRESS + back) + np.array([0.0, 0.0, HELD_DZ])
     return tuple(float(v) for v in p)
 
 
