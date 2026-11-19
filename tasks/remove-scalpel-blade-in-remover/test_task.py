@@ -455,15 +455,17 @@ def test_sim_link_read_is_strict():
     M._IN_SIM["on"] = True
     try:
         run([world(handle=OUT)])
-        raised = False
-    except RuntimeError:
-        raised = True
+        raised = ""
+    except RuntimeError as e:
+        raised = str(e)
     finally:
         M._IN_SIM["on"] = False
-    check(raised, "in the sim, no link poses: raises, never the box model")
+        M._IN_SIM["told"] = False
+    check(raised.startswith("[scalpel] blade contact: no arm link poses"),
+          "in the sim, no link poses: raises, never the box model")
     fresh()
-    run([world(handle=OUT)])
-    check(True, "offline (the tests only): the box model runs with no link poses")
+    s = run([world(handle=OUT)])
+    check(len(s) == 1 and not M._L.ruined, "offline (the tests only): the box model runs with no link poses")
 
 
 def test_redteam():
