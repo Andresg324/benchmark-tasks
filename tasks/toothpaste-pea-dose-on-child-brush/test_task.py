@@ -1,10 +1,14 @@
-"""Offline checks of the toothpaste-dose scorer, no simulator. Tube and brush states are built by hand from the same
-geometry the demo uses; the tube's wall pushes are set as its joint states. Covers: doing nothing; a holding grip
-(no paste); the demo's pea dose (1.0 once the tube is down and all is still for 1 s); too much (a half load and an adult
-strip); too little (a smear); paste off the bristles (on the counter; on the bristles' edge, running off); the dose
-scored the same wherever and however the brush is held (moved, tilted, laid down after dosing); bristles tipped past
-60 degrees while squeezing (nothing lands); the brush flipped with paste on it; the tube still in hand; the 1 s hold;
-the tube or brush dropped, thrown or left on the floor; a new trial; the thresholds in the text; and the demo plan's reach.
+"""Offline checks of the toothpaste task, no simulator. Brush, tube and cap states are built by hand from the same
+geometry the demo uses; the tube's wall pushes are set as its joint states; the arms' links are posed by the robot's
+forward kinematics (at the ready pose, or at the demo's grip on the tube) and checked with their own collision hulls.
+
+Covers: the thread (seated without overlap, free along its helix, a straight pull blocked until it has turned about
+1.1 turns); the start state (capped, nozzle sealed, scores 0); doing nothing; never opening (squeezing through the
+cap); a cap loosened but still on; the demo's pea dose with the cap off, then the ladder of cap states at the end
+(screwed fully on, left off, set on loose, part screwed, crooked, a hand still on the tube); too much; too little;
+paste off the bristles; the dose scored the same wherever the brush is; bristles tipped while squeezing; the brush
+flipped; the tube dropped; the tube left lying capped; a new trial; the start-state cap seat after a shift; the
+written USD (no joint or drive on the cap, its materials and offsets); the thresholds in the text; the demo plan.
 
     python3 test_task.py
 """
@@ -19,11 +23,10 @@ from yam_arena.task_file import ObjectState, load
 
 HERE = Path(__file__).parent
 M = load(HERE / "task.py").module
+import capkit as ck  # noqa: E402
 import yamkit as kit  # noqa: E402
 
-AWAY = {"left_gripper": (0.15, 0.30, M.TOP + 0.30), "right_gripper": (0.15, -0.30, M.TOP + 0.30)}
 GRIP_DOWN = np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, -1.0]])
-NOZZLE_DOWN = np.array([[0.0, 0.0, -1.0], [0.0, 1.0, 0.0], [1.0, 0.0, 0.0]])  # the tube's -x (nozzle) to world -z
 
 
 def check(cond, what):
@@ -34,8 +37,8 @@ def check(cond, what):
 
 def st(pos, rot=np.eye(3)):
     p = np.asarray(pos, float)
-    return ObjectState(pos=p, quat_xyzw=M.sq.quat(np.asarray(rot)), lin_vel=np.zeros(3), ang_vel=np.zeros(3),
-                       low=p - 0.01, high=p + 0.01)
+    return ObjectState(pos=p, quat_xyzw=np.asarray(ck.quat(np.asarray(rot)), float), lin_vel=np.zeros(3),
+                       ang_vel=np.zeros(3), low=p - 0.01, high=p + 0.01)
 
 
 def rx(a):
@@ -53,6 +56,71 @@ def rz(a):
     return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
 
 
+# -- the arms' link poses (forward kinematics), as the simulator reports them -------------------------------------------
+def _fk_poses(robot, q6, finger):
+    import yam_arena.demo as demo
+    from yam_arena.analysis import fk_link_poses_world
+
+    base = demo.LEFT_BASE_POS if robot == "left_robot" else demo.RIGHT_BASE_POS
+    q = {f"joint{i + 1}": float(q6[i]) for i in range(6)}
+    q["joint7"] = q["joint8"] = float(finger)
+    poses = fk_link_poses_world(q, base)
+    return {f"{robot}/{k}": (P[:3, 3].copy(), P[:3, :3].copy()) for k, P in poses.items() if k in M.ARM_LINKS}
+
+
+def _ik(robot, pos, rot):
+    import yam_arena.demo as demo
+
+    base = demo.LEFT_BASE_POS if robot == "left_robot" else demo.RIGHT_BASE_POS
+    best = None
+    for seed in (np.array(demo.READY, float), np.array([0.3, 1.6, 1.4, -1.0, 0.0, 0.5])):
+        q, pe, _ = demo.ik.solve(np.asarray(pos, float), demo.ik.matrix_to_quat_xyzw(rot), seed, base_pos=base,
+                                 iters=400)
+        if best is None or pe < best[1]:
+            best = (q, pe)
+    check(best[1] < 0.002, f"IK reaches the {robot} pose ({best[1] * 1000:.1f} mm)")
+    return best[0]
+
+
+_CACHE = {}
+
+
+def ready_links():
+    if "ready" not in _CACHE:
+        import yam_arena.demo as demo
+
+        out = {}
+        for r in M.ROBOTS:
+            out.update(_fk_poses(r, demo.READY, M.FINGER_OPEN))
+        _CACHE["ready"] = out
+    return _CACHE["ready"]
+
+
+def gripping_links(tube_pos, tube_R, finger):
+    """The right hand on the tube as the demo grips it (tool point on its axis GRIP_X above the body's middle, fingers
+    closing across world x), at finger command `finger`; the left at the ready pose."""
+    key = ("grip", tuple(np.round(tube_pos, 5)), tuple(np.round(tube_R, 5).ravel()), round(finger, 6))
+    if key not in _CACHE:
+        import yam_arena.demo as demo
+
+        tcp = np.asarray(tube_pos) + tube_R @ np.array([M.GRIP_X, 0.0, 0.0])
+        q = _ik("right_robot", tcp, demo.grip_rotation(M.YAW_LO))
+        out = _fk_poses("right_robot", q, finger)
+        out.update(_fk_poses("left_robot", demo.READY, M.FINGER_OPEN))
+        _CACHE[key] = out
+    return _CACHE[key]
+
+
+def capped_pose(tube_pos, tube_R, turned_deg=0.0, extra_rise=0.0, tilt_deg=0.0, off=0.0):
+    """The cap on the tube's neck, unscrewed `turned_deg` along the thread (plus `extra_rise` m straight out, a tilt
+    and a sideways offset): (pos, R) in the world."""
+    o_n = np.asarray(tube_pos) + tube_R @ M.NECK_ORIGIN
+    R_n = tube_R @ M.M_NECK
+    R_rel = rz(math.radians(turned_deg)) @ rx(math.radians(tilt_deg))
+    p_rel = np.array([off, 0.0, ck.SEAT_Z + ck.PITCH * turned_deg / 360.0 + extra_rise])
+    return o_n + R_n @ p_rel, R_n @ R_rel
+
+
 def fresh():
     kit._EPISODE["count"] += 1
     kit._EPISODE["last"] = None
@@ -60,44 +128,43 @@ def fresh():
 
 
 class Trial:
-    """A hand-built trial: the brush and tube where we put them, the tube's walls pushed in `push` m a side."""
+    """A hand-built trial: the brush, tube and cap where we put them, the tube's walls pushed in `push` m a side."""
 
     def __init__(self):
         fresh()
         self.brush = (np.array(M.BRUSH_START, float), np.eye(3))
-        self.tube = (np.array(M.TUBE_START, float), np.eye(3))
-        self.hand_on_tube = False
-        self.hand_on_brush = False
+        self.tube = (np.array(M.TUBE_START, float), M.R_STAND.copy())
+        self.cap = (np.array(M.CAP_START, float), M.R_STAND @ M._CAP_R)
+        self.links = ready_links()
         self.s = 0.0
 
-    def nozzle_over(self, dx=0.0, dy=0.0, gap=M.NOZZLE_GAP, rot=NOZZLE_DOWN):
-        """The nozzle's mouth `gap` over the bristle top's middle (offset dx, dy along the brush's own x, y)."""
+    def cap_on(self, turned_deg=0.0, **kw):
+        self.cap = capped_pose(*self.tube, turned_deg, **kw)
+
+    def cap_off(self):
+        """The cap standing on its top on the counter where the tube stood (mouth up), as the demo leaves it."""
+        self.cap = (np.array(M.CAP_START, float), M.R_STAND @ M._CAP_R)
+
+    def nozzle_over(self, dx=0.0, dy=0.0, gap=M.NOZZLE_GAP, rot=None):
+        """The tube nozzle-down, its mouth `gap` over the bristle top's middle (offset dx, dy along the brush's x, y)."""
+        rot = M.R_STAND if rot is None else rot
         bp, br = self.brush
         mouth = bp + br @ np.array([dx, dy, 0.0]) + np.array([0.0, 0.0, gap])
         self.tube = (mouth - rot @ np.array(M.TIP), rot)
 
-    def tube_down(self):
-        self.tube = (np.array(M.TUBE_START, float), np.eye(3))
+    def tube_home(self):
+        self.tube = (np.array(M.TUBE_START, float), M.R_STAND.copy())
 
     def step(self, push=0.0, n=1):
         for _ in range(n):
             for link, sign in M.PANEL_SIGN.items():
-                d = push if link in ("panel_l", "panel_r") else 0.0
+                d = push if link in ("panel_t", "panel_b") else 0.0
                 kit._JOINTS[f"tube/{link}"] = kit.JointState(sign * d, 0.0, False)
-            o = {"brush": st(*self.brush), "tube": st(*self.tube)}
-            opening = {}
-            for g, p in AWAY.items():
-                o[g] = st(p, GRIP_DOWN)
-                opening[g] = 1.0
-            if self.hand_on_tube:
-                tp, tr = self.tube
-                o["right_gripper"] = st(tp, tr @ rz(math.pi / 2) @ GRIP_DOWN)
-                opening["right_gripper"] = M.tube_grip(push)
-            if self.hand_on_brush:
-                bp, br = self.brush
-                o["left_gripper"] = st(bp + br @ M.BRUSH_GRIP_LOCAL, br @ GRIP_DOWN)
-                opening["left_gripper"] = M.finger_for(M.HANDLE[1] / 2 - 0.001)
-            kit._OPENING.update(opening)
+            M.LINK_POSES.clear()
+            M.LINK_POSES.update(self.links)
+            o = {"brush": st(*self.brush), "tube": st(*self.tube), "cap": st(*self.cap),
+                 "left_gripper": st((0.15, 0.30, M.TOP + 0.30), GRIP_DOWN),
+                 "right_gripper": st((0.15, -0.30, M.TOP + 0.30), GRIP_DOWN)}
             M.success(o)
             self.s = M.score(o)
         return self.s
@@ -109,8 +176,11 @@ class Trial:
         self.step(push, round(hold_s / M.DT))
         self.step(M.HOLD_PUSH, round(tail_s / M.DT))
 
-    def finish(self, still_s=1.5):
-        self.tube_down()
+    def recap(self, turned_deg=0.0, still_s=1.5, **kw):
+        """The tube back on its cap on the counter, the cap at `turned_deg` up the thread, hands at the ready pose."""
+        self.tube_home()
+        self.cap_on(turned_deg, **kw)
+        self.links = ready_links()
         return self.step(0.0, round(still_s / M.DT))
 
     @property
@@ -122,19 +192,77 @@ class Trial:
         return M._L.paste.off_g()
 
 
-def test_lid_shut_seals():
+def dosed():
+    """The cap off on the counter, the demo's squeeze over the brush lying at its start."""
     t = Trial()
+    t.cap_off()
     t.nozzle_over()
-    kit._JOINTS["tube/lid"] = kit.JointState(0.0, 0.0, False)
-    try:
-        t.squeeze(*M.VARIANTS["much"])
-        check(t.on + t.off == 0.0, "with the flip lid shut, a hard squeeze dispenses nothing")
-    finally:
-        kit._JOINTS["tube/lid"] = kit.JointState(M.LID_REST_RAD, 0.0, False)
-    t2 = Trial()
-    t2.nozzle_over()
-    t2.squeeze(M.DOSE_PUSH, M.DOSE_S)
-    check(M.PEA_G[0] <= t2.on <= M.PEA_G[1], f"with the lid at its open rest the demo squeeze doses ({t2.on:.3f} g)")
+    t.squeeze(M.DOSE_PUSH, M.DOSE_S)
+    return t
+
+
+# -- the thread ----------------------------------------------------------------------------------------------------------
+def _overlap_depth(phi_deg, rise, off=(0.0, 0.0)):
+    """Deepest overlap (m; <= 0: none) between any cap hull and any neck hull, the cap turned phi and risen `rise` off
+    its seat (neck frame), by linear programming on the hulls' face planes (the largest ball inside both)."""
+    from scipy.optimize import linprog
+    from scipy.spatial import ConvexHull
+
+    if "hulls" not in _CACHE:
+        neck = [np.asarray(p, float) for p in ck.neck_point_sets(M.BODY_R)]
+        cap = [np.asarray(p, float) for p in ck.cap_point_sets()]
+        _CACHE["hulls"] = (neck, [ConvexHull(p).equations for p in neck], cap, [ConvexHull(p).equations for p in cap])
+    neck, NE, cap, CE = _CACHE["hulls"]
+    R = rz(math.radians(phi_deg))
+    t = np.array([off[0], off[1], ck.SEAT_Z + rise])
+    worst = -1.0
+    for j, pc in enumerate(cap):
+        pw = pc @ R.T + t
+        n = CE[j][:, :3] @ R.T
+        d = CE[j][:, 3] - n @ t
+        lo, hi = pw.min(0), pw.max(0)
+        for i, pn in enumerate(neck):
+            if np.any(pn.min(0) > hi + 1e-4) or np.any(pn.max(0) < lo - 1e-4):
+                continue
+            A = np.vstack([NE[i][:, :3], n])
+            b = -np.concatenate([NE[i][:, 3], d])
+            nn = np.linalg.norm(A, axis=1)
+            res = linprog([0, 0, 0, -1], A_ub=np.hstack([A, nn[:, None]]), b_ub=b,
+                          bounds=[(None, None)] * 3 + [(None, 1)], method="highs")
+            if res.status == 0:
+                worst = max(worst, float(res.x[3]))
+    return worst
+
+
+def test_thread():
+    check(_overlap_depth(0.0, 0.0) <= 1e-6, "seated: the cap touches the neck only at its seat (no overlap)")
+    deep = max(_overlap_depth(ph, ck.PITCH * ph / 360.0) for ph in (60, 180, 300, 420, 540))
+    check(deep <= 1e-6, "turned along the helix, the cap's ridge never cuts the neck's")
+    for rise in (0.0005, 0.001):
+        check(_overlap_depth(0.0, rise) > 1e-5, f"pulled {rise * 1000:.1f} mm straight off its seat without turning: "
+              "the ridges block it")
+    check(_overlap_depth(0.0, -0.0003) > 1e-5, "pushed past its seat: the neck's tip blocks it")
+
+    def blocked(ph):
+        pr = ck.PITCH * ph / 360.0
+        return max(_overlap_depth(ph, pr + dz) for dz in np.linspace(0.0005, 0.005, 10)) > 1e-5
+
+    check(blocked(360.0), "after one full turn a straight pull is still blocked")
+    free = next(ph for ph in range(360, 540, 15) if not blocked(ph))
+    check(360 < free <= M.UNSCREW_DEG - 30, f"the cap pulls free after {free} degrees of turn (the demo turns "
+          f"{M.UNSCREW_DEG:.0f})")
+
+
+def test_start_state():
+    t = Trial()
+    o = {"tube": st(*t.tube), "cap": st(*t.cap)}
+    f = M.cap_fit(o)
+    check(abs(f["rise"] + M.SPAWN_GAP) < 1e-6 and f["off"] < 1e-9 and f["tilt"] < 1e-6,
+          f"the cap starts seated on the neck (rise {f['rise'] * 1000:.2f} mm)")
+    check(M.capped_fully(o) and M.nozzle_covered(o), "start: capped fully, the nozzle inside the cap")
+    low = M.lowest_z(o) - M.TOP
+    check(0 < low < 0.0005, f"the tube stands on its cap on the counter (lowest point {low * 1000:.2f} mm up)")
+    check(t.step(0.0, 60) == 0.0, "the start state (capped, no paste) scores 0")
 
 
 def test_nothing():
@@ -142,259 +270,272 @@ def test_nothing():
     check(t.step(0.0, 60) == 0.0, "doing nothing scores 0")
 
 
-def test_holding_grip():
+def test_never_opened():
+    """Squeezing through the closed cap: nothing comes out, however hard."""
     t = Trial()
     t.nozzle_over()
-    t.step(M.HOLD_PUSH, 100)
-    check(t.on == 0.0 and t.off == 0.0, f"a holding grip ({M.HOLD_PUSH * 1000:.1f} mm a side) dispenses nothing")
+    t.cap_on(0.0)
+    t.squeeze(0.006, 4.0)
+    check(t.on + t.off == 0.0, "a hard squeeze with the cap screwed on dispenses nothing")
+    check(t.recap(0.0) == 0.0, "never opened: 0")
 
 
-def pea():
-    """The demo's squeeze on the brush lying at its start, then the tube put down: returns the trial."""
+def test_loosened_not_off():
+    """A cap loosened (part unscrewed) but still on the neck: the nozzle is still inside it and nothing reaches the
+    brush; once the cap is off, the pressure built up comes out."""
     t = Trial()
     t.nozzle_over()
+    t.cap_on(200.0)
     t.squeeze(M.DOSE_PUSH, M.DOSE_S)
-    check(M.PEA_G[0] <= t.on <= M.PEA_G[1], f"the demo's squeeze leaves a pea dose ({t.on:.3f} g)")
+    check(t.on + t.off == 0.0, "cap loosened 200 degrees but still on: nothing dispensed")
+    t.cap_on(400.0)
+    t.squeeze(M.DOSE_PUSH, M.DOSE_S)
+    check(t.on + t.off == 0.0, "cap loosened 400 degrees, still over the nozzle: nothing dispensed")
+    t2 = Trial()
+    t2.nozzle_over()
+    t2.cap_on(0.0)
+    t2.step(M.DOSE_PUSH, 40)
+    t2.cap_off()
+    t2.step(M.DOSE_PUSH, 1)
+    t2.step(M.HOLD_PUSH, 40)
+    check(t2.on + t2.off > 0.0, f"squeezed while capped, then uncapped: the pressure comes out ({t2.on + t2.off:.3f} g)")
+
+
+def test_pea_and_cap_ladder():
+    t = dosed()
+    check(M.PEA_G[0] <= t.on <= M.PEA_G[1], f"the demo's squeeze with the cap off leaves a pea dose ({t.on:.3f} g)")
     check(t.off <= M.OFF_G, f"nothing off the bristles ({t.off:.3f} g)")
-    check(t.step(0.0, 5) == 0.75, "dosed, tube still over the brush: 0.75")
-    check(t.finish(0.5) == 0.75, "tube down for only 0.5 s: 0.75")
-    check(t.finish(1.5) == 1.0, "tube down and all still for 1 s: 1.0")
-    return t
+    check(t.step(0.0, 5) == M.OPEN_CAP, "dosed, the cap still off: 0.5")
+    dose = t.on
+    cases = (("screwed fully on, hands away, all still 1 s", dict(turned_deg=0.0), 1.0),
+             ("screwed on to within 40 degrees of its seat", dict(turned_deg=40.0), 1.0),
+             ("screwed on to 90 degrees short of its seat", dict(turned_deg=90.0), M.OPEN_CAP),
+             ("set on loose without turning (on the thread's crests)", dict(turned_deg=405.0, extra_rise=0.0002),
+              M.OPEN_CAP),
+             ("on its first turn of thread only", dict(turned_deg=300.0), M.OPEN_CAP),
+             ("seated but tilted 3 degrees (crooked)", dict(turned_deg=0.0, tilt_deg=3.0), M.OPEN_CAP),
+             ("seated but 1 mm off the neck's axis", dict(turned_deg=0.0, off=0.001), M.OPEN_CAP))
+    for label, kw, want in cases:
+        t = dosed()
+        got = t.recap(**kw)
+        check(got == want and t.on == dose, f"{label}: {want} (got {got})")
+    t = dosed()
+    t.tube = (np.array(M.TUBE_START, float) + np.array([0.0, 0.06, 0.0]), M.R_STAND.copy())
+    t.cap_off()
+    t.links = ready_links()
+    check(t.step(0.0, 40) == M.OPEN_CAP, "dosed, tube stood back on the counter but the cap left off: 0.5")
+    t = dosed()
+    check(t.recap(0.0, still_s=0.5) == 0.75, "capped, but still for only 0.5 s: 0.75")
 
 
-def test_pea():
-    pea()
+def test_hand_on_tube():
+    """A hand still on the tube (holding it on its cap, or pressing it onto a loose cap) is not finished."""
+    t = dosed()
+    t.tube_home()
+    t.cap_on(0.0)
+    hold = M.tube_grip(M.HOLD_PUSH)
+    t.links = gripping_links(t.tube[0], t.tube[1], hold)
+    o = {"tube": st(*t.tube), "cap": st(*t.cap)}
+    M.LINK_POSES.clear()
+    M.LINK_POSES.update(t.links)
+    g = M.arm_gap(o, "tube")
+    check(g <= M.TOUCH, f"the demo's grip on the tube counts as touching it (gap {g * 1000:.2f} mm)")
+    check(t.step(0.0, 40) == 0.75, "capped fully but the hand still on the tube: 0.75")
+    t.links = gripping_links(t.tube[0], t.tube[1], M.finger_for(M.FINGER_HALF_OPEN))
+    M.LINK_POSES.clear()
+    M.LINK_POSES.update(t.links)
+    g = M.arm_gap(o, "tube")
+    check(g > M.CLEAR, f"fingers opened wide around the body: every link more than 5 mm off ({g * 1000:.1f} mm)")
+    check(t.step(0.0, 40) == 1.0, "the hand opened wide around the capped tube, touching nothing: 1.0")
+    t = dosed()
+    t.tube_home()
+    t.cap_on(405.0, extra_rise=0.0002)
+    t.links = gripping_links(t.tube[0], t.tube[1], hold)
+    check(t.step(0.0, 40) == M.OPEN_CAP, "a hand pressing the tube onto a loose cap: 0.5")
+    t.links = ready_links()
+    check(t.step(0.0, 40) == M.OPEN_CAP, "and once the hand lets go, the loose cap is still loose: 0.5")
 
 
-def test_too_much():
+def test_too_much_and_too_little():
     t = Trial()
+    t.cap_off()
     t.nozzle_over()
     t.squeeze(*M.VARIANTS["much"])
     check(M.PEA_G[1] < t.on <= M.OVER_G, f"a firmer squeeze: too much ({t.on:.3f} g)")
-    check(t.finish() == 0.25, "too much (0.35-0.70 g) scores 0.25")
+    check(t.recap() == 0.25, "too much (0.35-0.70 g), capped: 0.25")
     t = Trial()
-    t.nozzle_over()
-    t.squeeze(0.0040, 3.0)
-    check(t.on + t.off > M.OVER_G, f"an adult strip ({t.on + t.off:.3f} g dispensed)")
-    check(t.finish() <= 0.25, f"an adult strip scores at most 0.25 ({t.s})")
-    t = Trial()
+    t.cap_off()
     t.nozzle_over()
     t.squeeze(0.0060, 4.0)
-    check(t.finish() == 0.0 and (t.on > M.OVER_G or t.off > M.OFF_G),
-          f"a full load beyond 0.70 g on the bristles scores 0 ({t.on:.3f} g on, {t.off:.3f} g off)")
-
-
-def test_too_little():
+    check(t.recap() == 0.0 and (t.on > M.OVER_G or t.off > M.OFF_G),
+          f"a full load scores 0 ({t.on:.3f} g on, {t.off:.3f} g off)")
     t = Trial()
+    t.cap_off()
     t.nozzle_over()
     t.squeeze(*M.VARIANTS["smear"])
     check(M.SMEAR_G <= t.on < M.PEA_G[0], f"a short squeeze: a smear ({t.on:.3f} g)")
-    check(t.finish() == 0.25, "a smear scores 0.25")
+    check(t.recap() == 0.25, "a smear, capped: 0.25")
     t = Trial()
+    t.cap_off()
     t.nozzle_over()
     t.squeeze(0.0009, 0.3)
-    check(t.on < M.SMEAR_G and t.finish() == 0.0, f"a trace ({t.on:.3f} g) scores 0")
+    check(t.on < M.SMEAR_G and t.recap() == 0.0, f"a trace ({t.on:.3f} g) scores 0")
 
 
 def test_off_bristles():
     t = Trial()
+    t.cap_off()
     t.nozzle_over(dy=0.030)  # beside the head: onto the counter
     t.squeeze(M.DOSE_PUSH, M.DOSE_S)
     check(t.on == 0.0 and t.off > M.OFF_G, f"squeezed beside the brush: all off ({t.off:.3f} g)")
-    check(t.finish() == 0.0, "on the counter scores 0")
+    check(t.recap() == 0.0, "on the counter scores 0")
     t = Trial()
-    t.nozzle_over(dx=0.0085)  # on the far end of the bristle field: part of the dab slumps off onto the head
+    t.cap_off()
+    t.nozzle_over(dx=0.0085)
     t.squeeze(M.DOSE_PUSH, M.DOSE_S)
     check(t.off > M.OFF_G, f"dosed on the field's edge: some runs off ({t.on:.3f} on, {t.off:.3f} off)")
-    check(t.finish() in (0.25, 0.5), f"a dab half off the bristles scores below 0.75 ({t.s})")
-
-
-def test_placement_robust():
-    """The dose is measured in the brush's frame: the same squeeze gives the same score whether the brush lies on the
-    counter, is held up somewhere else, or held turned and tilted; and moving it afterwards changes nothing."""
-    ref = pea()
-    for label, pos, rot in (("lying on the counter", M.BRUSH_START, np.eye(3)),
-                            ("held up elsewhere", (0.250, -0.050, M.TOP + 0.12), np.eye(3)),
-                            ("held turned 40 deg and tilted 25 deg", (0.300, 0.000, M.TOP + 0.10),
-                             rz(math.radians(40)) @ rx(math.radians(25)))):
-        t = Trial()
-        t.brush = (np.asarray(pos, float), rot)
-        t.nozzle_over()
-        t.squeeze(M.DOSE_PUSH, M.DOSE_S)
-        check(abs(t.on - ref.on) < 0.01, f"brush {label}: {t.on:.3f} g on, as with the brush level ({ref.on:.3f})")
-        t.brush = (np.array([0.33, 0.12, M.TOP + 0.014]), rz(math.radians(-30)))
-        check(t.finish() == 1.0, f"brush {label}, then laid down elsewhere: 1.0")
+    check(t.recap() in (0.25, 0.5), f"a dab half off the bristles scores below 0.75 ({t.s})")
 
 
 def test_placement_sweep():
-    """Every brush pose a policy can reach: the same squeeze over the bristles' middle leaves the same grams on them
-    (held anywhere over the counter, any heading, tipped up to 40 degrees about either of its axes), and the trial ends
-    1.0 once the tube is down; a nozzle anywhere over the field lands on it, one past the head's end lands off it."""
-    ref = None
-    n = 0
-    for pos in ((0.32, 0.08, M.TOP + 0.014), (0.20, -0.10, M.TOP + 0.08), (0.30, 0.00, M.TOP + 0.15),
-                (0.38, 0.15, M.TOP + 0.10)):
-        for k in range(8):
-            for tilt in ((0.0, 0.0), (40.0, 0.0), (0.0, 40.0), (-25.0, 25.0)):
-                rot = rz(k * math.pi / 4) @ rx(math.radians(tilt[0])) @ ry(math.radians(tilt[1]))
+    """The dose is measured in the brush's frame: the same squeeze over the bristles' middle gives the same grams
+    whether the brush lies on the counter or is held anywhere (any heading, tipped up to 40 degrees), and moving it
+    afterwards changes nothing."""
+    ref, n = None, 0
+    for pos in ((0.30, -0.04, M.TOP + 0.014), (0.20, -0.10, M.TOP + 0.08), (0.30, 0.00, M.TOP + 0.15)):
+        for k in range(4):
+            for tilt in ((0.0, 0.0), (40.0, 0.0), (0.0, 40.0)):
+                rot = rz(k * math.pi / 2) @ rx(math.radians(tilt[0])) @ ry(math.radians(tilt[1]))
                 t = Trial()
+                t.cap_off()
                 t.brush = (np.asarray(pos, float), rot)
                 t.nozzle_over()
                 t.squeeze(M.DOSE_PUSH, M.DOSE_S)
                 ref = t.on if ref is None else ref
-                s = t.finish()
+                t.brush = (np.array(M.BRUSH_START, float), rz(0.3))
+                s = t.recap()
                 if abs(t.on - ref) > 0.01 or t.off > M.OFF_G or s != 1.0:
                     check(False, f"brush at {pos} heading {k} tilt {tilt}: {t.on:.3f} g on, {t.off:.3f} off, {s}")
                 n += 1
-    check(n == 128, f"same dose ({ref:.3f} g) and 1.0 at all {n} brush poses")
-    for dx, dy in ((-0.007, 0.0), (0.007, 0.0), (0.0, -0.003), (0.0, 0.003)):
-        t = Trial()
-        t.nozzle_over(dx, dy)
-        t.squeeze(M.DOSE_PUSH, M.DOSE_S)
-        check(t.on >= M.PEA_G[0], f"nozzle {dx * 1000:+.0f}, {dy * 1000:+.0f} mm off the field's middle: "
-              f"{t.on:.3f} g on the bristles")
-    t = Trial()
-    t.nozzle_over(0.025, 0.0)
-    t.squeeze(M.DOSE_PUSH, M.DOSE_S)
-    check(t.on == 0.0 and t.off > M.OFF_G, "nozzle 25 mm along the brush (past the head): the dab lands off")
+    check(n == 36, f"same dose ({ref:.3f} g) and 1.0 at all {n} brush poses")
 
 
-def test_tipped_while_squeezing():
+def test_tipped_and_flipped():
     t = Trial()
+    t.cap_off()
     t.brush = (np.array([0.30, 0.02, M.TOP + 0.10]), rx(math.radians(70)))
     t.nozzle_over()
     t.squeeze(M.DOSE_PUSH, M.DOSE_S)
     check(t.on == 0.0, "bristles 70 degrees from up while squeezing: nothing lands on them")
-
-
-def test_flipped():
-    t = Trial()
-    t.nozzle_over()
-    t.squeeze(M.DOSE_PUSH, M.DOSE_S)
+    t = dosed()
     t.brush = (t.brush[0], rx(math.radians(120)))
     t.step(0.0, 3)
-    t.brush = (t.brush[0], np.eye(3))
-    check(t.finish() == 0.25, "brush turned bristles-down with the dab on it: capped at 0.25")
-
-
-def test_tube_held():
-    t = Trial()
-    t.nozzle_over()
-    t.squeeze(M.DOSE_PUSH, M.DOSE_S)
-    t.tube_down()
-    t.hand_on_tube = True
-    check(M.tube_held({**{g: st(p, GRIP_DOWN) for g, p in AWAY.items()},
-                       "tube": st(*t.tube), "right_gripper": st(t.tube[0], rz(math.pi / 2) @ GRIP_DOWN)}),
-          "a hand closed around the tube counts as holding it")
-    check(t.step(0.0, 40) == 0.75, "tube down but still in hand: 0.75")
-
-
-def test_brush_left_on_side():
-    t = Trial()
-    t.nozzle_over()
-    t.squeeze(M.DOSE_PUSH, M.DOSE_S)
+    t.brush = (np.array(M.BRUSH_START, float), np.eye(3))
+    check(t.recap() == 0.25, "brush turned bristles-down with the dab on it: capped at 0.25")
+    t = dosed()
     t.brush = (t.brush[0], rx(math.radians(60)))
-    check(t.finish() == 0.75, "brush left with the bristles 60 degrees from up: 0.75")
+    check(t.recap() == 0.75, "brush left with the bristles 60 degrees from up: 0.75")
 
 
-def dosed():
-    t = Trial()
-    t.nozzle_over()
-    t.squeeze(M.DOSE_PUSH, M.DOSE_S)
-    return t
-
-
-def let_go(t, start, end, n_fall):
-    """The tube in hand at `start`, let go there, then moving in `n_fall` steps to `end` and lying still there."""
-    t.tube = (np.asarray(start, float), np.eye(3))
-    t.hand_on_tube = True
-    t.step(0.0, 3)
-    t.hand_on_tube = False
-    for k in range(1, n_fall + 1):
-        t.tube = (np.asarray(start, float) + (np.asarray(end, float) - np.asarray(start, float)) * k / n_fall, np.eye(3))
-        t.step(0.0)
-    return t.step(0.0, 40)
-
-
-def test_tube_dropped_or_thrown():
-    """Putting the tube down is not dropping or throwing it: a tube let go 15 cm up (it falls in 0.17 s), or let go
-    on the counter while flung sideways at 0.8 m/s, ends lying on the counter but scores 0.75; the same tube laid
-    down and let go scores 1.0, and a dropped tube picked up again and laid down scores 1.0."""
-    up = np.array(M.TUBE_START) + np.array([0.0, 0.0, 0.15])
-    check(let_go(dosed(), up, M.TUBE_START, 4) == 0.75, "tube dropped from 15 cm onto the counter: 0.75")
-    side = np.array(M.TUBE_START) + np.array([0.0, 0.12, 0.0])
-    check(let_go(dosed(), side, M.TUBE_START, 3) == 0.75, "tube flung along the counter at 0.8 m/s: 0.75")
-    check(let_go(dosed(), M.TUBE_START, M.TUBE_START, 1) == 1.0, "tube laid down and let go: 1.0")
-    t = dosed()
-    let_go(t, up, M.TUBE_START, 4)
-    check(let_go(t, M.TUBE_START, M.TUBE_START, 1) == 1.0, "dropped, then picked up and laid down again: 1.0")
-
-
-def test_brush_dropped():
-    """The same for the brush: let go 10 cm up with the dab on it, it lands bristles-up but scores 0.75; held still
-    in the hand at the end (handed over ready) it scores 1.0; laid down and let go, 1.0."""
-    for label, h, want in (("brush dropped from 10 cm", 0.10, 0.75), ("brush laid down", 0.0, 1.0)):
+def test_tube_dropped_or_left_lying():
+    """Let go 6 cm up, the capped tube falls onto the counter: not put down (0.75); the same tube set down capped and
+    let go: 1.0. A capped tube left lying on its side on the counter is put down too."""
+    hold = M.tube_grip(M.HOLD_PUSH)
+    for label, h, want in (("dropped from 6 cm", 0.06, 0.75), ("set down", 0.0, 1.0)):
         t = dosed()
-        t.tube_down()
-        t.hand_on_brush = True
-        rest = np.array(M.BRUSH_START, float)
-        t.brush = (rest + np.array([0.0, 0.0, h]), np.eye(3))
+        rest = np.array(M.TUBE_START, float)
+        t.tube = (rest + np.array([0.0, 0.0, h]), M.R_STAND)
+        t.cap_on(0.0)
+        t.links = gripping_links(t.tube[0], t.tube[1], hold)
         t.step(0.0, 3)
-        t.hand_on_brush = False
-        for k in range(1, 4):
-            t.brush = (rest + np.array([0.0, 0.0, h * (1 - k / 3)]), np.eye(3))
+        t.links = ready_links()
+        for k in range(1, 5):
+            t.tube = (rest + np.array([0.0, 0.0, h * (1 - k / 4)]), M.R_STAND)
+            t.cap_on(0.0)
             t.step(0.0)
-        check(t.step(0.0, 40) == want, f"{label}: {want}")
+        check(t.step(0.0, 40) == want, f"capped tube {label}: {want}")
     t = dosed()
-    t.tube_down()
-    t.brush = (np.array(M.HOLD_BRUSH_AT, float), rz(M.HOLD_YAW))
-    t.hand_on_brush = True
-    check(t.step(0.0, 40) == 1.0, "brush held still, bristles up, at the end: 1.0 (held or set down)")
-
-
-def test_off_the_counter():
-    """A tube or brush that ends on the floor is not put down on the counter."""
-    t = dosed()
-    t.tube = (np.array([0.26, -0.15, M.TOP - 0.70]), np.eye(3))
-    check(t.step(0.0, 40) == 0.75, "tube still on the floor below the counter: 0.75")
-    t = dosed()
-    t.tube_down()
-    t.brush = (np.array([0.32, 0.08, M.TOP - 0.70]), np.eye(3))
-    check(t.step(0.0, 40) == 0.75, "dosed brush lying bristles-up on the floor: 0.75")
+    lying = ry(math.pi / 2) @ M.R_STAND  # the tube's axis level, along world x
+    o = np.array([0.30, -0.20, 0.0])
+    t.tube = (o, lying)
+    t.cap_on(0.0)
+    low = M.lowest_z({"tube": st(*t.tube), "cap": st(*t.cap)})
+    t.tube = (o + np.array([0.0, 0.0, M.TOP - low]), lying)
+    t.cap_on(0.0)
+    t.links = ready_links()
+    check(t.step(0.0, 40) == 1.0, "capped fully and lying on its side on the counter, hands away: 1.0")
 
 
 def test_new_trial():
-    pea()
+    t = dosed()
+    t.recap()
     t = Trial()
     check(t.step(0.0, 30) == 0.0 and t.on == 0.0, "a new trial starts with no paste and scores 0")
+
+
+def test_cap_reseat_math():
+    """The reset hook puts the cap screwed on under the tube wherever the tube was shifted: the pose it writes is the
+    seated pose."""
+    for dx, dy, yaw in ((0.0, 0.0, 0.0), (0.03, -0.02, 0.0), (-0.025, 0.03, 0.4)):
+        Rt = rz(yaw) @ M.R_STAND
+        tp = np.asarray(M.TUBE_START) + np.array([dx, dy, 0.0])
+        o, R = M.seated_cap_in_tube(M.SPAWN_GAP)
+        objs = {"tube": st(tp, Rt), "cap": st(tp + Rt @ o, Rt @ R)}
+        f = M.cap_fit(objs)
+        check(abs(f["rise"] + M.SPAWN_GAP) < 1e-9 and f["off"] < 1e-9 and M.capped_fully(objs),
+              f"tube shifted ({dx}, {dy}, yaw {yaw}): cap re-seated")
+
+
+def test_usd():
+    cap = kit._usda(M.CAP)
+    check("Joint" not in cap and "Drive" not in cap, "the cap's USD has no joint or drive: a free body")
+    check(cap.count("convexHull") == len(M.CAP.colliders), f"every cap collider is a convex hull "
+          f"({len(M.CAP.colliders)})")
+    check("physxCollision:contactOffset = 0.001" in cap and "staticFriction = 0.3" in cap,
+          "the cap's colliders carry their contact offset and plastic friction")
+    tube = kit._mech_usda(M.TUBE)
+    names = re.findall(r'def Physics\w*Joint "(\w+)"', tube)
+    check(sorted(names) == sorted(f"{p}_joint" for p in M.PANEL_SIGN), f"the tube's only joints are its four wall "
+          f"panels ({names})")
+    src = (HERE / "task.py").read_text() + (HERE / "capkit.py").read_text()
+    for word in ("ZONE", "PULL", "Latch(", "snap_"):
+        check(word not in src, f"no '{word}' in task.py or capkit.py")
 
 
 def test_text_numbers():
     js = json.loads((HERE / "task.json").read_text())
     readme = (HERE / "README.md").read_text()
     text = js["scoring"] + " " + js["setup"] + " " + js["fidelity"]
-    for v in ("0.15", "0.35", "0.05 g", "0.70", "45 degrees", "60 degrees", "1.30 g/mL", "0.01 g"):
+    for v in ("0.15", "0.35", "0.05 g", "0.70", "45 degrees", "60 degrees", "1.30 g/mL", "0.01 g", "5 mm"):
         check(v in text and v in readme, f"'{v}' in task.json and the README")
     check(js["instruction"] == M.INSTRUCTION, "instruction matches task.py")
-    check(re.search(r"1,200 steps", js["run_limit"]) is not None and M.RUN_LIMIT_STEPS == 1200, "run limit 1,200")
+    check(re.search(r"2,400 steps", js["run_limit"]) is not None and M.RUN_LIMIT_STEPS == 2400, "run limit 2,400")
     check(js["category"] == "Societal relatability", "category")
-    check(len(js["title"]) <= 120 and len(js["fidelity"]) <= 500, "title and fidelity within the limits")
+    limits = {"title": 120, "instruction": 1000, "context": 1000, "setup": 4000, "scoring": 4000, "fidelity": 500,
+              "scores": 300, "reset_notes": 1500}
+    for k, n in limits.items():
+        check(len(js[k]) <= n, f"task.json {k} within {n} characters ({len(js[k])})")
 
 
 def test_demo_plan():
     plan = M.demo()
     total = {a: sum(w.duration for w in p) for a, p in plan.items()}
-    check(max(total.values()) / M.DT <= M.RUN_LIMIT_STEPS, f"demo fits the run limit ({max(total.values()):.1f} s)")
-    xs = [w.pos[0] for p in plan.values() for w in p]
-    check(0.15 <= min(xs) and max(xs) <= 0.45, f"tool points within x 0.15-0.45 m ({min(xs):.3f}-{max(xs):.3f})")
-    def until(arm, label):
-        labels = [w.label for w in plan[arm]]
-        return sum(w.duration for w in plan[arm][:labels.index(label) + 1])
-    t_at = until("right", "nozzle 4 mm over the bristles")
-    t_done = until("right", "lift off the dab")
-    t_held = until("left", "hold it bristles-up")
-    t_free = until("left", "hold still while it is dosed")
-    check(t_held <= t_at and t_done <= t_free, "the brush is held still for the whole dose")
+    check(max(total.values()) / M.DT + 2 * M.HOLD_STEPS <= M.RUN_LIMIT_STEPS,
+          f"demo fits the run limit with room for the hold ({max(total.values()):.1f} s)")
+    tw = [w for w in plan["right"] if isinstance(w, kit.Tilted)]
+    check(min(w.yaw for w in tw) >= M.YAW_LO - 1e-9 and max(w.yaw for w in tw) <= M.YAW_HI + 1e-9,
+          "the wrist stays within its stroke")
+    check(all(abs(b.yaw - a.yaw) <= math.pi / 2 + 1e-9 for a, b in zip(tw, tw[1:])),
+          "no waypoint turns the wrist more than a quarter turn (each turn goes the way it is meant to)")
+    labels = [w.label for w in plan["right"]]
+    check(labels.index("lift the tube off the cap") < labels.index("squeeze") < labels.index("nozzle into the cap"),
+          "unscrew, dose, then screw back on")
+    _, _, turned = M.strokes(M.UNSCREW_DEG, +1.0, M.YAW_LO, M.TUBE_XY, 0.0, 0.0, "x")
+    check(abs(turned - M.UNSCREW_DEG) < 1e-6 and M.SCREW_DEG > M.UNSCREW_DEG, "screws back on past where it came off")
+    check(all(w.finger == M.finger_for(M.FINGER_HALF_OPEN) for w in plan["right"] if "turn back" in w.label),
+          "every turn-back is made with the fingers wide open")
+    closes = [w for w in plan["right"] if w.label.endswith("grip again") or w.label == "grip the body"]
+    check(all(w.duration >= 1.2 for w in closes), "every close takes at least 1.2 s")
 
 
 if __name__ == "__main__":

@@ -39,7 +39,7 @@ Usage in task.py:
     sauce.per_cm("roll", x0, x1, y0, y1)        # mL per 1 cm slice along y inside a band
 
 Panel links get `law=sq.Wall("bottle", sign)`; the law reads the bottle's live pressure through `register`.
-Constants marked (verify) in the task text come with the measurement that sets them.
+Constants a task states come with the measurement that sets them.
 """
 from __future__ import annotations
 
@@ -178,7 +178,7 @@ _FREE: dict = {}
 def free_body(mech, com=None):
     """Mark a loose (massed) yamkit Mechanism so that its base body carries the articulation root, with its center of
     mass pinned at `com` (base frame, m) if given. Without this PhysX roots a floating articulation at its most
-    central body and the joint drives misbehave (seen on the GPU with loose tools, Nov 10). Returns `mech`."""
+    central body and the joint drives misbehave (seen in the simulator with loose tools). Returns `mech`."""
     import yamkit as kit
 
     _FREE[mech.name] = com

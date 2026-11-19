@@ -1,23 +1,22 @@
-# Put a pea-sized dab of toothpaste on a child's toothbrush
+# Unscrew a kids' toothpaste tube, put a pea-sized dab on a child's toothbrush and screw the cap back on
 
 `task.py` for the `yam_arena` embodiment of
 [yam-isaac-lab-arena](https://github.com/kairosiann/yam-isaac-lab-arena), `station` scene. A child's manual
-toothbrush lies on its back, bristles up, on the robot's left. A partly used Crest Kid's 4.6 oz (130 g) toothpaste
-tube lies on its side on the right, its flip cap flipped open. The robot gets the brush ready for a 4-year-old:
-- one hand holds the brush bristles-up while the other squeezes a pea-sized dab (0.15 to 0.35 g) onto the bristles;
-- it puts the tube back down.
+toothbrush lies on its back, bristles up. A partly used Kid's Crest 4.2 oz stand-up toothpaste tube stands on its
+screw cap, capped. The robot gets the brush ready for a 4-year-old and leaves the toothpaste capped:
+- it unscrews the cap (the cap comes off only by turning it on its thread);
+- it squeezes a pea-sized dab (0.15 to 0.35 g) onto the bristles, nothing off them;
+- it screws the cap back on fully and lets go.
 
 Helper modules:
-- `yamkit.py` spawns the props: the brush, and the tube as an articulated body with four sprung wall panels and a
-  hinged, snap-open flip lid.
-- `guardkit.py` checks gripper contact.
-- `squeezekit.py` is the paste flow model (see "The paste model").
+- `capkit.py`: the tube's threaded neck and its screw cap as convex-hull colliders (see "The cap and thread").
+- `squeezekit.py`: the paste flow model (see "The paste model").
+- `yamkit.py`: spawns the props: the brush, the tube (an articulated body with four sprung wall panels) and the cap
+  (a free body).
+- `yamgeom.py`: the arms' own collision hulls, read at run time from the competition environment, as surface points
+  for the contact checks.
 
-`test_task.py` checks the scorer offline: `python3 test_task.py` (or `python3 -m pytest -q test_task.py`).
-
-Requirements: `yam-isaac-lab-arena` at commit `bd62771e60320433893bd1d2df0fc79b5ddcd6d1`, installed with its
-`setup.sh` (Isaac Lab-Arena `release/0.3.1`, `inspect-robots` 1.0.0, `inspect-robots-yam` 0.38.0), and
-`source $ARENA_DIR/yam.env` in the shell.
+`test_task.py` checks the scorer, the thread geometry and the demo plan offline: `python3 test_task.py`.
 
 ## Run a trial
 
@@ -27,325 +26,253 @@ Scripted demo:
 inspect-robots run --embodiment yam_arena --policy yam_scripted \
   -E task=tasks/toothpaste-pea-dose-on-child-brush/task.py -E object_jitter=0 \
   -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-  --instruction "Get the toothbrush ready for a 4-year-old." \
-  --scorer task_score --max-steps 1200 --store-frames --log-dir logs/toothpaste-demo
+  --instruction "Get the toothbrush ready for a 4-year-old, then leave the toothpaste capped." \
+  --scorer task_score --max-steps 2400 --store-frames --log-dir logs/toothpaste-demo
 ```
 
-- Scorer checks: `TOOTH_VARIANT=much` runs the same demo with a firmer, longer squeeze (too much), and
-  `TOOTH_VARIANT=smear` with a short light one.
-- `TOOTH_PROBE=<file>` writes one line per control step with the lid angle, the four panel pushes, the pressure, the
-  grams on and off the bristles, the bristle angle and the poses.
-- Model run (Dream-1): the same command with `--policy dream --max-steps 1200`.
-- Video: `inspect-robots video logs/toothpaste-demo/*.json`.
+- Model run (Dream-1): the same command with `--policy dream --max-steps 2400`.
+- Scorer checks: `TOOTH_VARIANT=much` runs the demo with a firmer, longer squeeze (too much), `TOOTH_VARIANT=smear`
+  with a short light one, and `TOOTH_VARIANT=nothing` keeps both arms at their ready pose.
+- `TOOTH_PROBE=<file>` writes one line per control step: the cap's rise, offset, tilt and turn on the neck, whether
+  the nozzle is inside the cap, the pressure, the grams on and off the bristles, the arms' gaps to the tube and the
+  cap, and the poses.
 - The scorer (`task_score`) reports the score at each step; the trial's score is the one at its end.
 
 ## Why it matters (Societal relatability)
 
-Putting toothpaste on a brush is something nearly everyone has done, and parents of young children do it for them
-twice a day.
+Putting toothpaste on a brush is something nearly everyone has done: unscrew the cap, squeeze, screw it back on.
+Parents of young children do it for them twice a day.
 
 **The dose matters.** For children aged 3 to 6 the CDC, ADA and AAP advise no more than a pea-sized amount of
-fluoride toothpaste, about 0.25 g. Under age 3 the advice is a smear the size of a grain of rice. In the US survey
-behind that advice, only 49.2% of children aged 3 to 6 used a pea-sized amount, and over 38% used a half or full
-brush load (20.6% half, 17.8% full) (CDC MMWR 2019;68(4):87-90,
-https://www.cdc.gov/mmwr/volumes/68/wr/mm6804a3.htm).
+fluoride toothpaste, about 0.25 g; under age 3, a smear the size of a grain of rice. In the US survey behind that
+advice, only 49.2% of children aged 3 to 6 used a pea-sized amount, and over 38% used a half or full brush load
+(20.6% half, 17.8% full) (CDC MMWR 2019;68(4):87-90, https://www.cdc.gov/mmwr/volumes/68/wr/mm6804a3.htm). Fluoride
+swallowed while the enamel is still forming causes dental fluorosis; among US 16-17 year olds, fluorosis graded "very
+mild" or worse rose from 29.7% (NHANES 2001-02) to 61.3% (2011-12) (Wiener et al. 2018,
+https://pubmed.ncbi.nlm.nih.gov/29500282/).
 
-Young children swallow much of the paste, and fluoride swallowed while the enamel is still forming (under about age
-8) causes dental fluorosis. Fluorosis is the most common cosmetic enamel defect: white flecks or streaks, mostly
-mild. Among US 16-17 year olds, fluorosis graded "very mild" or worse rose from 29.7% (NHANES 2001-02) to 61.3%
-(2011-12) (Wiener et al. 2018, https://pubmed.ncbi.nlm.nih.gov/29500282/). Too little paste (a smear at age 3 to 6)
-gives up the caries protection the fluoride is there for.
-
-**The robotic difficulty is control, not a rule.**
-- The dose is set by how far and for how long a deformable tube is squeezed.
-- The paste is a yield-stress material: nothing comes until the squeeze passes a threshold, and it keeps coming for a
-  moment after the squeeze eases.
-- The nozzle has to be aimed at a 20 x 9 mm bristle field that the other hand is holding level.
-
-Too much is the easy failure, as it is for parents.
+**The robotic difficulty is control.**
+- The cap comes off and goes back on only by turning it, about 1.1 turns, more than one wrist turn: the hand has to
+  turn, let go, turn back and grip again, following the thread, and put the cap back on straight and all the way.
+- The dose is set by how far and for how long a deformable tube is squeezed. The paste is a yield-stress material:
+  nothing comes until the squeeze passes a threshold, and it keeps coming for a moment after the squeeze eases.
+- The nozzle has to be aimed at a 20 x 9 mm bristle field.
 
 ## Scoring
 
-Grams on the bristles = mL x 1.30 g/mL. That density is for a silica toothpaste: toothpastes run 1.3 to 1.6 g/mL,
-silica ones at the low end and chalk ones at the high end, and Crest Kid's lists hydrated silica (confirm on the box).
-The real trial weighs grams directly, so the density matters only in simulation.
+Grams on the bristles = mL x 1.30 g/mL (a silica toothpaste: pastes run 1.3 to 1.6 g/mL). The real trial weighs
+grams directly, so the density matters only in simulation.
 
-| Score | Condition | Why this level |
-|---|---|---|
-| 1.0 | the 0.75 state; the bristles within 45 degrees of facing up (held or set down); the tube lying on the counter (its middle under 3 cm up) and released; each let go lying on the counter, not dropped or thrown; both still (under 1 cm/s) for 1 s | the brush is ready and the tube is out of the hand, so no more paste can come |
-| 0.75 | 0.15 to 0.35 g on the bristle field and at most 0.05 g anywhere else | the right dose, not yet finished |
-| 0.5 | 0.15 to 0.35 g on the bristles but more than 0.05 g off them (counter, head sides, neck, handle) | the right dose, with a mess that a parent would wipe up |
-| 0.25 | 0.05 to 0.15 g (a smear: the under-3 dose, too little at 4) or 0.35 to 0.70 g (too much: a half load) | the wrong dose for the child, but some control of the squeeze |
-| 0 | under 0.05 g or over 0.70 g (a full adult strip) | no dose, or the full load the CDC survey counts as overuse |
+| Score | Condition |
+|---|---|
+| 1.0 | 0.15 to 0.35 g on the bristle field and at most 0.05 g anywhere else; the cap screwed fully on; the bristles within 45 degrees of facing up; the tube resting on the counter (standing or lying) with no part of either arm touching it or its cap (in simulation every arm link at least 5 mm clear); the tube and brush each let go resting on the counter, not dropped or thrown; all still (under 1 cm/s) for 1 s |
+| 0.75 | the same dose, clean and capped, but not yet let go or not yet still |
+| 0.5 | a pea-sized dab with the tube left uncapped or its cap not screwed fully on; or a pea-sized dab with more than 0.05 g off the bristles |
+| 0.25 | 0.05 to 0.15 g (a smear: the under-3 dose) or 0.35 to 0.70 g (too much: a half load) |
+| 0 | under 0.05 g or over 0.70 g; doing nothing scores 0 (the tube starts capped, no paste out) |
 
-Doing nothing scores 0: no paste is on the bristles. Possible scores: 0, 0.25, 0.5, 0.75, 1.0.
+Possible scores: 0, 0.25, 0.5, 0.75, 1.0. Turning the bristles past sideways (more than 90 degrees from up) with paste on them caps the score at 0.25 for the
+rest of the trial: the dab can fall off or smear.
 
-**Why 0.15 to 0.35 g.**
-- The CDC defines a pea-sized amount as 0.25 g.
-- In a study of 40-48-month-olds told to use a pea, the doses averaged 0.256 g (range 0.035-0.620 g, n = 28; den
-  Besten, https://www.aapd.org/globalassets/media/publications/archives/denbesten-18-04.pdf).
-- UK parents asked for a "pea" dispensed about 0.30 g, and their usual dose was about 0.36 g
-  (https://eld.bl.uk/catalog/100046207873_0x000001; figures from the abstract).
+**Screwed fully on** means turned down to within 45 degrees of its seat, square and centered on the neck. In
+simulation: the cap within 0.19 mm of its seat along the thread (45 degrees of the 1.5 mm pitch), its axis within
+2 degrees and 0.6 mm of the neck's. In the real trial: after the trial a tester turns the cap clockwise by hand; it
+must stop within an eighth of a turn. A cap set on without turning sits on the thread's crests, a cap screwed only
+part way sits up the thread, and a cap started crooked cannot reach the seat: each scores at most 0.5.
 
-So the band's middle is the CDC pea and the study mean, and its 0.35 g top sits where parents actually dose. The 0.15
-g bottom is half-way between the CDC pea and the about-0.1 g rice-grain smear for under-3s
+**Why 0.15 to 0.35 g.** The CDC defines a pea-sized amount as 0.25 g. Children of 40-48 months told to use a pea
+dosed 0.256 g on average (range 0.035-0.620 g, n = 28; den Besten,
+https://www.aapd.org/globalassets/media/publications/archives/denbesten-18-04.pdf). UK parents' usual dose was about
+0.36 g (https://eld.bl.uk/catalog/100046207873_0x000001; figures from the abstract). The 0.15 g bottom is half-way
+between the CDC pea and the about-0.1 g rice-grain smear for under-3s
 (https://www.smilesforlifeoralhealth.org/topic/how-much-toothpaste/).
 
-**Why 0.05 g off the bristles.** That is 5 counts on the 0.01 g scale, and about a fifth of a pea. It is the smallest
-amount the real trial weighs reliably after a tissue wipe. More is a visible smear on the brush head or counter.
+**Why 0.05 g off the bristles.** That is 5 counts on the 0.01 g scale, about a fifth of a pea, the smallest amount
+the real trial weighs reliably after a tissue wipe.
 
-**Why the bristles within 45 degrees of up, and the tube released.** The brush is handed over ready, dab on top. Past
-45 degrees a soft dab can start to slide off the bristle tips. This is a proxy, not modeled: the real trial reads the
-angle from the video. The tube must be put down because while it is in a hand the squeeze is not over and more paste
-can still come. Neither the arms' final pose nor the brush's place on the counter is scored.
+**Why the arms must be off the tube and cap.** A tube held on its cap, or pressed onto a loose one, is not closed
+until it is let go; a cap set on loose and held there would read as closed while it is held.
 
-**Why put down, not dropped or thrown.** A dropped open tube lands on its walls and can squirt paste, and a dropped
-brush can bounce and smear or shed the dab; a parent lays both down. So whenever a hand lets go of the tube or the
-brush, it must already be lying on the counter (the tube's middle, or the bristle top's middle, under 3 cm up: within
-about 1.2 and 1.6 cm of their resting heights) and moving under 0.3 m/s. A free fall reaches 0.3 m/s after 4.6 mm,
-so only a hand that lays the thing down passes; picking it up again and laying it down clears a drop. A tube or brush
-that ends below the counter (on the floor) is not put down. Real trial: from the video, each is let go resting on or
-within about 1 cm of the counter, not tossed, and both end on the counter or in a hand.
-
-**Turning the bristles past sideways** (more than 90 degrees from up) with paste on them caps the score at 0.25 for
-the rest of the trial. The dab can fall off or smear on the counter, and the real trial would have to re-weigh
-whatever stayed on.
+**Why put down, not dropped or thrown.** Whenever the arms let go of the tube or the brush it must already rest on
+the counter (its lowest point within 1 cm of it) and move under 0.3 m/s. A free fall reaches 0.3 m/s after 4.6 mm.
 
 **What the scorer reads.**
-- In simulation, paste lands on the bristles only while they face within 60 degrees of up; squeezed onto a brush
-  tipped further, it lands off.
-- A hand counts as holding the tube when its own shape (palm and fingers, opened as they are) touches the tube within
-  2 mm (guardkit), not by nearness.
-- The dose is stored in the brush's own frame, so the score is the same wherever the brush is held or laid: on the
-  counter, held up anywhere, turned or tilted, or moved after dosing (`test_placement_robust`, `test_placement_sweep`).
+- Paste can leave the nozzle only while the nozzle is out of the cap: with the cap on, or loosened but still over the
+  nozzle, a squeeze raises the pressure and nothing leaves; the pressure comes out once the cap is off.
+- In simulation, paste lands on the bristles only while they face within 60 degrees of up.
+- Touching is contact on the arms' own collision hulls (link 3 to the fingertips, both arms): a hull point within
+  1 mm of the tube's or the cap's outline. The hulls load at run time from the competition environment.
+- The dose is stored in the brush's own frame, so the score is the same wherever the brush is held or laid
+  (`test_placement_sweep`).
 
-**Why the cap starts open.** A parent flips the cap open with the thumb of the hand holding the tube, in the same
-motion as picking it up, and the task starts just after that.
-- The flip lid is modeled (a snap hinge) and starts at its open rest. Shut, it seals the nozzle: squeezing raises
-  the pressure but nothing leaves (`test_lid_shut_seals`). Paste can leave only while the lid is at least 57 degrees
-  open.
-- A closed start was built and tried in four simulator probes. The left fingertip had to push a thumb tab only 3-4 mm
-  proud of the rim, beside the right hand holding the tube, and it landed 1 to 1.5 cm off the tab in each probe. The
-  arms track to about a centimeter that close together, and the YAM's parallel gripper has no thumb to flick a tab
-  with the holding hand.
-- With a closed start, the trial would mostly test whether a fingertip finds a 4 mm tab, not the dose this task is
-  about. So the cap starts open, the same in simulation and in the real trial.
-- Snapping it shut afterwards is good practice but is not scored, because the score is about the dose.
+## The cap and thread
+
+The tube is the Kid's Crest Cavity Protection Bubblegum 4.2 oz tube; its listing's directions read "twist off cap to
+remove foil seal" (Target, TCIN 1001365458, UPC 037000951438): a screw cap. Its closure is modeled on the standard
+35 mm tube screw closure (Amcor's 35 mm tube closures: neck 15 mm, neck finish "15 x 1,5", closure 34.2 mm across and
+20.8 mm tall, 4.4-5.3 g, polypropylene).
+
+- **Thread.** A single-start right-hand thread, 15 mm across at the neck's crest, 1.5 mm pitch. The neck carries a
+  male ridge and the cap a female ridge in its bore. Each ridge is a helix of short convex hulls, one per 15 degrees of
+  turn, with a trapezoid section (wider at the root than at the crest), each hull sharing its end faces with its
+  neighbors so a ridge slides along the other without ledges; the ridges' height runs out at both ends as a molded
+  thread starts. The cap's bore is a ring of convex wedges with a lead-in at its mouth; its top is one convex disc. The
+  neck's core is one convex cylinder with a chamfered tip, the shoulder one convex cone.
+- **Nothing holds the cap on but contact.** There is no joint, spring, capture zone or snap between cap and tube.
+  The offline check (`test_thread`) finds no overlap between any cap hull and any neck hull seated or anywhere along
+  the helix, a straight pull blocked by the ridges, and the cap free to pull off only after it has turned about 1.1
+  turns.
+- **Set as a molded thread of that size would be (not published), and checked on the trial tube:** the thread's depth,
+  its turns and its clearances. The trial tube's cap is checked by counting the turns from seated to free.
+- **Friction.** The cap and the neck are molded polyolefins: 0.3 static and 0.25 sliding, both on the thread and where
+  the cap stands on the counter. The tube's body and the brush keep the arena's object friction.
+- **Start.** The cap starts screwed fully on, the tube standing on it. If the arena shifts the tube at reset, the cap
+  is put back screwed on under it before anything moves.
 
 ## The paste model
 
 `squeezekit` (the house squeeze-bottle kit), with a toothpaste tube's numbers.
 
-**Walls.**
-- The tube's round body is a rigid core with four wall panels on prismatic joints, each sprung at 2.5 N per mm (an
-  estimate; at 0.4 N per mm the holding grip could not keep the tube from sliding in the fingers once the dose left).
-- A hand dispenses only by pushing panels in. Their inward push is read from the joints every control step. A grip on
-  the cap, shoulder or rolled end squeezes nothing.
-- Each panel displaces 1.0 mL per cm pushed. The 8 mL of air inside is compressed isothermally, and the air's pressure
-  pushes back on the panels.
+**Walls.** The tube's round body is a rigid core with four wall panels on prismatic joints, each sprung at 2.5 N per
+mm. A hand dispenses only by pushing panels in; their push is read from the joints every control step. Each panel
+displaces 1.0 mL per cm pushed. The 8 mL of air inside is compressed isothermally and pushes back on the panels.
 
 **Flow.**
-- The paste flows through the nozzle at 0.10 mL/s per kPa above its yield pressure.
+- The paste flows through the open nozzle at 0.10 mL/s per kPa above its yield pressure.
 - The yield pressure is the pressure needed to push a yield-stress plug through the nozzle: 4 x yield stress x nozzle
   length / bore = 4 x 300 Pa x 9 mm / 7.5 mm = 1.44 kPa. The 300 Pa is the middle of the measured range: about 100 Pa
-  on a model toothpaste (arXiv 1903.10888, https://arxiv.org/pdf/1903.10888) and about 500 Pa on a commercial-style
-  formula (US 5202112). The 7.5 mm bore is a conventional tube opening of 0.28-0.32 in (US 9567138).
+  on a model toothpaste (arXiv 1903.10888) and about 500 Pa on a commercial-style formula (US 5202112). The 7.5 mm
+  bore is a conventional tube opening of 0.28-0.32 in (US 9567138).
 - As paste leaves, the air re-expands and the flow dies away, so paste keeps coming briefly after the squeeze stops.
-  Easing off draws air back in and stops it.
-- A 0.4 mm holding grip (about 2.2 N a side) makes 1.0 kPa, under the 1.44 kPa yield, and dispenses nothing.
+- The demo's holding grip (0.4 mm a side) makes 1.0 kPa, under the yield, and dispenses nothing.
 
-**Where it lands.**
-- The paste's own weight is left out (an open tube held nozzle-down does not drip), and it feeds whichever way the
-  nozzle points.
-- It drops plumb from the nozzle. The plumb line is cut with the bristle plane, and the hit point is stored in the
-  brush's frame on a 1 mm grid of the 20 x 9 mm bristle field, so the dab moves with the brush.
-- A grid cell holds a bead 4.5 mm tall; more slumps into its neighbors, and slump over the field's edge counts as off
-  the bristles. Paste that misses the field (counter, hand, head sides) is off the bristles.
-- The dab is drawn as blue tiles on the bristles, turned and carried with the brush.
+**Where it lands.** The paste drops plumb from the nozzle (an open tube held nozzle-down does not drip, so its own
+weight is left out). The plumb line is cut with the bristle plane and the hit point is stored in the brush's frame on
+a 1 mm grid of the 20 x 9 mm bristle field, so the dab moves with the brush. A grid cell holds a bead 4.5 mm tall;
+more slumps into its neighbors, and slump over the field's edge counts as off the bristles. The dab is drawn as blue
+tiles on the bristles.
 
-**Fidelity note: the plumb drop.** A real dab leaves the nozzle as a soft ribbon. It touches down on the bristles,
-builds up, and is broken off when the tube is lifted (often with a small twist), sometimes leaving a short string. The
-model has none of that: each step's paste drops straight down from the nozzle's mouth and lands at once, with no
-ribbon touching down, no stringing, no tail breaking off, and no soaking into the bristles. In the demo the nozzle is
-4 mm over the bristles, about where a real 7.5 mm ribbon touches down, so the plumb drop and a real touch-down land
-in the same place. A nozzle held high would string and drift in reality; the model would still land the paste exactly
-underneath. The real trial weighs the paste, so none of this changes the real score; it only affects where the sim
-puts the dab.
+**Fidelity note: the plumb drop.** A real dab leaves the nozzle as a soft ribbon that touches down, builds up and is
+broken off when the tube is lifted. The model has no ribbon, stringing or tail. In the demo the nozzle is 4 mm over
+the bristles, about where a real 7.5 mm ribbon touches down, so both land in the same place. The real trial weighs
+the paste, so this does not change the real score.
 
-**Fidelity note: the cap.** The flip lid is a hinge with a snap. It is pulled shut within 29 degrees of closed (about
-1 N at a 4 mm thumb tab) and pulled to its open rest (143 degrees) past 63 degrees; between those it swings freely. The
-snap force is an estimate. A lid knocked shut seals the nozzle, as on the real tube.
+**Offline doses** (`test_task.py`): the demo's squeeze (1.75 mm a side for 1.2 s, then 1.5 s at the holding grip)
+leaves a pea-sized dose; a firmer, longer squeeze (2.5 mm for 1.5 s) too much; a short light one (1.2 mm for 0.6 s) a
+smear. The squeeze constants are calibrated on the trial tube (below); the real trial scores grams, not the squeeze.
 
-**Offline doses** (`test_task.py` and the probe). The demo squeeze is 1.75 mm a side for 1.2 s, then 1.5 s at the
-holding grip.
+**Calibrating the squeeze on the trial tube** (simulation only). Hold the prepared, uncapped tube nozzle-down in the
+YAM's gripper at the holding grip over a cup on the 0.01 g scale. Close in 0.1 mm steps a side, 1.2 s each, until the
+scale first gains 0.01 g (sets the yield stress). Then command closings of 1.0, 1.5 and 2.0 mm a side for 1.2 s, five
+times each, weigh each dose, and fit the panel area and flow constants in `test_task.py`'s offline squeeze until each
+mean matches within 0.02 g.
 
-| Yield stress | Yield pressure | Push for 0.15-0.35 g | Demo squeeze (1.75 mm, 1.2 s) |
-|---|---|---|---|
-| 100 Pa | 0.48 kPa | about 0.9-1.75 mm | 0.34 g (in the band, high); the 1.0 kPa holding grip also leaks |
-| 300 Pa (modeled) | 1.44 kPa | about 1.3-2.2 mm | 0.254 g |
-| 500 Pa | 2.40 kPa | about 1.7-2.55 mm | 0.18 g (in the band, low) |
+## The demo
 
-So the band can be reached across the whole literature range of yield stress. The squeeze that reaches it moves by
-about 0.4 mm a side from end to end of that range. That is why the real tube's constants are calibrated (below), and
-why the real trial scores grams, not the squeeze.
+Open loop, the right arm only (the left stays at its ready pose). The hand comes down over the standing tube with
+its fingers open either side of the flat crimp and grips the body lightly across its upper half. It unscrews the
+tube counterclockwise (seen from above) off the cap, which stays standing on the counter: half a turn per wrist
+stroke, rising with the thread and aiming a little down into it, then opening wide, turning back and gripping again,
+1.25 turns in all. It lifts the tube off, carries it nozzle-down over the bristles with the nozzle 4 mm above them,
+squeezes 1.75 mm a side for 1.2 s, eases to the holding grip for 1.5 s and lifts off. It lowers the nozzle into the
+cap, screws the tube back on clockwise in the same strokes, a little past the seat (the pads slip once it is tight),
+lets go, lifts clear and returns to its ready pose.
 
-The scorer variants, offline (`test_task.py`, the brush lying at its start; the simulator runs below give a little
-more because the held brush and tilted nozzle differ):
-- 2.5 mm for 1.5 s leaves 0.43 g (too much, 0.25);
-- 1.2 mm for 0.6 s leaves 0.10 g (a smear, 0.25);
-- 0.9 mm for 0.3 s leaves 0.03 g (a trace, 0).
+## Real-world build
 
-**Calibrating the constants on the trial tube** (simulation only; the real-trial score never uses them). The panel
-area (1.0 mL/cm), the air (8 mL), the flow (0.10 mL/s per kPa) and the yield stress are estimates. To fit them:
-1. Prepare the tube as in the protocol below (20-24 C, 50 to 70 g of paste, rolled, cap open).
-2. Hold it nozzle-down in the YAM's right gripper at the 0.4 mm holding grip, over a cup on the 0.01 g scale. Tare.
-3. Yield: close in 0.1 mm steps a side, 1.2 s each, easing back to the holding grip between steps, until the scale
-   first gains 0.01 g. That closing sets `TAU_Y_PA`.
-4. Doses: command closings of 1.0, 1.5 and 2.0 mm a side for 1.2 s, then 1.5 s at the holding grip, five times each,
-   reading the closing from the gripper's own position readout. Weigh each dose; the scale reads it with the
-   after-flow included.
-5. After-flow: for the 2.0 mm closing, also read the scale at the moment the squeeze eases. The gain over the next
-   1.5 s sets `AIR_ML` (more air, more after-flow).
-6. Fit: run `test_task.py`'s offline `Trial.squeeze` with the same closings and times, and adjust `AREA_ML_PER_CM`
-   and `FLOW` (with the step 3 and 5 values held) until each mean matches within 0.02 g. `K_WALL` is not fit: it only
-   sets the grip force, not the dose.
-
-**Forces (computed, not measured).**
-- The demo's squeeze makes about 4.6 kPa inside: about 9.9 N on each panel (4.4 N of wall spring, 5.6 N of
-  pressure), far inside the gripper's 50 N.
-- The finger's position servo (5,000 N/m) is a spring in series with the wall, so the demo commands each finger
-  past the wall by the force it must make over that stiffness.
-- The brush weighs 14 g and the tube about 72 g.
-
-## Real-world evaluation (reproducible protocol)
-
-The real trial scores only the outcome: grams on the bristles, grams off them, the bristle angle and the tube put
-down. No force gauge and no squeeze readout are used.
+The real trial scores only the outcome: grams on and off the bristles, the cap's seat, the bristle angle, and the
+tube let go on the counter with the arms off it. No force gauge and no squeeze readout are used.
 
 **Products** (all off the shelf):
 
 | Item | Product | Notes |
 |---|---|---|
-| Toothpaste | Crest Kid's Cavity Protection fluoride toothpaste, Sparkle Fun, 4.6 oz (130 g) tube with flip cap (Target A-13956414; CVS prodid 1010478) | the standard US size; no 4.2 oz Crest Kid's Sparkle was found |
-| Toothbrush | Colgate Kids Extra Soft toothbrush, Ocean Explorer 4-pack (Target A-75563150, UPC 035000458476; small round head) | one new brush per trial, or wash and dry it fully between trials |
-| Scale | American Weigh Scales AWS-100-CAL pocket scale: 100 g x 0.01 g, 2.5 x 3.0 in pan, with its 100 g calibration weight (https://www.scalesplus.com/aws-100-digital-pocket-scale) | calibrate at the start of each session |
-| Rule | Starrett C604RE-6 steel rule, 6 in (152 mm), graduated in 1/32 in, 1/64 in, 1 mm and 0.5 mm (or any 150 mm steel rule with 0.5 mm marks) | for the top photo of the dab, and for checking the tape marks |
-| Tape measure | Stanley 30-696 PowerLock tape, 8 m / 26 ft, metric and inch | for laying out the tape marks from the arm bases |
+| Toothpaste | Kid's Crest Cavity Protection fluoride toothpaste, Bubblegum, 4.2 oz stand-up tube with screw cap (Target TCIN 1001365458, UPC 037000951438) | its directions: "twist off cap to remove foil seal"; remove the foil seal before the first trial |
+| Toothbrush | Colgate Kids Extra Soft toothbrush, Ocean Explorer 4-pack (Target A-75563150, UPC 035000458476) | one new brush per trial, or wash and dry it fully between trials |
+| Scale | American Weigh Scales AWS-100-CAL pocket scale: 100 g x 0.01 g, with its 100 g calibration weight | calibrate at the start of each session |
+| Rule | any 150 mm steel rule with 0.5 mm marks | for the top photo of the dab and checking the marks |
+| Tape measure | any metric tape measure | for laying out the marks from the arm bases |
+| Caliper | any 150 mm digital caliper | for the tube, cap and brush dimensions marked [M] |
 | Thermometer | any room thermometer reading to 1 C | the room must be 20-24 C |
-| Caliper | Mitutoyo 500-196-30 digital caliper, 150 mm, 0.01 mm | for the [M] tube and brush dimensions |
-| Also | a phone camera on a stand, masking tape, dry tissues, a small cup | |
+| Also | a phone camera on a stand, masking tape, dry tissues, a small cup, nitrile exam gloves | |
 
-**Budget build.** The named items above stay as they are, and nothing changes for the sim or the scoring. These
-cheaper equivalents do the same jobs:
-- Caliper: a Neiko 01407A digital caliper, 150 mm, +-0.02 mm (about $25), in place of the Mitutoyo 500-196-30 ($194
-  to $237). It measures only the [M] tube and brush sizes, which feed the model and are never scored.
-- Rule: any 150 mm steel rule with 0.5 mm marks (about $5) in place of the Starrett C604RE-6; it only has to check
-  the tape marks to 5 mm and scale the dab photo.
+A low-cost setup: the robot and a phone aside, every item is a common household or hobby item.
 
-Primary rig about $320; budget build about $110 (excluding the robot and a phone).
+**Setup marks** (once). From the midpoint between the arm bases, x forward, y to the robot's left:
+- Brush: a tape outline of the brush lying on its back, the bristle field's middle at x 300 mm, y -40 mm (within
+  5 mm), its long axis along x, head away from the robot.
+- Tube: a tape circle for the cap at x 300 mm, y -200 mm (within 5 mm); the tube stands on its cap with the flat
+  crimp along y.
 
-**Setup marks** (once, before the first trial). Measure from the midpoint between the two arm bases with the tape:
-x forward, y to the robot's left.
-- Brush: a tape outline of the brush lying on its back, with the bristle field's middle at x 320 mm, y +80 mm (within
-  5 mm), its long axis along x (within 5 degrees), head away from the robot.
-- Tube: a tape outline of the tube lying on its side, with its round body's middle at x 260 mm, y -150 mm (within
-  5 mm), its axis along x (within 5 degrees), nozzle toward the robot.
-- Check each mark's position with the steel rule against the tape before the first trial.
+**Starting state** (each trial). Keep the room, the paste and the scale at 20-24 C (a paste's yield stress changes
+with temperature).
+1. The tube holds 50 to 70 g of paste (gross weight minus the weighed empty tube and cap). Roll it flat from the crimp
+   up to the paste, wipe the nozzle flush, screw the cap on by hand until it stops, and stand the tube on its cap at
+   its mark. Let it rest 1 min so the laminate springs back.
+2. Lay the clean, dry brush on its back at its mark.
+3. Both arms at their ready pose.
 
-**Starting state** (the same each trial). Keep the room, the paste and the scale at 20-24 C; a paste's yield stress
-changes with temperature, so a cold tube doses less for the same squeeze.
-1. Fill: the tube holds 50 to 70 g of paste (gross weight minus the empty tube's weight [M]; weigh one emptied,
-   rinsed and dried tube of the same SKU once). Bring a new tube into range by squeezing paste into the cup.
-2. Roll the tube flat from the crimp up to the paste and wipe the nozzle flush with a tissue. Flip the cap fully
-   open. Let it lie 1 min so the laminate springs back.
-3. Lay the tube on its side at its tape mark, nozzle toward the robot, the cap's hinge on top.
-4. Lay the clean, dry brush on its back at its tape mark, bristles up, along the robot's forward direction with the
-   head away from the robot.
-5. Both arms at their ready pose.
+**Gripper protection.** Each gripper pad gets a disposable nitrile finger cover cut from an exam glove, replaced
+whenever paste touches it and at the end of the session. A 10 s hold check on the tube at the start of the session
+confirms the grip.
 
-**Gripper protection.** Before a session, each gripper pad gets a disposable nitrile finger cover (cut from a standard nitrile exam glove), so no paste reaches the shared rig; covers are replaced whenever paste touches them and at the end of the session. A 10 s hold check on the tube at the start of the session confirms the grip.
-
-**Reset between trials.** Take the brush off (discard it or wash and fully dry it), wipe the counter dry, re-roll
-the tube to the paste and wipe the nozzle flush, re-check the fill (50 to 70 g), flip the cap fully open, wait 1 min,
-and lay both back at their marks.
-
-**Measure:**
-1. Before: weigh the brush (B0) and the tube (T0) on the scale.
-2. Run the trial. Record video from above.
-3. After: photograph the brush head from straight above next to the rule (the dab's position and size; a pea dab is
-   about 5-6 mm across).
-4. Wipe any paste off the brush outside the bristle field (head sides, neck, handle) with a dry tissue. Weigh the
-   brush (B1). On the bristles = B1 - B0.
-5. Weigh the tube unwiped (T1). Dispensed = T0 - T1. Off the bristles = dispensed - on the bristles.
-6. From the video: the bristle angle at the end, whether the tube was let go on the counter, and the 1 s of
-   stillness. Score with the table above.
-
-Every weight is independent of where the brush and tube end up, and none of them credits or penalizes how the
-squeeze was done.
+**Measure.**
+1. Before: weigh the brush (B0) and the tube with its cap (T0).
+2. Run the trial, recording video from above and from the side of the tube.
+3. Cap check: turn the cap clockwise by hand; it must stop within an eighth of a turn (mark the cap and the tube's
+   shoulder with a pen line first to read the turn). A cap left off or loose fails this check.
+4. Photograph the brush head from straight above beside the rule.
+5. Wipe any paste off the brush outside the bristle field and weigh the brush (B1): on the bristles = B1 - B0.
+6. Weigh the tube with its cap, unwiped (T1): dispensed = T0 - T1; off the bristles = dispensed - (B1 - B0).
+7. From the video: the bristle angle at the end, whether the arms are off the tube and cap at the end, whether the
+   tube and brush were let go resting on the counter (not tossed), and the 1 s of stillness.
 
 **Safety.** Only a toothbrush and toothpaste are used: nothing sharp, hot or heavy. The brush is never used in a
-mouth. Discard each dosed brush, or wash it.
+mouth; discard or wash each dosed brush.
 
 **Tolerances**
 
 | Quantity | Value | How it is measured | Source |
 |---|---|---|---|
-| Pea dose (full credit band) | 0.15 to 0.35 g on the bristles | scale, B1 - B0 | CDC pea = 0.25 g (MMWR 2019;68(4)); study mean 0.256 g (den Besten, AAPD); parents' usual dose about 0.36 g (BL record above) |
+| Pea dose (full credit band) | 0.15 to 0.35 g on the bristles | scale, B1 - B0 | CDC pea 0.25 g (MMWR 2019;68(4)); study mean 0.256 g (den Besten); parents' usual dose about 0.36 g |
 | Smear band | 0.05 to 0.15 g | scale | rice-grain smear about 0.1 g (Smiles for Life) |
-| Too much | 0.35 to 0.70 g (0.25 credit); over 0.70 g scores 0 | scale | half and full loads in MMWR 2019;68(4); 0.70 g is about 3 peas, where the survey's "half" grades into "full" (our cut, an estimate) |
-| Off the bristles | at most 0.05 g | scale, (T0 - T1) - (B1 - B0) | 5 counts of the scale; design choice (above) |
-| Scale resolution | 0.01 g, 100 g capacity | AWS-100 spec | scalesplus.com listing; the tube (about 85 g with 70 g of paste) and the brush fit under 100 g |
-| Bristle angle at the end | within 45 degrees of up | video frame, protractor overlay | design choice: dab on top; a proxy (above) |
-| Stillness | under 1 cm/s for 1 s | video | design choice: the score is read once nothing is moving, so a tube or brush still settling is not counted early |
-| Paste density | 1.30 g/mL (sim only) | not needed in the real trial | J. Soc. Cosmet. Chem. (https://library.scconline.org/v021n07/32): pastes 1.3-1.6 g/mL |
-| Yield stress | 300 Pa modeled; 100-500 Pa checked (sim only) | not needed in the real trial | arXiv 1903.10888; US 5202112 |
-| Tube body | 35 mm across [M: caliper] | caliper (above) | standard 35 mm laminate size (alltub.com data sheet); the carton is 44 x 48 x 180 mm (Target) |
-| Tube length | 15.0 cm as modeled, rolled to the paste [M: caliper] | rule | 165-175 mm unrolled with cap (supplier tables, estimate) |
-| Nozzle bore | 7.5 mm [M: caliper] | caliper | US 9567138 (conventional openings 0.28-0.32 in) |
-| Flip-cap tab | 3-4 mm proud of the rim [M]; 4 mm in the model | caliper | estimate from retail photos |
-| Brush | 151 mm long; head 26 x 12 mm; bristle field 20 x 9 mm, 9 mm tall; 14 g [M: all] | caliper, scale | no published dimensions for this SKU |
-| Fill | 50 to 70 g of paste | scale, gross minus empty tube [M] | reset rule above |
-| Setup marks | brush at (320, +80) mm, tube at (260, -150) mm; within 5 mm and 5 degrees | tape measure, steel rule | the simulator's start; 5 mm is under a third of the 16 mm handle |
-| Room temperature | 20-24 C | room thermometer | ordinary indoor range; keeps the paste's yield stress steady between trials |
-| Wall stiffness | 2.5 N per mm a panel (sim only) [M] | not needed in the real trial | estimate; in the model it sets only the grip force, not the dose |
+| Too much | 0.35 to 0.70 g (0.25); over 0.70 g scores 0 | scale | half and full loads in MMWR 2019;68(4); 0.70 g is about 3 peas (our cut) |
+| Off the bristles | at most 0.05 g | scale | 5 counts of the 0.01 g scale |
+| Cap screwed fully on | stops within an eighth of a turn (45 degrees) when turned clockwise by hand | pen mark on cap and shoulder | design choice: a cap that still turns is not closed |
+| Arms off the tube and cap | no contact at the end (in simulation every link at least 5 mm clear) | video | design choice: a held cap is not a closed one |
+| Bristle angle at the end | within 45 degrees of up | video frame | design choice: dab on top |
+| Stillness | under 1 cm/s for 1 s | video | the score is read once nothing is moving |
+| Paste density | 1.30 g/mL (sim only) | not needed in the real trial | pastes 1.3-1.6 g/mL (J. Soc. Cosmet. Chem.) |
+| Yield stress | 300 Pa modeled (sim only) | not needed in the real trial | arXiv 1903.10888; US 5202112 |
+| Neck thread | 15 mm, 1.5 mm pitch; depth, turns and clearances [M] | caliper; count the turns from seated to free | Amcor 35 mm tube closures (neck finish 15 x 1,5) |
+| Cap | 34.2 mm across, 20.8 mm tall, 4.5 g [M] | caliper, scale | Amcor 35 mm tube closures (34.2 mm, 20.8 mm, 4.4-5.3 g) |
+| Tube body | 35 mm across, rolled to the paste [M] | caliper | standard 35 mm laminate size |
+| Nozzle bore | 7.5 mm [M] | caliper | US 9567138 (0.28-0.32 in) |
+| Brush | 151 mm long; head 26 x 12 mm; bristle field 20 x 9 mm, 9 mm tall; 14 g [M] | caliper, scale | no published dimensions for this SKU |
+| Fill | 50 to 70 g of paste | scale | reset rule above |
+| Setup marks | brush at (300, -40) mm, tube at (300, -200) mm, within 5 mm | tape measure, rule | the simulator's start |
+| Room temperature | 20-24 C | room thermometer | keeps the paste's yield stress steady between trials |
 
-[M] = to be measured on the trial object before the first trial. Until then the value given is the model's
-estimate. No [M] item is part of the real score, which weighs grams directly.
+[M] = measured on the trial object before the first trial; until then the value given is the model's. No [M] item is
+part of the real score.
 
 ## Runtime and seeds
 
-- Run limit: 1,200 control steps at 20 Hz (1 minute).
-- Dream-1: **0** in 1,200 steps (the run limit) on the same task.py (sha256 ba995e8bf529).
-- Scripted demo: **1.0** (success at step 512, 25.6 s; task.py sha256 ba995e8bf529, with the release check
-  that each item is laid on the counter, not dropped or thrown). In the run, 0.284 g landed on
-  the bristles and 0.010 g off them; the brush was held level (bristles within 1.1 degrees of up) and laid back flat;
-  the tube was laid back and released. The left hand lifts the brush by its handle, turns it handle-left and holds it
-  10 cm over the counter. The right hand lifts the tube by its body with a light holding grip, turns it nozzle-down
-  (10 degrees off plumb) beside the brush, carries it over the bristles' middle with the nozzle 4 mm above them,
-  squeezes 1.75 mm a side for 1.2 s, eases to the holding grip for 1.5 s, lifts off and lays the tube back. The left
-  hand then lays the brush back. The demo is open loop.
-- Scorer checks in the simulator (same task.py): `TOOTH_VARIANT=much` 0.25 (0.461 g on, 0.070 g off);
-  `TOOTH_VARIANT=smear` 0.25 (0.111 g on); `TOOTH_VARIANT=nothing` (both hands park) 0.
-- No randomness: the layout is fixed (`-E object_jitter=0`).
+- Run limit: 2,400 control steps at 20 Hz (2 minutes).
+- No randomness in the scripted demo: the layout is fixed (`-E object_jitter=0`).
 
-## How the file works
+## Sources and licenses
 
-**The tube** is a yamkit `Mechanism`: a loose articulated body (`squeezekit.free_body`) with
-- four prismatic wall panels whose spring law (`squeezekit.Wall`) also feels the live pressure inside;
-- a revolute flip lid with a snap law, starting at its open rest.
+- `task.py`, `capkit.py`, `squeezekit.py`, `yamkit.py`, `yamgeom.py` and `test_task.py` were written by this task's
+  team.
+- The robot model and its collision hulls load at run time from the competition environment (arena revision
+  0059d02a) and are not redistributed: `yamgeom.py` reads them through `yam_arena.analysis.link_hulls()` and caches
+  surface points in the system temp folder, outside the task folder.
+- No meshes, images or data files from third parties are in this folder.
 
-The panels' and lid's travel opens only once their laws act (the first control step). Before that, in the arena's
-settle, an unsprung panel sagged to its 10 mm stop under the lying tube (seen in the first probe). The used end is a
-flat roll 55 mm wide: the tube's foot on the counter.
+## Files
 
-**Paste.**
-- After every control step, `_update()` reads the brush's pose, the tube's pose, its four panel pushes and the lid's
-  angle, and steps a `BrushPaste` (squeezekit's `Sauce` landing on the brush's own bristle grid).
-- With the lid shut the nozzle is sealed: no flow, no venting.
-- `success()` and `score()` share one update per step.
-- A new trial (yamkit's episode counter) starts a fresh tube and a clean brush.
-
-**Visible paste.** Cells with paste are drawn as blue tiles on the bristles with Isaac Lab's `VisualizationMarkers`,
-placed in the brush's frame every step, so camera-based policies see the dab and it moves with the brush. The tiles
-are only a picture: if drawing fails they turn off and scoring carries on. Nothing is drawn before paste lands, so
-nothing pops in at the start.
+- `task.py`: the scene, the scorer and the scripted demo.
+- `capkit.py`, `squeezekit.py`, `yamkit.py`, `yamgeom.py`: the task's helper modules.
+- `test_task.py`: offline checks.
+- `task.json`, `README.md`.
