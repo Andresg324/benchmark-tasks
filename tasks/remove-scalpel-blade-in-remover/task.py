@@ -507,10 +507,6 @@ def mesh(name) -> tuple:
     return yg.cloud(name)
 
 
-if "isaaclab" in sys.modules:  # in the simulator: read and check the hulls as the task loads, not in a trial's step
-    yg.warm(ARM_LINKS)
-
-
 def _box_gap(q, lo, hi) -> np.ndarray:
     """Distance (m) from points q (in a box's frame) to the box lo..hi (0 inside)."""
     return np.linalg.norm(np.maximum(np.maximum(np.asarray(lo) - q, q - np.asarray(hi)), 0.0), axis=1)
@@ -710,6 +706,8 @@ def _patch(scene) -> None:
     if getattr(scene, "_scalpel", False):
         return
     scene._scalpel = True
+    yg.warm(ARM_LINKS)  # read and check the hulls now: yam_arena.scene is imported after the app is up (loading
+    # them when the task file loads, before the app starts, imports pxr too early and breaks the app's start)
     inner_object, inner_states = scene.task_object, scene.object_states
 
     def task_object(spec):
