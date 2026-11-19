@@ -76,11 +76,12 @@ Possible scores: 0, 0.25, 0.5, 0.75, 1.0. Turning the bristles past sideways (mo
 on them caps the score at 0.25 for the rest of the trial: the dab can fall off or smear.
 
 **Screwed fully on** means turned down to within 45 degrees of its seat, square and centered on the neck. In
-simulation it is read only from the cap's own pose on the neck: its turn about the neck within 45 degrees of the seated
-turn, on the thread's last turn (within half the 1.5 mm pitch of its seat), its axis within 2 degrees and 0.6 mm of
-the neck's. A cap set on without turning, a cap a turn or more short, a cap part way down (also when pushed down into
-the thread's play) and a crooked cap each score at most 0.5. In the real trial a tester turns the cap clockwise by
-hand after the trial; it must stop within an eighth of a turn and sit square on the shoulder.
+simulation it is read only from the cap's own pose on the neck: its turn about the neck within 45 degrees of the
+seated turn, on the thread's last turn (within half the 1.5 mm pitch of its seat), its axis within 2 degrees and 0.6
+mm of the neck's. A cap set on without turning, a cap a turn or more short, a cap part way down (also when pushed down
+into the thread's play) and a crooked cap each score at most 0.5. In the real trial a tester turns the cap clockwise
+by hand after the trial; it must stop within an eighth of a turn and sit square: an even gap between the cap's mouth
+and the shoulder all round.
 
 **Why 0.15 to 0.35 g.** The CDC defines a pea-sized amount as 0.25 g. Children of 40-48 months told to use a pea
 dosed 0.256 g on average (range 0.035-0.620 g, n = 28; den Besten,
@@ -123,19 +124,18 @@ remove foil seal" (Target, TCIN 1001365458, UPC 037000951438): a screw cap on a 
   0.03 mm inside the true helix. The ridges run out to nothing over their last 45 degrees, as a molded thread starts.
   The cap's bore is a ring of 32 convex wedges with a lead-in at its mouth; its top is one convex disc. The neck's core
   is one convex cylinder with a separate chamfered tip, the shoulder one convex cone; no hull has more than 64 points.
-- **Clearances.** Molded tube necks carry no standard thread clearance. The cap stands 0.4 mm off the neck's crest
-  and 0.3 mm off its root, which leaves 0.35 mm of axial play between the flanks. The neck carries 2.25 turns of
-  thread and the cap 1.25, so the cap frees after about 1.1 turns (`test_thread`: the cap's and the neck's hulls
-  never overlap seated or along the helix, and a straight pull is blocked until then). The trial cap is checked by
-  counting its turns from seated to free.
+- **Clearances [M].** The cap stands 0.4 mm off the neck's crest and 0.3 mm off its root, which leaves 0.35 mm of
+  axial play between the flanks. The neck carries 2.25 turns of thread and the cap 1.25, so the cap frees after about
+  1.1 turns (`test_thread`: the cap's and the neck's hulls never overlap seated or along the helix, and a straight
+  pull is blocked until then). The trial cap is checked by counting its turns from seated to free.
 - **Nothing holds the cap but contact.** No joint, spring, capture zone or snap acts between the cap and the tube.
   Fully on, the cap's inner top face rests on the neck's tip: the stop is that contact. A hand screwing it on turns
-  until its grip slips. The cap body runs 32 position and 8 velocity solver iterations (the arms run 32 position
+  until its grip slips. The cap body runs 32 position and 8 velocity solver iterations (the tube runs 32 position
   iterations); this adds no force, friction or capture.
 - **The cap.** A 35 mm polypropylene screw cap on the 15 mm neck (Amcor "35mm Screw Cap": 35 mm, neck 15 mm, PP, for
-  tubes with a removable foil seal). Its height and mass are those of the same maker's 35 mm screw-on closure for
-  this neck finish, 20.8 mm and 4.4 g; its inertia is that of a thin-walled cup of that size and mass.
-  Both are measured on the trial cap.
+  tubes with a removable foil seal). Its height and mass are those of the same maker's 35 mm Softline flip-top
+  screw-on closure for this 15 x 1,5 neck finish, 20.8 mm and 4.4 g; its inertia is that of a thin-walled cup of that
+  size and mass. Both are measured on the trial cap.
 - **Friction.** The cap is polypropylene and the tube's laminate and neck polyethylene: polyethylene on polyethylene,
   clean and dry, 0.2 (Engineering ToolBox, "Friction - Coefficients for Common Materials and Surfaces"), on every
   surface of the tube and the cap. The YAM's finger pads are rubber-faced: 1.0 static and 0.8 sliding (rubber on
@@ -187,14 +187,15 @@ each mean matches within 0.02 g.
 
 Open loop, both arms, as a person does it: the left hand holds the tube and the right turns the cap. The left takes
 the lying tube from above, lightly across its body (a holding grip, under the paste's yield), and lifts it level with
-the cap toward the robot, over the brush. The right comes in pointing forward and closes on the cap while the left holds lightly; then the left holds
-firmly (the cap seals the nozzle, so nothing can flow) and the right unscrews the cap counterclockwise (seen from the
-cap's top), half a turn per wrist stroke, following the thread; between strokes it opens, turns back and closes again, 1.25 turns in all.
-Before the stroke that frees the cap the left eases back to its light hold, so no pressure is left to push paste out. It draws the cap straight off and holds it aside, out of the left arm's way. The left turns the tube nozzle-down over
-the brush, the nozzle 4 mm above the bristles, squeezes 1.75 mm a side for 1.2 s, eases to the holding grip for 1.5 s,
-lifts off and brings the tube back level. The right puts the cap back on the neck, pressing it on lightly, and screws
-it on clockwise in the same strokes, a little past the seat, lets go and backs away. The left lays the capped tube down, lets go and lifts
-clear.
+the cap toward the robot, over the brush. The right comes in pointing forward and closes on the cap while the left
+holds lightly; then the left holds firmly (the cap seals the nozzle, so nothing can flow) and the right unscrews the
+cap counterclockwise (seen from the cap's top), half a turn per wrist stroke, following the thread; between strokes it
+opens, turns back and closes again, 1.25 turns in all. Before the stroke that frees the cap the left eases back to its
+light hold, so no pressure is left to push paste out. It draws the cap straight off and holds it aside, out of the
+left arm's way. The left turns the tube nozzle-down over the brush, the nozzle 4 mm above the bristles, squeezes 1.75
+mm a side for 1.2 s, eases to the holding grip for 1.5 s, lifts off and brings the tube back level. The right puts the
+cap back on the neck, pressing it on lightly, and screws it on clockwise in the same strokes, a little past the seat,
+lets go and backs away. The left lays the capped tube down, lets go and lifts clear.
 
 ## Real-world build
 
@@ -237,8 +238,9 @@ confirms the grip.
 **Measure.**
 1. Before: weigh the brush (B0) and the tube with its cap (T0).
 2. Run the trial, recording video from above and from the robot's side.
-3. Cap check: turn the cap clockwise by hand; it must stop within an eighth of a turn and sit square on the shoulder
-   (mark the cap and the tube's shoulder with a pen line first to read the turn). A cap left off or loose fails this check.
+3. Cap check: turn the cap clockwise by hand; it must stop within an eighth of a turn and sit square: an even gap
+   between the cap's mouth and the shoulder all round (mark the cap and the tube's shoulder with a pen line first to
+   read the turn). A cap left off or loose fails this check.
 4. Photograph the brush head from straight above beside the rule.
 5. Wipe any paste off the brush outside the bristle field and weigh the brush (B1): on the bristles = B1 - B0.
 6. Weigh the tube with its cap, unwiped (T1): dispensed = T0 - T1; off the bristles = dispensed - (B1 - B0).
@@ -246,8 +248,8 @@ confirms the grip.
    the tube and brush were let go resting on the counter (not tossed), and the 1 s of stillness.
 
 **Safety.** Only a toothbrush and toothpaste are used: nothing sharp, hot or heavy. The brush is never used in a
-mouth; discard or wash each dosed brush. The operator keeps a hand on the robot's stop and stops the trial if an arm drives into the
-counter, the other arm or the tube.
+mouth; discard or wash each dosed brush. The operator keeps a hand on the robot's stop and stops the trial if an arm
+drives into the counter, the other arm or the tube.
 
 **Tolerances**
 
@@ -255,19 +257,19 @@ counter, the other arm or the tube.
 |---|---|---|---|
 | Pea dose (full credit band) | 0.15 to 0.35 g on the bristles | scale, B1 - B0 | CDC pea 0.25 g (MMWR 2019;68(4)); study mean 0.256 g (den Besten); parents' usual dose about 0.36 g |
 | Smear band | 0.05 to 0.15 g | scale | rice-grain smear about 0.1 g (Smiles for Life) |
-| Too much | 0.35 to 0.70 g (0.25); over 0.70 g scores 0 | scale | half and full loads in MMWR 2019;68(4); 0.70 g is about 3 peas (our cut) |
+| Too much | 0.35 to 0.70 g (0.25); over 0.70 g scores 0 | scale | half and full loads in MMWR 2019;68(4); 0.70 g is about 3 peas (design choice) |
 | Off the bristles | at most 0.05 g | scale | 5 counts of the 0.01 g scale |
-| Cap screwed fully on | stops within an eighth of a turn (45 degrees) when turned clockwise by hand, and sits square | pen mark on cap and shoulder | design choice: a cap that still turns is not closed |
+| Cap screwed fully on | stops within an eighth of a turn (45 degrees) when turned clockwise by hand, and sits square (an even gap between the cap's mouth and the shoulder all round) | pen mark on cap and shoulder | design choice: a cap that still turns is not closed |
 | Arms off the tube, cap and brush | no contact at the end (in simulation every link at least 5 mm clear) | video | design choice: a held cap is not a closed one |
 | Bristle angle at the end | within 45 degrees of up | video frame | design choice: dab on top |
 | Stillness | under 1 cm/s for 1 s | video | the score is read once nothing is moving |
 | Paste density | 1.30 g/mL (sim only) | not needed in the real trial | pastes 1.3-1.6 g/mL (https://library.scconline.org/v021n07/32) |
 | Yield stress | middle of 100-500 Pa (sim only) | not needed in the real trial | arXiv 1903.10888; US 5202112 |
 | Neck thread | 15 mm, 1.5 mm pitch, ISO 60-degree section; clearances and turns [M] | caliper; count the turns from seated to free | Amcor 35 mm tube closures (neck finish 15 x 1,5); ISO 68-1 |
-| Cap | 35 mm across [M]; 20.8 mm tall and 4.4 g [M] | caliper, scale | Amcor 35mm Screw Cap (35 mm, PP); height and mass from the same maker's screw-on closure for this neck |
+| Cap | 35 mm across [M]; 20.8 mm tall and 4.4 g [M] | caliper, scale | Amcor 35mm Screw Cap (35 mm, PP); height and mass from the same maker's 35mm Softline Flip Top Tube Closure Screw On (15 x 1,5 neck finish) |
 | Tube | 4.2 oz (119 g) of paste new, 60 g left in simulation; body 36 mm across, rolled end 50 mm wide [M] | caliper, scale | Target listing (net 4.2 oz; package 1.45 x 2 x 6.65 in) |
 | Nozzle bore | 7.5 mm [M] | caliper | US 9567138 (0.28-0.32 in) |
-| Brush | 151 mm long; head 26 x 12 mm; bristle field 20 x 9 mm, 9 mm tall; 14 g [M] | caliper, scale | no published dimensions for this SKU |
+| Brush | 151 mm long; head 26 x 12 mm; bristle field 20 x 9 mm, 9 mm tall; 14 g [M] | caliper, scale | [M] on the trial brush |
 | Fill | 50 to 70 g of paste | scale | reset rule above |
 | Setup marks | brush at (300, +20) mm, tube at (300, +110) mm, within 5 mm | tape measure, rule | the simulator's start |
 | Room temperature | 20-24 C | room thermometer | keeps the paste's yield stress steady between trials |
