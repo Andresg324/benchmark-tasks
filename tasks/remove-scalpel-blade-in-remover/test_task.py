@@ -468,6 +468,15 @@ def test_sim_link_read_is_strict():
     check(len(s) == 1 and not M._L.ruined, "offline (the tests only): the box model runs with no link poses")
 
 
+def test_robot_usd_matches_urdf_hulls():
+    """warm() (run when the scene module is patched, with the app up) checks that the robot USD the simulator loads has
+    the URDF's collision hulls for every arm link; hulls()/points() read only the URDF, so the demo plans without pxr."""
+    import yamgeom as yg
+
+    counts = yg.check()
+    check(all(counts.get(k, 0) >= 1 for k in M.ARM_LINKS), f"robot USD hulls match the URDF's: {counts}")
+
+
 def test_redteam():
     """The red-team cases (Nov 17): each scores what the real act deserves."""
     # R1: the remover, blade inside, carried into the instrument tray with the bare handle: not at its place: 0.7 at most
@@ -526,7 +535,8 @@ def test_redteam():
 if __name__ == "__main__":
     for t in (test_start, test_insert_pose, test_mechanism_and_tiers, test_no_catch_paths, test_hazards, test_gaming, test_arm_contact_and_press, test_redteam,
               test_hand_boxes_hold_the_hulls, test_hull_touch_visual_clear, test_hull_samples_cover_the_surface,
-              test_end_on_touch_at_blade_ends, test_sim_link_read_is_strict):
+              test_end_on_touch_at_blade_ends, test_sim_link_read_is_strict,
+              test_robot_usd_matches_urdf_hulls):
         t()
     if (HERE / "task.json").exists() and (HERE / "README.md").exists():
         test_text()

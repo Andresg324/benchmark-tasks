@@ -264,12 +264,12 @@ table with no slip in the fingers. If any of these slips, fit new covers and rep
 
 - Every file in this folder is the task's own code and text; there are no third-party files in it. The remover's drawn
   body and button cap are built at start-up in `task.py` (trimesh convex hulls of corner spheres).
-- The arm collision geometry. Earlier versions shipped `yam_links.npz`, points sampled from the YAM's collision
-  meshes; it and `LICENSE.i2rt` are removed, and nothing derived from the robot model is stored in this folder now.
-  The scorer and the demo read the same collision hulls at run time from the competition environment,
-  yam-isaac-lab-arena revision 0059d02a (`yam_arena/assets/yam/collision`, through `yam_arena.analysis.link_hulls`),
-  and sample their surfaces at start-up (`yamgeom.py`, `guardkit.py`; the samples are cached in the system
-  temp folder, never in the task).
+- The arm collision geometry. Earlier versions shipped a point file sampled from the YAM's collision meshes
+  (yam_links, an NPZ array); it and `LICENSE.i2rt` are removed, and nothing derived from the robot model is stored in
+  this folder now. The scorer and the demo read the same collision hulls at run time from the competition
+  environment, yam-isaac-lab-arena revision 0059d02a (`yam_arena/assets/yam/collision`, through
+  `yam_arena.analysis.link_hulls`), and sample their surfaces at start-up (`yamgeom.py`, `guardkit.py`; the samples
+  are cached in the system temp folder, never in the task).
   - Source: those hulls are convex pieces that YAM-inspect-Isaac (github.com/ttpierson/YAM-inspect-Isaac) cut with
     CoACD from the link meshes of I2RT Robotics' YAM model (github.com/i2rt-robotics/i2rt, commit 120c3c81, as the
     environment's `SOURCE_COMMIT` records); the environment ships them unchanged.

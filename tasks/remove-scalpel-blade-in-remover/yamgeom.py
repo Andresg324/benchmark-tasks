@@ -41,11 +41,11 @@ _VERSION = "yamgeom-2"
 @functools.lru_cache(maxsize=None)
 def hulls(link: str) -> tuple:
     """((vertices, triangles, planes), ...) of `link`'s collision hulls in its frame, from yam_arena.analysis
-    (triangles: the convex hull of each hull's vertices, which link_hulls does not keep). Runs check() first."""
+    (triangles: the convex hull of each hull's vertices, which link_hulls does not keep). Reads only the URDF and its
+    hull files (no pxr), so a demo can plan before the simulator app starts; warm() runs check() once the app is up."""
     from scipy.spatial import ConvexHull
     from yam_arena.analysis import link_hulls
 
-    check()
     found = link_hulls().get(link)
     if not found:
         raise ValueError(f"no collision hulls for {link!r} in the environment's robot model")
@@ -234,7 +234,9 @@ def _cells(name: str) -> tuple:
 
 
 def warm(names) -> None:
-    """Read and check the hulls and build near()'s cells for `names` now (at load), not inside a trial's step."""
+    """Check the robot USD against the URDF's hulls (check(), which imports pxr: call it only once the simulator app is
+    up) and build near()'s cells for `names` now, not inside a trial's step."""
+    check()
     for name in names:
         _cells(name)
 
