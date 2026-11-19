@@ -605,7 +605,10 @@ def _patch_resets() -> None:
     def write_data_to_sim(self):
         if _RESET["pending"] and _RESET["depth"] == 0:  # the settle's first physics step, after any jitter
             _RESET["pending"] = False
-            _seat_cap(self)
+            try:
+                _seat_cap(self)
+            except Exception as e:  # noqa: BLE001 (the cap then stays where the scene put it: seated, unshifted)
+                print(f"toothpaste: cap not re-seated ({e!r})", file=sys.stderr, flush=True)
         return write(self)
 
     def scene_reset(self, env_ids=None):
