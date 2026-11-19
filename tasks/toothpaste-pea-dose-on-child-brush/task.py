@@ -781,7 +781,7 @@ HELD_DZ = -0.0019  # m: the held tube sits this much under the left's command (t
 # right aims at the cap where it really is, so its fingers close on it centered
 CAP_GRIP_Z = 0.010  # m: the right's tool point on the cap's axis, this far in from its mouth (the fingertips then stop
 # 3 mm short of the mouth, clear of the tube's shoulder)
-CAP_SQUEEZE = 0.0015  # m a side: the right closes this far past the cap's side (about 7.5 N a finger on the rigid cap)
+CAP_SQUEEZE = 0.0010  # m a side: the right closes this far past the cap's side (about 5 N a finger on the rigid cap)
 CAP_OPEN = 0.010  # m: the right's pads stand this far off the cap's side when open between strokes
 YAW_LO, YAW_HI = -math.pi / 2, math.pi / 2  # the right wrist's stroke about its pointing axis
 UNSCREW_DEG = 450.0  # turns from seated to past free (capkit's thread frees after about 400 degrees)
@@ -902,17 +902,19 @@ def demo():
             _tw(1.3, pick, hold, "grip the body"),
             _tw(0.3, pick, hold, "settle"),
             _tw(2.0, work, hold, "lift it level, cap toward the robot"),
-            _tw(0.5, work, hold, "hold it"),
-            _tw(1.0, work, firm, "hold it firmly (the cap seals the nozzle)"),
-            _tw(0.5, work, firm, "settle")]
+            _tw(1.0, work, hold, "hold it")]
     # right: in to the cap once the tube is held still, grip, unscrew, draw it off
     right = [kit.Home(max(0.5, _t(left) - 1.5), label="wait at the ready pose"),
              _tw(3.0, cap_tcp(0.0, back=0.05), cap_open, "pointing at the cap", YAW_LO, PITCH_FWD),
              _tw(2.0, cap_tcp(0.0), cap_open, "fingers either side of the cap", YAW_LO, PITCH_FWD),
              _tw(0.5, cap_tcp(0.0), cap_open, "settle", YAW_LO, PITCH_FWD),
-             _tw(1.3, cap_tcp(0.0), cap_hold, "grip the cap", YAW_LO, PITCH_FWD),
-             _tw(0.3, cap_tcp(0.0), cap_hold, "settle", YAW_LO, PITCH_FWD)]
-    _hold(left, _t(right) - _t(left), "hold it while the cap is gripped")
+             _tw(2.0, cap_tcp(0.0), cap_hold, "grip the cap", YAW_LO, PITCH_FWD),
+             _tw(0.5, cap_tcp(0.0), cap_hold, "settle", YAW_LO, PITCH_FWD)]
+    # the left holds lightly while the right closes (its give takes up any misfit between the two hands), then firmly
+    # for the turning, once the cap is gripped
+    _hold(left, _t(right) - _t(left), "hold it lightly while the cap is gripped")
+    left += [_tw(1.0, work, firm, "hold it firmly (the cap seals the nozzle)"), _tw(0.3, work, firm, "settle")]
+    _hold(right, _t(left) - _t(right), "wait for the firm hold")
     wps, yaw, turned = strokes(UNSCREW_DEG, +1.0, YAW_LO, 0.0, cap_hold, "unscrew")
     opens = [i for i, w in enumerate(wps) if w.label == "unscrew: open"]
     t_ease = _t(right) + sum(w.duration for w in wps[:opens[-1]])  # the regrip before the stroke that frees the cap

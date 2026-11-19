@@ -186,9 +186,10 @@ each mean matches within 0.02 g.
 
 Open loop, both arms, as a person does it: the left hand holds the tube and the right turns the cap. The left takes
 the lying tube from above, lightly across its body (a holding grip, under the paste's yield), and lifts it level with
-the cap toward the robot, over the brush. The right comes in pointing forward, closes on the cap and unscrews it counterclockwise
-(seen from the cap's top), half a turn per wrist stroke, following the thread; between strokes it opens, turns back and
-closes again, 1.25 turns in all. It draws the cap straight off and holds it aside, out of the left arm's way. The left turns the tube nozzle-down over
+the cap toward the robot, over the brush. The right comes in pointing forward and closes on the cap while the left holds lightly; then the left holds
+firmly (the cap seals the nozzle, so nothing can flow) and the right unscrews the cap counterclockwise (seen from the
+cap's top), half a turn per wrist stroke, following the thread; between strokes it opens, turns back and closes again, 1.25 turns in all.
+Before the stroke that frees the cap the left eases back to its light hold, so no pressure is left to push paste out. It draws the cap straight off and holds it aside, out of the left arm's way. The left turns the tube nozzle-down over
 the brush, the nozzle 4 mm above the bristles, squeezes 1.75 mm a side for 1.2 s, eases to the holding grip for 1.5 s,
 lifts off and brings the tube back level. The right puts the cap back on the neck and screws it on clockwise in the
 same strokes, a little past the seat, lets go and backs away. The left lays the capped tube down, lets go and lifts
