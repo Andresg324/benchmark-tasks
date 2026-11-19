@@ -565,13 +565,34 @@ def test_demo_plan():
     def at(seq, lab):
         return sum(w.duration for w in seq[:[w.label for w in seq].index(lab) + 1])
 
-    check(at(plan["right"], "draw the cap off") <= at(plan["left"], "squeeze") <= at(plan["right"], "onto the thread"),
+    check(at(plan["right"], "draw the cap off") <= at(plan["left"], "squeeze") <= at(plan["right"], "onto the neck, pressed lightly"),
           "unscrew, dose, then screw back on")
     check("grip the cap" in rl and "grip the body" in ll, "the left holds the tube and the right turns the cap")
     _, _, turned = M.strokes(M.UNSCREW_DEG, +1.0, M.YAW_LO, 0.0, 0.0, "x")
     check(abs(turned - M.UNSCREW_DEG) < 1e-6 and M.SCREW_DEG > M.UNSCREW_DEG, "screws back on past where it came off")
     check(all(w.finger == M.finger_for(ck.R_CAP + M.CAP_OPEN) for w in plan["right"] if "turn back" in w.label),
           "every turn-back is made with the fingers open clear of the cap")
+    # screwing back on, the cap goes onto the neck and every stroke is aimed PUSH_ON past where the thread puts it (the
+    # arms' give presses it on); the hand opens and turns back where the thread puts the cap (open fingers not pushed in)
+    i0, i1 = rl.index("onto the neck, pressed lightly"), rl.index("let go of the cap")
+    axis = np.array(M.cap_tcp(0.0, back=0.01)) - np.array(M.cap_tcp(0.0))
+    axis /= np.linalg.norm(axis)  # out of the neck, along the cap's axis
+
+    def on_line(w, back):  # the waypoint lies on cap_tcp(t, back) for some turn t
+        return min(abs(float(np.dot(np.array(w.pos) - np.array(M.cap_tcp(t, back=back)), axis)))
+                   for t in np.arange(0.0, 481.0, 0.5)) < 1e-6
+
+    seg = [w for w in plan["right"][i0:i1] if isinstance(w, kit.Tilted)]
+    check(np.allclose(seg[0].pos, M.cap_tcp(M.UNSCREW_DEG, back=-M.PUSH_ON), atol=1e-9) and M.PUSH_ON >= 0.002,
+          "the cap goes onto the neck pressed lightly (aimed PUSH_ON past the thread)")
+    st_ = [w for w in seg if w.label.startswith("screw on: stroke") or w.label.endswith("press it on")]
+    check(len(st_) > 4 and all(on_line(w, -M.PUSH_ON) for w in st_), "every screw-on stroke presses the cap on")
+    op_ = [w for w in seg if w.finger == M.finger_for(ck.R_CAP + M.CAP_OPEN)]
+    check(len(op_) > 0 and all(on_line(w, 0.0) for w in op_),
+          "the hand opens and turns back where the thread puts the cap (not pressed in)")
+    _, _, t_unscr = M.strokes(M.UNSCREW_DEG, +1.0, M.YAW_LO, 0.0, 0.0, "x")
+    w_un, _, _ = M.strokes(M.UNSCREW_DEG, +1.0, M.YAW_LO, 0.0, 0.0, "x")
+    check(not any("press" in w.label for w in w_un), "unscrewing is unchanged (no press)")
     closes = [w for w in plan["right"] + plan["left"] if w.label.endswith("grip again") or w.label.startswith("grip the")]
     check(all(w.duration >= 1.2 for w in closes), "every close takes at least 1.2 s")
 

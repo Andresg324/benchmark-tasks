@@ -762,8 +762,8 @@ _TILES = _Tiles()
 # it; between strokes it opens, turns back and closes again. Once the thread is free it draws the cap straight off and
 # holds it. The left turns the tube nozzle-down over the brush lying on the counter, the nozzle 4 mm above the
 # bristles, squeezes 1.75 mm a side for 1.2 s, eases to the holding grip, waits 1.5 s for the flow to die, lifts off and
-# brings the tube back level. The right puts the cap back on the neck and screws it on clockwise in the same strokes,
-# a little past the seat (the grips slip once it is tight), lets go and backs away; the left lays the capped tube down,
+# brings the tube back level. The right puts the cap back on the neck, pressing it on lightly, and screws it on
+# clockwise in the same strokes, a little past the seat (the grips slip once it is tight), lets go and backs away; the left lays the capped tube down,
 # lets go and lifts clear.
 HOLD_PUSH = 0.0004  # m a side: holds the tube (2.2 N a side, 1.0 kPa inside, under the 1.44 kPa yield)
 FIRM_PUSH = 0.0006  # m a side: a firmer hold while the cap is on and seals the nozzle (nothing can flow); eased to the
@@ -788,6 +788,10 @@ YAW_LO, YAW_HI = -math.pi / 2, math.pi / 2  # the right wrist's stroke about its
 UNSCREW_DEG = 450.0  # turns from seated to past free (capkit's thread frees after about 400 degrees)
 SCREW_DEG = UNSCREW_DEG + 30.0  # screwing back: to the seat and a little past (the grips slip once it is tight)
 PRESS = 0.0001  # m: each stroke aims the cap this far into the thread (the arm's give makes a light push)
+PUSH_ON = 0.003  # m: screwing back on, the gripped cap is aimed this far past where the thread puts it, so the arms'
+# give presses it lightly onto the neck while it turns (as a hand does). The arms' joint friction leaves their tool
+# points a millimetre or so off command (seen: 1.1 mm), more than a pitch's worth of aim, so a cap aimed only at the
+# thread can hang just off the neck and turn in air
 STEP_DEG = 90.0  # waypoints along a stroke (each a smooth start and stop)
 STROKE_S = 3.5  # s per half turn
 DRAW_OFF = 0.025  # m: the cap drawn straight back off the neck once free
@@ -838,10 +842,12 @@ def _tw(duration, pos, finger, label, yaw=0.0, pitch=0.0):
                       pitch=float(pitch))
 
 
-def strokes(total_deg: float, sign: float, start_yaw: float, turned0: float, hold: float, label: str) -> tuple:
+def strokes(total_deg: float, sign: float, start_yaw: float, turned0: float, hold: float, label: str,
+            push: float = 0.0) -> tuple:
     """The right's waypoints that turn the cap `total_deg` (sign +1 unscrews: counterclockwise seen from its top) in
     wrist strokes between YAW_LO and YAW_HI, following the thread, regripping between strokes; and the yaw and the
-    cap's turn at the end (still gripped)."""
+    cap's turn at the end (still gripped). With `push` (m) the gripped cap is aimed that far onto the neck (it opens
+    and closes on the cap where the thread puts it, then presses)."""
     out, yaw, turned, left, k = [], start_yaw, turned0, total_deg, 0
     open_ = finger_for(ck.R_CAP + CAP_OPEN)
     while left > 1e-6:
@@ -854,6 +860,9 @@ def strokes(total_deg: float, sign: float, start_yaw: float, turned0: float, hol
                 out.append(_tw(1.6, p, open_, f"{label}: turn back half a turn", yaw, PITCH_FWD))
             out += [_tw(1.3, p, hold, f"{label}: grip again", yaw, PITCH_FWD),
                     _tw(0.3, p, hold, f"{label}: settle", yaw, PITCH_FWD)]
+            if push > 0.0:
+                out.append(_tw(0.5, cap_tcp(max(0.0, turned), back=-push), hold, f"{label}: press it on", yaw,
+                               PITCH_FWD))
             continue
         k += 1
         d = min(left, room)
@@ -861,8 +870,8 @@ def strokes(total_deg: float, sign: float, start_yaw: float, turned0: float, hol
         for i in range(1, n + 1):
             yaw_i = yaw + sign * math.radians(d * i / n)
             t_i = turned + sign * d * i / n
-            out.append(_tw(STROKE_S * d / 180.0 / n, cap_tcp(max(0.0, t_i)), hold, f"{label}: stroke {k}", yaw_i,
-                           PITCH_FWD))
+            out.append(_tw(STROKE_S * d / 180.0 / n, cap_tcp(max(0.0, t_i), back=-push), hold, f"{label}: stroke {k}",
+                           yaw_i, PITCH_FWD))
         yaw += sign * math.radians(d)
         turned += sign * d
         left -= d
@@ -951,12 +960,12 @@ def demo():
     # right: cap back on the neck, screwed on
     right += [_tw(2.5, cap_tcp(turned, back=DRAW_OFF), cap_hold, "back in front of the neck", yaw, PITCH_FWD),
               _tw(1.5, cap_tcp(turned, back=0.003), cap_hold, "cap to the neck", yaw, PITCH_FWD),
-              _tw(1.0, cap_tcp(turned), cap_hold, "onto the thread", yaw, PITCH_FWD),
-              _tw(0.3, cap_tcp(turned), cap_hold, "settle", yaw, PITCH_FWD)]
+              _tw(1.0, cap_tcp(turned, back=-PUSH_ON), cap_hold, "onto the neck, pressed lightly", yaw, PITCH_FWD),
+              _tw(0.3, cap_tcp(turned, back=-PUSH_ON), cap_hold, "settle", yaw, PITCH_FWD)]
     _hold(left, _t(right) - _t(left), "hold it while the cap goes back on")
     left.append(_tw(0.8, work, firm, "hold it firmly again (the cap covers the nozzle)"))
     _hold(right, _t(left) - _t(right), "settle")
-    wps, yaw, turned = strokes(SCREW_DEG, -1.0, yaw, turned, cap_hold, "screw on")
+    wps, yaw, turned = strokes(SCREW_DEG, -1.0, yaw, turned, cap_hold, "screw on", push=PUSH_ON)
     right += wps
     p_end = cap_tcp(max(0.0, turned))
     right += [_tw(1.0, p_end, cap_open, "let go of the cap", yaw, PITCH_FWD),

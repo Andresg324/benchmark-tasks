@@ -191,8 +191,8 @@ firmly (the cap seals the nozzle, so nothing can flow) and the right unscrews th
 cap's top), half a turn per wrist stroke, following the thread; between strokes it opens, turns back and closes again, 1.25 turns in all.
 Before the stroke that frees the cap the left eases back to its light hold, so no pressure is left to push paste out. It draws the cap straight off and holds it aside, out of the left arm's way. The left turns the tube nozzle-down over
 the brush, the nozzle 4 mm above the bristles, squeezes 1.75 mm a side for 1.2 s, eases to the holding grip for 1.5 s,
-lifts off and brings the tube back level. The right puts the cap back on the neck and screws it on clockwise in the
-same strokes, a little past the seat, lets go and backs away. The left lays the capped tube down, lets go and lifts
+lifts off and brings the tube back level. The right puts the cap back on the neck, pressing it on lightly, and screws
+it on clockwise in the same strokes, a little past the seat, lets go and backs away. The left lays the capped tube down, lets go and lifts
 clear.
 
 ## Real-world build
