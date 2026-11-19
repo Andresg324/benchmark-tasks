@@ -19,5 +19,5 @@
   "reset_notes": "Room at 20-24 C (the paste's stiffness changes with temperature). Each trial uses a clean, dry brush (weighed) laid at its mark, and the tube with 50 to 70 g of paste left (gross weight minus the weighed empty tube and cap): roll it flat from the crimp up to the paste, hold it nozzle up and press gently until paste fills the nozzle to its mouth, wipe the nozzle flush, screw the cap on with the fingertips until it just stops (no extra twist), lay the tube at its mark and let it rest 1 min so the laminate springs back. In simulation the tube always holds 60 g, starts capped, and the brush starts clean.",
   "fidelity": "Rigid bodies. The cap is a free body on its thread: the neck's and the cap's ridges are helices of convex hulls with the ISO metric 60-degree section, so it comes off and goes on only by turning, about 1.1 turns. The tube's body is a rigid core with four sprung wall panels. The paste is a flow model, not a fluid: pressure from the panels' push on trapped air, a yield pressure, flow past it, dropped plumb from an uncapped nozzle onto a 1 mm bristle grid (README).",
   "scores": "Dream-1 run: 0 (2,400 steps, the run limit) on this task.py (238bd215e5ea); demo: 1.0 (2,118 steps)",
-  "media": ""
+  "media": "M-YGRAKY"
 }
