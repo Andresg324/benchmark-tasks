@@ -766,6 +766,8 @@ _TILES = _Tiles()
 # a little past the seat (the grips slip once it is tight), lets go and backs away; the left lays the capped tube down,
 # lets go and lifts clear.
 HOLD_PUSH = 0.0004  # m a side: holds the tube (2.2 N a side, 1.0 kPa inside, under the 1.44 kPa yield)
+FIRM_PUSH = 0.0015  # m a side: a firm hold while the cap is on and seals the nozzle (nothing can flow); eased to the
+# light hold before the cap comes free, so no pressure is left to push paste out
 DOSE_PUSH = 0.00175  # m a side: the dosing squeeze (a pea-sized dose in the offline model at 300 Pa)
 DOSE_S = 1.2  # s held
 VARIANTS = {"much": (0.0025, 1.5), "smear": (0.0012, 0.6)}  # TOOTH_VARIANT checks of the scorer in the simulator
@@ -782,7 +784,7 @@ CAP_OPEN = 0.010  # m: the right's pads stand this far off the cap's side when o
 YAW_LO, YAW_HI = -math.pi / 2, math.pi / 2  # the right wrist's stroke about its pointing axis
 UNSCREW_DEG = 450.0  # turns from seated to past free (capkit's thread frees after about 400 degrees)
 SCREW_DEG = UNSCREW_DEG + 30.0  # screwing back: to the seat and a little past (the grips slip once it is tight)
-PRESS = 0.0003  # m: each stroke aims the cap this far into the thread (the arm's give makes a light push)
+PRESS = 0.0001  # m: each stroke aims the cap this far into the thread (the arm's give makes a light push)
 STEP_DEG = 90.0  # waypoints along a stroke (each a smooth start and stop)
 STROKE_S = 3.5  # s per half turn
 DRAW_OFF = 0.025  # m: the cap drawn straight back off the neck once free
@@ -885,7 +887,7 @@ def demo():
         return {"left": [kit.Home(10.0, label="stay at the ready pose")],
                 "right": [kit.Home(10.0, label="stay at the ready pose")]}
     push, dose_s = VARIANTS.get(os.environ.get("TOOTH_VARIANT", ""), (DOSE_PUSH, DOSE_S))
-    hold, dose = tube_grip(HOLD_PUSH), tube_grip(push)
+    hold, dose, firm = tube_grip(HOLD_PUSH), tube_grip(push), tube_grip(FIRM_PUSH)
     l_open = finger_for(FINGER_HALF_OPEN)
     cap_hold, cap_open = finger_for(ck.R_CAP - CAP_SQUEEZE), finger_for(ck.R_CAP + CAP_OPEN)
     o0 = np.asarray(TUBE_START, float)
@@ -898,9 +900,11 @@ def demo():
             _tw(1.3, pick, hold, "grip the body"),
             _tw(0.3, pick, hold, "settle"),
             _tw(2.0, work, hold, "lift it level, cap toward the robot"),
-            _tw(0.5, work, hold, "hold it")]
-    # right: in to the cap, grip, unscrew, draw it off
-    right = [kit.Home(max(0.5, _t(left) - 5.5), label="wait at the ready pose"),
+            _tw(0.5, work, hold, "hold it"),
+            _tw(1.0, work, firm, "hold it firmly (the cap seals the nozzle)"),
+            _tw(0.5, work, firm, "settle")]
+    # right: in to the cap once the tube is held still, grip, unscrew, draw it off
+    right = [kit.Home(max(0.5, _t(left) - 1.5), label="wait at the ready pose"),
              _tw(3.0, cap_tcp(0.0, back=0.05), cap_open, "pointing at the cap", YAW_LO, PITCH_FWD),
              _tw(2.0, cap_tcp(0.0), cap_open, "fingers either side of the cap", YAW_LO, PITCH_FWD),
              _tw(0.5, cap_tcp(0.0), cap_open, "settle", YAW_LO, PITCH_FWD),
@@ -908,7 +912,11 @@ def demo():
              _tw(0.3, cap_tcp(0.0), cap_hold, "settle", YAW_LO, PITCH_FWD)]
     _hold(left, _t(right) - _t(left), "hold it while the cap is gripped")
     wps, yaw, turned = strokes(UNSCREW_DEG, +1.0, YAW_LO, 0.0, cap_hold, "unscrew")
+    opens = [i for i, w in enumerate(wps) if w.label == "unscrew: open"]
+    t_ease = _t(right) + sum(w.duration for w in wps[:opens[-1]])  # the regrip before the stroke that frees the cap
     right += wps
+    _hold(left, t_ease - _t(left), "hold it firmly while the cap is turned")
+    left.append(_tw(0.8, work, hold, "ease to a light hold before the cap comes free"))
     right.append(_tw(1.5, cap_tcp(turned, back=DRAW_OFF), cap_hold, "draw the cap off", yaw, PITCH_FWD))
     right.append(_tw(2.5, CAP_PARK, cap_hold, "hold the cap aside, out of the left arm's way", yaw, PITCH_FWD))
     _hold(left, _t(right) - _t(left), "hold it while the cap comes off")
@@ -941,6 +949,8 @@ def demo():
               _tw(1.0, cap_tcp(turned), cap_hold, "onto the thread", yaw, PITCH_FWD),
               _tw(0.3, cap_tcp(turned), cap_hold, "settle", yaw, PITCH_FWD)]
     _hold(left, _t(right) - _t(left), "hold it while the cap goes back on")
+    left.append(_tw(0.8, work, firm, "hold it firmly again (the cap covers the nozzle)"))
+    _hold(right, _t(left) - _t(right), "settle")
     wps, yaw, turned = strokes(SCREW_DEG, -1.0, yaw, turned, cap_hold, "screw on")
     right += wps
     p_end = cap_tcp(max(0.0, turned))
