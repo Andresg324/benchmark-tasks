@@ -766,8 +766,9 @@ _TILES = _Tiles()
 # a little past the seat (the grips slip once it is tight), lets go and backs away; the left lays the capped tube down,
 # lets go and lifts clear.
 HOLD_PUSH = 0.0004  # m a side: holds the tube (2.2 N a side, 1.0 kPa inside, under the 1.44 kPa yield)
-FIRM_PUSH = 0.0015  # m a side: a firm hold while the cap is on and seals the nozzle (nothing can flow); eased to the
-# light hold before the cap comes free, so no pressure is left to push paste out
+FIRM_PUSH = 0.0006  # m a side: a firmer hold while the cap is on and seals the nozzle (nothing can flow); eased to the
+# light hold before the cap comes free. Squeezed much harder, the narrow sprung wall panels let the tube squirt out of the
+# pinch
 DOSE_PUSH = 0.00175  # m a side: the dosing squeeze (a pea-sized dose in the offline model at 300 Pa)
 DOSE_S = 1.2  # s held
 VARIANTS = {"much": (0.0025, 1.5), "smear": (0.0012, 0.6)}  # TOOTH_VARIANT checks of the scorer in the simulator
@@ -913,7 +914,7 @@ def demo():
     # the left holds lightly while the right closes (its give takes up any misfit between the two hands), then firmly
     # for the turning, once the cap is gripped
     _hold(left, _t(right) - _t(left), "hold it lightly while the cap is gripped")
-    left += [_tw(1.0, work, firm, "hold it firmly (the cap seals the nozzle)"), _tw(0.3, work, firm, "settle")]
+    left += [_tw(1.5, work, firm, "hold it firmly (the cap seals the nozzle)"), _tw(0.5, work, firm, "settle")]
     _hold(right, _t(left) - _t(right), "wait for the firm hold")
     wps, yaw, turned = strokes(UNSCREW_DEG, +1.0, YAW_LO, 0.0, cap_hold, "unscrew")
     opens = [i for i, w in enumerate(wps) if w.label == "unscrew: open"]
