@@ -197,6 +197,8 @@ class Prop(Box):
     material: tuple | None = None
     contact_offset: float | None = None  # m: PhysX contact offset of every collider (rest offset 0); None = the arena's
     max_depenetration: float | None = None  # m/s: PhysX's cap on the speed it uses to undo an overlap; None = default
+    inertia: tuple | None = None  # kg m^2: principal moments about the center of mass (prop axes); None = from colliders
+    com: tuple | None = None  # m: center of mass in the prop's frame; None = from the colliders (uniform density)
 
 
 def _linear(c: float) -> float:
@@ -213,6 +215,11 @@ def _usda(prop: Prop) -> str:
     out.append('def Xform "Root" (\n    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]\n)\n{\n')
     if prop.mass is not None:
         out.append(f"    float physics:mass = {prop.mass}\n")
+    if prop.inertia is not None:
+        out.append(f"    float3 physics:diagonalInertia = {_fmt(prop.inertia)}\n"
+                   "    quatf physics:principalAxes = (1, 0, 0, 0)\n")
+    if prop.com is not None:
+        out.append(f"    point3f physics:centerOfMass = {_fmt(prop.com)}\n")
     out.append('    def Scope "Looks"\n    {\n')
     for i, lk in enumerate(looks):
         col = _fmt(_linear(c) for c in lk.color)

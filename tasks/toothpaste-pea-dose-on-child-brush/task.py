@@ -1,6 +1,6 @@
 """On a bathroom counter (the station table), in front of the arms: a child's manual toothbrush lies on its back,
-bristles up, and a kids' fluoride toothpaste tube (a Kid's Crest 4.2 oz stand-up tube, partly used) stands on its
-screw cap, capped.
+bristles up, and a kids' fluoride toothpaste tube (a Kid's Crest Bubblegum 4.2 oz tube, partly used) lies on its
+side, its screw cap on.
 
 The job is to get the brush ready for a 4-year-old: unscrew the cap, put a pea-sized dab of toothpaste (0.25 g; 0.15
 to 0.35 g scores full) on the bristles and nothing off them, then screw the cap back on fully and let go. The US
@@ -13,8 +13,7 @@ stays on its thread by contact alone. Paste can leave the nozzle only while the 
 is squeezekit's flow model: the tube's body is four sprung wall panels around a rigid core; a hand dispenses only by
 pushing the panels in (read from their joints), and the paste flows through the open nozzle only while the pressure
 inside beats its yield pressure, then keeps flowing briefly after the squeeze stops. It drops plumb from the nozzle
-onto the bristle field, a 1 mm grid that moves with the brush, or off it. Every threshold below appears once, with the
-same value in task.json and the README.
+onto the bristle field, a 1 mm grid that moves with the brush, or off it.
 """
 import math
 import os
@@ -26,10 +25,11 @@ import dataclasses  # noqa: E402
 import numpy as np  # noqa: E402
 
 import capkit as ck  # noqa: E402
+import gripkit  # noqa: E402
 import squeezekit as sq  # noqa: E402
 import yamgeom as yg  # noqa: E402
 import yamkit as kit  # noqa: E402
-from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN, GRIPPY_FRICTION  # noqa: E402
+from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN  # noqa: E402
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
 
 SCENE = "station"
@@ -53,7 +53,7 @@ BRUSH_PARTS_BOX = (((0.0, 0.0, -BRISTLE[2] / 2), BRISTLE),
                    ((-(HEAD[0] + NECK[0]) / 2, 0.0, _FLOOR + NECK[2] / 2), NECK),
                    ((-HEAD[0] / 2 - NECK[0] - HANDLE[0] / 2, 0.0, _FLOOR + HANDLE[2] / 2), HANDLE))
 BRUSH_G = 14.0  # g
-BRUSH_START = (0.300, -0.040, TOP - _FLOOR)  # the bristle top's middle, 14 mm above the counter, head away from the robot
+BRUSH_START = (0.300, -0.070, TOP - _FLOOR)  # the bristle top's middle, 14 mm above the counter, head away from the robot
 BRUSH = kit.Prop(
     "brush", pos=BRUSH_START, mass=BRUSH_G / 1000, size=(0.151, HANDLE[1], -_FLOOR),
     meshes=(kit.box(*BRUSH_PARTS_BOX[0], kit.Look((0.95, 0.95, 0.97), 0.8)),
@@ -61,11 +61,12 @@ BRUSH = kit.Prop(
     colliders=tuple(kit.Collider(c, size=s) for c, s in BRUSH_PARTS_BOX))
 
 # -- the tube (its own frame: origin at the middle of the body, x along its axis from the nozzle (-x) to the crimp (+x)).
-#    It stands on its cap: x up, the nozzle down ---------------------------------------------------------------------
-BODY_R = 0.0175  # m: the round body, 35 mm across
+#    It starts lying on its side, z up -------------------------------------------------------------------------------
+BODY_R = 0.018  # m: the round body, 36 mm across (the listing's package is 1.45 in deep)
 BODY_X = (-0.050, 0.050)  # 10 cm of body
-# The used end, rolled flat up to the paste (as the reset rolls it): a flat roll 55 mm wide and 10 mm thick, 2.4 cm long.
-CRIMP = ((0.062, 0.0, 0.0), (0.024, 0.055, 0.010))
+# The used end, rolled flat up to the paste (as the reset rolls it): a flat roll 55 mm wide and 10 mm thick, 2.4 cm
+# long, lying flat on the counter with the round body's underside.
+CRIMP = ((0.062, 0.0, -BODY_R + 0.005), (0.024, 0.050, 0.010))  # 50 mm: the listing's package is 2 in wide
 X_NECK0 = BODY_X[0] - ck.SHOULDER_L  # where the neck leaves the shoulder
 TIP = (X_NECK0 - ck.NECK_L, 0.0, 0.0)  # the nozzle's mouth, at the neck's tip
 AXIS_TO_TIP = (-1.0, 0.0, 0.0)
@@ -81,15 +82,15 @@ _CORE_W = 2 * (BODY_R - PANEL[1] - PANEL_TRAVEL)
 CORE = (BODY_X[1] - BODY_X[0], _CORE_W, _CORE_W)
 BAND_X = (BODY_X[0], PANEL_X - PANEL[0] / 2 - 0.004)  # the body's stiff front, by the shoulder: one round hull
 PANEL_SIGN = {"panel_l": -1.0, "panel_r": 1.0, "panel_t": -1.0, "panel_b": 1.0}  # inward push = sign * joint pos
-PASTE_ML = 46.0  # mL left: 60 g of paste, the middle of the 50-70 g reset fill
-AIR_ML = 8.0  # mL of air inside at rest (a laminate tube springs back and draws some in; calibrate, see the README)
-TUBE_G = 12.0  # g: the empty laminate tube (the cap is its own body)
+PASTE_ML = 46.0  # mL left: 60 g of paste of the tube's 4.2 oz (119 g), the middle of the 50-70 g reset fill
+AIR_ML = 8.0  # mL of air inside at rest (a laminate tube springs back and draws some in; fitted on the trial tube)
+TUBE_G = 12.0  # g: the empty laminate tube, without its cap (weighed on the trial tube, README)
 DENSITY = 1.30  # g/mL: a silica toothpaste (pastes run 1.3-1.6, silica low, chalk high); real trials weigh grams
 PANEL_KG = 0.0015
 TUBE_KG = (TUBE_G + PASTE_ML * DENSITY) / 1000 - 4 * PANEL_KG
-K_WALL = 2500.0  # N/m per panel: 2.5 N per mm of push, a round laminate tube (calibrate, see the README)
+K_WALL = 2500.0  # N/m per panel: the laminate wall's spring (sets only the grip force, not the dose)
 PANEL_AREA_M2 = PANEL[0] * PANEL[2]
-AREA_ML_PER_CM = 1.0  # mL displaced per cm of one panel's push (calibrate, see the README)
+AREA_ML_PER_CM = 1.0  # mL displaced per cm of one panel's push (fitted on the trial tube, README)
 TAU_Y_PA = 300.0  # Pa: the paste's yield stress (100 Pa on a model paste, arXiv 1903.10888; ~500 Pa on a
 # commercial-style formula, US 5202112): the middle of that range. The demo's dose is checked at 100, 300 and 500 Pa.
 
@@ -100,17 +101,17 @@ def p_yield_kpa(tau_pa: float = TAU_Y_PA) -> float:
 
 
 P_YIELD_KPA = p_yield_kpa()  # 1.44 kPa
-FLOW = 0.10  # mL/s per kPa past the yield: a firm squeeze (5 kPa) runs a 7.5 mm ribbon about 1 cm/s (calibrate)
+FLOW = 0.10  # mL/s per kPa past the yield (fitted on the trial tube, README)
 LAMINATE = kit.Look((0.92, 0.92, 0.95), 0.5)
 TUBE_LOOK = kit.Look((0.55, 0.30, 0.85), 0.5)  # a purple kids' tube
 CAP_LOOK = kit.Look((0.25, 0.75, 0.95), 0.45)
 PASTE_RGB = (0.35, 0.75, 0.95)  # blue kids' gel
 
-# Friction. The thread and the cap are molded polyolefin plastic (a polypropylene cap on a polyethylene neck): dry
-# polyolefins slide at about 0.2-0.3, so both use 0.3 static and 0.25 sliding (the lower of a pair applies). The rest
-# of the tube and the brush keep the arena's own object friction.
-PLASTIC = (0.30, 0.25, "min")
-GRIPPY = (float(GRIPPY_FRICTION[0]), float(GRIPPY_FRICTION[1]), "average")
+# Friction (static, dynamic; PhysX averages the two touching surfaces). The cap is polypropylene and the tube's
+# laminate and neck polyethylene: polyethylene on polyethylene, clean and dry, 0.2 (Engineering ToolBox, friction
+# coefficients), for every surface of the tube and the cap. The YAM's finger pads are rubber-faced: 1.0 / 0.8
+# (gripkit), so a pad on the cap or the tube grips at about 0.6 / 0.5.
+PLASTIC = (0.20, 0.20, "average")
 CONTACT_OFFSET = 0.001  # m: PhysX contact offset of the tube's and the cap's colliders (the thread's gaps are < 1 mm)
 
 
@@ -141,8 +142,12 @@ class _Wall(sq.Wall):
         return super().drive(key, q, qd, J, mem)
 
 
+PANEL_INSET = 0.0005  # m: the panels' faces stand this far inside the round body, so the lying tube rests on its stiff
+# front and its rolled end, not on a sprung panel
+
+
 def _panel(link: str, axis: str, side: float):
-    off = side * (BODY_R - PANEL[1] / 2)
+    off = side * (BODY_R - PANEL_INSET - PANEL[1] / 2)
     anchor = (PANEL_X, off, 0.0) if axis == "Y" else (PANEL_X, 0.0, off)
     size = PANEL if axis == "Y" else (PANEL[0], PANEL[2], PANEL[1])
     lo, hi = (-PANEL_TRAVEL, 0.0) if side > 0 else (0.0, PANEL_TRAVEL)
@@ -151,17 +156,13 @@ def _panel(link: str, axis: str, side: float):
                     damping=0.0, law=_Wall("tube", -side, k=K_WALL, area_m2=PANEL_AREA_M2, lo=lo, hi=hi))
 
 
-def _with_material(cols, mat):
-    return tuple(dataclasses.replace(c, material=mat) for c in cols)
-
-
-_NECK_COLS = _with_material(ck.colliders(ck.neck_point_sets(BODY_R), to_tube), PLASTIC)
+_NECK_COLS = ck.colliders(ck.neck_point_sets(BODY_R), to_tube)
 _BAND = ck.colliders([_axis_x(np.asarray(ck.prism(BODY_R / math.cos(math.pi / ck.N_SIDES), BAND_X[0], BAND_X[1])))])
 
-# The tube stands on its cap: tube x = world up, tube y = world -y, tube z = world x (the crimp's 55 mm across world y).
-R_STAND = np.array([[0.0, 0.0, 1.0], [0.0, -1.0, 0.0], [1.0, 0.0, 0.0]])
-TUBE_XY = (0.300, -0.200)
-SPAWN_GAP = 0.0001  # m: the cap spawns this far over the counter, and the neck's tip this far over the cap's seat
+# The tube lies on its side along x, the cap toward the robot, the rolled end flat on the counter.
+R_LIE = np.eye(3)
+TUBE_XY = (0.300, 0.020)
+SPAWN_GAP = 0.0001  # m: the tube spawns this far over the counter, and the neck's tip this far off the cap's seat
 
 
 def seated_cap_in_tube(gap: float = 0.0):
@@ -169,20 +170,13 @@ def seated_cap_in_tube(gap: float = 0.0):
     return NECK_ORIGIN + M_NECK @ np.array([0.0, 0.0, ck.SEAT_Z - gap]), M_NECK
 
 
-def _tube_start_z() -> float:
-    """World height of the tube's origin standing on its seated cap (cap top SPAWN_GAP over the counter)."""
-    o, R = seated_cap_in_tube(SPAWN_GAP)
-    cap_top_local = o + R @ np.array([0.0, 0.0, ck.H_CAP])  # tube frame
-    return TOP + SPAWN_GAP - float((R_STAND @ cap_top_local)[2])
-
-
-TUBE_START = (TUBE_XY[0], TUBE_XY[1], _tube_start_z())
+TUBE_START = (TUBE_XY[0], TUBE_XY[1], TOP + BODY_R + SPAWN_GAP)  # resting on its round front and its rolled end
 _NECK_LATHE = [(BODY_R, -ck.SHOULDER_L), (ck.SHOULDER_TOP_R, 0.0), (ck.R_CREST - 0.0002, 0.0),
                (ck.R_CREST - 0.0002, ck.NECK_L - ck.TIP_CHAMFER), (ck.TIP_R, ck.NECK_L), (NOZZLE_D / 2, ck.NECK_L),
                (NOZZLE_D / 2, ck.NECK_L - 0.001)]
 
 TUBE = sq.free_body(kit.Mechanism(
-    "tube", pos=TUBE_START, yaw=0.0, mass=TUBE_KG, tilt_xyzw=ck.quat(R_STAND),
+    "tube", pos=TUBE_START, yaw=0.0, mass=TUBE_KG,
     size=(CRIMP[0][0] + CRIMP[1][0] / 2 - TIP[0], CRIMP[1][1], 2 * BODY_R),
     meshes=(kit.box((PANEL_X, 0, 0), CORE, LAMINATE),
             kit.cylinder((0, 0, 0), BODY_R - 0.001, BODY_X[1] - BODY_X[0], TUBE_LOOK, axis="x"),
@@ -191,23 +185,25 @@ TUBE = sq.free_body(kit.Mechanism(
     colliders=(kit.Collider((PANEL_X, 0, 0), size=CORE), kit.Collider(*CRIMP), *_BAND, *_NECK_COLS),
     links=(_panel("panel_l", "Y", 1.0), _panel("panel_r", "Y", -1.0),
            _panel("panel_t", "Z", 1.0), _panel("panel_b", "Z", -1.0)),
-    material=GRIPPY, contact_offset=CONTACT_OFFSET),
+    material=PLASTIC, contact_offset=CONTACT_OFFSET),
     com=(0.0, 0.0, 0.0))
 
-# -- the cap: a free body screwed fully on at the start, standing on the counter under the tube ------------------------
+# -- the cap: a free body screwed fully on at the start ------------------------------------------------------------------
 _CAP_O, _CAP_R = seated_cap_in_tube(SPAWN_GAP)
-CAP_START = tuple(float(v) for v in np.asarray(TUBE_START) + R_STAND @ _CAP_O)
+CAP_START = tuple(float(v) for v in np.asarray(TUBE_START) + R_LIE @ _CAP_O)
+CAP_COM, CAP_INERTIA = ck.cap_mass_props()
 _CAP_PROFILE = [(0.0, ck.H_CAP), (ck.R_CAP - 0.0015, ck.H_CAP), (ck.R_CAP - 0.0004, ck.H_CAP - 0.0006),
                 (ck.R_CAP, ck.H_CAP - 0.0018), (ck.R_CAP, 0.0006), (ck.R_CAP - 0.0006, 0.0),
                 (ck.MOUTH_R, 0.0), (ck.R_BORE, ck.LEAD_IN), (ck.R_BORE, ck.H_IN), (0.0, ck.H_IN)]
 CAP = kit.Prop(
-    "cap", pos=CAP_START, mass=ck.CAP_G / 1000, tilt_xyzw=ck.quat(R_STAND @ _CAP_R),
+    "cap", pos=CAP_START, mass=ck.CAP_G / 1000, tilt_xyzw=ck.quat(R_LIE @ _CAP_R), inertia=CAP_INERTIA, com=CAP_COM,
     size=(2 * ck.R_CAP, 2 * ck.R_CAP, ck.H_CAP),
     meshes=(kit.lathe(_CAP_PROFILE, CAP_LOOK, n=48),),
     colliders=ck.colliders(ck.cap_point_sets()),
     material=PLASTIC, contact_offset=CONTACT_OFFSET, max_depenetration=0.1)
 
 OBJECTS = [BRUSH, TUBE, CAP]
+gripkit.use_rubber_pads()  # the YAM's finger pads are rubber-faced
 
 # -- the paste model (squeezekit) and the scored thresholds ---------------------------------------------------------------
 # The paste does not drip from an open tube turned nozzle-down (its yield stress holds it), so its own weight is left
@@ -228,8 +224,10 @@ UP_DEG = 45.0  # at the end the bristles face within 45 degrees of straight up
 OPEN_CAP = 0.5  # a tube left open or not screwed fully on caps the score here
 # Screwed fully on: the cap within SEAT_TURN_DEG of a turn from its seat (its rise up the thread at most that turn's
 # share of the pitch), its axis within CAP_OFF of the neck's and CAP_TILT_DEG of parallel.
+# The turn is read from the cap's own angle about the neck (0 when seated) and its rise must be under half a pitch, so
+# a cap a turn short, or pushed down into the thread's play, is not taken for seated.
 SEAT_TURN_DEG = 45.0
-SEAT_RISE = ck.PITCH * SEAT_TURN_DEG / 360.0
+SEAT_RISE = ck.PITCH / 2
 CAP_OFF = 0.0006
 CAP_TILT_DEG = 2.0
 # Contact with the arms: their own collision hulls (link3 to the fingertips, both arms) against the tube's and the cap's
@@ -237,15 +235,17 @@ CAP_TILT_DEG = 2.0
 # means no point within CLEAR.
 TOUCH = 0.001
 CLEAR = 0.005
-DOWN_GAP = 0.003  # m: the tube rests on the counter: its (or its cap's) lowest point within this of the counter top
+DOWN_GAP = 0.003  # m: the tube (with its cap, if on) and the brush rest on the counter: lowest point within this
+NOZZLE_DOWN_DEG = 60.0  # paste lands on the bristles only from a nozzle pointing within 60 degrees of straight down ...
+NOZZLE_HIGH = 0.030  # ... and at most 3 cm above the bristles' plane; otherwise it lands off them
 # Put down, not dropped or thrown: each time the hands let go of the tube or the brush it must already rest on the
 # counter (lowest point within PLACE_GAP of it) and move under PLACE_V.
-PLACE_GAP = 0.010
+PLACE_GAP = 0.005
 PLACE_V = 0.30  # m/s
 FLIP_DEG = 90.0  # the bristles turned past sideways with paste on them: the dab is counted as fallen off
 STILL_STEP = 0.0005  # m per control step (1 cm/s)
 HOLD_STEPS = round(SUCCESS_HOLD_S / DT)
-ARM_LINKS = ("link3", "link4", "link5", "gripper", "tip_left", "tip_right")
+ARM_LINKS = ("link1", "link2", "link3", "link4", "link5", "gripper", "tip_left", "tip_right")
 ROBOTS = ("left_robot", "right_robot")
 LINK_POSES: dict = {}  # "right_robot/gripper" -> (pos, R) in the env frame at this control step (filled in the sim)
 
@@ -275,9 +275,18 @@ def cap_fit(objects) -> dict:
 
 
 def capped_fully(objects) -> bool:
-    """The cap screwed fully on: within SEAT_TURN_DEG of a turn of its seat, coaxial and square."""
+    """The cap screwed fully on: its turn about the neck within SEAT_TURN_DEG of the seated turn, on the last turn of
+    the thread (rise under half a pitch), coaxial and square."""
     f = cap_fit(objects)
-    return f["rise"] <= SEAT_RISE and f["off"] <= CAP_OFF and f["tilt"] <= CAP_TILT_DEG
+    turn = (f["turn"] + 180.0) % 360.0 - 180.0
+    return (abs(turn) <= SEAT_TURN_DEG and f["rise"] < SEAT_RISE and f["off"] <= CAP_OFF
+            and f["tilt"] <= CAP_TILT_DEG)
+
+
+def cap_on_neck(objects) -> bool:
+    """The cap on the neck at all (anywhere along the thread, roughly coaxial)."""
+    f = cap_fit(objects)
+    return -0.002 <= f["rise"] <= ck.H_IN and f["off"] <= ck.MOUTH_R and f["tilt"] <= 30.0
 
 
 def nozzle_covered(objects) -> bool:
@@ -364,7 +373,8 @@ def lowest_z(objects) -> float:
     ring = np.stack([np.zeros_like(a), np.cos(a), np.sin(a)], axis=1)
     pts = [np.asarray(t.pos, float) + (np.array([x, 0, 0]) + BODY_R * ring) @ Rt.T for x in (BODY_X[0], BODY_X[1])]
     ringc = np.stack([np.cos(a), np.sin(a), np.zeros_like(a)], axis=1)
-    pts += [np.asarray(c.pos, float) + (np.array([0, 0, z]) + ck.R_CAP * ringc) @ Rc.T for z in (0.0, ck.H_CAP)]
+    if cap_on_neck(objects):  # the cap counts as part of the tube only while it is on the neck
+        pts += [np.asarray(c.pos, float) + (np.array([0, 0, z]) + ck.R_CAP * ringc) @ Rc.T for z in (0.0, ck.H_CAP)]
     corners = np.array([[sx, sy, sz] for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)]) * np.asarray(CRIMP[1]) / 2
     pts.append(np.asarray(t.pos, float) + (np.asarray(CRIMP[0]) + corners) @ Rt.T)
     return float(np.min(np.concatenate(pts)[:, 2]))
@@ -393,7 +403,7 @@ def brush_gap(objects) -> float:
         link = key.split("/")[1]
         _, cen, rad = yg.cloud(link)
         o_, R_ = np.asarray(o, float), np.asarray(R, float)
-        if float(np.linalg.norm((o_ + R_ @ cen - bo) @ Rb)) - rad > 0.12:
+        if float(np.linalg.norm((o_ + R_ @ cen - bo) @ Rb)) - rad > 0.16:  # the brush reaches 0.14 m from its origin
             continue
         q = yg.near(link, lambda x: (o_ + x @ R_.T - bo) @ Rb, gap, 0.02)
         if len(q):
@@ -415,9 +425,12 @@ class BrushPaste(sq.Sauce):
         t = super().tip_world(pos, quat_xyzw)
         bp, r = self.brush
         n = r[:, 2]
-        if n[2] < math.cos(math.radians(LAND_DEG)):
-            return np.array([1.0, 1.0, -1.0])  # far off the field: lands off
+        nozzle = rotm(quat_xyzw) @ np.asarray(AXIS_TO_TIP, float)
+        if n[2] < math.cos(math.radians(LAND_DEG)) or -nozzle[2] < math.cos(math.radians(NOZZLE_DOWN_DEG)):
+            return np.array([1.0, 1.0, -1.0])  # bristles tipped, or the nozzle not pointing down: lands off the field
         s = float(n @ (t - bp)) / float(n[2])  # height of the nozzle above the bristle plane, plumb
+        if s > NOZZLE_HIGH:
+            return np.array([1.0, 1.0, -1.0])  # squeezed from high up: the ribbon strings and drifts, lands off
         local = r.T @ (t - np.array([0.0, 0.0, s]) - bp)
         return np.array([local[0], local[1], s])
 
@@ -490,9 +503,10 @@ class Ledger:
                                               float(np.linalg.norm(tp - self.last[1])),
                                               float(np.linalg.norm(cp - self.last[2]))) <= STILL_STEP
         gaps = {part: arm_gap(objects, part) for part in ("tube", "cap")}
+        bgap = brush_gap(objects)
         low = lowest_z(objects)
         for name, held, p, prev, rest in (
-                ("brush", brush_gap(objects) <= TOUCH, bp, None if self.last is None else self.last[0],
+                ("brush", bgap <= TOUCH, bp, None if self.last is None else self.last[0],
                  brush_low_z(objects) - TOP),
                 ("tube", min(gaps.values()) <= TOUCH, tp, None if self.last is None else self.last[1], low - TOP)):
             if self.held[name] and not held:  # let go this step: laid down, or dropped or thrown?
@@ -500,10 +514,12 @@ class Ledger:
                 self.placed[name] = -0.01 <= rest <= PLACE_GAP and v <= PLACE_V
             self.held[name] = held
         self.capped = capped_fully(objects)
-        self.clear = min(gaps.values()) > CLEAR
+        self.clear = min(min(gaps.values()), bgap) > CLEAR
         self.last = (bp, tp, cp)
+        brush_rest = brush_low_z(objects) - TOP
         done = (self.tier() == 0.75 and self.capped and self.clear and up <= UP_DEG and -0.01 <= low - TOP <= DOWN_GAP
-                and float(bp[2]) > TOP and self.placed["tube"] and self.placed["brush"] and still)
+                and -0.01 <= brush_rest <= DOWN_GAP and not self.held["brush"] and self.placed["tube"]
+                and self.placed["brush"] and still)
         self.good = self.good + 1 if done else 0
         if _PROBE:
             f = cap_fit(objects)
@@ -605,10 +621,7 @@ def _patch_resets() -> None:
     def write_data_to_sim(self):
         if _RESET["pending"] and _RESET["depth"] == 0:  # the settle's first physics step, after any jitter
             _RESET["pending"] = False
-            try:
-                _seat_cap(self)
-            except Exception as e:  # noqa: BLE001 (the cap then stays where the scene put it: seated, unshifted)
-                print(f"toothpaste: cap not re-seated ({e!r})", file=sys.stderr, flush=True)
+            _seat_cap(self)
         return write(self)
 
     def scene_reset(self, env_ids=None):
@@ -731,36 +744,43 @@ class _Tiles(sq.Tiles):
 _TILES = _Tiles()
 
 # -- scripted demo: open loop from the fixed layout --------------------------------------------------------------------------
-# The right hand does it all; the left waits out of the way. The hand comes down over the standing tube, fingers open
-# either side of the flat crimp, and grips the body lightly across its middle (a holding push on two wall panels, under
-# the paste's yield). Unscrewing: it turns the tube counterclockwise (seen from above) on the cap, which rests on the
-# counter, rising with the thread and aiming a little down into it; after each half turn it opens wide (the crimp turns
-# clear inside the open fingers), turns back and grips again. Once the thread is free it lifts the tube off, leaving the
-# cap standing on the counter, carries it nozzle-down over the bristles, 4 mm above them, squeezes 1.75 mm a side for
-# 1.2 s, eases back to the holding grip and waits 1.5 s for the flow to die. Then it lowers the nozzle into the cap and
-# screws the tube back on clockwise in the same strokes, a little past the seat, lets go and lifts clear.
+# Two hands, as a person does it: the left hand holds the tube and the right turns the cap. The left takes the lying
+# tube from above, lightly across its body (a holding push on two wall panels, under the paste's yield), and lifts it
+# level, the cap toward the robot. The right comes in pointing forward, closes on the cap and unscrews it
+# counterclockwise (seen from the cap's top) half a turn per wrist stroke, following the thread and aiming a little into
+# it; between strokes it opens, turns back and closes again. Once the thread is free it draws the cap straight off and
+# holds it. The left turns the tube nozzle-down over the brush lying on the counter, the nozzle 4 mm above the
+# bristles, squeezes 1.75 mm a side for 1.2 s, eases to the holding grip, waits 1.5 s for the flow to die, lifts off and
+# brings the tube back level. The right puts the cap back on the neck and screws it on clockwise in the same strokes,
+# a little past the seat (the grips slip once it is tight), lets go and backs away; the left lays the capped tube down,
+# lets go and lifts clear.
 HOLD_PUSH = 0.0004  # m a side: holds the tube (2.2 N a side, 1.0 kPa inside, under the 1.44 kPa yield)
-DOSE_PUSH = 0.00175  # m a side: the dosing squeeze (about 0.25 g in the offline model at 300 Pa)
+DOSE_PUSH = 0.00175  # m a side: the dosing squeeze (a pea-sized dose in the offline model at 300 Pa)
 DOSE_S = 1.2  # s held
 VARIANTS = {"much": (0.0025, 1.5), "smear": (0.0012, 0.6)}  # TOOTH_VARIANT checks of the scorer in the simulator
 TAIL_S = 1.5  # s for the flow to die after easing off
 FINGER_HALF_OPEN = 0.047  # m: each finger's inner face from the tool point when fully open
 NOZZLE_GAP = 0.004  # m: the nozzle's mouth over the bristle top while squeezing
-GRIP_X = 0.038  # m: the tool point on the tube's axis this far above the body's middle: the pads bear on the wall
-# panels' upper half, and the fingers' carriages, which cross the hand's middle from 4.4 cm behind the tool point, stay
-# 8 mm above the crimp
-YAW_LO, YAW_HI = -math.pi / 2, math.pi / 2  # the wrist's stroke: closing across x at both ends (the crimp across y)
-UNSCREW_DEG = 450.0  # turns from seated to past free (capkit's thread frees after about 405 degrees)
-SCREW_DEG = UNSCREW_DEG + 30.0  # screwing back: to the seat and a little past (the pads slip once it is tight)
-PRESS = 0.0005  # m: each stroke aims the tube this far down into the thread (the arm's give makes a light press)
+GRIP_X = 0.025  # m: the left's tool point on the tube's axis, this far from the body's middle toward the rolled end
+WORK_Z = TOP + 0.130  # height of the tube's axis while the cap is turned
+CAP_GRIP_Z = 0.010  # m: the right's tool point on the cap's axis, this far in from its mouth (the fingertips then stop
+# 3 mm short of the mouth, clear of the tube's shoulder)
+CAP_SQUEEZE = 0.003  # m a side: the right closes this far past the cap's side (about 15 N a finger on the rigid cap)
+CAP_OPEN = 0.010  # m: the right's pads stand this far off the cap's side when open between strokes
+YAW_LO, YAW_HI = -math.pi / 2, math.pi / 2  # the right wrist's stroke about its pointing axis
+UNSCREW_DEG = 450.0  # turns from seated to past free (capkit's thread frees after about 400 degrees)
+SCREW_DEG = UNSCREW_DEG + 30.0  # screwing back: to the seat and a little past (the grips slip once it is tight)
+PRESS = 0.0003  # m: each stroke aims the cap this far into the thread (the arm's give makes a light push)
 STEP_DEG = 90.0  # waypoints along a stroke (each a smooth start and stop)
 STROKE_S = 3.5  # s per half turn
+DRAW_OFF = 0.025  # m: the cap drawn straight back off the neck once free
 K_FINGER = 5000.0  # N/m: the YAM finger's position servo (yam_arena GRIPPER stiffness), in series with the wall
+PITCH_FWD = -math.pi / 2  # a hand pointing forward (+x)
 
 
 def finger_for(half: float) -> float:
     """Gripper command whose finger faces stand `half` m from the tool point."""
-    return FINGER_CLOSED + (FINGER_OPEN - FINGER_CLOSED) * max(0.0, half) / FINGER_HALF_OPEN
+    return FINGER_CLOSED + (FINGER_OPEN - FINGER_CLOSED) * min(FINGER_HALF_OPEN, max(0.0, half)) / FINGER_HALF_OPEN
 
 
 def push_force(push: float) -> float:
@@ -773,34 +793,49 @@ def push_force(push: float) -> float:
 def tube_grip(push: float) -> float:
     """Gripper command that pushes each gripped panel `push` m in: the finger's servo is a spring in series with the
     panel, so it is commanded past the panel by the force it must make over its stiffness."""
-    return finger_for(BODY_R - push - push_force(push) / K_FINGER)
+    return finger_for(BODY_R - PANEL_INSET - push - push_force(push) / K_FINGER)
 
 
-def grip_z(turned_deg: float) -> float:
-    """World height of the tool point on the gripped tube, unscrewed `turned_deg` from seated, standing on its cap."""
-    return TUBE_START[2] - SPAWN_GAP + GRIP_X + ck.PITCH * turned_deg / 360.0
+def work_tube():
+    """The tube's pose (origin, rotation) held level at the work height, where it was picked up."""
+    return np.array([TUBE_XY[0], TUBE_XY[1], WORK_Z]), R_LIE
 
 
-def _tw(duration, pos, finger, label, yaw):
-    return kit.Tilted(float(duration), tuple(float(v) for v in pos), float(finger), label, yaw=float(yaw))
+def cap_tcp(turned_deg: float, back: float = 0.0) -> tuple:
+    """The right's tool point on the cap's axis with the cap turned `turned_deg` off its seat along the thread (pushed
+    PRESS into it), drawn `back` m further off along the axis, the tube at its work pose."""
+    o, R = work_tube()
+    co, cR = seated_cap_in_tube(0.0)
+    axis = R @ cR[:, 2]  # the cap's axis, out of its top (world -x)
+    p = o + R @ co + axis * (CAP_GRIP_Z + ck.PITCH * turned_deg / 360.0 - PRESS + back)
+    return tuple(float(v) for v in p)
 
 
-def strokes(total_deg: float, sign: float, start_yaw: float, xy, turned0: float, hold: float, label: str) -> tuple:
-    """Waypoints that turn the gripped tube `total_deg` (sign +1 unscrews: counterclockwise from above) in wrist strokes
-    between YAW_LO and YAW_HI, following the thread (and PRESS down into it), regripping between strokes; and the yaw
-    and the tube's turn at the end (still gripped)."""
+def left_tcp_level(o, R) -> tuple:
+    return tuple(float(v) for v in np.asarray(o) + R @ np.array([GRIP_X, 0.0, 0.0]))
+
+
+def _tw(duration, pos, finger, label, yaw=0.0, pitch=0.0):
+    return kit.Tilted(float(duration), tuple(float(v) for v in pos), float(finger), label, yaw=float(yaw),
+                      pitch=float(pitch))
+
+
+def strokes(total_deg: float, sign: float, start_yaw: float, turned0: float, hold: float, label: str) -> tuple:
+    """The right's waypoints that turn the cap `total_deg` (sign +1 unscrews: counterclockwise seen from its top) in
+    wrist strokes between YAW_LO and YAW_HI, following the thread, regripping between strokes; and the yaw and the
+    cap's turn at the end (still gripped)."""
     out, yaw, turned, left, k = [], start_yaw, turned0, total_deg, 0
-    open_ = finger_for(FINGER_HALF_OPEN)
+    open_ = finger_for(ck.R_CAP + CAP_OPEN)
     while left > 1e-6:
         room = math.degrees(YAW_HI - yaw) if sign > 0 else math.degrees(yaw - YAW_LO)
-        if room < 1.0:  # regrip: open wide, turn back half a turn (the crimp turns clear inside the open hand), grip
-            z = grip_z(turned) - PRESS
-            out.append(_tw(1.0, (xy[0], xy[1], z), open_, f"{label}: open wide", yaw))
+        if room < 1.0:  # regrip: open, turn back half a turn clear of the cap, close
+            p = cap_tcp(max(0.0, turned))
+            out.append(_tw(1.0, p, open_, f"{label}: open", yaw, PITCH_FWD))
             for _ in range(2):  # two quarter turns, so the wrist turns back the way it came
                 yaw -= sign * math.pi / 2
-                out.append(_tw(1.6, (xy[0], xy[1], z), open_, f"{label}: turn back half a turn", yaw))
-            out += [_tw(1.3, (xy[0], xy[1], z), hold, f"{label}: grip again", yaw),
-                    _tw(0.3, (xy[0], xy[1], z), hold, f"{label}: settle", yaw)]
+                out.append(_tw(1.6, p, open_, f"{label}: turn back half a turn", yaw, PITCH_FWD))
+            out += [_tw(1.3, p, hold, f"{label}: grip again", yaw, PITCH_FWD),
+                    _tw(0.3, p, hold, f"{label}: settle", yaw, PITCH_FWD)]
             continue
         k += 1
         d = min(left, room)
@@ -808,56 +843,104 @@ def strokes(total_deg: float, sign: float, start_yaw: float, xy, turned0: float,
         for i in range(1, n + 1):
             yaw_i = yaw + sign * math.radians(d * i / n)
             t_i = turned + sign * d * i / n
-            out.append(_tw(STROKE_S * d / 180.0 / n, (xy[0], xy[1], grip_z(max(0.0, t_i)) - PRESS), hold,
-                           f"{label}: stroke {k}", yaw_i))
+            out.append(_tw(STROKE_S * d / 180.0 / n, cap_tcp(max(0.0, t_i)), hold, f"{label}: stroke {k}", yaw_i,
+                           PITCH_FWD))
         yaw += sign * math.radians(d)
         turned += sign * d
         left -= d
     return out, yaw, turned
 
 
+def _hold(seq, duration, label):
+    """Repeat a sequence's last waypoint for `duration` s (waiting for the other hand)."""
+    if duration > 1e-6:
+        w = seq[-1]
+        if isinstance(w, kit.Home):
+            seq.append(kit.Home(float(duration), label=label))
+        else:
+            seq.append(kit.Tilted(float(duration), w.pos, w.finger, label, yaw=w.yaw, roll=w.roll, pitch=w.pitch))
+
+
+def _t(seq):
+    return sum(w.duration for w in seq)
+
+
 def demo():
-    """The right hand unscrews the tube off its cap, doses the bristles, screws it back on and lets go.
-    (TOOTH_VARIANT=nothing: both hands park high and wait, touching nothing: the scorer's do-nothing check.)"""
+    """Left holds the tube, right unscrews the cap; left doses; right screws the cap back on; left lays the tube down.
+    (TOOTH_VARIANT=nothing: both arms stay at their ready pose: the scorer's do-nothing check.)"""
     if os.environ.get("TOOTH_VARIANT") == "nothing":
         return {"left": [kit.Home(10.0, label="stay at the ready pose")],
                 "right": [kit.Home(10.0, label="stay at the ready pose")]}
     push, dose_s = VARIANTS.get(os.environ.get("TOOTH_VARIANT", ""), (DOSE_PUSH, DOSE_S))
     hold, dose = tube_grip(HOLD_PUSH), tube_grip(push)
-    open_ = finger_for(FINGER_HALF_OPEN)
-    xy = TUBE_XY
-    z0 = grip_z(0.0) - PRESS
-    right = [_tw(3.0, (xy[0], xy[1], z0 + 0.10), open_, "over the tube", YAW_LO),
-             _tw(2.0, (xy[0], xy[1], z0), open_, "fingers either side of the body", YAW_LO),
-             _tw(0.5, (xy[0], xy[1], z0), open_, "settle", YAW_LO),
-             _tw(1.3, (xy[0], xy[1], z0), hold, "grip the body", YAW_LO),
-             _tw(0.3, (xy[0], xy[1], z0), hold, "settle", YAW_LO)]
-    wps, yaw, turned = strokes(UNSCREW_DEG, +1.0, YAW_LO, xy, 0.0, hold, "unscrew")
+    l_open = finger_for(FINGER_HALF_OPEN)
+    cap_hold, cap_open = finger_for(ck.R_CAP - CAP_SQUEEZE), finger_for(ck.R_CAP + CAP_OPEN)
+    o0 = np.asarray(TUBE_START, float)
+    pick = left_tcp_level(o0 - np.array([0.0, 0.0, SPAWN_GAP]), R_LIE)
+    work = left_tcp_level(*work_tube())
+    # left: take the tube and hold it level at the work height
+    left = [_tw(3.0, (pick[0], pick[1], pick[2] + 0.10), l_open, "over the tube"),
+            _tw(2.0, pick, l_open, "fingers either side of the body"),
+            _tw(0.5, pick, l_open, "settle"),
+            _tw(1.3, pick, hold, "grip the body"),
+            _tw(0.3, pick, hold, "settle"),
+            _tw(2.0, work, hold, "lift it level, cap toward the robot"),
+            _tw(0.5, work, hold, "hold it")]
+    # right: in to the cap, grip, unscrew, draw it off
+    right = [kit.Home(max(0.5, _t(left) - 5.5), label="wait at the ready pose"),
+             _tw(3.0, cap_tcp(0.0, back=0.05), cap_open, "pointing at the cap", YAW_LO, PITCH_FWD),
+             _tw(2.0, cap_tcp(0.0), cap_open, "fingers either side of the cap", YAW_LO, PITCH_FWD),
+             _tw(0.5, cap_tcp(0.0), cap_open, "settle", YAW_LO, PITCH_FWD),
+             _tw(1.3, cap_tcp(0.0), cap_hold, "grip the cap", YAW_LO, PITCH_FWD),
+             _tw(0.3, cap_tcp(0.0), cap_hold, "settle", YAW_LO, PITCH_FWD)]
+    _hold(left, _t(right) - _t(left), "hold it while the cap is gripped")
+    wps, yaw, turned = strokes(UNSCREW_DEG, +1.0, YAW_LO, 0.0, cap_hold, "unscrew")
     right += wps
-    lifted = grip_z(turned) + 0.040
-    right.append(_tw(1.5, (xy[0], xy[1], lifted), hold, "lift the tube off the cap", yaw))
-    # nozzle-down over the bristles: the nozzle's mouth is (GRIP_X - TIP[0]) below the tool point
+    right.append(_tw(1.5, cap_tcp(turned, back=DRAW_OFF), cap_hold, "draw the cap off", yaw, PITCH_FWD))
+    _hold(left, _t(right) - _t(left), "hold it while the cap comes off")
+    # left: nozzle-down over the bristles, dose, back level
     bx, by, bz = BRUSH_START
-    at = (bx, by, bz + NOZZLE_GAP + (GRIP_X - TIP[0]))
-    over = (bx, by, max(at[2] + 0.040, lifted))
-    right += [_tw(2.0, over, hold, "carry it over the bristles", yaw),
-              _tw(1.5, at, hold, "nozzle 4 mm over the bristles", yaw),
-              _tw(0.5, at, hold, "settle", yaw),
-              _tw(0.3, at, dose, "squeeze", yaw),
-              _tw(dose_s, at, dose, "hold the squeeze", yaw),
-              _tw(0.3, at, hold, "ease off", yaw),
-              _tw(TAIL_S, at, hold, "let the flow die", yaw),
-              _tw(1.0, over, hold, "lift off the dab", yaw),
-              _tw(2.0, (xy[0], xy[1], lifted), hold, "back over the cap", yaw),
-              _tw(1.5, (xy[0], xy[1], grip_z(turned) - PRESS), hold, "nozzle into the cap", yaw),
-              _tw(0.5, (xy[0], xy[1], grip_z(turned) - PRESS), hold, "settle", yaw)]
-    wps, yaw, turned = strokes(SCREW_DEG, -1.0, yaw, xy, turned, hold, "screw on")
+    r_dose = np.array([[0.0, 0.0, -1.0], [0.0, 1.0, 0.0], [1.0, 0.0, 0.0]])  # the hand pointing forward: nozzle down
+    at_o = np.array([bx, by, bz + NOZZLE_GAP]) - r_dose @ np.asarray(TIP)
+    at = left_tcp_level(at_o, r_dose)
+    over = (at[0], at[1], at[2] + 0.040)
+    high_level = (work[0], work[1], TOP + 0.15)
+    high_dose = (at[0], at[1], TOP + 0.15)
+    left += [_tw(4.0, high_level, hold, "turn it nozzle-down", pitch=PITCH_FWD),
+             _tw(2.0, high_dose, hold, "over the brush", pitch=PITCH_FWD),
+             _tw(1.5, over, hold, "nozzle 4 cm over the bristles", pitch=PITCH_FWD),
+             _tw(1.2, at, hold, "nozzle 4 mm over the bristles", pitch=PITCH_FWD),
+             _tw(0.5, at, hold, "settle", pitch=PITCH_FWD),
+             _tw(0.3, at, dose, "squeeze", pitch=PITCH_FWD),
+             _tw(dose_s, at, dose, "hold the squeeze", pitch=PITCH_FWD),
+             _tw(0.3, at, hold, "ease off", pitch=PITCH_FWD),
+             _tw(TAIL_S, at, hold, "let the flow die", pitch=PITCH_FWD),
+             _tw(1.0, over, hold, "lift off the dab", pitch=PITCH_FWD),
+             _tw(1.5, high_dose, hold, "up", pitch=PITCH_FWD),
+             _tw(2.0, high_level, hold, "back over its place", pitch=PITCH_FWD),
+             _tw(4.0, work, hold, "turn it level at the work height"),
+             _tw(0.5, work, hold, "hold it")]
+    _hold(right, _t(left) - _t(right), "hold the cap while the tube is away")
+    # right: cap back on the neck, screwed on
+    right += [_tw(1.5, cap_tcp(turned, back=0.003), cap_hold, "cap to the neck", yaw, PITCH_FWD),
+              _tw(1.0, cap_tcp(turned), cap_hold, "onto the thread", yaw, PITCH_FWD),
+              _tw(0.3, cap_tcp(turned), cap_hold, "settle", yaw, PITCH_FWD)]
+    _hold(left, _t(right) - _t(left), "hold it while the cap goes back on")
+    wps, yaw, turned = strokes(SCREW_DEG, -1.0, yaw, turned, cap_hold, "screw on")
     right += wps
-    zs = grip_z(max(0.0, turned)) - PRESS
-    right += [_tw(1.0, (xy[0], xy[1], zs), open_, "let go", yaw),
-              _tw(2.0, (xy[0], xy[1], zs + 0.07), open_, "lift clear of the crimp", yaw),
-              kit.Home(2.5, label="back to the ready pose"),
-              kit.Home(3.0, label="wait")]
-    total = sum(w.duration for w in right)
-    left = [kit.Home(total, label="wait at the ready pose")]
+    p_end = cap_tcp(max(0.0, turned))
+    right += [_tw(1.0, p_end, cap_open, "let go of the cap", yaw, PITCH_FWD),
+              _tw(1.5, (p_end[0] - 0.05, p_end[1], p_end[2]), cap_open, "back away", yaw, PITCH_FWD),
+              kit.Home(6.0, label="back to the ready pose")]
+    _hold(left, _t(right) - 6.0 - _t(left), "hold it while the right lets go")
+    # left: lay the capped tube down, let go, lift clear
+    down = left_tcp_level(o0 + np.array([0.0, 0.0, 0.001 - SPAWN_GAP]), R_LIE)
+    left += [_tw(2.0, (down[0], down[1], down[2] + 0.02), hold, "down to the counter"),
+             _tw(1.0, down, hold, "lay it down"),
+             _tw(0.3, down, hold, "settle"),
+             _tw(1.0, down, l_open, "let go"),
+             _tw(1.5, (down[0], down[1], down[2] + 0.08), l_open, "lift clear"),
+             kit.Home(2.5, label="back to the ready pose"),
+             kit.Home(3.0, label="wait")]
+    _hold(right, _t(left) - _t(right), "wait")
     return {"left": left, "right": right}
