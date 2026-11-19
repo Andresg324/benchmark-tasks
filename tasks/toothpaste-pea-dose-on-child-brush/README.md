@@ -61,13 +61,13 @@ https://pubmed.ncbi.nlm.nih.gov/29500282/).
 
 ## Scoring
 
-Grams on the bristles = mL x 1.30 g/mL (pastes run 1.3 to 1.6 g/mL). The real trial weighs grams directly, so the
-density matters only in simulation.
+Paste is scored in grams: the real trial weighs it, and the simulation converts mL at 1.30 g/mL (pastes run 1.3 to
+1.6 g/mL), so the density matters only in simulation.
 
 | Score | Condition |
 |---|---|
 | 1.0 | 0.15 to 0.35 g on the bristle field and at most 0.05 g anywhere else; the cap screwed fully on; the bristles within 45 degrees of facing up; the tube and the brush both resting on the counter (lowest point within 3 mm of it) with no part of either arm touching them or the cap (in simulation every arm link at least 5 mm clear); each let go resting on the counter, not dropped or thrown; all still (under 1 cm/s) for 1 s |
-| 0.75 | the same dose, clean and capped, but not yet let go or not yet still |
+| 0.75 | the same dose, clean and capped, when any other condition for 1.0 is not met (not yet let go, a tube or brush dropped or thrown, the bristles more than 45 degrees from up, or not yet still) |
 | 0.5 | a pea-sized dab with the tube left uncapped or its cap not screwed fully on; or a pea-sized dab with more than 0.05 g off the bristles |
 | 0.25 | 0.05 to 0.15 g (a smear: the under-3 dose) or 0.35 to 0.70 g (too much: a half load) |
 | 0 | under 0.05 g or over 0.70 g; doing nothing scores 0 (the tube starts capped, no paste out) |
@@ -90,8 +90,8 @@ https://www.aapd.org/globalassets/media/publications/archives/denbesten-18-04.pd
 between the CDC pea and the about-0.1 g rice-grain smear for under-3s
 (https://www.smilesforlifeoralhealth.org/topic/how-much-toothpaste/).
 
-**Why 0.05 g off the bristles.** That is 5 counts on the 0.01 g scale, about a fifth of a pea, the smallest amount
-the real trial weighs reliably after a tissue wipe.
+**Why 0.05 g off the bristles.** That is 5 counts on the 0.01 g scale and about a fifth of a pea: a stray smear, well
+above the scale's resolution.
 
 **Why the arms must be off the tube, the cap and the brush.** A cap held on, or pressed onto a loose one, is not
 closed until it is let go, and a brush still in a hand is not set down.
@@ -135,7 +135,7 @@ remove foil seal" (Target, TCIN 1001365458, UPC 037000951438): a screw cap on a 
 - **The cap.** A 35 mm polypropylene screw cap on the 15 mm neck (Amcor "35mm Screw Cap": 35 mm, neck 15 mm, PP, for
   tubes with a removable foil seal). Its height and mass are those of the same maker's 35 mm Softline flip-top
   screw-on closure for this 15 x 1,5 neck finish, 20.8 mm and 4.4 g; its inertia is that of a thin-walled cup of that
-  size and mass. Both are measured on the trial cap.
+  size and mass. Both are checked on the trial cap with the caliper and the scale before the first trial [M].
 - **Friction.** The cap is polypropylene and the tube's laminate and neck polyethylene: polyethylene on polyethylene,
   clean and dry, 0.2 (Engineering ToolBox, "Friction - Coefficients for Common Materials and Surfaces"), on every
   surface of the tube and the cap. The YAM's finger pads are rubber-faced: 1.0 static and 0.8 sliding (rubber on
@@ -207,7 +207,7 @@ tube and brush let go on the counter with the arms off them. No force gauge and 
 | Item | Product | Notes |
 |---|---|---|
 | Toothpaste | Kid's Crest Cavity Protection fluoride toothpaste, Bubblegum, 4.2 oz tube with screw cap (Target TCIN 1001365458, UPC 037000951438) | its directions: "twist off cap to remove foil seal"; remove the foil seal before the first trial |
-| Toothbrush | Colgate Kids Extra Soft toothbrush, Ocean Explorer 4-pack (Target A-75563150, UPC 035000458476) | one new brush per trial, or wash and dry it fully between trials |
+| Toothbrush | Colgate Kids Extra Soft toothbrush, Ocean Explorer 4-pack (Target A-75563150, UPC 035000458476) | one new brush per trial, or a set of washed brushes in rotation, each used only once fully dry (its weight steady on the scale) |
 | Scale | American Weigh Scales AWS-100-CAL pocket scale: 100 g x 0.01 g, with its 100 g calibration weight | calibrate at the start of each session |
 | Rule | any 150 mm steel rule with 0.5 mm marks | for the top photo of the dab and checking the marks |
 | Tape measure | any metric tape measure | for laying out the marks from the arm bases |
@@ -220,14 +220,15 @@ A low-cost setup: the robot and a phone aside, every item is a common household 
 **Setup marks** (once). From the midpoint between the arm bases, x forward, y to the robot's left:
 - Brush: a tape outline of the brush lying on its back, the bristle field's middle at x 300 mm, y +20 mm (within
   5 mm), its long axis along x, head away from the robot.
-- Tube: a tape outline of the capped tube lying on its side along x, its body's middle at x 300 mm, y +110 mm (within
-  5 mm), cap toward the robot, the rolled end flat on the counter.
+- Tube: a tape outline of the capped tube lying on its side along x, cap toward the robot, the front end of its round
+  body (where the shoulder starts) at x 250 mm, y +110 mm (within 5 mm), the rolled end flat on the counter.
 
 **Starting state** (each trial). Keep the room, the paste and the scale at 20-24 C (a paste's yield stress changes
 with temperature).
 1. The tube holds 50 to 70 g of paste (gross weight minus the weighed empty tube and cap). Roll it flat from the crimp
-   up to the paste, wipe the nozzle flush, screw the cap on by hand until it stops, and lay the tube at its mark. Let
-   it rest 1 min so the laminate springs back.
+   up to the paste, hold it nozzle up and press gently until paste fills the nozzle to its mouth (no air at the tip),
+   wipe the nozzle flush, screw the cap on with the fingertips until it just stops (no extra twist), and lay the tube
+   at its mark. Let it rest 1 min so the laminate springs back.
 2. Lay the clean, dry brush on its back at its mark.
 3. Both arms at their ready pose.
 
@@ -271,11 +272,11 @@ drives into the counter, the other arm or the tube.
 | Nozzle bore | 7.5 mm [M] | caliper | US 9567138 (0.28-0.32 in) |
 | Brush | 151 mm long; head 26 x 12 mm; bristle field 20 x 9 mm, 9 mm tall; 14 g [M] | caliper, scale | [M] on the trial brush |
 | Fill | 50 to 70 g of paste | scale | reset rule above |
-| Setup marks | brush at (300, +20) mm, tube at (300, +110) mm, within 5 mm | tape measure, rule | the simulator's start |
+| Setup marks | brush at (300, +20) mm, tube's shoulder at (250, +110) mm, within 5 mm | tape measure, rule | the simulator's start |
 | Room temperature | 20-24 C | room thermometer | keeps the paste's yield stress steady between trials |
 
-[M] = measured on the trial object before the first trial; until then the value given is the simulation's. No [M] item
-is part of the real score.
+[M] = checked with the caliper or the scale on the trial object before the first trial; the simulation uses the value
+given. No [M] item is part of the real score.
 
 ## Runtime and seeds
 
