@@ -772,7 +772,8 @@ VARIANTS = {"much": (0.0025, 1.5), "smear": (0.0012, 0.6)}  # TOOTH_VARIANT chec
 TAIL_S = 1.5  # s for the flow to die after easing off
 FINGER_HALF_OPEN = 0.047  # m: each finger's inner face from the tool point when fully open
 NOZZLE_GAP = 0.004  # m: the nozzle's mouth over the bristle top while squeezing
-GRIP_X = 0.025  # m: the left's tool point on the tube's axis, this far from the body's middle toward the rolled end
+GRIP_X = 0.0  # m: the left holds the tube across its center of mass (the body's middle): a two-finger pinch turns
+# freely about its closing line, so an offset lets the tube's weight swing it (25 mm off swings it tens of degrees)
 WORK_Z = TOP + 0.130  # height of the tube's axis while the cap is turned
 CAP_GRIP_Z = 0.010  # m: the right's tool point on the cap's axis, this far in from its mouth (the fingertips then stop
 # 3 mm short of the mouth, clear of the tube's shoulder)
