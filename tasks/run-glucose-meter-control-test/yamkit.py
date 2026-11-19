@@ -39,6 +39,7 @@ from yam_arena.task_file import Box, ObjectState
 GRIPPERS = {"left_gripper": "left_robot", "right_gripper": "right_robot"}
 TIP_LINKS = ("tip_left", "tip_right")
 _OPENING: dict[str, float] = {}
+_OPEN_TARGET: dict[str, float] = {}  # the fingers' commanded opening (same 0..1 scale)
 _EPISODE = {"count": 0, "last": None}  # trials seen, and the env's step count within the current one
 _PROPS: set[str] = set()
 
@@ -144,15 +145,17 @@ def band(path, width: float, thickness: float, look: Look, normal=(1, 0, 0)) -> 
 
 @dataclass(frozen=True)
 class Collider:
-    """An invisible box (`size`) or cylinder (`radius`, `height`, along `axis`) collider in the prop's frame. (`axis`
-    "X", "Y" or "Z"; default "Z".)"""
+    """An invisible box (`size`), cylinder (`radius`, `height`, along `axis`) or convex-hull (`hull` points and their
+    `faces`) collider in the prop's or link's frame. (`axis` "X", "Y" or "Z"; default "Z".) Small round parts that
+    slide on each other want hulls: PhysX approximates a USD cylinder with a coarse convex, whose flats and corners
+    make sub-millimetre ledges."""
 
     center: tuple
     size: tuple | None = None
     radius: float = 0.0
     height: float = 0.0
     axis: str = "Z"
-    hull: tuple | None = None  # flatness task: convex-hull mesh collider, points relative to `center` (a wedge) ...
+    hull: tuple | None = None  # a convex-hull mesh collider: its points, relative to `center` ...
     faces: tuple = ()  # ... and its triangles (indices into `hull`), so no hull library is needed at start-up
 
     def extent(self, k: int) -> float:
@@ -185,6 +188,7 @@ class Prop(Box):
     meshes: tuple = field(default=())
     colliders: tuple = field(default=())
     tilt_xyzw: tuple = (0.0, 0.0, 0.0, 1.0)
+    friction: tuple | None = None  # (static, dynamic) of the object's material instead of the arena's grippy default
 
 
 def _linear(c: float) -> float:
@@ -340,8 +344,6 @@ class Mechanism(Prop):
     the link's origin, at its anchor), and the joint through `joint(objects, "name/link")`."""
 
     links: tuple = field(default=())
-    friction: tuple | None = None  # (static, dynamic) for the whole mechanism instead of the arena's grippy material
-    # (coffee-carafe task: a glossy plastic base and non-stick plate the carafe slides on)
 
 
 @dataclass(frozen=True)
@@ -403,6 +405,17 @@ def _body_usda(name: str, translate, mass, meshes, colliders, looks, floating=Fa
                    f'{i2}    uniform bool doubleSided = 1\n'
                    f'{i2}    rel material:binding = </Root/Looks/M{looks.index(m.look)}>\n{i2}}}\n')
     for i, c in enumerate(colliders):
+        if c.hull is not None:  # a convex mesh collider (PhysX cooks the hull of the points)
+            out.append(f'{i2}def Mesh "C{i}" (\n{i2}    prepend apiSchemas = ["PhysicsCollisionAPI", '
+                       f'"PhysicsMeshCollisionAPI"]\n{i2})\n{i2}{{\n'
+                       f'{i2}    uniform token purpose = "guide"\n'
+                       f'{i2}    uniform token physics:approximation = "convexHull"\n'
+                       f'{i2}    point3f[] points = [{", ".join(_fmt(p) for p in c.hull)}]\n'
+                       f'{i2}    int[] faceVertexCounts = [{", ".join(["3"] * len(c.hull_faces))}]\n'
+                       f'{i2}    int[] faceVertexIndices = [{", ".join(str(j) for f in c.hull_faces for j in f)}]\n'
+                       f"{i2}    double3 xformOp:translate = {_fmt(c.center)}\n"
+                       f'{i2}    uniform token[] xformOpOrder = ["xformOp:translate"]\n{i2}}}\n')
+            continue
         kind = "Cube" if c.size is not None else "Cylinder"
         out.append(f'{i2}def {kind} "C{i}" (\n{i2}    prepend apiSchemas = ["PhysicsCollisionAPI"]\n{i2})\n{i2}{{\n'
                    f'{i2}    uniform token purpose = "guide"\n')
@@ -744,7 +757,9 @@ def _patch(scene) -> None:
             return original_task_object(spec)
         _PROPS.add(spec.name)
         yaw = (0.0, 0.0, math.sin(spec.yaw / 2), math.cos(spec.yaw / 2))
-        addon = {"physics_material": scene._grippy()}
+        addon = {"physics_material": scene._grippy() if spec.friction is None else
+                 scene.sim_utils.RigidBodyMaterialCfg(static_friction=float(spec.friction[0]),
+                                                      dynamic_friction=float(spec.friction[1]))}
         if spec.mass is None:
             addon.update(func=scene._spawn_fixture,
                          rigid_props=scene.PhysxRigidBodyPropertiesCfg(kinematic_enabled=True))
@@ -794,6 +809,13 @@ def _patch(scene) -> None:
             tips = tcp + rot @ np.array([0.0, 0.0, PAD_TIP_PAST_TCP])
             j = art.joint_names.index("joint7")
             _OPENING[key] = float(abs(art.data.joint_pos.torch[0, j].item()) / abs(FINGER_OPEN))
+            tgt = getattr(art.data, "joint_pos_target", None)
+            if tgt is not None:
+                tgt = getattr(tgt, "torch", tgt)
+                _OPEN_TARGET[key] = float(abs(tgt[0, j].item()) / abs(FINGER_OPEN))
+            elif not _OPEN_TARGET.get("_warned"):
+                print("yamkit: no joint_pos_target on the arm's data; open_target() is nan", file=sys.stderr, flush=True)
+                _OPEN_TARGET["_warned"] = 1.0
             out[key] = ObjectState(pos=tcp, quat_xyzw=np.array([x, y, z, w]), lin_vel=np.zeros(3),
                                    ang_vel=np.zeros(3), low=np.minimum(tcp, tips), high=np.maximum(tcp, tips))
         return out
@@ -836,6 +858,11 @@ def opening(objects, side: str) -> float:
     """How far a gripper's fingers are open, 0 (closed) to 1 (fully open), as of the last step; side is
     "left_gripper" or "right_gripper"."""
     return _OPENING.get(side, float("nan"))
+
+
+def open_target(objects, side: str) -> float:
+    """The fingers' commanded opening, 0 (closed) to 1 (fully open), as of the last step (nan if not read)."""
+    return _OPEN_TARGET.get(side, float("nan"))
 
 
 if "yam_arena.scene" in sys.modules:

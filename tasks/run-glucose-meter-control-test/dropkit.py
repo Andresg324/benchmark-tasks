@@ -9,6 +9,7 @@ No fluid simulation: a deterministic, scored model of what a dropper bottle does
   space. Then it flows into a drop hanging at the tip at `flow` * (F - open_force) (uL/s per N): a firm hold below
   `open_force` releases nothing; a moderate squeeze grows one drop in about a second; squeezing harder or longer
   makes more. When the hanging drop reaches `drop_ul` it detaches and falls straight down.
+- A sealed tip (the task's `sealed(objects)`, e.g. a cap over it) releases nothing however hard the squeeze.
 - Easing off below `open_force` sucks a hanging, not yet detached drop back into the bottle (the walls spring back
   and draw air in through the tip), as a real bottle does.
 - Each released drop is handed to the task's `land(objects, tip_world)` function, which says where it lands
@@ -71,13 +72,15 @@ class _State:
     drops: list = field(default_factory=list)
 
 
-_CFG: dict = {"bottle": None, "land": None}
+_CFG: dict = {"bottle": None, "land": None, "sealed": None, "force": None}
 _S = _State()
 
 
-def setup(bottle: Bottle, land) -> None:
-    """Register the task's bottle and its landing function land(objects, tip_world) -> (zone, point, info)."""
-    _CFG["bottle"], _CFG["land"] = bottle, land
+def setup(bottle: Bottle, land, sealed=None, force=None) -> None:
+    """Register the task's bottle and its landing function land(objects, tip_world) -> (zone, point, info), and
+    optionally sealed(objects) -> bool: the tip is closed (a cap over it), so a squeeze releases nothing, and
+    force(objects) -> N: the squeeze force on the walls from the task (instead of the bottle's wall pads)."""
+    _CFG["bottle"], _CFG["land"], _CFG["sealed"], _CFG["force"] = bottle, land, sealed, force
 
 
 def _rot(q) -> np.ndarray:
@@ -114,6 +117,8 @@ def squeeze(objects, spec: Bottle | None = None) -> float:
 
 
 def squeeze_force(objects, spec: Bottle | None = None) -> float:
+    if _CFG["force"] is not None:
+        return float(_CFG["force"](objects))
     spec = spec or _CFG["bottle"]
     return spec.wall_k * squeeze(objects, spec)
 
@@ -139,7 +144,8 @@ def update(objects) -> None:
     if spec.name not in objects:
         return
     f = squeeze_force(objects, spec)
-    if f < spec.open_force or not tip_down(objects, spec):
+    closed = _CFG["sealed"] is not None and _CFG["sealed"](objects)
+    if closed or f < spec.open_force or not tip_down(objects, spec):
         _S.hanging = 0.0  # easing off (or turning the tip up) draws a hanging drop back in
         return
     left = spec.capacity_ul - _S.released - _S.hanging
@@ -244,6 +250,6 @@ class _Hook(kit._Hook):
 
 if "yam_arena.scene" in sys.modules:
     _patch(sys.modules["yam_arena.scene"])
-else:  # replace yamkit's import hook with one that also adds the drop step after yamkit's patch (as pourkit does)
+else:  # replace yamkit's import hook with one that also adds the drop step after yamkit's patch
     sys.meta_path[:] = [f for f in sys.meta_path if not isinstance(f, kit._Hook)]
     sys.meta_path.insert(0, _Hook())

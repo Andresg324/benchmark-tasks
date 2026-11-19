@@ -26,7 +26,7 @@ import sys
 # -- materials ---------------------------------------------------------------------------------------------------
 
 DEFAULT_PAD = (0.5, 0.5)  # PhysX default material: what the stock YAM pads get (no material bound)
-RUBBER_PAD = (1.0, 0.8)  # static, dynamic: rubber pad faces (rubber on card/plastic/wood 0.6-1.2), as in sheetkit
+RUBBER_PAD = (1.0, 0.8)  # static, dynamic: rubber pad faces (rubber on card/plastic/wood 0.6-1.2)
 TIP_LINKS = ("tip_left", "tip_right")
 ROBOTS = ("left_robot", "right_robot")
 

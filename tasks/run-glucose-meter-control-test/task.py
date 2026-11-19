@@ -6,19 +6,20 @@ the bottle's rim; a bottle of Contour Next control solution (normal), shaken and
 in a rest made of two stacks of glass slides; and a clean glass microscope slide (the maker's "clean, nonabsorbent
 surface").
 
-Run the control test: uncap the control bottle (one hand holds it, the other pulls the cap off and stands it on
-the counter) and lay it back in its rest; take the strip, push its grey end fully into the meter's port (the meter turns on), squeeze one
-small drop of control solution onto the slide, touch the strip's sample tip to the drop and hold it there until the
-strip has drawn the sample, then put the meter down, cap the control bottle and lay it back in its rest. The meter's
-reading is compared with the range printed on the strip bottle.
+Run the control test: uncap the control bottle (one hand holds it, the other pulls the cap off and stands it on the
+counter) and lay it back in its rest; take the strip, push its gray end fully into the meter's port (the meter turns
+on), squeeze one small drop of control solution onto the slide, touch the strip's sample tip to the drop and hold it
+there until the strip has drawn the sample, then put the meter down, cap the control bottle and lay it back in its
+rest. The meter's reading is compared with the range printed on the strip bottle.
 
 Physical model (rigid bodies; disclosed in the README): the meter is a free 36 g body whose port is a slot with
 rounded lips; a sprung contact roller inside the port presses on an inserted strip (the meter's contacts), which is
 what holds a strip in the port. The strip is a thin rigid plate. The control bottle is a squeezable dropper (dropkit:
-sprung wall pads; a drop forms only above the opening squeeze force with the tip pointing down, and falls straight
-down). The drop on the slide is a lumped bead (its volume's spherical cap); the strip draws the sample when its tip
-stays in the bead for the sip time with no other part of the strip in the liquid. The cap is a rigid cup that slides
-over the bottle's conical nozzle. Every threshold below appears once, with the same value in task.json and README.
+the walls' force from the hand that pinches it; a drop forms only above the opening squeeze force with the tip
+pointing down and the cap off the nozzle, and falls straight down). The drop on the slide is a lumped bead (its
+volume's spherical cap); the strip draws the sample when its tip stays in the bead for the sip time with no other
+part of the strip in the liquid. The cap's round bore is a close sliding fit on a cylindrical band at the nozzle's
+base, held on by friction. Every threshold below appears once, with the same value in task.json and README.
 """
 import math
 import os
@@ -30,7 +31,7 @@ import numpy as np  # noqa: E402
 import gripkit  # noqa: E402
 import yamkit as kit  # noqa: E402
 import dropkit as dk  # noqa: E402  (after yamkit)
-import guardkit as gk  # noqa: E402
+import handkit as hk  # noqa: E402  (after yamkit)
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN, GRIPPER  # noqa: E402
 from yam_arena.demo import grip_rotation  # noqa: E402
 from yam_arena.task_file import TABLE_TOP  # noqa: E402
@@ -51,11 +52,11 @@ SCREEN = kit.Look((0.05, 0.07, 0.09), 0.15)  # its display
 PORT_LIGHT = kit.Look((0.92, 0.93, 0.95), 0.3)  # the white port-light ring
 BUTTON = kit.Look((0.75, 0.75, 0.76), 0.4)
 STRIP_LOOK = kit.Look((0.93, 0.93, 0.90), 0.5)  # the strip's white face
-CONTACTS = kit.Look((0.55, 0.56, 0.58), 0.35, metallic=0.3)  # its grey contact end
+CONTACTS = kit.Look((0.55, 0.56, 0.58), 0.35, metallic=0.3)  # its gray contact end
 VIAL_LOOK = kit.Look((0.20, 0.32, 0.62), 0.45)  # the blue strip bottle
 PACK_LOOK = kit.Look((0.88, 0.88, 0.86), 0.5)  # the other strips' ends, seen in the bottle
 LDPE = kit.Look((0.95, 0.95, 0.93), 0.35, opacity=0.9)  # the control bottle
-CAP_LOOK = kit.Look((0.97, 0.97, 0.97), 0.4)
+CAP_LOOK = kit.Look((0.10, 0.35, 0.80), 0.4)  # blue (Ascensia's product image of the Level 2 bottle)
 SLIDE_STACK = kit.Look((0.80, 0.88, 0.89), 0.1)  # the rest's stacked glass slides
 GLASS = kit.Look((0.86, 0.92, 0.93), 0.05)
 
@@ -64,7 +65,7 @@ GLASS = kit.Look((0.86, 0.92, 0.93), 0.05)
 # its underside, x along its length with the test strip port in the -x end, y across, z up (display up).
 M_L, M_W, M_T = 0.097, 0.028, 0.0149
 M_KG = 0.036
-PORT_D = 0.009  # m: how far the strip's grey end goes in, from the end face to the contacts' back stop
+PORT_D = 0.009  # m: how far the strip's gray end goes in, from the end face to the contacts' back stop
 SLOT_W, SLOT_H = 0.0076, 0.0010  # the port's slot: the strip's width + 0.6 mm, its thickness + 0.6 mm
 LIP_R = 0.0020  # the slot's rounded lips (top and bottom), which guide a strip in that is up to ~1 mm off
 SIDE_R = 0.0020  # ... and its rounded sides
@@ -77,18 +78,22 @@ ROLL_X = X_STOP - ROLL_R - 0.0005
 ROLL_GAP = 0.0002  # at rest the roller stands this far over the slot floor (a 0.4 mm strip lifts it 0.2 mm)
 ROLL_TRAVEL = 0.0015
 ROLL_K = 150.0  # N/m ...
-ROLL_PRELOAD = 0.0020  # ... pulled toward a rest this far below its stop: 0.3 N on the strip (+0.03 N lifted); a
-# strip connector's contacts press 0.1-0.3 N each (Roche, US 8,398,443); the roller lumps them at the upper end
-METER_FRICTION = (0.30, 0.25)  # ABS plastic
+ROLL_PRELOAD = 0.0020  # ... pulled toward a rest this far below its stop: 0.3 N on the strip in all (+0.03 N lifted).
+# One roller stands for all of the connector's contacts and holds the strip lightly; the real setup records the
+# connector's push-back on the strip with the kitchen scale
+METER_FRICTION = (0.30, 0.30)  # ABS, a hard styrenic plastic: polystyrene on steel 0.3-0.35 (Engineering ToolBox)
+# PhysX averages the two touching materials' coefficients, so each object gets its own material's values.
 
 # -- the strip ----------------------------------------------------------------------------------------------------------
-# Contour Next test strip: a thin plastic plate, grey contact end (goes into the port) and the sample tip at the other
+# Contour Next test strip: a thin plastic plate, gray contact end (goes into the port) and the sample tip at the other
 # end, which "sips" the sample by capillary action (user guide). Not published: 33 x 7 x 0.4 mm (the setup checks it
-# with a caliper). Its frame: origin in its middle, x from the sample tip (-x) to the grey end (+x), y across, z through it.
+# with a caliper). Its frame: origin in its middle, x from the sample tip (-x) to the gray end (+x), y across, z through it.
 S_L, S_W, S_T = 0.033, 0.0070, 0.0004
 S_KG = 0.0002  # 0.2 g
-GREY_L = 0.009  # the grey contact end's length (drawn)
+GRAY_L = 0.009  # the gray contact end's length (drawn)
 SIP_L = 0.003  # m: only the last 3 mm of the strip's tip may touch the liquid
+STRIP_FRICTION = (0.40, 0.30)  # PET film, side A on side B: static 0.4, kinetic 0.3 (Transcendia GPXLH, ASTM D1894)
+SEAT_FACE = 1.0  # the strip goes in right side up: its +z face (gray square drawn on it) toward the display
 
 # -- the strip bottle ---------------------------------------------------------------------------------------------------
 # Contour Next 50-count strip bottle: 32 mm across and 52 mm tall, flip-top lid open. The strips
@@ -109,34 +114,45 @@ B_SHOULDER = 0.016  # the shoulder's top: where the cap's rim seats
 B_TIP = 0.027
 TIP_R = 0.0015
 NOZ_R = 0.0036  # the nozzle at the shoulder
+SEAL_L = 0.006  # m: the nozzle's cylindrical band at its base (radius NOZ_R), which the cap's bore fits over
 B_KG = 0.009
-PAD_KG = 0.0015  # each wall pad (the bottle core gets the rest)
 GRIP_X = -0.017  # the demo holds the body here, near its base (room for the cap hand)
-WALL_K = 3000.0  # N/m per wall (3 N per mm; 12 N at the pads' stop)
-PAD_T, PAD_TRAVEL = 0.003, 0.004
-PAD_X, PAD_W = (-0.024, 0.010), 0.012
+# The squeeze. The bottle is a rigid round body in contact (the real round shape); the force on its walls comes from
+# the hand that pinches it: with both of a hand's fingertips on the body, the fingers' commanded closing past the
+# wall (B_R minus the commanded face position) acts through the finger drive (K_F) and the wall's give (WALL_K) in
+# series, up to the walls' stop. So a squeeze reads the same whatever the bottle's roll in the hand.
+WALL_K = 3000.0  # N/m per wall
+PAD_TRAVEL = 0.004  # m: the walls' give before they bottom out (12 N)
 OPEN_FORCE = 8.3  # N on the walls before liquid leaves the tip: the mean first-drop squeeze of 78 dropper bottles
 # (8.3 +- 3.0 N, range 4.2-15.7 N; Wide Variation of Squeezing Force ... among Eyedropper Bottles, PMC6501172)
 DROP_UL = 30.0  # uL: one drop (0.03 g)
-BOTTLE_FRICTION = (0.25, 0.20)  # LDPE
+BOTTLE_FRICTION = (0.20, 0.20)  # LDPE: polyethylene on polyethylene, clean and dry, 0.2 (Engineering ToolBox)
 REST_C = (0.260, -0.070)  # the rest; the bottle lies 2 cm toward the robot of its middle (nozzle out over its front)
 # The rest: two stacks of four plain 75 x 25 x 1 mm glass slides taped to the counter, long sides along x, 20 mm
 # apart: a groove 20 mm wide and 4 mm deep whose floor is the counter.
 SLIDE_L, SLIDE_W, SLIDE_T, STACK_N = 0.075, 0.025, 0.001, 4
 GROOVE_W, GROOVE_D = 0.020, STACK_N * SLIDE_T
 REST_SIZE = (SLIDE_L, GROOVE_W + 2 * SLIDE_W, GROOVE_D)
+TAPE_FRICTION = (0.20, 0.20)  # the stacks are wrapped in packing tape: polypropylene film, a polyolefin (0.2)
 REST_FLOOR = TOP
 BOTTLE_START = (REST_C[0] - 0.020, REST_C[1], REST_FLOOR + B_R)
 B_YAW = math.pi  # the bottle lies tip toward the robot (-x)
-CAP_R, CAP_IN, CAP_H, CAP_TOP_T = 0.0065, 0.0045, 0.014, 0.002  # cap: outer and bore radius, height, top thickness
+CAP_R, CAP_H, CAP_TOP_T = 0.0065, 0.014, 0.002  # cap: outer radius, height, top thickness
 CAP_KG = 0.002
+CAP_FRICTION = (0.20, 0.20)  # polypropylene, a polyolefin like the LDPE nozzle: polyethylene on itself 0.2
 CAP_START = (0.200, 0.110)  # where the robot stands the cap, open side down, once it is off (tape mark)
 CAP_ON_GAP = 0.0002  # m: at the start the cap's rim stands this far off the shoulder (seated; no overlap at spawn)
+# The cap is a close sliding fit on the nozzle's cylindrical band: its bore is CAP_CLEAR wider than the band all
+# round, so it cannot tip or ride up a taper, and friction (cap on nozzle 0.2) holds it while the bottle is near level,
+# as it is whenever the cap is on in this task.
+CAP_CLEAR = 0.0002  # m
+CAP_IN = NOZ_R + CAP_CLEAR  # the bore's radius
 
 # -- the slide ----------------------------------------------------------------------------------------------------------
 SLIDE_C = (0.240, 0.040)  # a plain 75 x 25 x 1 mm glass microscope slide, long side along x
 SLIDE_SIZE = (0.075, 0.025, 0.001)
 SLIDE_TOP = TOP + SLIDE_SIZE[2]
+GLASS_FRICTION = (0.9, 0.4)  # glass on glass, clean and dry: static 0.9-1.0, dynamic 0.4 (Engineering ToolBox)
 # A drop of control solution on clean glass: a spherical cap with the drop's volume and a 60 degree contact angle
 # (DROP_UL 30 uL -> 3.1 mm footprint radius, 1.8 mm high).
 BEAD_A = (DROP_UL * 1e-9 / (math.pi * math.tan(math.radians(30)) / 6 * (3 + math.tan(math.radians(30)) ** 2))) ** (1 / 3)
@@ -194,7 +210,7 @@ METER = kit.Mechanism("meter", pos=(METER_START[0], METER_START[1], TOP), mass=M
                       meshes=_M_MESHES, colliders=tuple(_cbox(lo, hi) for lo, hi in _M_PARTS) + _M_LIPS,
                       links=(ROLLER,), friction=METER_FRICTION)
 
-# The strip stands in the bottle grey end down, its faces toward +-y: strip x -> world -z, strip z -> world +y.
+# The strip stands in the bottle gray end down, its faces toward +-y: strip x -> world -z, strip z -> world +y.
 _S_ROT0 = np.array([[0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [-1.0, 0.0, 0.0]])
 
 
@@ -213,9 +229,9 @@ def _quat(R) -> tuple:
 
 STRIP = kit.Prop(
     "strip", pos=STRIP_START, mass=S_KG, size=(S_W, S_T, S_L), tilt_xyzw=tuple(float(v) for v in _quat(_S_ROT0)),
-    meshes=(_box((-S_L / 2, -S_W / 2, -S_T / 2), (S_L / 2 - GREY_L, S_W / 2, S_T / 2), STRIP_LOOK),
-            _box((S_L / 2 - GREY_L, -S_W / 2, -S_T / 2), (S_L / 2, S_W / 2, S_T / 2), CONTACTS)),
-    colliders=(_cbox((-S_L / 2, -S_W / 2, -S_T / 2), (S_L / 2, S_W / 2, S_T / 2)),))
+    meshes=(_box((-S_L / 2, -S_W / 2, -S_T / 2), (S_L / 2, S_W / 2, S_T / 2), STRIP_LOOK),
+            _box((S_L / 2 - GRAY_L, -S_W / 2, S_T / 2), (S_L / 2, S_W / 2, S_T / 2 + 0.00005), CONTACTS)),
+    colliders=(_cbox((-S_L / 2, -S_W / 2, -S_T / 2), (S_L / 2, S_W / 2, S_T / 2)),), friction=STRIP_FRICTION)
 
 # The strip bottle: its wall as 12 boxes round its axis, a floor, the pack of strips as two blocks either side of the
 # standing strip (to 3 mm under the rim), and the strip's seat in the pack.
@@ -239,57 +255,59 @@ VIAL = kit.Prop(
             _box((-V_R - 0.024, -V_R * 0.8, V_H - 0.001), (-V_R - 0.002, V_R * 0.8, V_H + 0.002), VIAL_LOOK)),  # lid
     colliders=_V_WALL + _V_PACK)
 
-# The control bottle (dropkit): a rigid core and four sprung wall pads, a nozzle cone (stacked cylinders) and shoulder.
-_pad_c = ((PAD_X[0] + PAD_X[1]) / 2, 0.0, 0.0)
-_PAD_SIZE = {"Y": (PAD_X[1] - PAD_X[0], PAD_T, PAD_W), "Z": (PAD_X[1] - PAD_X[0], PAD_W, PAD_T)}
-_CORE = B_R - PAD_T - PAD_TRAVEL
-PADS = (("l", "Y", 1), ("r", "Y", -1), ("t", "Z", 1), ("b", "Z", -1))
+# The control bottle (dropkit): a rigid round body, a neck and a smooth nozzle (band and cone); see wall_force().
 BOTTLE_PROFILE = [(0.0, B_BODY[0]), (B_R, B_BODY[0]), (B_R, B_BODY[1]), (0.0060, B_SHOULDER - 0.001),
-                  (0.0060, B_SHOULDER), (NOZ_R, B_SHOULDER), (TIP_R + 0.0003, B_TIP - 0.0003), (0.0, B_TIP)]
-_NOZ_STEPS = 4  # the nozzle's cone as stacked cylinders
+                  (0.0060, B_SHOULDER), (NOZ_R, B_SHOULDER), (NOZ_R, B_SHOULDER + SEAL_L),
+                  (TIP_R + 0.0003, B_TIP - 0.0003), (0.0, B_TIP)]
+_CONE_X0 = B_SHOULDER + SEAL_L  # where the cone starts
 
 
-class _PadSpring:
-    """The wall's spring; the pad's travel opens only once the spring acts (the first control step), so a lying
-    bottle's lower pad does not sag to its stop while the scene settles (eye-drop task lesson)."""
-
-    sets_limits = True
-
-    def __init__(self, k, lo, hi):
-        self.k, self.lo, self.hi = k, lo, hi
-
-    def drive(self, key, q, qd, J, mem):
-        mem["limits"] = (self.lo, self.hi)
-        return 0.0, self.k, 0.0, 2.0
 
 
-def _pad(side, axis, sg):
-    anchor = (0.0, sg * (B_R - PAD_T / 2), 0.0) if axis == "Y" else (0.0, 0.0, sg * (B_R - PAD_T / 2))
-    lo, hi = (-PAD_TRAVEL, 0.0) if sg > 0 else (0.0, PAD_TRAVEL)
-    return kit.Link(f"pad_{side}", "prismatic", axis, anchor=anchor, lower=-1e-4, upper=1e-4, start=0.0, mass=PAD_KG,
-                    meshes=(kit.box(_pad_c, _PAD_SIZE[axis], LDPE),),
-                    colliders=(kit.Collider(_pad_c, size=_PAD_SIZE[axis]),),
-                    law=_PadSpring(WALL_K, lo, hi))
+HULL_N = 32  # sides of the round hull colliders (a flat's middle sits at the nominal radius)
+
+
+def hull_lathe(profile, axis: str, n: int = HULL_N) -> kit.Collider:
+    """A convex-hull collider turned about `axis` ("X", "Y" or "Z") through the origin: `profile` is (radius,
+    position along the axis) pairs, radius non-increasing past its widest, so the solid is convex. The n-gon's flats
+    sit at each radius. A smooth round collider: PhysX turns a USD cylinder into a coarse convex, whose flats and
+    corners leave sub-millimetre ledges between neighbouring cylinders (probe pf-143018: the cap's bore parts stuck
+    0.8 mm off on one)."""
+    a = "XYZ".index(axis)
+    u, v = [k for k in range(3) if k != a]
+    grow = 1.0 / math.cos(math.pi / n)
+    pts = []
+    for rad, x in profile:
+        for k in range(n):
+            t = 2 * math.pi * (k + 0.5) / n
+            q = [0.0, 0.0, 0.0]
+            q[a], q[u], q[v] = x, rad * grow * math.cos(t), rad * grow * math.sin(t)
+            pts.append(tuple(q))
+    faces = []
+    for i in range(len(profile) - 1):
+        for k in range(n):
+            p0, p1 = i * n + k, i * n + (k + 1) % n
+            faces += [(p0, p1, p1 + n), (p0, p1 + n, p0 + n)]
+    last = (len(profile) - 1) * n
+    faces += [(0, k + 1, k) for k in range(1, n - 1)] + [(last, last + k, last + k + 1) for k in range(1, n - 1)]
+    return kit.Collider((0.0, 0.0, 0.0), hull=tuple(pts), faces=tuple(faces))
+
+
+NOZ_END_R = TIP_R + 0.0003  # the nozzle's radius at its end
+NOZZLE_PROFILE = ((NOZ_R, B_SHOULDER), (NOZ_R, _CONE_X0), (NOZ_END_R, B_TIP))  # band, then cone (radius, x)
 
 
 def _nozzle_colliders() -> tuple:
-    out = [kit.Collider(((B_BODY[1] + B_SHOULDER) / 2, 0.0, 0.0), radius=0.0060, height=B_SHOULDER - B_BODY[1],
-                        axis="X")]
-    seg = (B_TIP - B_SHOULDER) / _NOZ_STEPS
-    for k in range(_NOZ_STEPS):
-        x0 = B_SHOULDER + k * seg
-        r = NOZ_R + (TIP_R - NOZ_R) * (k + 0.5) / _NOZ_STEPS  # each step at the cone's mean radius over it
-        out.append(kit.Collider((x0 + seg / 2, 0.0, 0.0), radius=r, height=seg, axis="X"))
-    return tuple(out)
+    neck = kit.Collider(((B_BODY[1] + B_SHOULDER) / 2, 0.0, 0.0), radius=0.0060, height=B_SHOULDER - B_BODY[1],
+                        axis="X")
+    return (neck, hull_lathe(NOZZLE_PROFILE, "X"))
 
 
-BOTTLE = kit.Mechanism(
-    "bottle", pos=BOTTLE_START, yaw=B_YAW, size=(B_TIP - B_BODY[0], 2 * B_R, 2 * B_R), mass=B_KG - 4 * PAD_KG,
+BOTTLE = kit.Prop(
+    "bottle", pos=BOTTLE_START, yaw=B_YAW, size=(B_TIP - B_BODY[0], 2 * B_R, 2 * B_R), mass=B_KG,
     meshes=(kit.lathe(BOTTLE_PROFILE, LDPE, axis="x", n=28),),
-    colliders=(kit.Collider((sum(B_BODY) / 2, 0.0, 0.0), size=(B_BODY[1] - B_BODY[0], 2 * _CORE, 2 * _CORE)),
-               *_nozzle_colliders()),
-    links=tuple(_pad(*p) for p in PADS), friction=BOTTLE_FRICTION)
-BOTTLE_SPEC = dk.Bottle("bottle", pads=((("pad_l", -1), ("pad_r", 1)), (("pad_t", -1), ("pad_b", 1))),
+    colliders=(hull_lathe(((B_R, B_BODY[0]), (B_R, B_BODY[1])), "X"), *_nozzle_colliders()), friction=BOTTLE_FRICTION)
+BOTTLE_SPEC = dk.Bottle("bottle", pads=(("none", 1),),  # the squeeze comes from wall_force(), not from pads
                         tip=(B_TIP - TIP_R, 0.0, 0.0), axis=(1, 0, 0), wall_k=WALL_K, open_force=OPEN_FORCE,
                         flow=50.0, drop_ul=DROP_UL, tip_down_deg=30.0, capacity_ul=2500.0)
 
@@ -299,59 +317,80 @@ _STACKS = tuple((tuple(min(a, b) for a, b in zip(lo, hi)), tuple(max(a, b) for a
 REST = kit.Prop(
     "bottle_rest", pos=(REST_C[0], REST_C[1], TOP), size=REST_SIZE,
     meshes=tuple(_box(lo, hi, SLIDE_STACK) for lo, hi in _STACKS),
-    colliders=tuple(_cbox(lo, hi) for lo, hi in _STACKS))
+    colliders=tuple(_cbox(lo, hi) for lo, hi in _STACKS), friction=TAPE_FRICTION)
 
 # The cap: a cup. Its frame: origin in the middle of its open rim, +z through its top. It starts on the bottle (its
 # axis along the bottle's, rim at the shoulder); the robot takes it off and stands it open side down at CAP_START.
-_CN = 12
-_CAP_RING = tuple(kit.Collider((((CAP_R + CAP_IN) / 2) * math.cos(2 * math.pi * k / _CN),
-                                ((CAP_R + CAP_IN) / 2) * math.sin(2 * math.pi * k / _CN), (CAP_H - CAP_TOP_T) / 2),
-                               size=(CAP_R - CAP_IN, 2 * CAP_R * math.tan(math.pi / _CN), CAP_H - CAP_TOP_T))
-                  for k in range(_CN))
+_CN = 24  # the bore's wall as wedges round the axis
+
+
+def _wedge(k: int) -> kit.Collider:
+    """The k-th wedge of the cap's wall (a convex hull): from the bore (CAP_IN, its flat facing the axis) to the
+    outside, rim to the top's underside. Wedges, not axis-aligned boxes, so the bore is round everywhere."""
+    a0, a1 = 2 * math.pi * k / _CN, 2 * math.pi * (k + 1) / _CN
+    r_in = CAP_IN / math.cos(math.pi / _CN)  # corners out, so the flat between them sits at CAP_IN
+    pts = [(r * math.cos(a), r * math.sin(a), z) for z in (0.0, CAP_H - CAP_TOP_T) for r in (r_in, CAP_R) for a in (a0, a1)]
+    faces = ((0, 1, 3), (0, 3, 2), (4, 6, 7), (4, 7, 5), (0, 4, 5), (0, 5, 1), (2, 3, 7), (2, 7, 6), (0, 2, 6),
+             (0, 6, 4), (1, 5, 7), (1, 7, 3))
+    return kit.Collider((0.0, 0.0, 0.0), hull=tuple(pts), faces=faces)
+
+
+_CAP_RING = tuple(_wedge(k) for k in range(_CN))
 CAP = kit.Prop(
     "cap", pos=(BOTTLE_START[0] - B_SHOULDER - CAP_ON_GAP, BOTTLE_START[1], BOTTLE_START[2]), mass=CAP_KG,
     size=(2 * CAP_R, 2 * CAP_R, CAP_H), tilt_xyzw=(0.0, -math.sqrt(0.5), 0.0, math.sqrt(0.5)),  # +z -> -x (on the tip)
     meshes=(kit.lathe([(CAP_IN, 0.0), (CAP_R, 0.0), (CAP_R, CAP_H), (0.0, CAP_H), (0.0, CAP_H - CAP_TOP_T),
                        (CAP_IN, CAP_H - CAP_TOP_T), (CAP_IN, 0.0)], CAP_LOOK, n=28),),
-    colliders=_CAP_RING + (kit.Collider((0.0, 0.0, CAP_H - CAP_TOP_T / 2), radius=CAP_R, height=CAP_TOP_T),))
+    colliders=_CAP_RING + (hull_lathe(((CAP_R, CAP_H - CAP_TOP_T), (CAP_R, CAP_H)), "Z"),),
+    friction=CAP_FRICTION)
 
 SLIDE = kit.Prop("slide", pos=(SLIDE_C[0], SLIDE_C[1], TOP), size=SLIDE_SIZE,
                  meshes=(_box((-SLIDE_SIZE[0] / 2, -SLIDE_SIZE[1] / 2, 0.0), (SLIDE_SIZE[0] / 2, SLIDE_SIZE[1] / 2,
                                                                              SLIDE_SIZE[2]), GLASS),),
                  colliders=(_cbox((-SLIDE_SIZE[0] / 2, -SLIDE_SIZE[1] / 2, 0.0), (SLIDE_SIZE[0] / 2,
-                                                                                  SLIDE_SIZE[1] / 2, SLIDE_SIZE[2])),))
+                                                                                  SLIDE_SIZE[1] / 2, SLIDE_SIZE[2])),),
+                 friction=GLASS_FRICTION)
 
 OBJECTS = [METER, STRIP, VIAL, BOTTLE, REST, CAP, SLIDE]
 gripkit.use_rubber_pads()  # rubber pad faces, as on the real YAM (measured grip envelope)
 
 # -- the scored thresholds -----------------------------------------------------------------------------------------------
-SEAT_TOL = 0.0010  # m: the strip's grey end within 1 mm of the contacts' back stop: fully in, the meter on
+SEAT_TOL = 0.0010  # m: the strip's gray end within 1 mm of the contacts' back stop: fully in, the meter on
 SEAT_ALIGN_DEG = 6.0  # ... and the strip lined up with the port within 6 degrees
 SIP_S = 1.0  # s: the strip's tip held in the drop this long (contiguous) draws the sample (the meter beeps)
 COUNTDOWN_S = 5.0  # s: the meter counts down 5 s with the strip in, then shows the result (user guide)
 DROP_FRESH_S = 60.0  # s: the drop is sampled within 60 s of landing ("immediately", user guide)
-TOUCH_GAP = 0.0010  # m: the strip within 1 mm of the bottle's tip counts as touching it (control applied from the bottle)
+TOUCH_GAP = 0.0010  # m: the strip within 1 mm of the nozzle's surface near its end (end face and last 3 mm of its
+# side), or in a drop hanging from it, counts as touching the bottle's tip (control applied from the bottle)
+TIP_ZONE = 0.003
 TIP_IN_SLACK = 0.0005  # m: the tip point counts as in the bead within 0.5 mm of its surface
 CAP_OFF_TOL = 0.0015  # m: capped: the cap's rim centre within 1.5 mm of the shoulder's centre, ...
 CAP_ALIGN_DEG = 10.0  # ... its axis within 10 degrees of the bottle's
 DOWN_TOL = 0.003  # m: the meter resting on the counter (underside within 3 mm of it, tilted 10 degrees or less)
 DOWN_TILT_DEG = 10.0
-BOTTLE_DOWN_TOL = 0.004  # m: the bottle lying in its rest (its axis within 4 mm of the groove's floor + radius, ...
-BOTTLE_REST_OFF = 0.030  # ... and within 3 cm of the rest's middle)
+BOTTLE_DOWN_TOL = GROOVE_D / 2  # m: the bottle lying in its rest: its axis within half the stacks' height (2 mm) of
+# its resting height (the groove's floor plus its radius) at both ends of its body; on a stack it lies 4 mm higher
 DROP_SPEED = 0.8  # m/s: the meter or the control bottle falling faster than this was dropped
-RELEASE_MARGIN = 0.010  # m: every tool point and pad tip this far from meter, strip, bottle and cap
+RELEASE_MARGIN = 0.010  # m: each hand (its gripper body and both fingers, on the robot's collision hulls) this
+# far from the meter, strip, bottle and cap
 STILL_STEP = 0.0005  # m per control step
 HOLD_STEPS = round(SUCCESS_HOLD_S / DT)
 SIP_STEPS = round(SIP_S / DT)
 COUNT_STEPS = round(COUNTDOWN_S / DT)
 FRESH_STEPS = round(DROP_FRESH_S / DT)
-dk.setup(BOTTLE_SPEC, lambda objects, tip_w: land(objects, tip_w))
+dk.setup(BOTTLE_SPEC, lambda objects, tip_w: land(objects, tip_w), lambda objects: cap_covers(objects),
+         lambda objects: wall_force(objects))
+SQUEEZE_CONTACT = 0.001  # m: a fingertip this close to the bottle's body is on it
+PINCH_DEPTH = 0.011  # m: the bottle's axis at most this far along the fingers past the tool point (the demo's grip
+# holds it 8 mm past, B_IN_HAND; fingers held apart by a cap or the meter with their ends over the body put it 15 mm+)
+BODY_SHAPE = (hk.Cyl((B_BODY[0], 0.0, 0.0), (1.0, 0.0, 0.0), B_R, 0.0, B_BODY[1] - B_BODY[0]),)
+DROP_R = (3 * DROP_UL * 1e-9 / (4 * math.pi)) ** (1 / 3)  # m: a falling drop's radius (a 30 uL sphere: 1.93 mm)
 
 
 # -- geometry ------------------------------------------------------------------------------------------------------------
 def pose(objects, name) -> tuple:
     s = objects[name]
-    return np.asarray(s.pos, float), gk._rot(np.asarray(s.quat_xyzw, float))
+    return np.asarray(s.pos, float), dk._rot(np.asarray(s.quat_xyzw, float))
 
 
 def to_local(objects, name, p) -> np.ndarray:
@@ -368,7 +407,7 @@ def strip_point(objects, x, y=0.0, z=0.0) -> np.ndarray:
     return to_world(objects, "strip", (x, y, z))
 
 
-def grey_end(objects) -> np.ndarray:
+def gray_end(objects) -> np.ndarray:
     return strip_point(objects, S_L / 2)
 
 
@@ -377,18 +416,19 @@ def sample_tip(objects) -> np.ndarray:
 
 
 def seat_depth(objects) -> float:
-    """How far (m) the strip's grey end is short of the contacts' back stop (0 = fully in; negative = past it)."""
-    return float(X_STOP - to_local(objects, "meter", grey_end(objects))[0])
+    """How far (m) the strip's gray end is short of the contacts' back stop (0 = fully in; negative = past it)."""
+    return float(X_STOP - to_local(objects, "meter", gray_end(objects))[0])
 
 
 def seated(objects) -> bool:
-    """The strip fully in the port: its grey end within 1 mm of the back stop, inside the slot, lined up with it."""
-    g = to_local(objects, "meter", grey_end(objects))
+    """The strip fully in the port, right side up: its gray end within 1 mm of the back stop, inside the slot, lined
+    up with it, and its top face toward the display (upside down the meter shows E 3, "Strip Upside Down")."""
+    g = to_local(objects, "meter", gray_end(objects))
     _o, Rm = pose(objects, "meter")
     _o, Rs = pose(objects, "strip")
     ang = math.degrees(math.acos(float(np.clip(Rm[:, 0] @ Rs[:, 0], -1.0, 1.0))))
     return (abs(seat_depth(objects)) <= SEAT_TOL and abs(g[1]) <= SLOT_W / 2 and abs(g[2] - Z_SLOT) <= SLOT_H
-            and ang <= SEAT_ALIGN_DEG)
+            and ang <= SEAT_ALIGN_DEG and SEAT_FACE * float(Rm[:, 2] @ Rs[:, 2]) > 0.0)
 
 
 def bead_height(r: float) -> float:
@@ -405,7 +445,7 @@ def in_bead(p, at, slack: float = 0.0) -> bool:
 
 
 def _strip_body_points(objects) -> list:
-    """Points on the strip's four long edges, from SIP_L behind its tip to its grey end."""
+    """Points on the strip's four long edges, from SIP_L behind its tip to its gray end."""
     out = []
     for x in np.linspace(-S_L / 2 + SIP_L, S_L / 2, 16):
         for y in (-S_W / 2, 0.0, S_W / 2):
@@ -428,22 +468,114 @@ def strip_box_dist(objects, p) -> float:
     return float(np.linalg.norm(np.maximum(q, 0.0)) + min(0.0, float(q.max())))
 
 
+def meter_box_dist(objects, p) -> float:
+    q = np.abs(to_local(objects, "meter", p) - np.array([0.0, 0.0, M_T / 2])) - np.array([M_L / 2, M_W / 2, M_T / 2])
+    return float(np.linalg.norm(np.maximum(q, 0.0)) + min(0.0, float(q.max())))
+
+
 def land(objects, tip_w):
-    """Where a drop leaving the tip lands, falling straight down: on the strip or the meter (control put on the strip
-    straight from the bottle), on the slide, or on the counter."""
+    """Where a drop leaving the tip lands, falling straight down as a sphere of its own size (DROP_R): on the strip or
+    the meter if it touches either on the way down, or if it lands on the slide with the strip already inside the
+    bead it spreads into (control put on the strip straight from the bottle); otherwise on the slide or the counter."""
     tip_w = np.asarray(tip_w, float)
-    for z in np.arange(tip_w[2], TOP - 0.001, -0.0005):
-        p = np.array([tip_w[0], tip_w[1], z])
-        if "strip" in objects and strip_box_dist(objects, p) <= 0.0005:
+    for z in np.arange(tip_w[2] - DROP_R, TOP - 0.001, -0.0005):
+        p = np.array([tip_w[0], tip_w[1], z])  # the drop's centre
+        if "strip" in objects and strip_box_dist(objects, p) <= DROP_R:
             return "strip", p, {}
-        if "meter" in objects:
-            m = to_local(objects, "meter", p)
-            if abs(m[0]) <= M_L / 2 and abs(m[1]) <= M_W / 2 and -0.0005 <= m[2] <= M_T:
-                return "meter", p, {}
+        if "meter" in objects and meter_box_dist(objects, p) <= DROP_R:
+            return "meter", p, {}
         if (abs(p[0] - SLIDE_C[0]) <= SLIDE_SIZE[0] / 2 and abs(p[1] - SLIDE_C[1]) <= SLIDE_SIZE[1] / 2
-                and p[2] <= SLIDE_TOP + 0.0005):
-            return "slide", np.array([p[0], p[1], SLIDE_TOP]), {}
+                and p[2] <= SLIDE_TOP + DROP_R):
+            at = np.array([p[0], p[1], SLIDE_TOP])
+            near = _strip_tip_points(objects) + _strip_body_points(objects) if "strip" in objects else []
+            if any(in_bead(q, at) for q in near):  # it spreads straight onto a strip already there
+                return "strip", p, {}
+            return "slide", at, {}
     return "counter", np.array([tip_w[0], tip_w[1], TOP]), {}
+
+
+def pinching_body(objects, g) -> bool:
+    """Hand g holds the bottle's body between its fingers: both fingertips on the body (robot hulls, within 1 mm),
+    the fingers actually held apart by it (their faces B_R - PAD_TRAVEL - 1 mm to B_R + 1 mm from the middle: the
+    walls give under a squeeze, and the fingers sink a little into the rigid body), the closing axis across the
+    bottle's axis, the tool point along the body (not the neck or the cap), and the body between the fingers: the
+    bottle's axis no further along the fingers than PINCH_DEPTH past the tool point. Fingers closed on top of or beside
+    the bottle, a lengthwise pinch, a pinch on the cap, or fingers held apart by something else with their ends over
+    the body are not a squeeze."""
+    if g not in objects or "bottle" not in objects:
+        return False
+    half = kit.opening(objects, g) * F_HALF_OPEN
+    if not (B_R - PAD_TRAVEL - 0.001 <= half <= B_R + 0.001):
+        return False
+    gaps = hk.gap(objects, g, "bottle", BODY_SHAPE, links=("tip_left", "tip_right"))
+    if max(gaps.values()) > SQUEEZE_CONTACT:
+        return False
+    close = pose(objects, g)[1][:, 0]  # the fingers close along the gripper's x (URDF finger joints)
+    o, R = pose(objects, "bottle")
+    if abs(float(close @ R[:, 0])) > 0.5:
+        return False
+    s = float((np.asarray(objects[g].pos, float) - o) @ R[:, 0])
+    depth = float((o + s * R[:, 0] - np.asarray(objects[g].pos, float)) @ pose(objects, g)[1][:, 2])
+    return B_BODY[0] + 0.003 <= s <= B_BODY[1] - 0.003 and depth <= PINCH_DEPTH
+
+
+def wall_force(objects) -> float:
+    """The squeeze on the control bottle's walls (N): for a hand pinching the bottle's body (pinching_body), the
+    fingers' commanded closing past the wall (B_R less the commanded face position) acting through the finger drive
+    and the wall's give in series, up to the walls' stop; the larger of the two hands. 0 with no hand on it."""
+    best = 0.0
+    for g in ("left_gripper", "right_gripper"):
+        tgt = kit.open_target(objects, g)
+        if not math.isfinite(tgt) or not pinching_body(objects, g):
+            continue
+        push = B_R - tgt * F_HALF_OPEN
+        best = max(best, min(WALL_K * PAD_TRAVEL, max(0.0, push) * K_F * WALL_K / (K_F + WALL_K)))
+    return best
+
+
+def cap_covers(objects) -> bool:
+    """The cap over the nozzle (seated or part way on): the nozzle's end inside the cap's bore. No liquid leaves a
+    covered tip, however hard the bottle is squeezed."""
+    if "cap" not in objects or "bottle" not in objects:
+        return False
+    e = to_local(objects, "cap", to_world(objects, "bottle", (B_TIP, 0.0, 0.0)))
+    return 0.0 <= e[2] <= CAP_H - CAP_TOP_T + 0.0005 and math.hypot(e[0], e[1]) <= CAP_IN
+
+
+_NOZ_RING = 12
+
+
+def _nozzle_points() -> np.ndarray:
+    """Points (bottle frame) on the nozzle's end face and on the last TIP_ZONE of its side, along its drawn cone."""
+    end_r = NOZ_END_R
+    pts = [(B_TIP, 0.0, 0.0)]
+    for r in (end_r / 3, 2 * end_r / 3, end_r):
+        for k in range(_NOZ_RING):
+            a = 2 * math.pi * k / _NOZ_RING
+            pts.append((B_TIP, r * math.cos(a), r * math.sin(a)))
+    for x in np.linspace(B_TIP, B_TIP - TIP_ZONE, 4):
+        r = end_r + (NOZ_R - end_r) * (B_TIP - x) / (B_TIP - _CONE_X0)
+        for k in range(_NOZ_RING):
+            a = 2 * math.pi * k / _NOZ_RING
+            pts.append((x, r * math.cos(a), r * math.sin(a)))
+    return np.array(pts, float)
+
+
+NOZZLE_PTS = _nozzle_points()
+
+
+def tip_touched(objects) -> bool:
+    """The strip within TOUCH_GAP of the nozzle's end (end face or the last 3 mm of its side), or in a drop hanging
+    from the tip."""
+    o, R = pose(objects, "bottle")
+    if min(strip_box_dist(objects, o + R @ q) for q in NOZZLE_PTS) <= TOUCH_GAP:
+        return True
+    h = dk.hanging()
+    if h > 0.0:
+        r = (3 * h * 1e-9 / (4 * math.pi)) ** (1 / 3)
+        c = dk.tip(objects, BOTTLE_SPEC) - np.array([0.0, 0.0, r])
+        return strip_box_dist(objects, c) <= r
+    return False
 
 
 def capped(objects) -> bool:
@@ -457,9 +589,16 @@ def capped(objects) -> bool:
 
 
 def bottle_in_rest(objects) -> bool:
+    """The bottle lying in its rest: at both ends of its body the axis is between the two stacks (inside the groove's
+    width and the slides' length) and within 2 mm of its resting height, the groove's floor plus the bottle's radius.
+    Lying on a stack or across the stacks (4 mm higher), standing on end, held up or out in front of the rest fails."""
     p, R = pose(objects, "bottle")
-    return (abs(float(p[2]) - (REST_FLOOR + B_R)) <= BOTTLE_DOWN_TOL
-            and math.hypot(p[0] - BOTTLE_START[0], p[1] - BOTTLE_START[1]) <= BOTTLE_REST_OFF and abs(float(R[2, 0])) <= 0.17)
+    for x in B_BODY:
+        e = p + R @ np.array([x, 0.0, 0.0])
+        if (abs(float(e[2]) - (REST_FLOOR + B_R)) > BOTTLE_DOWN_TOL or abs(float(e[0]) - REST_C[0]) > SLIDE_L / 2
+                or abs(float(e[1]) - REST_C[1]) >= GROOVE_W / 2):
+            return False
+    return True
 
 
 def meter_down(objects) -> bool:
@@ -468,15 +607,25 @@ def meter_down(objects) -> bool:
     return abs(float(p[2]) - TOP) <= DOWN_TOL and tilt <= DOWN_TILT_DEG
 
 
-METER_PARTS = (gk.Block((0.0, 0.0, M_T / 2), (M_L, M_W, M_T)),)
-STRIP_PARTS = (gk.Block((0.0, 0.0, 0.0), (S_L, S_W, S_T)),)
-BOTTLE_PARTS = (gk.Seg((B_BODY[0], 0.0, 0.0), (B_TIP, 0.0, 0.0), B_R),)
-CAP_PARTS = (gk.Ring(0.0, CAP_R, 0.0, CAP_H),)
+HAND_SHAPES = {
+    "meter": (hk.Box((0.0, 0.0, M_T / 2), (M_L, M_W, M_T)),),
+    "strip": (hk.Box((0.0, 0.0, 0.0), (S_L, S_W, S_T)),),
+    "bottle": (hk.Cyl((B_BODY[0], 0.0, 0.0), (1.0, 0.0, 0.0), B_R, 0.0, B_TIP - B_BODY[0]),),
+    "cap": (hk.Cyl((0.0, 0.0, 0.0), (0.0, 0.0, 1.0), CAP_R, 0.0, CAP_H),),
+}
 
 
 def released(objects) -> bool:
-    return all(gk.released_clear(objects, n, parts, RELEASE_MARGIN) for n, parts in
-               (("meter", METER_PARTS), ("strip", STRIP_PARTS), ("bottle", BOTTLE_PARTS), ("cap", CAP_PARTS)))
+    """Every hand clear: each gripper's body and both fingers (the robot's collision hulls, placed from the hand's
+    pose and opening) at least RELEASE_MARGIN from the meter, strip, bottle and cap."""
+    return all(min(hk.gap(objects, g, part, shapes).values()) >= RELEASE_MARGIN
+               for g in ("left_gripper", "right_gripper") if g in objects for part, shapes in HAND_SHAPES.items())
+
+
+def _roll_deg(objects) -> float:
+    """The control bottle's roll about its own axis (degrees; 0 as it lies in its rest), for the debug line."""
+    R = pose(objects, "bottle")[1]
+    return math.degrees(math.atan2(R[2, 1], R[2, 2]))
 
 
 # -- one trial's record --------------------------------------------------------------------------------------------------
@@ -503,14 +652,14 @@ class Ledger:
             for k in ("meter", "bottle"):
                 if (pts[k][2] - self.last[k][2]) / DT < -DROP_SPEED:
                     self.ruined = self.ruined or f"{k} dropped"
-        if strip_box_dist(objects, dk.tip(objects, BOTTLE_SPEC)) <= TOUCH_GAP:
+        if tip_touched(objects):
             self.ruined = self.ruined or "strip touched the bottle's tip"
         if any(d.zone in ("strip", "meter") for d in dk.drops()):
             self.ruined = self.ruined or "control solution put on the strip or meter from the bottle"
         is_seated = seated(objects)
         fresh = [d.at for d in slide_drops() if self.n - d.step <= FRESH_STEPS]
         body = _strip_body_points(objects)
-        for d in slide_drops():
+        for d in ([] if self.result else slide_drops()):  # once the meter shows its result, it keeps it
             if any(in_bead(p, d.at) for p in body):
                 self.smeared = True
         tip_in = any(in_bead(p, at, TIP_IN_SLACK) for at in fresh for p in _strip_tip_points(objects))
@@ -530,8 +679,8 @@ class Ledger:
                 and meter_down(objects) and is_seated and released(objects) and still)
         self.good = self.good + 1 if done else 0
         if _DEBUG and "left_gripper" in objects and (self.n % _DEBUG == 0 or dk.squeeze_force(objects, BOTTLE_SPEC) > 2.0):
-            g = to_local(objects, "meter", grey_end(objects))
-            print(f"glucose {self.n} seat {seat_depth(objects) * 1000:+.1f}mm grey_m {np.round(g * 1000, 1)} "
+            g = to_local(objects, "meter", gray_end(objects))
+            print(f"glucose {self.n} seat {seat_depth(objects) * 1000:+.1f}mm gray_m {np.round(g * 1000, 1)} "
                   f"seated {is_seated} roller {kit.joint(objects, 'meter/contact').pos * 1000:.2f}mm "
                   f"strip {np.round(pts['strip'], 4)} meter {np.round(pts['meter'], 4)} tip {np.round(sample_tip(objects), 4)} "
                   f"drops {[(d.step, d.zone, None if d.at is None else np.round(d.at, 4).tolist()) for d in dk.drops()]} "
@@ -541,7 +690,10 @@ class Ledger:
                   f"ruined '{self.ruined}' sq {dk.squeeze_force(objects, BOTTLE_SPEC):.1f}N "
                   f"capw {np.round(pts['cap'], 4)} capax {np.round(pose(objects, 'cap')[1][:, 2], 2)} "
                   f"bottle {np.round(pts['bottle'], 4)} tipdir {np.round(dk.tip_dir(objects, BOTTLE_SPEC), 2)} "
-                  f"hang {dk.hanging():.1f} L {np.round(objects['left_gripper'].pos, 4)} "
+                  f"hang {dk.hanging():.1f} covered {cap_covers(objects)} "
+                  f"Rtgt {kit.open_target(objects, 'right_gripper'):.3f} Ropen {kit.opening(objects, 'right_gripper'):.3f} "
+                  f"broll {_roll_deg(objects):.0f} "
+                  f"L {np.round(objects['left_gripper'].pos, 4)} "
                   f"R {np.round(objects['right_gripper'].pos, 4)}", flush=True)
 
     def tier(self, objects) -> float:
@@ -574,6 +726,7 @@ def _update(objects):
         return
     _L.key, _L.objs = key, objects
     dk.update(objects)
+    DIP_AIM.step(objects)
     _L.step(objects)
 
 
@@ -628,7 +781,7 @@ else:  # replace yamkit's (and dropkit's) import hook with one that adds the rec
     sys.meta_path.insert(0, _Hook())
 
 
-# -- scripted demo: open loop from the fixed layout ------------------------------------------------------------------------
+# -- scripted demo: from the fixed layout, closed loop on one thing (the dip goes to where the drop landed) ---------------
 # Left hand: takes the meter by its far end from above, lifts it and holds it level with its port toward the right
 # hand; after the drop is on the slide it tips the meter port-end down 45 degrees and touches the strip's tip to the
 # drop, holds it there, then puts the meter back down and lets go; takes the cap, turns it open side forward and pushes
@@ -676,7 +829,16 @@ DOWN_Y = frame((0, 0, -1), (0, -1, 0))  # fingers straight down, closing along y
 # -- strip hand --
 STRIP_PINCH = 0.012  # m: the pads' tips this far under the standing strip's top (3 mm over the bottle's rim)
 STRIP_TCP_OUT = 0.013 - STRIP_PINCH  # the tool point this far beyond the strip's tip end (pad tips 13 mm past it)
-INSERT_R = frame((1, 0, 0), (0, 0, -1))  # fingers forward, closing up-down: the strip level, grey end forward
+STRIP_PICK_R = DOWN_Y  # fingers straight down, closing on the standing strip's faces
+INSERT_R = frame((1, 0, 0), (0, 0, -1))  # fingers forward, closing up-down: the strip level, gray end forward
+# The strip is pinched on its faces. Closed on a 0.4 mm strip the fingers stop 0.2 mm short of their target and press
+# about 1 N each, so the strip can slip back in the pinch at the port's mouth (probe pf-151400: 4.8 mm, left 2.5 mm
+# short). So the hand pushes twice: lets go, slides back REGRIP_BACK along the strip, closes and pushes it home again.
+# (A pinch on the strip's 7 mm edges held harder, but its 0.4 mm edge sank into one finger's pad and the strip came
+# away with that finger however wide the hand opened: probes pf-155056, pf-162628, pf-170837.)
+STRIP_SQUEEZE = FINGER_CLOSED
+STRIP_RELEASE = finger(0.004)  # let go: faces 4 mm off a 0.4 mm strip
+REGRIP_BACK = 0.006  # m: the hand slides back this far along the strip before the second push
 PUSH_PAST = 0.0040  # m: the insert is commanded this far past the back stop (probe p1: the loaded hand stalls ~2.5 mm short)
 # -- meter hand --
 M_GRIP_X = 0.030  # m: the meter held this far from its middle toward its far end
@@ -693,7 +855,7 @@ FINGER_HOLD = B_R - 0.0005 * (K_F + WALL_K) / K_F  # each wall pushed 0.5 mm: 1.
 FINGER_SQUEEZE = B_R - PAD_TRAVEL - 0.006  # 6 mm past the walls' stop: 12 N (probe q1: 3 mm past gave 9.8 N)
 FINGER_FIRM = B_R - 0.0015 * (K_F + WALL_K) / K_F  # each wall pushed 1.5 mm: 4.5 N, still under the opening force, while
 # the cap is pushed on (probe p6: at 1 N the bottle slid 6 mm along the fingers and the cap stopped 1.8 mm short)
-SQUEEZE_S = 0.3  # s at full squeeze (probe p2: 0.1 s grew 26.5 of 30 uL; the 8.3 N opening is reached later)
+SQUEEZE_S = 0.2  # s at full squeeze: one drop, from 10.4 N up to the walls' 12 N stop (probe pb-204321: two at 0.3 s)
 DROP_TILT = math.radians(45.0)  # the bottle tipped tip-down 45 degrees over the slide
 TIP_OVER = 0.012  # m: its tip this far over the glass when squeezed
 DROP_AT = (SLIDE_C[0] - 0.012, SLIDE_C[1])  # where the drop is aimed on the slide
@@ -712,7 +874,7 @@ WIDE = finger(0.020)
 def strip_rel(R_hand) -> tuple:
     """The strip's rotation and its middle's offset from the tool point, for a hand at R_hand (the pinch keeps the
     strip's x along the approach and its faces across the closing axis)."""
-    Rs = R_hand @ (DOWN_Y.T @ _S_ROT0)
+    Rs = R_hand @ (STRIP_PICK_R.T @ _S_ROT0)
     return Rs, Rs @ np.array([S_L / 2 + STRIP_TCP_OUT, 0.0, 0.0])
 
 
@@ -722,7 +884,7 @@ def strip_grasp_tcp() -> np.ndarray:
 
 
 def insert_tcp(meter_origin, past: float = 0.0, back: float = 0.0) -> np.ndarray:
-    """The tool point that puts the strip's grey end `past` beyond the back stop (`back` m short of it instead)."""
+    """The tool point that puts the strip's gray end `past` beyond the back stop (`back` m short of it instead)."""
     stop = np.asarray(meter_origin, float) + np.array([X_STOP, 0.0, Z_SLOT])
     Rs, off = strip_rel(INSERT_R)
     return stop + np.array([past - back, 0.0, 0.0]) - (off + Rs @ np.array([S_L / 2, 0.0, 0.0]))
@@ -730,6 +892,48 @@ def insert_tcp(meter_origin, past: float = 0.0, back: float = 0.0) -> np.ndarray
 
 def meter_tcp(origin, R_m=np.eye(3)) -> np.ndarray:
     return np.asarray(origin, float) + R_m @ M_TCP
+
+
+def dip_tcps(at, sag) -> dict:
+    """The left hand's tool points for the dip at drop centre `at` (x, y on the glass): over it, tip in it, lifted."""
+    R = ry(DIP_TILT)
+    dip = dip_meter_origin(at)
+    over = dip + np.array([0.0, 0.0, 0.015])
+    return {"over": meter_tcp(over, R) + sag, "dip": meter_tcp(dip, R) + sag,
+            "lift": meter_tcp(over + np.array([0.0, 0.0, 0.020]), R) + sag}
+
+
+class _DipAim:
+    """The demo's eyes for the dip, as a person watches where the drop lands: once a drop is on the slide, the left
+    hand's dip waypoints are moved so the strip's tip goes to that drop's centre (the latest drop on the slide), not
+    to the aim point. The scripted plan reads its waypoints' positions as it plays them, so this takes effect for the
+    moves still to come. A new trial restores the nominal poses."""
+
+    def __init__(self):
+        self.wps, self.roles, self.sag, self.nominal, self.ep, self.done = [], (), None, [], None, None
+
+    def arm(self, wps, roles, sag) -> None:
+        self.wps, self.roles, self.sag = list(wps), tuple(roles), np.asarray(sag, float)
+        self.nominal = [w.pos for w in self.wps]
+        self.ep, self.done = None, None
+
+    def step(self, objects) -> None:
+        if not self.wps:
+            return
+        if self.ep != kit.episode():
+            self.ep, self.done = kit.episode(), None
+            for w, p in zip(self.wps, self.nominal):
+                w.pos = p
+        drops = slide_drops()
+        if not drops or drops[-1].step == self.done:
+            return
+        poses = dip_tcps(np.asarray(drops[-1].at[:2], float), self.sag)
+        for w, role in zip(self.wps, self.roles):
+            w.pos = tuple(float(v) for v in poses[role])
+        self.done = drops[-1].step
+
+
+DIP_AIM = _DipAim()
 
 
 def dip_meter_origin(at) -> np.ndarray:
@@ -792,6 +996,10 @@ CAP_SET_TRIM = np.array([0.0011, 0.0004, 0.0])  # probe q2: set down at the plai
 # and 0.4 mm in y of CAP_START; picked there for capping it then rode 1.1 mm low in the pinch and jammed on the nozzle
 
 
+CAP_PULL, CAP_PULL_S = 0.035, 2.5  # m, s: the uncap pull along the bottle's axis. The cap's bore covers the nozzle
+# for B_TIP - B_SHOULDER (11 mm); the pull runs 35 mm, a wide margin over that and the held bottle's give.
+
+
 def uncap_grip(back: float = 0.0) -> np.ndarray:
     """The tool point (turned CAP_R_HAND) pinching the cap seated on the bottle held at CAP_HOLD (`back` m short)."""
     return cap_tcp(back=back) - CAP_TRIM  # the trim is for a cap carried in the pinch; this one sits on the nozzle
@@ -808,7 +1016,7 @@ def left_uncap() -> tuple:
     out += [tw(1.2, pre, WIDE, "in line with the cap", UNCAP_R),
             tw(1.5, uncap_grip(), WIDE, "around the cap", UNCAP_R),
             tw(0.6, uncap_grip(), CAP_SQUEEZE, "pinch it", UNCAP_R),
-            tw(1.5, uncap_grip(back=0.020), CAP_SQUEEZE, "pull it off the nozzle", UNCAP_R)]
+            tw(CAP_PULL_S, uncap_grip(back=CAP_PULL), CAP_SQUEEZE, "pull it off the nozzle", UNCAP_R)]
     t_off = sum(w.duration for w in out)
     out += [tw(1.0, pre - np.array([0.040, 0, 0]), CAP_SQUEEZE, "clear of the bottle", UNCAP_R),
             tw(5.0, cg + np.array([0, 0, 0.050]), CAP_SQUEEZE, "turn it open side down over its mark", SET_R),
@@ -851,18 +1059,25 @@ def right_plan(t_off: float) -> tuple:
     pre = insert_tcp(M_INS, back=0.015)
     near = insert_tcp(M_INS, back=0.004)
     seat = insert_tcp(M_INS, past=PUSH_PAST)
-    out = [tw(3.0, g + np.array([0, 0, 0.030]), WIDE, "over the standing strip", DOWN_Y),
-           tw(1.5, g, finger(0.006), "pads either side of the strip's top", DOWN_Y),
-           tw(0.6, g, FINGER_CLOSED, "pinch the strip", DOWN_Y),
-           tw(1.5, up, FINGER_CLOSED, "pull it up out of the bottle", DOWN_Y),
-           tw(4.0, pre + np.array([0, 0, 0.020]), FINGER_CLOSED, "turn it level, grey end forward", INSERT_R),
-           tw(1.2, pre, FINGER_CLOSED, "in line with the port", INSERT_R),
-           tw(1.0, near, FINGER_CLOSED, "at the port's mouth", INSERT_R),
-           tw(2.0, seat, FINGER_CLOSED, "push it fully in", INSERT_R),
-           tw(0.6, seat, FINGER_CLOSED, "hold it in (the meter beeps)", INSERT_R),
-           tw(0.6, seat, finger(0.004), "let go", INSERT_R),
-           tw(1.2, seat - np.array([0.040, 0.0, 0.0]), finger(0.006), "back the fingers off", INSERT_R)]
-    t_inserted = t0 + sum(w.duration for w in out[:9])
+    regrip = seat - np.array([REGRIP_BACK, 0.0, 0.0])
+    out = [tw(3.0, g + np.array([0, 0, 0.030]), WIDE, "over the standing strip", STRIP_PICK_R),
+           tw(1.5, g, finger(0.006), "pads either side of the strip's top", STRIP_PICK_R),
+           tw(0.6, g, STRIP_SQUEEZE, "pinch the strip", STRIP_PICK_R),
+           tw(1.5, up, STRIP_SQUEEZE, "pull it up out of the bottle", STRIP_PICK_R),
+           tw(4.0, pre + np.array([0, 0, 0.020]), STRIP_SQUEEZE, "turn it level, gray end forward", INSERT_R),
+           tw(1.2, pre, STRIP_SQUEEZE, "in line with the port", INSERT_R),
+           tw(1.0, near, STRIP_SQUEEZE, "at the port's mouth", INSERT_R),
+           tw(2.0, seat, STRIP_SQUEEZE, "push it fully in", INSERT_R),
+           tw(0.4, seat, STRIP_SQUEEZE, "hold it", INSERT_R),
+           tw(0.6, seat, STRIP_RELEASE, "open", INSERT_R),
+           tw(0.8, regrip, STRIP_RELEASE, "slide back along the strip", INSERT_R),
+           tw(0.6, regrip, STRIP_SQUEEZE, "pinch it again", INSERT_R),
+           tw(1.2, seat, STRIP_SQUEEZE, "push it home again", INSERT_R),
+           tw(0.6, seat, STRIP_SQUEEZE, "hold it in (the meter beeps)", INSERT_R),
+           tw(0.8, seat, STRIP_RELEASE, "let go", INSERT_R),
+           tw(1.2, seat - np.array([0.040, 0.0, 0.0]), STRIP_RELEASE, "back the fingers off", INSERT_R)]
+    k_in = next(i for i, w in enumerate(out) if w.label == "hold it in (the meter beeps)")
+    t_inserted = t0 + sum(w.duration for w in out[:k_in + 1])
     out = first + out
     b0 = np.asarray(BOTTLE_START, float)
     bg = bottle_tcp(b0, B_ROT0)
@@ -917,13 +1132,13 @@ def left_plan(ev: dict, first: list) -> list:
     t = sum(w.duration for w in out)
     out.append(tw(max(0.5, ev["drop"] + 2.5 - t), meter_tcp(M_INS) + sag, M_SQUEEZE, "wait for the drop", DOWN_Y))
     R_dip = ry(DIP_TILT)
-    at = np.array([DROP_AT[0], DROP_AT[1]])
-    dip = dip_meter_origin(at)
-    over = dip + np.array([0.0, 0.0, 0.015])
-    out += [tw(2.5, meter_tcp(over, R_dip) + sag, M_SQUEEZE, "tip it port-end down over the drop", R_dip @ DOWN_Y),
-            tw(1.5, meter_tcp(dip, R_dip) + sag, M_SQUEEZE, "strip's tip into the drop", R_dip @ DOWN_Y),
-            tw(DWELL_S, meter_tcp(dip, R_dip) + sag, M_SQUEEZE, "hold until it beeps", R_dip @ DOWN_Y),
-            tw(1.0, meter_tcp(over + np.array([0, 0, 0.020]), R_dip) + sag, M_SQUEEZE, "lift it off", R_dip @ DOWN_Y),
+    poses = dip_tcps(np.array(DROP_AT, float), sag)  # nominal: the aim point; DIP_AIM moves them onto the drop seen
+    dips = [tw(2.5, poses["over"], M_SQUEEZE, "tip it port-end down over the drop", R_dip @ DOWN_Y),
+            tw(1.5, poses["dip"], M_SQUEEZE, "strip's tip into the drop", R_dip @ DOWN_Y),
+            tw(DWELL_S, poses["dip"], M_SQUEEZE, "hold until it beeps", R_dip @ DOWN_Y),
+            tw(1.0, poses["lift"], M_SQUEEZE, "lift it off", R_dip @ DOWN_Y)]
+    DIP_AIM.arm(dips, ("over", "dip", "dip", "lift"), sag)
+    out += dips + [
             tw(2.5, g + np.array([0, 0, 0.020]), M_SQUEEZE, "level, back over its place", DOWN_Y),
             tw(1.2, g + np.array([0, 0, 0.001]), M_SQUEEZE, "set it down", DOWN_Y),
             tw(0.6, g + np.array([0, 0, 0.001]), WIDE, "let go", DOWN_Y),
