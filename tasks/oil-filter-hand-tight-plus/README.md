@@ -109,7 +109,7 @@ Who turned it. Contact is real contact between a gripper's own collision hulls (
 (its opening from 15 % of full travel tighter than the can's 6.6 cm to 3 % looser) and both fingertips touch it. Each step a gripper holding the filter at either end of the step adds its
 own wrist roll about the filter's axis, clockwise seen from the filter's end, to its budget (kept at most 30 degrees
 ahead of the filter), and new ground past contact is credited from that budget. While the wrench's cap is on the filter (its axis within 3 mm and 8 degrees of the filter's, its 12 mm teeth at least 4 mm over the flutes, so its floor within 8 mm of the filter's end) and a hand holds the wrench (fingers under 60 % open, both fingertips touching its head, handle or grip), the new ground is the
-wrench's, held. The scorer does not check that the wrench's handle itself turned: a seated cap's ratchet freewheels forward, so while a hand holds the seated wrench, turning of the can by anything else would also be booked to the wrench. Only a push on the smooth can could do that, and it cannot approach the 18 N·m the top band needs; a holding hand's own roll is credited in any case. Whatever neither turned is unheld; more than 45 degrees unheld scores 0. Each hand keeps its own
+wrench's, held. Whatever neither turned is unheld; more than 45 degrees unheld scores 0. Each hand keeps its own
 budget, so a second hand near the can or on it never voids the holder's turning (tested: a hand hovering open, both hands rolling, one steadying; two hands closed with neither rolling is still a swipe).
 
 A hand is still on the filter at the end when any part of the gripper touches the can. Turning the filter by hand
