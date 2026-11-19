@@ -20,6 +20,6 @@
   "run_limit": "5,000 steps (about 4.2 minutes at 20 Hz)",
   "reset_notes": "Unscrew the filter, wipe the nipple and the boss, wipe and re-oil the gasket, and stand the filter on its gasket at its mark on the bench. Replace the filter if it was tightened past a full turn or cross-threaded, and after five trials past 180 degrees (the gasket takes a set; redraw the witness line on the new one), and chase the nipple's thread with an M20 x 1.5 die if it was cross-threaded. Lay the wrench back flat on its tape outline, cup down. Fit fresh glove covers on the gripper fingers; the used ones and the towel go in the oily-waste bag.",
   "fidelity": "Filter free on six undriven joints. Its threaded hole goes over the M20 nipple only centered within the 0.2 mm ISO 965 clearance (no capture; the end chamfer is drawn, not collided). The thread catches only if pressed on and turned within 2.6 degrees of square, then runs down as an axial drive. Past contact the gasket torque rises linearly to 18 N·m at 0.75 turn. The cup drives the flutes by contact. Friction 1.2 on every part, steel on steel included. No oil.",
-  "scores": "Dream-1 run: PENDING; demo: PENDING. On task.py SHA_PENDING.",
-  "media": "M-9ZFHC2"
+  "scores": "Dream-1 run: 0 (5,000 steps); demo: 1.0 (4,307 steps). Both on task.py b735c08844f6.",
+  "media": "M-HZF57J"
 }
