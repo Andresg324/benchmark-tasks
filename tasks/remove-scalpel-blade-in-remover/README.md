@@ -122,11 +122,13 @@ the button is on top, over the blade at the stop.
 Possible scores: 0, 0.4, 0.7, 1.0. Partial credit is given only for safe states: every scored state has the blade
 already inside the remover. Success: 1.0 held for 2 s.
 
-**Real trial, scored on the outcome.** Both grippers wear the dark cut-resistant finger covers of the Safety
-section below, so a touch on the bright steel blade is plain on the wrist and side videos; a touch of a cover counts
-as a touch of the robot. Side and top videos judge the hazards (a finger or any
-part of an arm on the blade, a drop, the bladed scalpel in the tray). At the end: the handle's fitting is bare, the blade is seen through the remover's slot,
-the remover stands, and a top photo shows the handle inside the tray.
+**Real trial, scored on the outcome.** Both grippers wear the dark cut-resistant finger covers of the Safety section
+below, so a touch on the bright steel blade is plain on the wrist and side videos; a touch of a cover counts as a
+touch of the robot. The covers' face is their nitrile coating, a rubber face like the simulated pads, and they sit
+just outside the fingers' collision shapes, so a real touch is judged at least as strictly as in the simulation. Side
+and top videos judge the hazards (a finger or any part of an arm on the blade, a drop, the bladed scalpel in the
+tray). At the end: the handle's fitting is bare, the blade is seen through the remover's slot, the remover stands,
+and a top photo shows the handle inside the tray.
 
 ## Credit only for the real act
 
@@ -183,7 +185,8 @@ commanded past the cap's top as a force target: the hand stops on the bottomed b
   button frees it.
 - Friction: stainless handle, blade, dish and tray 0.6 static, 0.42 kinetic (steel on steel, clean and dry: 0.5 to 0.8
   and 0.42 [9]); the polypropylene remover 0.3 and 0.25 (polyethylene on steel 0.2, polystyrene on steel 0.3 to 0.35 [9]).
-  PhysX averages the two surfaces' values; the YAM's finger pads are rubber (1.0 and 0.8).
+  PhysX averages the two surfaces' values; the YAM's finger pads are rubber (1.0 and 0.8). In the real trial the pads'
+  face is the finger covers' nitrile coating, also a rubber.
 
 ## Real-world build and reset
 
@@ -210,8 +213,9 @@ treats any touch of the blade as a failure.
 
 Once per session, with the covers on and before the first trial: close one gripper on the handle near its tail and
 lift the scalpel, blade on, clear of the dish and hold it level for 5 s without slipping; close a gripper's
-fingertips and press the remover's button fully down; pinch the remover's body across its 25 mm depth and slide it
-2 cm along the table with no slip in the fingers. If any of these slips, fit new covers and repeat.
+fingertips, hold the remover down on the table with them while the other hand pushes its slot end, and see it stay
+put, then press its button fully down; pinch the remover's body across its 25 mm depth and slide it 2 cm along the
+table with no slip in the fingers. If any of these slips, fit new covers and repeat.
 
 ## Sizes and sources
 
@@ -266,9 +270,9 @@ fingertips and press the remover's button fully down; pinch the remover's body a
   yam-isaac-lab-arena revision 0059d02a (`yam_arena/assets/yam/collision`, through `yam_arena.analysis.link_hulls`),
   and sample their surfaces at start-up (`yamgeom.py`, `guardkit.py`; the samples are cached in the system
   temp folder, never in the task).
-  - Source: those hulls are convex pieces that YAM-inspect-Isaac cut with CoACD from the link meshes of I2RT
-    Robotics' YAM model (github.com/i2rt-robotics/i2rt, commit 120c3c81, as the environment's `SOURCE_COMMIT`
-    records); the environment ships them unchanged.
+  - Source: those hulls are convex pieces that YAM-inspect-Isaac (github.com/ttpierson/YAM-inspect-Isaac) cut with
+    CoACD from the link meshes of I2RT Robotics' YAM model (github.com/i2rt-robotics/i2rt, commit 120c3c81, as the
+    environment's `SOURCE_COMMIT` records); the environment ships them unchanged.
   - License: the YAM model is under the MIT License, Copyright (c) I2RT Robotics (`yam_arena/assets/yam/LICENSE.i2rt`
     in the environment). The environment's README states that the environment has no license yet and that
     YAM-inspect-Isaac, which made the hulls, has none. The URDF, hulls, USD and the simulator (the environment's

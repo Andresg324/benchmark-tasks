@@ -417,6 +417,7 @@ def corners(lo, hi) -> list:
 BLADE_PTS = corners(B_LO, B_HI)
 HANDLE_PTS = corners(GRIP_LO, GRIP_HI) + corners(TANG_LO, TANG_HI)
 B_RLO, B_RHI = (B_X0, -B_W / 2, B_Z0), (B_X1, B_W / 2, B_Z0 + B_T)  # the real 0.4 mm blade (contact is judged on it)
+B_HALF_DIAG = float(np.linalg.norm(np.subtract(B_RHI, B_RLO))) / 2  # the blade box's centre to its farthest corner
 BLADE_PARTS = (gk.Block(tuple((a + b) / 2 for a, b in zip(B_RLO, B_RHI)), tuple(b - a for a, b in zip(B_RLO, B_RHI))),)
 HANDLE_PARTS = (gk.Block(tuple((a + b) / 2 for a, b in zip(GRIP_LO, GRIP_HI)), tuple(b - a for a, b in zip(GRIP_LO, GRIP_HI))),
                 gk.Block(tuple((a + b) / 2 for a, b in zip(TANG_LO, TANG_HI)), tuple(b - a for a, b in zip(TANG_LO, TANG_HI))))
@@ -523,7 +524,7 @@ def arm_gap(objects, poses=None, upto: float = 0.05) -> tuple:
     best, who = math.inf, ""
     for key, (o, R) in poses.items():
         _, c, r = mesh(key.split("/")[1])
-        if float(np.linalg.norm(o + R @ c - centre)) - r > upto:
+        if float(np.linalg.norm(o + R @ c - centre)) - r - B_HALF_DIAG > upto:  # no point of the link within upto
             continue
         q = yg.near(key.split("/")[1], lambda x, o=o, R=R: ((o + x @ R.T) - ob) @ Rb,  # in the blade's frame, only
                     lambda x: _box_gap(x, B_RLO, B_RHI), upto)  # the 1 cm cells of points that can be within `upto`

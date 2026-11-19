@@ -295,14 +295,14 @@ def test_hand_boxes_hold_the_hulls():
 
 
 def test_hull_samples_cover_the_surface():
-    """The contact threshold leans on the sampling: random points on the outer surface of the wrist's and a fingertip's
-    collision hulls (area-weighted, none inside another hull of the link) all lie closer to a sample point than
+    """The contact threshold leans on the sampling: random points on the outer surface of the upper arm's, the wrist's and
+    a fingertip's collision hulls (area-weighted, none inside another hull of the link) all lie closer to a sample point than
     TOUCH_TOL, so a real touch reads under the threshold."""
     import yamgeom as yg
     from scipy.spatial import cKDTree
 
     rng = np.random.default_rng(0)
-    for link in ("link5", "tip_left"):
+    for link in ("link3", "link5", "tip_left"):
         hs = yg.hulls(link)
         found = []
         for i, (_, tri, _) in enumerate(hs):
@@ -370,6 +370,35 @@ def test_hull_touch_visual_clear():
               f"{link}: hulls {hg * 1000:.2f} mm over the blade, visual mesh {vg * 1000:.1f} mm: a touch, 0")
 
 
+def test_end_on_touch_at_blade_ends():
+    """Anti-gaming (the per-step check's cull): each arm link's farthest collision-hull point 0.3 mm off the blade's
+    tip or heel, end-on along the blade with the link beyond it, is a touch (the trial is 0); the scorer's arm_gap
+    (as the trial calls it, upto 1 cm) equals a full scan of the link's points."""
+    import yamgeom as yg
+
+    lo, hi = np.array(M.B_RLO), np.array(M.B_RHI)
+    for link in M.ARM_LINKS:
+        pts, c, r = M.mesh(link)
+        far = pts[int(np.argmax(np.linalg.norm(pts - c, axis=1)))]
+        for end, u in ((hi[0], 1.0), (lo[0], -1.0)):
+            fresh()
+            o = world(handle=OUT)
+            ob, Rb = M.pose(o, "blade")
+            R = yg.turn_to(far - c, (-u, 0.0, 0.0))  # in the blade's frame: the far point faces the blade's end
+            pos = np.array([end + u * 0.0003, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2]) - R @ far
+            full = float(M._box_gap(pts @ R.T + pos, lo, hi).min())
+            M.LINK_POSES.clear()
+            M.LINK_POSES[f"right_robot/{link}"] = (ob + Rb @ pos, Rb @ R)
+            try:
+                gap, _ = M.arm_gap(o, upto=0.01)
+                run([world(handle=OUT)])
+            finally:
+                M.LINK_POSES.clear()
+            check(abs(gap - full) < 1e-9 and full < M.TOUCH_TOL and link in M._L.ruined,
+                  f"{link} end-on {'tip' if u > 0 else 'heel'} side: full scan {full * 1000:.2f} mm, arm_gap "
+                  f"{gap * 1000:.2f} mm: a touch, 0")
+
+
 def test_redteam():
     """The red-team cases (Nov 17): each scores what the real act deserves."""
     # R1: the remover, blade inside, carried into the instrument tray with the bare handle: not at its place: 0.7 at most
@@ -427,7 +456,8 @@ def test_redteam():
 
 if __name__ == "__main__":
     for t in (test_start, test_insert_pose, test_mechanism_and_tiers, test_no_catch_paths, test_hazards, test_gaming, test_arm_contact_and_press, test_redteam,
-              test_hand_boxes_hold_the_hulls, test_hull_touch_visual_clear, test_hull_samples_cover_the_surface):
+              test_hand_boxes_hold_the_hulls, test_hull_touch_visual_clear, test_hull_samples_cover_the_surface,
+              test_end_on_touch_at_blade_ends):
         t()
     if (HERE / "task.json").exists() and (HERE / "README.md").exists():
         test_text()
