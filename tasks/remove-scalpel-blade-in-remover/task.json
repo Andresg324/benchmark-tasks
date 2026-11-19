@@ -16,6 +16,6 @@
   "run_limit": "1,200 steps (60 s at 20 Hz)",
   "fidelity": "Rigid bodies at real size, box colliders. The blade is its own body, fixed to the handle until the button frees it where it lies, then fixed to the remover; nothing draws it in. The button is spring-returned; the scorer reads its travel only. The bare handle leaves the slot by contact alone. Blade collider 0.8 mm; contact is judged on the real 0.4 mm blade. Friction: steel 0.6/0.42, polypropylene 0.3/0.25.",
   "reset_notes": "New No. 10 blades stand in for used ones. Fit a new blade on the handle with a needle holder, never by hand: grip the blade's back edge in the needle holder, slide its slot onto the handle's fitting until it clicks home, then lay the scalpel in the dish as set up (blade tip on the floor, handle on the rim). Put the remover back upright on its tape marks; it holds 150 to 300 blades, so it serves many trials, and when full it goes in the sharps container whole. Put the tray back empty on its marks. Fit new finger covers when one shows a cut.",
-  "scores": "Dream-1 run: PENDING; demo: PENDING.",
-  "media": "M-PBKYRF"
+  "scores": "Dream-1 run: 0 (1,200 steps); demo: 1.0 (683 steps). Both on task.py 83619529b012.",
+  "media": "M-RD8JNQ"
 }

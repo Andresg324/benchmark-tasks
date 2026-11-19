@@ -148,8 +148,8 @@ trial's video shows. Each has a test in `test_task.py` (`test_gaming` G1 to G8, 
 
 ## Results in simulation
 
-One GPU physics run (Isaac Sim, scripted demo, `object_jitter=0`): the scripted demo scores PENDING; Dream-1 PENDING
-(both to be recorded on this task.py). In the demo the blade reaches the stop flat in the slot, the button goes down, and at that step the blade's
+One GPU physics run (Isaac Sim, scripted demo, `object_jitter=0`): the scripted demo scores 1.0 (683 steps); Dream-1 scores 0
+(1,200 steps), both on this task.py. In the demo the blade reaches the stop flat in the slot, the button goes down, and at that step the blade's
 joint to the handle turns off and its joint to the remover turns on. The handle comes out bare, the remover stays
 upright where it stood, no arm link touches the blade, and the bare handle lies still in the tray to the end.
 
