@@ -124,11 +124,11 @@ already inside the remover. Success: 1.0 held for 2 s.
 
 **Real trial, scored on the outcome.** Both grippers wear the dark cut-resistant finger covers of the Safety section
 below, so a touch on the bright steel blade is plain on the wrist and side videos; a touch of a cover counts as a
-touch of the robot. The covers' face is their nitrile coating, a rubber face like the simulated pads, and they sit
-just outside the fingers' collision shapes, so a real touch is judged at least as strictly as in the simulation. Side
-and top videos judge the hazards (a finger or any part of an arm on the blade, a drop, the bladed scalpel in the
-tray). At the end: the handle's fitting is bare, the blade is seen through the remover's slot, the remover stands,
-and a top photo shows the handle inside the tray.
+touch of the robot. The covers' face is their nitrile coating, a rubber face like the simulated pads; a cover adds
+its thickness over the finger, so a covered finger meets the blade no later than a bare one. Side and top videos
+judge the hazards (a finger or any part of an arm on the blade, a drop, the bladed scalpel in the tray). At the end:
+the handle's fitting is bare, the blade is seen through the remover's slot, the remover stands, and a top photo shows
+the handle inside the tray.
 
 ## Credit only for the real act
 
