@@ -16,9 +16,9 @@ forward, and the throw changes as the bag empties), the tube is dropped and hang
 valve is left open, the graduate is knocked over, the spout is left out of its sleeve or only half in.
 
 The bag and tube are one yamkit articulation on the holder, its parts colliding with each other: the bag swings on its
-hook (a pull on the tube moves it), the drain tube is two links (an 8 cm run off the outlet, then 11 cm) on hinges with
-a sideways hinge at the outlet, and the tip is a twist-valve collar (22 mm long, 12 mm across) that turns on the tube
-between its closed and open stops. Nothing pulls the tube or the collar anywhere: the tube's hinges carry only damping,
+hook (a pull on the tube moves it), the drain tube is two links (an 8.5 cm run off the outlet, then 11 cm) on hinges with
+a sideways hinge at the outlet, and at its end a twist-valve collar (22 mm long, 12 mm across), with the spout (15 mm
+long, 8 mm across) past it, turns on the tube between its closed and open stops. Nothing pulls the tube or the collar anywhere: the tube's hinges carry only damping,
 the collar's turn damping and its seal's friction (it stays where it is left), and the spout stays in its sleeve by
 contact and friction. The water is a lumped flow model: the bag is a pillow-shaped volume
 (its section grows over the bottom 8 cm, so 600 mL stands 10 cm deep); it drains through the spout as an orifice
@@ -29,7 +29,7 @@ the floor and is spilled too. The graduate is a liquidkit vessel (its level, its
 rim if tipped or jolted).
 
 A touch is real contact with the surface the real trial coats with lipstick: any point of the drain tube's surface
-(the run out of the bag, the folded-up tube and the valve collar with its mouth, the spout) within 0.5 mm of the
+(the run out of the bag, the folded-up tube, the valve collar and the spout past it) within 0.5 mm of the
 graduate's rim (its top edge, the pour spout's lip included), inside wall or inside floor, checked every control step
 and along the motion between steps, from the start of the trial to its end; and, as lipstick rides on a hand, a robot
 link that has touched that surface and then touches the tube. A stream that runs into a hand or arm for more than 1 s
@@ -128,14 +128,24 @@ BAG_KG = BAG_SHELL_KG + START_ML * ML * 1000.0  # the bag's body mass (the liqui
 BAG_SWING = (-0.02, 0.40)  # rad: the holder's frame stops it swinging back; it can swing out toward the robot
 PORT = (HOOK[0], 0.0, HOOK[2] - STRAP - BAG_H)  # the outlet, at the middle of the bag's bottom (base frame)
 
-# -- the drain tube and twist valve --------------------------------------------------------------------------------------
-# Clear PVC drain tube, 9 mm across, ending in a 12 mm twist-valve collar 22 mm long (the spout).
+# -- the drain's specification -------------------------------------------------------------------------------------------
+# Every size of the drain tube, valve collar, spout and sleeve is set here, and everything else (the sleeve's colliders,
+# the pad's height, the "in its sleeve" thresholds, the pull-out and push-in moves, the tests) is derived from these.
+# Clear PVC drain tube 9 mm across, ending in a twist-valve collar 22 mm long and 12 mm across; past the collar a spout
+# 15 mm long and 8 mm across. The sleeve is 30 mm deep from its mouth to its closed top. Fully home, the spout's tip
+# reaches the closed top, so 15 mm of the collar is inside the sleeve and 7 mm shows below its mouth (15 + 15 = 30).
 TUBE_R = 0.0045
-LA = 0.080  # the tube's run out from the outlet before it folds up: the folded tube stands 5.75 cm proud of the bag's
+LA = 0.085  # the tube's run out from the outlet before it folds up: the folded tube stands 6.25 cm proud of the bag's
 # front, held there by the holder tab (room for the gripper's 10 cm palm beside the bag; a real tube folds closer)
 LB = 0.110  # the rest of the tube
-LV = 0.022  # the twist-valve collar; its end is the spout
+LV = 0.022  # the twist-valve collar's length
 COLLAR_R = 0.006
+SPOUT_LEN = 0.015  # the spout, past the collar
+SPOUT_R = 0.004
+TIP_L = LV + SPOUT_LEN  # the spout's tip from the collar's tube end, along the axis
+SLEEVE_DEPTH = 0.030  # m from the sleeve's mouth to its closed top
+COLLAR_HOME_IN = SLEEVE_DEPTH - SPOUT_LEN  # 15 mm of collar inside the sleeve when the spout is fully home ...
+COLLAR_SHOWING = LV - COLLAR_HOME_IN  # ... and 7 mm showing below the mouth
 TUBE_KG = (0.004, 0.008, 0.010, 0.010)  # sideways hinge, stub, tube, collar (raised from ~2 g for the solver)
 STOW_A = math.pi / 2  # the stub folded out toward the robot, horizontal ...
 STOW_B = math.pi / 2  # ... and the tube folded up in front of the bag: the spout in its sleeve, pointing up
@@ -181,24 +191,27 @@ _PORT_L = (0.0, 0.0, -(STRAP + BAG_H))  # the outlet in the bag link's frame
 # Drainage bags park the drain spout in a sleeve on the bag ("Put the drain spout back into its sleeve at the bottom of
 # the bag", patient guides; Bard's patent US4417892: "The free end of the outlet is received in a protective housing
 # heat sealed to one face of the urine drainage bag"). Modeled as a short sleeve on the holder tab in front of the bag,
-# open at the bottom and closed at the top, that the folded-up tube's spout is pushed up into: a bore 1 mm wider than the
-# collar all round, a flared mouth, and a springy pad in its bag-side wall that presses the collar against the far wall.
-# The spout stays in by friction alone (the pad's push and the walls' grip on the collar), plastic on plastic; nothing
-# pulls it in, and the robot must push it all the way up (the scored "in its holder"). Sizes are model values (the
-# maker lists none), checked against the trial bag's sleeve at setup.
+# open at the bottom and closed at the top, that the folded-up tube's spout is pushed up into (sizes in the drain's
+# specification above): 30 mm deep, a bore 1 mm wider than the collar, a flared mouth, and a springy pad in its
+# bag-side wall that presses the collar against the far wall. Fully home the spout's tip is at the closed top, the spout
+# is inside the upper 15 mm and the collar fills the lower 15 mm, its last 7 mm showing below the mouth. The spout
+# stays in by friction alone (the pad's push and the walls' grip on the collar), plastic on plastic; nothing pulls it
+# in, and the robot must push it all the way up (the scored "in its holder"). The trial bag's sleeve is checked against
+# these sizes at setup.
 SLEEVE_X = -LA  # the sleeve's axis in the bag link's frame: over the end of the tube's run, ...
-SLEEVE_TOP = _PORT_L[2] + LB + LV  # ... closed at the height of the stowed spout's end
-SLEEVE_R = COLLAR_R + 0.001  # its bore's radius
-SLEEVE_DEPTH = 0.016  # m of collar it covers when the spout is all the way in
-SLEEVE_FLARE = (0.005, 0.003)  # its mouth flares this high, opening this much wider
+SLEEVE_TOP = _PORT_L[2] + LB + TIP_L  # ... closed at the height of the stowed spout's tip
+SLEEVE_MOUTH = SLEEVE_TOP - SLEEVE_DEPTH
+SLEEVE_R = COLLAR_R + 0.0005  # its bore's radius: 13 mm across, 1 mm wider than the collar
+SLEEVE_FLARE = (0.004, 0.0025)  # its lowest 4 mm flares out to the mouth, this much wider all round (18 mm across)
 SLEEVE_WALL = 0.0015
 SLEEVE_PANELS = 16
 PLASTIC_MU = (0.30, 0.25)  # static, dynamic: dry PVC on plastic (kinetic 0.23-0.30 measured, arXiv:1902.03573)
-PAD_FACE = 0.0045  # m from the axis: the pad's face at rest (the collar, against the far wall, pushes it back 0.5 mm)
+PAD_FACE = 0.0045  # m from the axis: the pad's face at rest, clear of the 8 mm spout (the collar, against the far
+# wall, pushes it back 1 mm)
 PAD_SIZE = (0.003, 0.006, 0.010)  # thickness, width, height
 PAD_LEAD = SLEEVE_R - PAD_FACE  # m: its top and bottom edges are chamfered 45 degrees back to the bore's wall, so a
 # collar end coming up (or down) meets a slope, not a step, and pushes the pad back
-PAD_Z = SLEEVE_TOP - SLEEVE_DEPTH / 2  # its middle, halfway up the sleeve
+PAD_Z = SLEEVE_MOUTH + (SLEEVE_FLARE[0] + COLLAR_HOME_IN) / 2  # its middle: on the collar's part in the straight bore
 PAD_TRAVEL = 0.004  # m it can be pushed back into the wall
 PAD_K, PAD_PRELOAD = 200.0, 0.006  # N/m and m: about 1.2 N pressing at rest (a light spring)
 PAD_DAMP = 1.0  # N*s/m
@@ -211,7 +224,7 @@ def _sleeve_colliders() -> list:
     bag link's frame."""
     out, n = [], SLEEVE_PANELS
     k = 1.0 / math.cos(math.pi / n)
-    z0, z1 = SLEEVE_TOP - SLEEVE_DEPTH, SLEEVE_TOP
+    z0, z1 = SLEEVE_MOUTH + SLEEVE_FLARE[0], SLEEVE_TOP  # the straight bore, above the flare
     for i in range(n):
         a0, a1 = 2 * math.pi * i / n, 2 * math.pi * (i + 1) / n
         mid = (a0 + a1) / 2
@@ -235,10 +248,10 @@ def _sleeve_colliders() -> list:
 _HEX_FACES = ((0, 1, 2), (0, 2, 3), (4, 6, 5), (4, 7, 6), (0, 4, 5), (0, 5, 1), (1, 5, 6), (1, 6, 2), (2, 6, 7),
               (2, 7, 3), (3, 7, 4), (3, 4, 0))
 _SLEEVE_MESH = kit.lathe([(0.0, SLEEVE_TOP + SLEEVE_WALL), (SLEEVE_R + SLEEVE_WALL, SLEEVE_TOP + SLEEVE_WALL),
-                          (SLEEVE_R + SLEEVE_WALL, SLEEVE_TOP - SLEEVE_DEPTH),
-                          (SLEEVE_R + SLEEVE_FLARE[1] + SLEEVE_WALL, SLEEVE_TOP - SLEEVE_DEPTH - SLEEVE_FLARE[0]),
-                          (SLEEVE_R + SLEEVE_FLARE[1], SLEEVE_TOP - SLEEVE_DEPTH - SLEEVE_FLARE[0]),
-                          (SLEEVE_R, SLEEVE_TOP - SLEEVE_DEPTH), (SLEEVE_R, SLEEVE_TOP), (0.0, SLEEVE_TOP)],
+                          (SLEEVE_R + SLEEVE_WALL, SLEEVE_MOUTH + SLEEVE_FLARE[0]),
+                          (SLEEVE_R + SLEEVE_FLARE[1] + SLEEVE_WALL, SLEEVE_MOUTH),
+                          (SLEEVE_R + SLEEVE_FLARE[1], SLEEVE_MOUTH),
+                          (SLEEVE_R, SLEEVE_MOUTH + SLEEVE_FLARE[0]), (SLEEVE_R, SLEEVE_TOP), (0.0, SLEEVE_TOP)],
                          kit.Look((0.93, 0.93, 0.92), 0.4), center=(SLEEVE_X, 0.0, 0.0), n=24)
 BAG_LINK = kit.Link(
     "bag", "revolute", "Y", anchor=HOOK, lower=BAG_SWING[0], upper=BAG_SWING[1], start=0.0, mass=BAG_KG, damping=0.3,
@@ -274,8 +287,10 @@ TUBE_B = kit.Link("tube_b", "revolute", "Y", anchor=_below(PORT, LA), lower=-2.6
 VALVE_LINK = kit.Link("valve", "revolute", "Z", anchor=_below(PORT, LA + LB), lower=min(0.0, VALVE_OPEN_Q),
                       upper=max(0.0, VALVE_OPEN_Q), start=0.0,
                       mass=TUBE_KG[3], parent="tube_b", damping=VALVE_DAMP, friction=VALVE_FRICTION,
-                      meshes=(_cyl((0.0, 0.0, -LV / 2), COLLAR_R, LV, VALVE),),
-                      colliders=(kit.Collider((0.0, 0.0, -LV / 2), radius=COLLAR_R, height=LV),))
+                      meshes=(_cyl((0.0, 0.0, -LV / 2), COLLAR_R, LV, VALVE), _cyl((0.0, 0.0, -LV - SPOUT_LEN / 2),
+                                                                                    SPOUT_R, SPOUT_LEN, VALVE)),
+                      colliders=(kit.Collider((0.0, 0.0, -LV / 2), radius=COLLAR_R, height=LV),
+                                 kit.Collider((0.0, 0.0, -LV - SPOUT_LEN / 2), radius=SPOUT_R, height=SPOUT_LEN)))
 
 
 def _pad_collider():
@@ -446,7 +461,7 @@ def fk(swing=0.0, side=0.0, a=STOW_A, b=STOW_B, v=0.0) -> dict:
     pv = pb + Rbt @ np.array([0.0, 0.0, -LB])
     Rv = Rbt @ rot_axis("Z", v)
     return {"bag": (hook, Rb), "tube_x": (port, Rx), "tube_a": (port, Ra), "tube_b": (pb, Rbt), "valve": (pv, Rv),
-            "tip": pv + Rv @ np.array([0.0, 0.0, -LV]), "collar": pv + Rv @ np.array([0.0, 0.0, -LV / 2])}
+            "tip": pv + Rv @ np.array([0.0, 0.0, -TIP_L]), "collar": pv + Rv @ np.array([0.0, 0.0, -LV / 2])}
 
 
 def _R(q) -> np.ndarray:
@@ -462,7 +477,7 @@ def spout(objects) -> tuple:
     """(spout end, its outward axis, the valve frame's origin, rotation) from the valve collar's state."""
     p, R = _state_pose(objects, "drainbag/valve")
     d = R @ np.array([0.0, 0.0, -1.0])
-    return p + LV * d, d, p, R
+    return p + TIP_L * d, d, p, R
 
 
 def bag_level(objects, volume_m3: float) -> float:
@@ -486,20 +501,37 @@ def valve_open_fraction(v: float) -> float:
     return float(min(max((v / VALVE_OPEN_Q * VALVE_OPEN - lo) / (VALVE_OPEN - lo), 0.0), 1.0))
 
 
-IN_SLEEVE_TOP = 0.004  # m: "all the way in" is the spout's end within this of the sleeve's closed top
+IN_SLEEVE_TOP = 0.004  # m: "fully home" is the spout's tip within this of the sleeve's closed top ...
+COLLAR_MIN_IN = COLLAR_HOME_IN - IN_SLEEVE_TOP  # ... with at least this much collar inside the sleeve (11 of its
+# 22 mm; at most 11 mm showing below the mouth)
+COAXIAL = SLEEVE_R - COLLAR_R + 0.0005  # m: the collar's axis within this of the sleeve's, where it is inside
+
+
+def holder_readout(objects) -> tuple:
+    """(spout tip's height below the sleeve's closed top, mm of collar inside the sleeve, the collar's axis' largest
+    offset from the sleeve's axis over its inside part, the collar pointing up) in the bag link's frame."""
+    bp, bR = _state_pose(objects, "drainbag/bag")
+    vp, vR = _state_pose(objects, "drainbag/valve")
+
+    def at(z):  # a point on the valve's axis, z along it (0 the collar's tube end, -LV its spout end, -TIP_L the tip)
+        return bR.T @ (vp + vR @ np.array([0.0, 0.0, z]) - bp)
+
+    end, shoulder, tip = at(0.0), at(-LV), at(-TIP_L)
+    up = float(shoulder[2] - end[2]) / LV  # the axis' rise per length, 1 straight up
+    inside = min(max(float(shoulder[2]) - SLEEVE_MOUTH, 0.0), LV * max(up, 0.0)) / max(up, 1e-9)  # along the axis
+    mouth = at(-LV + inside)  # where the collar passes the mouth (its shoulder if it is not in)
+    radial = max(math.hypot(float(e[0]) - SLEEVE_X, float(e[1])) for e in (shoulder, mouth))
+    return SLEEVE_TOP - float(tip[2]), inside, radial, up > 0.0
 
 
 def in_holder(objects) -> bool:
-    """The spout is in its sleeve, all the way up: both ends of the valve collar inside the bore (in the bag link's
-    frame) and the spout's end within IN_SLEEVE_TOP of the sleeve's closed top. A geometric readout of where the
-    collar is; what keeps it there is the sleeve's contact and friction."""
-    bp, bR = _state_pose(objects, "drainbag/bag")
-    vp, vR = _state_pose(objects, "drainbag/valve")
-    ends = [bR.T @ (vp + vR @ np.array([0.0, 0.0, z]) - bp) for z in (0.0, -LV)]  # collar's tube end, spout's end
-    radial = max(math.hypot(float(e[0]) - SLEEVE_X, float(e[1])) for e in ends)
-    tip_z = float(ends[1][2])
-    return (radial <= SLEEVE_R - COLLAR_R + 0.0005 and SLEEVE_TOP - IN_SLEEVE_TOP <= tip_z <= SLEEVE_TOP + 0.0005
-            and float(ends[0][2]) < float(ends[1][2]))
+    """The spout is in its sleeve, fully home: its tip within IN_SLEEVE_TOP of the sleeve's closed top (and not past
+    it), at least COLLAR_MIN_IN of the valve collar inside the sleeve, and the collar coaxial in the bore over its
+    inside part, pointing up. Derived from the drain's specification: fully home the tip is at the top with
+    COLLAR_HOME_IN of collar inside. A geometric readout of where the collar is; what keeps it there is the sleeve's
+    contact and friction."""
+    below_top, inside, radial, up = holder_readout(objects)
+    return bool(up and -0.0005 <= below_top <= IN_SLEEVE_TOP and inside >= COLLAR_MIN_IN - 1e-9 and radial <= COAXIAL)
 
 
 def graduate_frame(objects) -> tuple:
@@ -609,12 +641,13 @@ def _sphere_samples(r, spacing=0.0004) -> np.ndarray:
 
 def _surface_samples() -> dict:
     """Points on the whole drain tube's surface, each in its own link's frame, on that link's colliders: the run out of
-    the bag (tube_a), the folded-up tube with its knee (tube_b), and the valve collar with its mouth (the spout). Every
+    the bag (tube_a), the folded-up tube with its knee (tube_b), and the valve collar with the spout past it. Every
     point of that surface lies within 0.4 mm of a sample (test_task.py), so a real contact reads as a gap under 0.4 mm,
     inside the 0.5 mm touch band."""
     return {"drainbag/tube_a": _cylinder_samples(TUBE_R, 0.0, -LA, 48),
             "drainbag/tube_b": np.concatenate([_cylinder_samples(TUBE_R, 0.0, -LB, 48), _sphere_samples(TUBE_R)]),
-            "drainbag/valve": _cylinder_samples(COLLAR_R, 0.0, -LV, 64)}
+            "drainbag/valve": np.concatenate([_cylinder_samples(COLLAR_R, 0.0, -LV, 64),
+                                              _cylinder_samples(SPOUT_R, -LV, -TIP_L, 48)])}
 
 
 TUBE_SAMPLES = _surface_samples()
@@ -870,7 +903,8 @@ class Ledger:
         """Both hands clear of the spout, the tube and the graduate: every tool point and pad tip RELEASE_MARGIN away
         and, in the sim, no part of either arm (its collision hulls: palm, fingers, wrist, forearm) within
         RELEASE_MARGIN of any part of the drain tube, so nothing but the sleeve holds the spout up."""
-        spout_parts = (gk.Seg((0.0, 0.0, 0.0), (0.0, 0.0, -LV), COLLAR_R),)
+        spout_parts = (gk.Seg((0.0, 0.0, 0.0), (0.0, 0.0, -LV), COLLAR_R),
+                       gk.Seg((0.0, 0.0, -LV), (0.0, 0.0, -TIP_L), SPOUT_R))
         tube_parts = (gk.Seg((0.0, 0.0, 0.0), (0.0, 0.0, -LB), TUBE_R),)
         run_parts = (gk.Seg((0.0, 0.0, 0.0), (0.0, 0.0, -LA), TUBE_R),)
         clear = bool(gk.released_clear(objects, "drainbag/valve", spout_parts, RELEASE_MARGIN)
@@ -937,8 +971,10 @@ def _update(objects):
             _log_sleeve_friction()
         if _DEBUG:  # run log only: the spout in its sleeve, the pad, the hull counts
             tip_b = _state_pose(objects, "drainbag/bag")[1].T @ (tip - _state_pose(objects, "drainbag/bag")[0])
-            print(f"  sleeve: spout end {1000 * (float(tip_b[2]) - SLEEVE_TOP):+.1f} mm from its top, "
-                  f"{1000 * math.hypot(float(tip_b[0]) - SLEEVE_X, float(tip_b[1])):.1f} mm off its axis, pad "
+            _below, _inside, _radial, _up = holder_readout(objects)  # (DRAINBAG_DEBUG)
+            print(f"  sleeve: spout tip {1000 * (float(tip_b[2]) - SLEEVE_TOP):+.1f} mm from its top, "
+                  f"{1000 * math.hypot(float(tip_b[0]) - SLEEVE_X, float(tip_b[1])):.1f} mm off its axis, collar "
+                  f"{1000 * _inside:.1f} mm inside ({1000 * _radial:.1f} mm off axis), pad "
                   f"{1000 * joint_angle('pad', 0.0):.2f} mm back, arm hulls {_HULLS.get('counts')}", flush=True)
         if _DEBUG and "left_gripper" in objects and "right_gripper" in objects:  # run log only
             col = _p + _R_ @ np.array([0.0, 0.0, -LV / 2])  # (DRAINBAG_DEBUG)
@@ -1406,9 +1442,13 @@ else:  # replace yamkit's import hook with one that also adds the drain step aft
 # sleeve: a global IK search finds no pose within 35 mm; the left one can.)
 X_YAW = -math.pi / 2  # top-down fingers closing across world x (turned this way: the wrist stays inside its limits)
 FINGER_HALF_OPEN = 0.047  # m: each finger's inner face from the tool point when fully open (guardkit's gripper model)
-DRAIN_A = math.radians(126.0)  # the run out of the outlet raised 36 degrees above horizontal, out toward the robot
+DRAIN_A = math.radians(129.0)  # the run out of the outlet raised 39 degrees above horizontal, out toward the robot
+# (with the spout 15 mm past the collar, 36 degrees left its tip low enough that a full bag's stream, missing the
+# graduate, would carry past the pan's near wall)
 DRAIN_PHI = math.radians(60.0)  # the spout's axis 60 degrees from straight down, toward the robot
-PULL_A = STOW_A - 0.35  # the stub lowered 20 degrees: the spout comes down out of its sleeve
+PULL_CLEAR = 0.006  # m: pulled out, the spout's tip comes this far below the sleeve's mouth
+PULL_A = STOW_A - math.asin((SLEEVE_DEPTH + PULL_CLEAR) / LA)  # the stub lowered 25 degrees: the spout's tip comes
+# down out of its sleeve
 PUSH_PAST = 0.002  # m: once the spout is in, the hand eases back to aim this far past the sleeve's closed top, and
 # lets go there (a light push up, so easing off never pulls the spout back down)
 PUSH_DEEP = 0.015  # m: pushing the spout in, the hand aims this far past the top: the arm gives under the pad's push

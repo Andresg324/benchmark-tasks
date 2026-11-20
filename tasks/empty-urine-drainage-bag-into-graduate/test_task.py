@@ -355,8 +355,9 @@ def test_tube_over_the_rim():
 
 def test_jet_up_out_of_the_mouth():
     # the stub hanging down and the tube folded back up: the spout points up, below the bag's level, so it flows; held
-    # with its mouth inside the graduate's mouth below the rim, its jet rises out and comes down outside
-    ab = (0.0, math.pi - 0.4)
+    # with its mouth inside the graduate's mouth below the rim, its jet rises out and comes down outside (leaning 34
+    # degrees: at 23 degrees the 15 mm spout's slower jet falls partly back into the mouth, which is caught, as it would be)
+    ab = (0.0, math.pi - 0.6)
     tip = M.fk(a=ab[0], b=ab[1])["tip"]
     t = Trial()
     t.at(ab, valve=M.VALVE_OPEN_Q, gpos=np.array([tip[0], tip[1], tip[2] - M.GR_RIM_Z + 0.01]))
@@ -699,10 +700,15 @@ def test_holder_readout_and_cheats():
         return M.in_holder(o)
 
     check(not moved(0.0, -0.010), "10 mm under the sleeve's top (half in): not in")
+    check(not moved(0.0, -M.IN_SLEEVE_TOP - 0.001), "1 mm short of the home threshold: not in")
+    check(moved(0.0, -M.IN_SLEEVE_TOP + 0.0005), "within the home threshold: in")
+    check(not moved(0.0, -M.SPOUT_LEN), "only the spout in (the collar at the mouth): not in")
+    check(not moved(0.0, -M.SLEEVE_DEPTH + 0.001), "the spout's tip resting just inside the mouth: not in")
     check(not moved(0.0, -0.030), "under the sleeve's mouth: not in")
     check(not moved(-0.016, -0.005), "beside the sleeve (draped against it): not in")
     check(not moved(0.0, 0.008), "above the sleeve (through its top): not in")
-    check(moved(-0.0009, -0.002), "against the far wall, 2 mm short of the top: in")
+    check(moved(-(M.SLEEVE_R - M.COLLAR_R), -0.002), "against the far wall, 2 mm short of the top: in")
+    check(not moved(-0.004, 0.0), "at the top's height but 4 mm off the sleeve's axis (through its wall): not in")
     check(not moved(0.0, 0.0, tilt=0.4), "cocked 23 degrees across the mouth: not in")
     # a hand holding the tube there: the trial cannot finish (both hands must be clear)
     t2 = Trial()
@@ -710,6 +716,57 @@ def test_holder_readout_and_cheats():
     drain_all(t2)
     t2.at(STOW, valve=0.0)
     check(t2.step(HOLD) == 0.75, "spout in its sleeve but a hand still on it: 0.75")
+
+
+def test_sleeve_spec_is_consistent_and_home_is_reachable():
+    # the drain's specification is one consistent set of sizes, and the full-score state is a real pose: the spout's
+    # tip at the sleeve's closed top with 15 mm of the 22 mm collar inside and 7 mm showing (15 + 15 = 30)
+    check(abs(M.SLEEVE_DEPTH - 0.030) < 1e-12 and abs(M.LV - 0.022) < 1e-12 and abs(M.SPOUT_LEN - 0.015) < 1e-12,
+          "sleeve 30 mm deep, collar 22 mm, spout 15 mm")
+    check(abs(M.COLLAR_HOME_IN + M.SPOUT_LEN - M.SLEEVE_DEPTH) < 1e-12 and abs(M.COLLAR_HOME_IN - 0.015) < 1e-12
+          and abs(M.COLLAR_SHOWING - 0.007) < 1e-12, "fully home: 15 mm of collar inside, 7 mm showing")
+    check(0.0 < M.COLLAR_MIN_IN < M.COLLAR_HOME_IN < M.LV, "the home threshold asks less collar than fully home has")
+    check(M.SPOUT_R < M.PAD_FACE < M.COLLAR_R < M.SLEEVE_R < M.SLEEVE_R + M.SLEEVE_FLARE[1],
+          "the spout passes the pad; the collar pushes it back; the bore and the mouth are wider than the collar")
+    lo, hi = M.PAD_Z - M.PAD_SIZE[2] / 2, M.PAD_Z + M.PAD_SIZE[2] / 2
+    check(M.SLEEVE_MOUTH + M.SLEEVE_FLARE[0] <= lo and hi <= M.SLEEVE_MOUTH + M.COLLAR_HOME_IN,
+          "the pad lies on the collar's part in the straight bore when fully home")
+    check(lo + M.PAD_LEAD < M.SLEEVE_MOUTH + M.COLLAR_MIN_IN,
+          "at the home threshold the collar still reaches past the pad's lower chamfer onto its face")
+    zs = [c.center[2] + p[2] for c in M._sleeve_colliders() if c.hull for p in c.hull]
+    check(abs(min(zs) - M.SLEEVE_MOUTH) < 1e-9 and abs(max(zs) - M.SLEEVE_TOP) < 1e-9,
+          "the sleeve's colliders run from its mouth to its closed top")
+    t = Trial()
+    below, inside, radial, up = M.holder_readout(t.objects())
+    check(abs(below) < 1e-9 and abs(inside - M.COLLAR_HOME_IN) < 1e-9 and radial < 1e-9 and up,
+          f"the stowed (start) pose: tip at the top, {1000 * inside:.1f} mm of collar inside, coaxial")
+    check(M.in_holder(t.objects()), "the start pose is in its sleeve")
+    # as the sim leaves it: the pad pushes the collar onto the far wall
+    o = t.objects()
+    p, R = M._state_pose(o, "drainbag/valve")
+    o["drainbag/valve"] = st(p + np.array([-(M.SLEEVE_R - M.COLLAR_R), 0.0, 0.0]), R)
+    check(M.in_holder(o), "fully home against the far wall (where the pad holds it): in")
+    # pulled out, the spout's tip is below the mouth before the tube leans out
+    a, phi = M.sleeve_path(M.STOW_A, M.PULL_A, 3)[-1]
+    f = M.fk(a=a, b=phi - a)
+    tip_b = f["bag"][1].T @ (f["tip"] - f["bag"][0])
+    check(float(tip_b[2]) <= M.SLEEVE_MOUTH - 0.005, f"pulled out: the tip {1000 * (M.SLEEVE_MOUTH - tip_b[2]):.1f} mm "
+          "below the mouth")
+
+
+def test_sleeve_holds_the_hanging_tube_with_the_arms_clear():
+    # fully home and let go, the pad presses the collar (it stands 1 mm back from rest) and the friction of the pad and
+    # the far wall carries the tube; with the arms clear the trial scores 1.0, with no other support
+    near_side = 2 * M.COLLAR_R - M.SLEEVE_R  # the collar's side toward the pad, from the axis, against the far wall
+    check(near_side > M.PAD_FACE, f"the collar pushes the pad back {1000 * (near_side - M.PAD_FACE):.1f} mm")
+    force = M.PAD_K * (M.PAD_PRELOAD + near_side - M.PAD_FACE)
+    g = 9.81
+    load = g * (M.TUBE_KG[1] * M.LA / 2 + (M.TUBE_KG[2] + M.TUBE_KG[3]) * M.LA) / M.LA
+    check(M.PLASTIC_MU[0] * 2 * force > 1.3 * load, f"grip {M.PLASTIC_MU[0] * 2 * force:.2f} N > the tube's {load:.2f} N")
+    t = Trial()
+    drain_all(t)
+    t.at(STOW, valve=0.0)
+    check(t.step(HOLD) == 1.0, "fully home, arms clear: 1.0")
 
 
 def test_released_needs_the_arms_off_the_tube():
@@ -739,7 +796,7 @@ def test_arms_clear_the_bag_and_sleeve():
     # the left hand's fingers on the tube while it pushes the spout in (they hold the tube 8 cm under the sleeve)
     hook = np.asarray(M.STAND_POS) + np.asarray(M.HOOK)
     pts = []
-    for z in np.arange(M.SLEEVE_TOP - M.SLEEVE_DEPTH - M.SLEEVE_FLARE[0], M.SLEEVE_TOP + M.SLEEVE_WALL, 0.002):
+    for z in np.arange(M.SLEEVE_MOUTH, M.SLEEVE_TOP + M.SLEEVE_WALL, 0.002):
         r = M.SLEEVE_R + M.SLEEVE_WALL + M.SLEEVE_FLARE[1]
         a = np.linspace(0, 2 * math.pi, 40, endpoint=False)
         pts.append(np.stack([M.SLEEVE_X + r * np.cos(a), r * np.sin(a), np.full(40, z)], 1))
@@ -1004,7 +1061,7 @@ def test_colliders_are_the_checked_shape():
     rng = np.random.default_rng(1)
     worst = 0.0
     for key, r, z0, z1 in (("drainbag/tube_a", M.TUBE_R, 0.0, -M.LA), ("drainbag/tube_b", M.TUBE_R, 0.0, -M.LB),
-                           ("drainbag/valve", M.COLLAR_R, 0.0, -M.LV)):
+                           ("drainbag/valve", M.COLLAR_R, 0.0, -M.LV), ("drainbag/valve", M.SPOUT_R, -M.LV, -M.TIP_L)):
         s = M.TUBE_SAMPLES[key]
         a = rng.uniform(0.0, 2 * math.pi, 9000)
         side = np.stack([r * np.cos(a[:5000]), r * np.sin(a[:5000]), rng.uniform(z1, z0, 5000)], 1)
@@ -1015,10 +1072,12 @@ def test_colliders_are_the_checked_shape():
             u = rng.normal(size=(4000, 3))
             pts = np.concatenate([pts, M.TUBE_R * u / np.linalg.norm(u, axis=1, keepdims=True)])
         worst = max(worst, float(cKDTree(s).query(pts)[0].max()))
-        check(abs(float(s[:, 2].max()) - max(z0, M.TUBE_R if key == "drainbag/tube_b" else z0)) < 1e-4
-              and abs(float(s[:, 2].min()) - z1) < 1e-9, f"{key}'s samples span its colliders")
+        z_lo = -M.TIP_L if key == "drainbag/valve" else z1
+        check(abs(float(s[:, 2].max()) - max(0.0, M.TUBE_R if key == "drainbag/tube_b" else 0.0)) < 1e-4
+              and abs(float(s[:, 2].min()) - z_lo) < 1e-9, f"{key}'s samples span its colliders")
     check(any(c.sphere for c in M.TUBE_B.colliders) and all(abs(c.height - L) < 1e-12 for c, L in
-          ((M.TUBE_A.colliders[0], M.LA), (M.TUBE_B.colliders[0], M.LB))),
+          ((M.TUBE_A.colliders[0], M.LA), (M.TUBE_B.colliders[0], M.LB), (M.VALVE_LINK.colliders[0], M.LV),
+           (M.VALVE_LINK.colliders[1], M.SPOUT_LEN))),
           "the tube's colliders run end to end, with a sphere at the knee")
     check(worst <= 0.0004, f"every point of the drain tube's surface is within {1000 * worst:.2f} mm of a sample")
 
@@ -1196,6 +1255,15 @@ def test_text_thresholds():
     for s in ("570 mL", "600 mL", "5 mL", "20 mL", "300 mL", "100 mL", "10 degrees", "1 s", "0.25", "0.5 mm"):
         check(s in j["scoring"], f"task.json scoring states '{s}'")
         check(s in readme, f"README states '{s}'")
+    # the sleeve's thresholds and specification, from task.py's own numbers
+    mm = lambda v: f"{round(v * 1000):d} mm"  # noqa: E731
+    for v in (M.IN_SLEEVE_TOP, M.COLLAR_MIN_IN, M.LV):
+        check(mm(v) in j["scoring"] and mm(v) in readme, f"task.json scoring and README state '{mm(v)}'")
+    for v in (M.SLEEVE_DEPTH, M.COLLAR_HOME_IN, M.COLLAR_SHOWING, M.SPOUT_LEN):
+        check(mm(v) in j["setup"] and mm(v) in readme, f"task.json setup and README state '{mm(v)}'")
+    for bad in ("both ends", "16 mm deep", "14 mm bore", "estimate", "measured"):
+        check(bad not in j["setup"] + j["scoring"] + j["reset_notes"], f"task.json does not say '{bad}'")
+    check("both ends" not in readme and "16 mm deep" not in readme, "README: no 'both ends' / '16 mm deep'")
     check(j["instruction"] == M.INSTRUCTION, "instruction matches")
     check("2,400 steps" in j["run_limit"] and M.RUN_LIMIT_STEPS == 2400, "run limit 2,400")
     check(len(j.get("context", "")) <= 1000, f"context at most 1,000 characters ({len(j.get('context', ''))})")
