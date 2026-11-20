@@ -2,8 +2,8 @@
 
 A clear glass mixing bowl, half full of cold water, stands in front of the robot. Three eggs lie on a folded tea towel
 to its left, and an empty glass ramekin stands to its right. The eggs look alike: one is fresh, one is a few weeks
-old, one is old enough to float. The real trial uses two fresh eggs and a brown plastic egg weighted to float like
-the old one (see Real-world build).
+old, one is old enough to float. The real trial uses three real eggs from one carton: two fresh ones, and one emptied
+and refilled with water so that it floats like the old one (see Real-world build).
 
 **Instruction:** `Lower each egg into the bowl of water without cracking it, then lift any egg that floats out into the small dish and leave the others in the bowl.`
 
@@ -46,42 +46,66 @@ Category: **Societal relatability**.
 
 ## Real-world build
 
-A low-cost setup: the bowl, the ramekin, a thin non-slip silicone mat under both, a tea towel, a carton of eggs, a
-plastic egg, 4.5 mm steel airgun BBs (Daisy .177), modelling clay, nitrile gloves, and common tools (tape, a ruler,
-a bamboo skewer, an egg carton).
+A low-cost setup: the bowl, the ramekin, a thin non-slip silicone mat under both, a tea towel, a carton of eggs,
+non-hardening modelling clay, a 10 mL oral syringe, nitrile gloves, and common tools (a thumbtack, a small Phillips
+screwdriver, tape, a ruler, a bamboo skewer, the egg carton, a phone with a flashlight).
 
 | Item | What | Size, mass |
 |---|---|---|
 | Sinkers (2) | US Large hen eggs, brown shells, from a new carton (USDA Large: 24 oz per dozen) | about 56.7 mm long, 42.1 mm across, 57 g |
-| Floater (1) | BestPysanky brown hollow plastic dummy nest egg, 2.25 in, weighted inside with steel BBs | 57 mm long, 40 mm across (maker's listing); about 46.4 g |
+| Floater (1) | A third egg from the same carton, emptied, then refilled with cold tap water and a little modelling clay at its narrow tip (see Preparing the eggs) | the carton's egg size; about 51 g for a 57 g egg, set by the float check |
 | Bowl | Anchor Hocking 2.5 qt clear glass mixing bowl (81575L20) | top 8 5/8 in, bottom 4 5/8 in, 4 1/4 in high; 1.2 L of cold tap water, 7.5 cm deep |
 | Discard dish | Duralex Ovenchef 8.5 oz clear glass ramekin | top 3 7/8 in, 2 in high |
 | Towel | Cotton tea towel, folded | 13 x 22 cm, 4 mm thick |
 
 Positions (cm from the midpoint between the arm bases, x forward, y left): bowl centered at x 32, y 0; towel
 centered at x 30, y 23, the eggs' middles at y 16, 23 and 30, long axes along x; ramekin at x 30, y -20.5.
-Which towel place holds the floater is shuffled per trial; the operator knows it by feel.
+Which towel place holds the floater is shuffled per trial; the operator knows it by the clay and tape on its
+tips.
 
-**Why a plastic floater.** Real eggs that float take weeks of aging and keep changing, so the floater is a brown
-plastic egg weighted to the sim floater's specific gravity (0.972). Like the sim's floater it floats blunt end up
-with about 5 mm showing (sim: 5.2 mm). The two sinkers are real fresh eggs. The plastic egg looks alike (brown,
-egg-shaped, the same length) but is plastic: it may look a little glossier, and it cannot crack (see Scoring). Telling
-it by look does not skip anything: the score needs all three eggs tested in the water first.
+**Why a refilled egg.** A real egg takes weeks of aging to float, and keeps changing, so the floater is a third egg
+from the same carton, emptied and refilled with cold tap water to the sim floater's specific gravity (0.972). Like
+the sim's floater it floats blunt end up with about 5 mm showing (sim: 5.2 mm). Its shell is a real eggshell with
+water behind it everywhere below its air gap, as a fresh egg's contents are behind its shell, so a squeeze or knock
+that cracks an egg cracks it, and the crack rule (see Scoring) covers it as it covers the other two. A small ball of
+modelling clay pressed into its narrow tip keeps it blunt end up: with water alone, its air could also gather at the
+narrow end and float it upside down. The fill follows from published egg data: a 57 g egg at a fresh egg's specific
+gravity of 1.075-1.085 (UF/IFAS VM044) has a volume of 52.5-53.0 cm3, so at 0.972 it weighs 51.0-51.5 g (sim: 52.54
+cm3, 51.1 g). Its shell is about 11% of the egg's mass (Park and Sohn 2018), about 6 g, which leaves about 45 g:
+about 4 g of clay and about 41 g of water, with an air gap of about 12 mm at the blunt end (sim: an 11 mm air cell).
+A larger egg from the carton takes a little more water; the float check, not a weight, sets it. The floater looks
+like the other two except for the clay and tape on its tips; telling it by look does not skip anything, as the score
+needs all three eggs tested in the water first.
 
 **Preparing the eggs.** Sinkers: two fresh eggs from a new carton, kept in the refrigerator between sessions. A
-cracked one is replaced from the carton. Floater, once (about 15 minutes):
+cracked one is replaced from the carton.
 
-1. Stand the plastic egg in an egg carton with its hole up. The hole should be at the blunt end; if it is at the
-   narrow end, plug it with clay and tape and make a hole at the blunt end. If a BB will not pass, open the hole a
-   little with a drill bit turned by hand.
-2. Drop in about 80 BBs, then more a few at a time, floating the egg in a bowl of cold tap water after each few,
-   blunt end up with the hole above the water. Stop when it floats with about 10 mm showing.
-3. Narrow end down, push small pieces of modelling clay in through the hole with a skewer and press them onto the
-   BBs so they cannot shift. Add more small pieces of clay, floating it after each, until 5 to 7 mm shows against a
-   ruler. Fill the hole with clay, tape over it and check once more: 4 to 7 mm showing (about 46.4 g in all).
+Floater: made once and reused, trial after trial and session after session, until its shell cracks. Making one takes
+about 20 minutes, plus a night for the emptied shell to dry. Make two from the same carton at once, so a spare is ready.
 
-Check before each session (1 minute): put the three eggs in a bowl of cold tap water. Both real eggs sink, and the
-floater floats blunt end up with 4 to 7 mm showing. A floater that sits lower has let in water: replace it.
+1. Wash a third egg from the carton. Prick a hole in each end with a thumbtack. At the blunt end, turn the tip of a
+   small Phillips screwdriver in the hole like a drill until it is about 5 mm across.
+2. Over a bowl, blow into the narrow-end hole until the contents run out of the blunt-end hole; if the yolk blocks
+   the hole, break it up with a bamboo skewer. Run a little water in, shake, and blow it out. Stand the shell blunt end
+   down in the egg carton overnight to dry.
+3. Cover the narrow-end hole with a dab of modelling clay pressed flat and a small piece of tape. Roll about 4 g of
+   clay (a ball about 17 mm across) into a few small pieces, push them in through the blunt-end hole with the skewer
+   and press them into the narrow tip.
+4. Stand the shell blunt end up in the carton. With a 10 mL oral syringe (pharmacy aisle), fill it with cold tap
+   water through the hole, floating it in a bowl of cold tap water after each syringe-full (hole above the water),
+   then a little at a time, until it floats blunt end up with 5 to 7 mm showing against a ruler.
+5. Press a dab of clay into the hole, flush with the shell, tape over it and float it once more: blunt end up, 4 to 7
+   mm showing.
+
+Check before each session (1 minute): put the three eggs in a bowl of cold tap water. Both fresh eggs sink, and the
+floater floats blunt end up with 4 to 7 mm showing. One that shows more has lost water: peel the tape at its blunt
+end, add a few drops with the syringe and seal it again. One that shows less has let water in: use the spare.
+
+Crack check (1 minute): candle every egg before its first trial (and look at the shell round the floater's holes
+before taping them), and after each trial candle each egg as it comes out of the bowl, before it
+is dried: in a dim room, hold it against a phone's flashlight and turn it; a crack shows as a bright line. An egg
+with a crack scores 0 for the trial and is replaced: a sinker from the carton, the floater by the spare (then make a
+new spare).
 
 **Protecting the robot.** Lifting the floater puts the fingers about 3 cm into the water. Cover each finger, from
 the pad up to the gripper body, with a finger cut from a large nitrile glove or a thin silicone sleeve (if a glove
@@ -136,8 +160,9 @@ inertia of its contents are set on the body. Eggshell friction is 0.4 static and
   on the egg, either arm's links together, both arms' links together, and the glass, table, towel and other eggs
   together (what a hand pushing the egg into the glass loads it with). A single step's reading is the impulse averaged over 1/240 s, so
   a sharp knock that averages twice the rupture force over a step peaked higher still. Real trial: these force limits
-  are scored in the sim only; a real egg with a visibly cracked shell scores 0. The plastic floater cannot crack, so
-  a hard squeeze on it is not caught in the real trial.
+  are scored in the sim only. All three eggs, the floater included, are real eggshells, so a squeeze or knock harder
+  than a shell takes cracks it: an egg with a crack, seen by eye or by candling it with a phone flashlight after the
+  trial (see Preparing the eggs), scores 0.
 - **0 also if** an egg leaves the table, or (real trial) the bowl is knocked off its mat or water spills over its rim.
 - Otherwise **0** until every egg has been **tested**: each has sat in the bowl's water, not touched by the robot,
   for 1 s.
@@ -157,8 +182,8 @@ velocity, which catches a fall from 8.2 to 10 mm depending on when the fall star
 are the contact force vectors PhysX reports between that egg and each link of each arm, and the egg's net contact
 force.
 
-Real trial, with a tape measure and a phone video: watch each egg go in and come out (release height), check the two
-real eggs for cracks afterward, measure the floater in the ramekin and the others on the bowl's floor, and time 1 s with the
+Real trial, with a tape measure and a phone video: watch each egg go in and come out (release height), check all
+three eggs for cracks afterward (by eye and by candling), measure the floater in the ramekin and the others on the bowl's floor, and time 1 s with the
 hands away.
 
 ## Run it
@@ -197,15 +222,18 @@ Approximate:
 - A crack is not simulated. It is judged from the egg's speed and the contact force on it.
 - The contents of each egg are one uniform density, with the shell's mass spread through them.
 - Real trial: both sinkers are fresh eggs that lie on their side, while the sim's second sinker is an older egg that
-  stands on its narrow end; only floater versus sinker matters for the score. The plastic floater is 5% narrower
-  than the sim's (40 vs 42.1 mm) and lighter (about 46.4 vs 51.1 g) at the same specific gravity. Its weight sits low
-  in the BBs, so it rights itself more stiffly than a real egg when tipped. Smooth plastic may be more slippery than
-  eggshell. The finger covers are not modeled.
+  stands on its narrow end; only floater versus sinker matters for the score. The refilled floater matches the sim's
+  floater in size (the carton's egg), specific gravity (set by the float check) and float height, and its mass follows
+  from its volume (about 51 g for a 57 g egg; sim 51.1 g). Its air gap is about 12 mm at its blunt end (sim: 11 mm)
+  and its center of mass about 2.5 mm from its middle toward its narrow end (sim: 1.6 mm). Its contents are water, not
+  egg white: its air is a free bubble rather than a cell held by a membrane, so lying on its side the air moves to the
+  top, and the water sloshes a little when it is moved fast. The clay at its narrow tip reaches about 8 mm from the
+  tip. The finger covers are not modeled.
 
 ## Sources
 
-- USDA AMS, Egg Grading Manual: weight classes (Large: 24 oz per dozen), air cell depth by grade, the air cell at the
-  large end, and its growth by evaporation.
+- USDA AMS, Egg Grading Manual: weight classes (Large: 24 oz per dozen), candling for cracked shells (checks), air
+  cell depth by grade, the air cell at the large end, and its growth by evaporation.
 - USU Extension (Utah State), "How can I tell if eggs have gone bad?"; Egg Safety Center, "Floating eggs".
 - UF/IFAS VM044: egg specific gravity by flotation in salt solutions (1.070-1.090).
 - Krivanek et al. 2016, Acta Universitatis Agriculturae et Silviculturae Mendelianae Brunensis 64:1191: egg size and
@@ -213,6 +241,7 @@ Approximate:
 - Narushin, Romanov and Griffin 2021, Annals of the New York Academy of Sciences: egg shape formulas built on
   Hugelschaffer's model.
 - Sutanto et al. 2025, Communications Physics 8:182: egg compression and drop tests.
-- BestPysanky, "Set of 12 Brown Hollow Plastic Dummy Fake Nest Eggs 2.25 Inches": 57 mm (H) x 40 mm (W), hollow,
-  with a hole at one end (https://www.bestpysanky.com/products/2-25-set-of-12-solid-brown-brown-dummy-plastic-eggs;
-  also https://www.amazon.com/dp/B00NMT24YG).
+- Park and Sohn 2018, Korean Journal for Food Science of Animal Resources 38:1080, Table 3: shell weight 6.72-7.08 g
+  of egg weights 62.61-63.75 g (about 11%).
+- pysanky.info, "Emptying Eggs" (https://www.pysanky.info/Preparations/Emptying.html): holes started with a
+  thumbtack and enlarged with a small Phillips screwdriver tip; blowing an egg out through a hole at each end.
