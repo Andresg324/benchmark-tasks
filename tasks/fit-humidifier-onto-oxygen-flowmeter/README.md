@@ -40,7 +40,9 @@ inspect-robots run --embodiment yam_arena --policy yam_scripted \
 **Who depends on it.** "More than 1.5 million adults in the United States use supplemental oxygen for a variety of
 respiratory disorders to improve their quality of life and prolong survival." (Jacobs et al., Optimizing Home Oxygen
 Therapy, ATS workshop report, Ann Am Thorac Soc 2018;15(12):1369-1381,
-https://www.aarc.org/wp-content/uploads/2019/01/ATS-Oxygen-Workshop-Report.pdf). The same report: "Oxygen users
+https://www.aarc.org/wp-content/uploads/2019/01/ATS-Oxygen-Workshop-Report.pdf); the ATS's 2021 summary of its home
+oxygen guideline: "Home oxygen therapy is prescribed to over 1.5 million Americans" (Khor et al., Ann Am Thorac Soc
+2021;18(9):1444-1449, https://atsedplus.thoracic.org/node/265). The 2018 report: "Oxygen users
 experience significant functional, mechanical, and financial problems and a lack of education related to their oxygen
 equipment". In hospitals, the British Thoracic Society's 2015 national audit covered "181 UK hospitals representing 2473
 wards and 55,208 patients, 14% of which were on oxygen" (BTS oxygen guideline 2017, web appendix 11,
@@ -54,6 +56,11 @@ The AARC home-oxygen guideline: "Oxygen supplied to adults by nasal cannulae at 
 humidified." (Respir Care 2007;52(8):1063-1068, https://www.aarc.org/wp-content/uploads/2014/08/08.07.1063.pdf). The
 7600 is used at "3 LPM to 7 LPM" (AirLife 7100 and 7600 hospital-use user guide UG-20019,
 https://connect.myairlife.com/resources/UG-20019-C1%20Rev%201%207100%20and%207600%20Bubble%20Humidifier%20Hospital%20Use%20User%20Guide.pdf).
+In practice the bottle is fitted more widely than that: "Bubble humidification is often utilized with low-flow nasal
+cannulas despite a lack of evidence to support its use." (Neal-Rice et al., Respir Care 2026, a US children's hospital,
+https://pubmed.ncbi.nlm.nih.gov/42561086/). In a French randomized trial of 354 ICU patients on oxygen, "for patients
+receiving more than 4 L/min, a post hoc superiority analysis suggested that patients receiving dry oxygen were less
+comfortable." (Poiroux et al., Oxyrea, Ann Intensive Care 2018;8:126, https://pubmed.ncbi.nlm.nih.gov/30560440/).
 
 **A badly fitted bottle costs the patient oxygen.** The same guide: "WARNING: Leaks may partially or fully reduce
 oxygen being delivered to the patient." Its own check after fitting: "Test for leaks. Turn the flow to 3 LPM and block
@@ -69,7 +76,9 @@ https://cpapx.com/cdn/shop/files/devilbiss-525ds-concentrator-user-guide.pdf).
 Some set-ups differ (a strap and connector tube on a Philips EverFlo; flowmeters with other outlets need an adaptor).
 
 **The hidden constraint is a square start.** Apria's liquid-oxygen manual (RES-2002): "Cross-threading the cap on the
-humidifier bottle will cause oxygen to escape out the top of the bottle". A home-oxygen supplier: "Thread the bottle
+humidifier bottle will cause oxygen to escape out the top of the bottle"
+(https://www.apria.com/hubfs/Patient%20Education%20Doc%20Page/RES-2002_Manual_Liquid-Oxygen_ONLINE_03-21_v1_FNL.pdf).
+A home-oxygen supplier: "Thread the bottle
 onto the humidifier port straight, not at an angle. If it does not turn easily in the first few twists, back it off
 and start again." and "Tighten until snug. Hand-tight is enough."
 (https://dmesuperstore.com/blogs/news/oxygen-concentrator-water-bottle). The bottle's maker sells its "Large, easy to
