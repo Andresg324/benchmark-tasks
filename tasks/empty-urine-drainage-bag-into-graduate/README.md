@@ -58,8 +58,7 @@ The real items (each is in the sim at the sizes under Fidelity):
   is 22 mm long and 12 mm across, a quarter turn from closed to open, and the spout past it is 15 mm long and 8 mm
   across. The sleeve is 30 mm deep from its mouth to its closed top, its bore 13 mm across (1 mm wider than the
   collar), flaring over its lowest 4 mm to an 18 mm mouth. Fully home, the spout's tip reaches the closed top, the
-  spout fills the upper 15 mm and the collar the lower 15 mm, and 7 mm of the collar shows below the mouth
-  (15 + 15 = 30).
+  spout fills the upper 15 mm and the collar the lower 15 mm, and 7 mm of the collar shows below the mouth.
 - **The hanging height:** the bag hangs from a 50 cm catheter-bag floor holder, hook 48 cm up, bag bottom 21 cm up:
   below the bladder and off the floor, as the CDC asks. The drip pan's floor stands in for the floor beside the bed.
 - **The fill:** 600 mL, 30 % of the bag's 2000 mL: a bag emptied at the end of a shift, well before it is half full.
