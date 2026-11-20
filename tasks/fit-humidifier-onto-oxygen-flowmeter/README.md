@@ -35,15 +35,30 @@ inspect-robots run --embodiment yam_arena --policy yam_scripted \
 - Scorer checks (the same plan, changed): `short` 0.25 (stopped 1.0 mm off its seat), `held` 0.5 (seated, hand
   still on), `crooked` 0 (latched cross-threaded at 7 degrees), `nothing` 0.
 
-## Why it matters (Impact on jobs)
+## Why it matters (Other: home and hospital oxygen)
 
-Licensed practical and vocational nurses (about 666,900 jobs in 2025, BLS) have this O*NET Core task (29-2061.00,
-importance 80): "Assemble and use equipment, such as catheters, tracheotomy tubes, or oxygen suppliers." Respiratory
-therapists' top Core task (29-1126.00, importance 99) includes setting up "therapeutic gas administration apparatus". A nursing skills text lists the step in the oxygen set-up: "If using a high O2 flow, attach
-humidifier" (figure: "Attach humidifier to flow meter."; Craven and Hirnle, Fundamentals of Nursing,
+**Who depends on it.** "More than 1.5 million adults in the United States use supplemental oxygen for a variety of
+respiratory disorders to improve their quality of life and prolong survival." (Jacobs et al., Optimizing Home Oxygen
+Therapy, ATS workshop report, Ann Am Thorac Soc 2018;15(12):1369-1381,
+https://www.aarc.org/wp-content/uploads/2019/01/ATS-Oxygen-Workshop-Report.pdf). The same report: "Oxygen users
+experience significant functional, mechanical, and financial problems and a lack of education related to their oxygen
+equipment". In hospitals, the British Thoracic Society's 2015 national audit covered "181 UK hospitals representing 2473
+wards and 55,208 patients, 14% of which were on oxygen" (BTS oxygen guideline 2017, web appendix 11,
+https://www.brit-thoracic.org.uk/document-library/guidelines/emergency-oxygen/web-appendix-11-dissemination-and-implementation).
+
+**When the humidifier goes on.** At higher flows the oxygen is bubbled through water. A nursing skills text: "If using a
+high O2 flow, attach humidifier" (figure: "Attach humidifier to flow meter."; Craven and Hirnle, Fundamentals of
+Nursing,
 https://downloads.lww.com/wolterskluwer_vitalstream_com/sample-content/9780781788786_Craven/samples/mod09/topic2a/text.html).
-At home, patients and caregivers do it: more than 1.5 million US adults use supplemental oxygen (Jacobs et al., Ann
-Am Thorac Soc 2018;15(12):1369-1381).
+The AARC home-oxygen guideline: "Oxygen supplied to adults by nasal cannulae at flows ≤ to 4 L/min need not be
+humidified." (Respir Care 2007;52(8):1063-1068, https://www.aarc.org/wp-content/uploads/2014/08/08.07.1063.pdf). The
+7600 is used at "3 LPM to 7 LPM" (AirLife 7100 and 7600 hospital-use user guide UG-20019,
+https://connect.myairlife.com/resources/UG-20019-C1%20Rev%201%207100%20and%207600%20Bubble%20Humidifier%20Hospital%20Use%20User%20Guide.pdf).
+
+**A badly fitted bottle costs the patient oxygen.** The same guide: "WARNING: Leaks may partially or fully reduce
+oxygen being delivered to the patient." Its own check after fitting: "Test for leaks. Turn the flow to 3 LPM and block
+the oxygen outlet port on the Bubble Humidifier (A). A sound should emit within 5 seconds. If there is no sound, check
+the lid and other connections for leaks."
 
 **The screw-on connection is how these bottles attach.** "Bubble humidifiers typically incorporate a female DISS 1240
 thread for connection to the flowmeter ..." (Quintero Osorio et al., Medical Devices: Evidence and Research 2026,
@@ -101,15 +116,28 @@ the 1.411 mm pitch of its seat, its axis within 0.6 mm and 2 degrees of the outl
 | Let go with the bottle still swinging | 0.5 | 1.0 needs it under 1 cm/s for 1 s. |
 | Drop or tip the bottle | 0 | Latched for the rest of the trial. |
 
-**Real trial.** From the video and a check after the trial:
-- Seated: a tester turns the wing nut on with the fingertips and it stops within an eighth of a turn; no thread shows
-  between the nut's mouth and the hex body; the bottle hangs plumb.
-- 0.25: the nut holds the bottle on the outlet, but a fingertip turns it more than an eighth of a turn before it stops.
-- Leak check: a blood-pressure bulb and gauge on a tube to the fitting's inlet; block the humidifier's outlet port
-  with a fingertip, pump to 200 mmHg (3.9 psi, under the 7600's 6 psi pop-off, AirLife UG-20018), and the gauge holds for 10 s. A cross-threaded or loose
-  nut leaks and the gauge falls.
-- Cross-threaded: the nut stops more than a turn short, sits tilted, or the leak check fails. Dropped, tipped and
-  let go: from the video. A trial stopped by the operator scores 0.
+**Real trial.** From the video and three checks after the trial, in this order, without loosening the nut. They
+tell a loose nut that was started square (0.25) from a cross-threaded one (0):
+1. **Square.** A square stood on the table against the jar, from the front and from the side: the jar's gap to the
+   blade differs by under 4 mm between the jar's top and bottom (125 mm, so 2 degrees). A cross-threaded nut hangs the
+   bottle more than 3 degrees off (a difference over 6.5 mm).
+2. **Turns.** A tester, steadying the bottle, turns the wing nut on with the fingertips until it stops, counting by a
+   wing.
+   - Seated (0.5 or 1.0): it stops within an eighth of a turn, and no thread shows between the nut's mouth and the
+     hex body.
+   - 0.25 (loose but started square): it turns on freely more than an eighth and under 0.91 of a turn (1.29 mm of
+     the 1.411 mm pitch), then stops seated, square, no thread showing.
+   - Cross-threaded: it binds short of its seat with thread showing (a nut that turns on more than 0.91 of a turn
+     before it stops is not a full turn on: 0).
+3. **Leak**, only once check 2 has turned the nut home, so a loose but square nut is never leak-tested loose. A
+   blood-pressure bulb and gauge on a tube to the fitting's inlet; block the humidifier's outlet port with a
+   fingertip, pump to 200 mmHg (3.9 psi, under the 7600's 6 psi pop-off, AirLife UG-20018), and the gauge holds for
+   10 s. This is the maker's own leak test (block the outlet port, listen for the pop-off) made with a gauge, since
+   the rig has no oxygen. A nut started square seals once home; a cross-threaded nut does not seat and leaks (Apria:
+   oxygen escapes "out the top of the bottle"), and the gauge falls.
+
+Cross-threaded (0): off square in check 1, binding in check 2 or leaking in check 3. Dropped, tipped and let go: from
+the video. A trial stopped by the operator scores 0.
 
 ## The model
 
