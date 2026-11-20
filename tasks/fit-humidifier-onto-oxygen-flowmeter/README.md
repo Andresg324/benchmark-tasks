@@ -121,14 +121,14 @@ tell a loose nut that was started square (0.25) from a cross-threaded one (0):
 1. **Square.** A square stood on the table against the jar, from the front and from the side: the jar's gap to the
    blade differs by under 4 mm between the jar's top and bottom (125 mm, so 2 degrees). A cross-threaded nut hangs the
    bottle more than 3 degrees off (a difference over 6.5 mm).
-2. **Turns.** A tester, steadying the bottle, turns the wing nut on with the fingertips until it stops, counting by a
-   wing.
+2. **Turns.** A tester, steadying the bottle, first pencils a line across one wing and the hex body, then turns the wing nut on with the
+   fingertips until it stops, counting turns by the line.
    - Seated (0.5 or 1.0): it stops within an eighth of a turn, and no thread shows between the nut's mouth and the
      hex body.
    - 0.25 (loose but started square): it turns on freely more than an eighth and under 0.91 of a turn (1.29 mm of
      the 1.411 mm pitch), then stops seated, square, no thread showing.
-   - Cross-threaded: it binds short of its seat with thread showing (a nut that turns on more than 0.91 of a turn
-     before it stops is not a full turn on: 0).
+   - Cross-threaded: it binds short of its seat with thread showing.
+   - Not a full turn on (0): it turns on 0.91 of a turn or more before it stops.
 3. **Leak**, only once check 2 has turned the nut home, so a loose but square nut is never leak-tested loose. A
    blood-pressure bulb and gauge on a tube to the fitting's inlet; block the humidifier's outlet port with a
    fingertip, pump to 200 mmHg (3.9 psi, under the 7600's 6 psi pop-off, AirLife UG-20018), and the gauge holds for
@@ -136,8 +136,9 @@ tell a loose nut that was started square (0.25) from a cross-threaded one (0):
    the rig has no oxygen. A nut started square seals once home; a cross-threaded nut does not seat and leaks (Apria:
    oxygen escapes "out the top of the bottle"), and the gauge falls.
 
-Cross-threaded (0): off square in check 1, binding in check 2 or leaking in check 3. Dropped, tipped and let go: from
-the video. A trial stopped by the operator scores 0.
+Any score above 0 needs check 1 under 4 mm. Cross-threaded (0): over 6.5 mm in check 1, binding in check 2, leaking in
+check 3, or seen in the video forced on at least a quarter turn while visibly tilted, even if straightened later (as in
+simulation, where the cross-thread latches). Dropped, tipped and let go: from the video. A trial stopped by the operator scores 0.
 
 ## The model
 
@@ -187,7 +188,7 @@ A low-cost setup:
 
 **Each trial.** Fill the 7600 (a new one after any cross-threaded trial) to its maximum line (290 mL) with tap water,
 screw its lid on with the threads aligned, weigh it (380 g), and stand it at its mark with a wing of its nut pointing
-at the robot's left. Both arms start at their ready pose. After the trial: the seated and leak checks, then unscrew
+at the robot's left. Both arms start at their ready pose. After the trial: the square, turns and leak checks, then unscrew
 the bottle and stand it back at its mark. Reset in about a minute.
 
 **Protecting the grippers.** The jar stays closed and upright; nothing wet touches the grippers. The operator stops
