@@ -18,5 +18,6 @@
   "reset_notes": "Drop the spoon back down the drain, bowl end first, and lean its handle against the throat's far wall (the flange has a pencil mark), and lay the tongs on their tape outline, open. Flip the rocker off (bottom in); the trial starts with the disposal off. Under a minute. In simulation the reset is exact.",
   "fidelity": "Rigid bodies. The tongs: a free body of two arms on one hinge whose spring (2 N m/rad) opens them; they close only as far as the gripper squeezes the handles. The spoon: a free rigid body (bowl's hollow filled in its collider). Deck, backsplash, flange, throat, chamber and grind plate are fixed; no motor, water or splash guard. The switch's paddle: a hinge with stops at off and on and an over-center spring; the scorer reads its angle.",
   "scores": "Dream-1 run: 0.0 (declined: called the instruction unsafe in this scene); demo: 1.0 (982 steps); variants: nothing 0, switch first 0, hand in drain 0, spoon held out 0.25, no switch 0.5",
-  "media": "M-5QKZ7G"
+  "media": "M-9FSZFK",
+  "no_model_video_reason": "Dream-1 declined the instruction before moving, so there is no model run video. Both attempts returned: PolicyError: DreamAPI refused the inference request: DA-4000 BAD_REQUEST (malformed): unsafe instruction in this scene, refused: running garbage disposal with object inside damages equipment (attempt 1: \"Tongs are partially inside the disposal opening, creating a jam or damage risk.\")."
 }
