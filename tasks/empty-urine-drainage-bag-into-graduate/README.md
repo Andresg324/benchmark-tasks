@@ -18,8 +18,7 @@ with an indwelling (Foley) catheter, and intake and output are on the task lists
 | Licensed Practical and Licensed Vocational Nurses (29-2061.00) | 666,900 | "Record food and fluid intake and output." |
 
 Together that is about 2.2 million US workers. Registered nurses do it too, but it is not on their O*NET list, so they
-are not counted. Home health and personal care aides empty leg and night bags at home, but their O*NET task lists say
-only "Assist patients with toileting and incontinent care", so they are not counted either.
+are not counted.
 
 **How often.**
 - Between 15 % and 25 % of hospitalized patients may receive a short-term indwelling urinary catheter (CDC, CAUTI
@@ -31,38 +30,36 @@ only "Assist patients with toileting and incontinent care", so they are not coun
 - So every catheterized patient's bag is emptied at least 2-3 times a day (8 or 12 h shifts), every day, by the aide or nurse on shift.
 
 **Why it is core, not ancillary.** It is the measurement that the O*NET lines above describe (urine output), and the
-step most tied to infection control. It is a graded skill in nurse-aide competency testing: the Arizona skills
-checklist "Catheter Care - Emptying a Urinary Drainage Bag" scores, in this order, "Places a barrier on the floor under
-the drainage bag", "Places the graduate on the previously placed barrier", "Opens the drain to allow the urine to flow
-into the graduate", "Completely empties drainage bag", "Avoids touching the graduate with any part of the tubing",
-"Closes the drain", "Wipes the drain with alcohol wipe AFTER emptying drainage bag" (left out here, see below) and
-"Replaces drain in holder". The CDC's catheter-associated UTI (CAUTI) guideline (2009),
-recommendation III.B.3 (Category IB, kept in the 2022 SHEA/IDSA/APIC update), sets the method: "Empty the collecting bag
+step most tied to infection control. It is a graded skill in nurse-aide competency testing (the Arizona skills
+checklist "Catheter Care - Emptying a Urinary Drainage Bag"; its steps are in the table below). The CDC's
+catheter-associated UTI (CAUTI) guideline (2009), recommendation III.B.3 (Category IB, kept in the 2022 SHEA/IDSA/APIC update), sets the method: "Empty the collecting bag
 regularly using a separate, clean collecting container for each patient; avoid splashing, and prevent contact of the
 drainage spigot with the nonsterile collecting container." The same guideline keeps the bag below the bladder and off
-the floor and the system closed; CDC estimates that up to 380,000 CAUTIs and 9,000 related deaths a year could be
+the floor and the system closed; CDC states that up to 380,000 CAUTIs and 9,000 related deaths a year could be
 prevented.
 
 **Why it is hard for a robot.** The spout hangs on soft tubing. One hand has to hold it a few centimeters above the
 graduate's mouth without letting the tube touch the rim, the inside or the floor, while the other twists the valve
-collar on that same tube, and at the end the spout has to go straight up into a sleeve barely wider than it. The full bag throws the stream forward in an arc, and as the bag empties the stream
-slows and its arc shortens, so the aiming hand has to follow it. A picture of the end state does not show any of this.
+collar on that same tube, and at the end the spout has to go straight up into a sleeve whose bore is 1 mm wider than the collar.
+The full bag throws the stream forward in an arc, and as the bag empties the stream slows and its arc shortens, so the aiming hand has to follow it. A picture of the end state does not show any of this.
 
 ## The scene and how this matches the real job
 
-The real items (each is in the sim at the sizes under Fidelity, checked against the trial parts at setup):
-- **The bag:** Bard (BD) 154002 urinary drainage bag, 2000 mL, vinyl, anti-reflux valve, hook and string hanger, 48 in
-  tubing, drain tube with a twist valve (McKesson's listing). Its clear drain tube (modeled 9 mm across) leaves the
-  middle of the bag's bottom, runs out 8.5 cm toward the robot and folds up 11 cm in front of the bag; the twist-valve
-  collar at its end (22 mm long, 12 mm across, a quarter turn from closed to open), with the spout (15 mm long, 8 mm
-  across) past it, sits closed with the spout pushed fully home in the bag's drain-spout sleeve.
-- **The sleeve:** drainage bags park the drain spout in a sleeve on the bag ("Put the drain spout back into its sleeve
-  at the bottom of the bag", patient guide; Bard's patent US4417892: the outlet's free end "is received in a protective
-  housing heat sealed to one face of the urine drainage bag"). It holds the spout by its grip alone: pushed fully home,
-  the spout stays; pulled down, it comes out. The task's specification of the sleeve and spout: the sleeve is 30 mm deep
-  from its mouth to its closed top, with a bore 1 mm wider than the collar; fully home, the spout's tip reaches the
-  sleeve's closed top with 15 mm of the 22 mm collar inside and 7 mm showing below the mouth (15 + 15 = 30). Setup step
-  2 checks the trial bag against it.
+The real items (each is in the sim at the sizes under Fidelity):
+- **The bag:** Bard (BD) 154002 urinary drainage bag. BD lists it as 2000 mL; McKesson lists it as vinyl, with an
+  anti-reflux valve, a hook and string hanger, 48 in tubing and a twist-valve drain tube. Its clear drain tube leaves
+  the middle of the bag's bottom, runs out 8.5 cm toward the robot and folds up 11 cm in front of the bag; the
+  twist-valve collar at its end, with the spout past it, sits closed with the spout pushed fully home in the bag's
+  drain-spout sleeve.
+- **The sleeve and the drain's sizes:** the drain spout parks in a sleeve on the bag ("Put the drain spout back into
+  its sleeve at the bottom of the bag", patient guide; Bard's patent US4417892: the outlet's free end "is received in
+  a protective housing heat sealed to one face of the urine drainage bag"). It holds the spout by its grip alone:
+  pushed fully home, the spout stays; pulled down, it comes out. The drain tube is 9 mm across. The twist-valve collar
+  is 22 mm long and 12 mm across, a quarter turn from closed to open, and the spout past it is 15 mm long and 8 mm
+  across. The sleeve is 30 mm deep from its mouth to its closed top, its bore 13 mm across (1 mm wider than the
+  collar), flaring over its lowest 4 mm to an 18 mm mouth. Fully home, the spout's tip reaches the closed top, the
+  spout fills the upper 15 mm and the collar the lower 15 mm, and 7 mm of the collar shows below the mouth
+  (15 + 15 = 30).
 - **The hanging height:** the bag hangs from a 50 cm catheter-bag floor holder, hook 48 cm up, bag bottom 21 cm up:
   below the bladder and off the floor, as the CDC asks. The drip pan's floor stands in for the floor beside the bed.
 - **The fill:** 600 mL, 30 % of the bag's 2000 mL: a bag emptied at the end of a shift, well before it is half full.
@@ -74,7 +71,7 @@ The real items (each is in the sim at the sizes under Fidelity, checked against 
 - **The barrier:** a blue Medline disposable underpad on the floor under the bag, folded in half both ways (29 x 46 cm).
 - **The floor and the spill catch:** an Oatey 34169 plastic washing machine pan (28 x 30 in inside, 2.5 in deep; 29.75
   x 31.75 in outside) under the whole scene. Its floor is the floor beside the bed; its walls are far below the drain
-  and the valve, and the arms keep 23 mm or more clear of them all through the demo (`test_task.py`, on the
+  and the valve, and the arms keep 20 mm or more clear of them all through the demo (`test_task.py`, on the
   robot's collision hulls). A dropped tube, a stream that misses the mouth or a knocked-over graduate drains into it,
   not onto the table.
 
@@ -96,7 +93,7 @@ Real failures stay possible: the spout or the tube touches the rim, the inside w
 CDC and checklist violation), the stream lands beyond the mouth (or, as it shortens, short of it), a hand gets in the
 stream's way (it splashes off), the tube is dropped and hangs down with the valve open (draining onto the floor), the
 graduate is knocked over, shaken so it slops, or left off the barrier, the valve is left open, the spout is left out of
-its sleeve or only partly in (it then works loose and falls out).
+its sleeve or only partly in (less than 11 mm of the collar inside).
 
 ## Run a trial
 
@@ -112,11 +109,7 @@ inspect-robots run --embodiment yam_arena --policy yam_scripted \
 
 Model run (Dream-1): the same command with `--policy dream --max-steps 2400`.
 Video: `inspect-robots video logs/drainbag-demo/*.json`. The scorer (`task_score`) reports the score each step; the
-trial's score is the one at its end. `DRAINBAG_DEBUG=<n>` prints the drain's state every n control steps (bag,
-graduate, spilled, valve, tube angles, spout in its sleeve, spout height, touch, the stream check). The run log says
-"drainbag: hand check on: arm hulls {...}" with each arm's hull count once the arms' collision hulls are read;
-"drainbag: HAND CHECK OFF" means they (or one arm's) could not be read at some step, and such a trial cannot score
-1.0. Offline checks: `python3 test_task.py` in this folder.
+trial's score is the one at its end. Offline checks: `python3 test_task.py` in this folder.
 
 ## Scoring
 
@@ -167,9 +160,8 @@ A low-cost setup of named, widely available products; nothing has to be made, an
 - Use a Medline disposable underpad (23 x 36 in), folded in half both ways to 29 x 46 cm.
 - Use clear tap water, 600 mL per trial (no coloring: it stays hygienic and identical trial to trial), and a small
   plastic kitchen funnel (e.g. the smallest of an OXO Good Grips 3-piece funnel set) to fill the bag.
-- Use a basic digital kitchen scale reading 1 g to 5 kg (e.g. Etekcity EK6015 or OXO Good Grips 11 lb food scale). The
-  fill is 600 g within 2 g and the spill limits are 5 mL and 20 mL, so 1 g is enough; check it once against 500 mL of
-  water measured in the graduate. The scale also measures the fill, so no measuring jug is needed.
+- Use a basic digital kitchen scale reading 1 g to 5 kg (e.g. Etekcity EK6015 or OXO Good Grips 11 lb food scale); it
+  also weighs out the fill.
 - **Spill containment:** an Oatey 34169 plastic washing machine pan (28 x 30 in inside, 29.75 x 31.75 in outside with
   its lip, 2.5 in deep), its 1 in PVC drain adapter left off and the drain hole taped shut with 3M duct tape. It stands
   on the table under the whole scene (holder, bag, underpad and graduate) and holds many times the bag's 600 mL, so a
@@ -192,7 +184,7 @@ A low-cost setup of named, widely available products; nothing has to be made, an
   long-wear or transfer-proof formula), white paper towels, a white LED flashlight, and Dawn dish soap to wash it off.
 - Use ScotchBlue 2090 painter's tape and a 30 cm steel ruler (e.g. Westcott) for the setup marks, and a phone on a
   tripod mount for the side video.
-- Safety: tap water only; nothing sharp, hot or heavy (the full bag is about 0.7 kg: 600 g of water and the bag); the
+- Safety: tap water only; nothing sharp, hot or heavy (the full bag is 0.7 kg: 600 g of water and the bag); the
   pan keeps the water off the table and the robot's bases, and the operator stops a failed trial (below).
 
 **Operator stop.** If the stream runs onto a hand or an arm for more than 1 s in all (a 0 already), or the tube is
@@ -205,9 +197,7 @@ edge, the pour spout's lip included), inside walls and inside floor carry a thin
 bare, as the hands carry it there. The drain tube, the valve collar and the spout stay bare, so the hands hold and
 twist exactly the clean parts the sim models. After the trial the whole drain tube, the collar and the spout's end face
 are wiped with a white paper towel: any red on the towel or the tube means some part of the tube touched the coated
-graduate at some moment of the trial. This is the transfer test machinists use to find where two parts touch
-(engineer's blue is applied thinly to one surface and transfers only where the other touches it), with a marker that
-is safe at a bedside setup. The stream landing on the coated inside, or the spout dipping into the collected water,
+graduate at some moment of the trial. The stream landing on the coated inside, or the spout dipping into the collected water,
 does not carry red to the tube, as the coat does not dissolve. The sim scores the same events: the tube within 0.5 mm
 of the rim, inside wall or floor, or a robot link that touched them and then the tube (a finger reddened on the rim
 reddens the tube it then holds).
@@ -225,11 +215,7 @@ bases (x forward, y to the robot's left).
 **Setup (marks and tolerances; about 25 minutes the first time)**
 1. Set the pan on the table with its near right outside corner at x 6.5, y -42 cm (within 5 mm), its near edge along
    the y axis, and tape its corners to the table with painter's tape. Heights below are from the pan's floor.
-2. Check the trial parts against the sizes under Fidelity with the ruler (the bag's and tube's lengths, the graduate's
-   outside sizes and its handle, within 5 mm; the tube's, the valve collar's and the spout's diameters within 1 mm; the
-   valve's turn from closed to open by eye) and weigh the empty graduates (the model's 136 g within 15 g). Check the
-   sleeve and spout before the first trial: push the spout fully home and let go with the tube hanging free; it stays
-   put, and a ruler held against the collar shows about 7 mm of collar below the sleeve's mouth (within 2 mm).
+2. Weigh each empty graduate (the model's 136 g within 15 g).
 3. Tape the holder's base to the pan's floor so its hook sits at x 42, y -4 cm (within 5 mm), 48 cm above the pan's
    floor (within 5 mm; check with the ruler).
 4. Pre-weigh the dry underpad (1 g) and tape its corners flat centered at x 28.5, y 4.5 cm, its long side along y
@@ -237,8 +223,7 @@ bases (x forward, y to the robot's left).
 5. Tare a dry graduate on the scale and weigh 600 g of tap water into it (within 2 g). Pour it through the funnel into
    the bag's inlet tube held above the bag, then dry it.
 6. Hang the bag on the hook, front toward the robot, twist the valve to its closed stop and push the spout fully home
-   in its sleeve (about 7 mm of collar showing below the mouth). Let go: the spout stays in. Check once per session that it stays for 1 minute with the tube
-   hanging free, and that it comes out with a light pull.
+   in its sleeve (7 mm of collar showing below the mouth). Let go.
 7. Coat the graduate: rub the lipstick round the rim's top edge (the pour spout's lip included), over the inside walls
    from the rim down and over the inside floor; leave the outside wall and the handle bare. Blot it once with a paper
    towel so the coat is thin (a thick coat smears). Tare it and write down its empty mass. Check the coat once per
@@ -261,12 +246,12 @@ bases (x forward, y to the robot's left).
 4. Stream into a hand: from the side video, the total time the stream runs into a hand or an arm; more than 1 s scores
    0. Water that splashes off is in the spill reading.
 5. Valve and sleeve: photo of the collar at its closed stop, and a side photo of the sleeve's mouth with the ruler
-   held against the collar: fully home shows about 7 mm of collar below the mouth; more than 11 mm showing (the tip
-   more than 4 mm short of the top) is not in its sleeve. No drip from the spout for 30 s (video).
+   held against the collar: fully home shows 7 mm of collar below the mouth; more than 11 mm showing (the tip more
+   than 4 mm short of the top) is not in its sleeve. No drip from the spout for 30 s (video).
 6. Graduate upright, standing on the underpad, and both hands clear at the end: the side video and a photo from above.
 
 **Reset (about 8 minutes):** unhook the bag and drain what is left into the sink; refill it as in setup step 5 (with
-the spare graduate, dry); rehang, close it and push the spout fully home in its sleeve (about 7 mm of collar showing); wash the used graduate and the drain
+the spare graduate, dry); rehang, close it and push the spout fully home in its sleeve (7 mm of collar showing); wash the used graduate and the drain
 tube with dish soap and warm water, rinse and dry them; coat the spare graduate as in step 7, tare it and put it on its
 circle; lay a fresh pre-weighed underpad (or the same one once it is dry and back to its start mass); wipe the pan's
 floor and the covers dry, look the bag covers over under the flashlight and replace any with red on it, and fit fresh
@@ -292,21 +277,10 @@ finger cots.
 
 ## Design notes
 
-- **The pan.** A fixed floor and four walls at the pan's inside size, with an outside slightly larger than the real
-  one (each sloped wall and its lip taken as the solid band between them, so the arms are checked against more than
-  the real wall); every height in the scene is from its floor. Spill lands on that floor.
 - **The holder and the bag.** One articulation fixed to the pan's floor at the holder's base, its parts colliding with
   each other (only the tube's first run, which starts inside the bag's outlet, is excused against the bag). The bag
   hangs on a hinge at the hook: a pull on the tube swings it, as on a real holder; the holder's frame stops it swinging
   back.
-- **The drain tube.** A sideways hinge at the outlet, an 8.5 cm run and an 11 cm tube on hinges in the bag's plane, and
-  the valve collar (22 mm long, 12 mm across) with the spout past it (15 mm long, 8 mm across), turning on the tube's axis between its closed and open stops (the
-  joint's limits). The tube's colliders run end to end, with a sphere at the knee where the run folds up, so a bend
-  leaves no gap. Nothing pulls the tube or the collar toward any pose: the tube's hinges carry only damping (the soft
-  tube's own resistance to quick bending), and the collar, like a real twist valve's seal, turns with light finger
-  pressure and stays where it is set (joint friction, with no preferred position). The
-  tube hangs straight down from the outlet when nothing holds it: dropped with the valve open, it drains onto the
-  floor.
 - **The sleeve.** A sleeve on a tab in front of the bag, open at the bottom and closed at the top, 30 mm from its mouth
   to its top, its bore 13 mm across (1 mm wider than the collar), its lowest 4 mm flared out to an 18 mm mouth: convex
   panels on the bag's own body, so the collar and spout touch them. Fully home, the spout's tip is at the closed top,
@@ -316,7 +290,7 @@ finger cots.
   and the far wall holds the tube up. The pad's push and the plastic's friction are model values (the sleeve's
   colliders carry a plastic surface; the tube and everything else of the bag carry the environment's grip material);
   over half to twice that push and friction from 0.25 to 0.5 the grip still exceeds what the tube's weight asks
-  (`test_task.py`), and the trial bag's own sleeve is checked to hold the spout at setup. Nothing else holds it: with the
+  (`test_task.py`). Nothing else holds it: with the
   sleeve's colliders taken out (`DRAINBAG_NO_SLEEVE=1`, a check run only) the tube drops out of it. The pad's spring is
   on from the first physics step after every reset, so the spout stays in through the scene's settle before the trial
   starts. To score, the spout must be pushed fully home: its tip within 4 mm of the top, at least 11 mm of the collar
@@ -327,56 +301,35 @@ finger cots.
   far the valve is open: the flow slows as the bag empties. Up in its sleeve, the spout is above the full bag's level,
   so nothing flows even if the valve is opened there.
 - **The stream.** It leaves the spout along its axis at sqrt(2 g h) and falls ballistically. It is caught if it crosses
-  the plane of the graduate's mouth (tilted with the graduate) within the mouth, 2 mm in from the rim, or if the spout
-  is already inside the mouth below its plane and the jet does not come back down outside it; otherwise it lands on
-  the floor and is spilled. As h falls the stream slows and its arc shortens. Each step the arc is checked against both
-  arms' own collision hulls (the robot model's, at their live poses, each grown by the jet's radius, from one collar
-  radius beyond the spout's mouth): a stream that runs into a finger, a hand or an arm splashes off it onto the floor
+  the plane of the graduate's mouth inside the rim; otherwise it lands on the floor and is spilled. As h falls the
+  stream slows and its arc shortens. Each step the arc is checked against both arms' own collision hulls (the robot
+  model's, at their live poses): a stream that runs into a finger, a hand or an arm splashes off it onto the floor
   and is spilled, and more than 1 s of it in all scores 0. If either arm's hulls cannot be read in the sim at any
   step, the log says so and the trial cannot score 1.0.
 - **The graduate's water.** A liquidkit vessel of the graduate's inside shape: its surface tilts with the graduate's
   motion through the first sloshing mode (natural frequency and viscous damping of water in a tank of its size, after
   NASA SP-106 as updated by Dodge), so a hard shake or jolt slops water over the rim; tipped, it pours over the rim as
   a weir. A gentle move spills nothing.
-- **The touch.** The whole drain tube counts, as on the checklist. The graduate's colliders are its shape: the flared
-  wall as 48 convex panels round the axis (their inside faces on the drawn wall to within 0.14 mm), the floor and the
-  handle. The coated surface is the rim's top (the jug's pour spout, which the model leaves out, counted as rim
-  there), the inside wall and the inside floor. The drain tube's surface is sampled on its colliders (the two tube
-  links, the knee's sphere and the collar, sides and ends) so that every point of it lies within 0.4 mm of a sample,
-  and each sample's distance to the coated surface is computed exactly every control step and along the straight
-  motion between steps. A gap of 0.5 mm or less is a touch. Each robot link that comes within 0.5 mm of the coated
-  surface is marked as carrying lipstick; if it then comes within 0.5 mm of the tube, that is a touch too. The tests
+- **The touch.** The whole drain tube counts, as on the checklist. The coated surface is the rim's top (the jug's
+  pour spout, which the model leaves out, counted as rim there), the inside wall and the inside floor, on the
+  graduate's own colliders. Points over the drain tube's surface, no point of it more than 0.4 mm from one, are
+  checked against the coated surface every control step and along the straight motion between steps; a gap of 0.5 mm
+  or less is a touch. A robot link that comes within 0.5 mm of the coated surface carries lipstick; if it then comes
+  within 0.5 mm of the tube, that is a touch too. The tests
   place the graduate at 0.3 mm (a touch) and 0.7 mm (none) from the tube on the rim, the inside wall low and high and
   the floor, check that the bare outside wall and handle are not touches, and check a swipe across the rim within one
   step, a graduate tipped and raised to meet the spout, the tube laid over the rim (and over the pour spout's lip) with
   the spout inside the mouth, the rim in the tube's knee at bends from 0 to 120 degrees, a fingertip carrying red from
   the rim to the tube, and a spout hovering inside the mouth (no touch).
-- **The drawing** (never part of the score). The water is drawn as clear water: light and slightly blue-tinted,
-  semi-transparent in the bag and the graduate (the stream, a few pixels wide on the camera, is drawn solid); the jug
-  itself is drawn see-through. In the bag the water is drawn as slices as thick as the filled bag at each height (full
-  at the start, falling as it drains); in the graduate as a surface at the exact depth for its volume, so it rises
-  smoothly; the stream as one smooth tube mesh from just inside the spout along its arc into the mouth and, where the
-  jet meets the graduate's inside wall before the surface, down that wall to the surface (the arc is never drawn
-  through the wall). The stream is drawn 8 mm thick fully open (a little wider than the 6 mm bore, so it shows on the
-  320 px camera), thinner while the valve is only partly open. The drawing is created when the scene is built and
-  drawn in its start state on every reset, so the first frame already shows the full bag.
-- **The demo** (open loop, 106 s). Right hand: takes the graduate's handle from above, carries it onto the underpad
-  under the drain and slides off the handle's arm. Left hand (the aiming hand; the right one cannot hold the tube
-  fingers-across in front of the sleeve): comes in from the robot's left with its fingers pointing right and pinches
-  the tube 8.5 cm up from the collar (fingers aimed 2 mm inside each side), pulls the spout straight down out of its
-  sleeve (lowering the run 25 degrees, so its tip comes 6 mm below the mouth, the tube leaning a little so the spout stays in line with the sleeve), leans the tube out clear of the
-  sleeve, raises the run to 39 degrees above horizontal and swings the spout to 60 degrees from vertical, 4.4 cm above
-  the rim. Right hand (the valve hand): pinches the collar from the robot's right and twists it a quarter turn open,
-  lets go and stands by 7 cm off. The aiming hand then follows the stream: six waypoints, from the scorer's own drain
-  model run ahead (planned at 75 % open), move the spout so the shortening stream keeps landing on the same spot in the
-  mouth (offline: within 43 mm of the mouth's center, inside its 61.5 mm radius, from 40 % to 100 % open). 49 s
-  after the flow starts, the valve hand takes the collar again and twists it closed, pressing it onto its closed stop;
-  the aiming hand swings the tube back up, stands it under the sleeve and pushes the spout straight up into it, aiming
-  25 mm past the sleeve's top (the scripted demo's choice: the arm gives as the pad resists the collar, and the top
-  stops the spout), keeps pushing 1.5 s, eases off to aim 2 mm past the top; both hands let go and back away. Offline, on the robot's collision hulls at
-  the planned joint angles, at every pose checked (every 0.25 s; while carried, the graduate moves with the hand that
-  holds it), no arm comes within 5 mm of the coated surface, once the graduate is down none comes within
-  10 mm of it, and the arms stay clear of the sleeve and the bag throughout.
+- **The demo** (open loop, 106 s). The right hand carries the graduate by its handle onto the underpad under the
+  drain. The left hand pinches the tube, pulls the spout straight down out of its sleeve, raises the run to 39 degrees
+  above horizontal and aims the spout 4.4 cm above the rim; the right hand twists the valve a quarter turn open and
+  stands off. The left hand follows the shortening stream through six waypoints planned from the scorer's own drain
+  model. 49 s after the flow starts, the right hand twists the valve closed, and the left hand swings the tube up and
+  pushes the spout fully home in its sleeve (aiming 25 mm past the sleeve's top, which stops the spout); both hands
+  let go and back away. Offline, on the robot's collision hulls at the planned joint angles every 0.25 s, no arm comes
+  within 5 mm of the coated surface, once the graduate is down none comes within 8 mm of it, and the arms stay clear
+  of the sleeve and the bag throughout.
 
 ## Runtime and seeds
 
@@ -396,40 +349,33 @@ finger cots.
 
 ## Fidelity
 
-- The water is a lumped flow model: the bag's volume drains through the spout as an orifice (Torricelli) with the head
-  from its level down to the spout, the stream follows the ballistic arc that head gives it (and stops at a hand or
-  arm in its way), and the graduate (liquidkit) holds the volume, shows its level, sloshes when moved and spills over
-  its rim if tipped or shaken. Volumes are conserved to the microliter; what it leaves out is splashing, dripping and
-  surface tension.
+- The water is a lumped flow model (orifice flow, a ballistic stream, the graduate's sloshing volume; see Design
+  notes). Volumes are conserved to the microliter; what it leaves out is splashing, dripping and surface tension.
 - The vinyl bag is a rigid pillow on its hook hinge, and its mass stays at full (the 70 g bag and 600 g of water) as it
   drains. The graduate's body keeps its empty mass as it fills, and the stream pushes on nothing.
 - The flexible PVC tube is two rigid links on hinges that carry only damping. Folded, it stands 6.25 cm off the bag's
-  front, its spout in the sleeve on the holder tab (room for the gripper's 10 cm palm beside the bag); a real tube
+  front, its spout in the sleeve on the tab in front of the bag (room for the gripper's 10 cm palm beside the bag); a real tube
   folds closer. The sleeve holds the spout by contact and friction, with a light spring pad for the springiness of
-  the real sleeve's wall; its friction, 0.30 static and 0.25 sliding, is a model value set at the low end of what dry
-  PVC shows on other materials (0.23-0.30 sliding, measured), and the pad's push is a model value too. The valve
+  the real sleeve's wall; its friction, 0.30 static and 0.25 sliding, is a model value set at the low end of dry PVC's
+  published sliding friction on other materials (0.23-0.30), and the pad's push is a model value too. The valve
   collar turns between its two stops, which are the joint's limits.
 - The graduate is round, as the jug is; its small pour spout is left out, its lip counted as rim. The tube parts'
   masses are raised slightly for the solver.
-- Tube contact is real contact on the graduate's colliders: the drain tube's surface within 0.5 mm of the rim, the
-  inside wall or the inside floor, directly or through a robot link that touched them first, at any time in the trial
-  (see The touch, under Design notes).
-- The drip pan is modeled at its inside size and a slightly larger outside, 30 x 32 in (so the arms are checked against
+- In the sim the drip pan has its inside size and a slightly larger outside, 30 x 32 in (so the arms are checked against
   more than the real pan); the gripper and forearm covers (thin nitrile and clear bags) are not modeled; the
   once-per-session covers check confirms the covered fingers open, close, pinch, carry and twist.
-- Sizes in the sim (the task's specification; setup step 2 checks the trial parts): the bag 18 x 4.5 x 25 cm with an 8 cm bottom bulge (the maker lists its capacity); the drain tube
-  9 mm across, 8.5 + 11 cm; the collar 12 mm across, 22 mm long; the spout 15 mm long, 8 mm across, 6 mm bore; the
+- Sizes in the sim (the task's sizes): the bag 2000 mL (BD's capacity), its body a rigid pillow 18 x 4.5 x 25 cm with
+  an 8 cm bottom bulge; the drain tube 9 mm across, 8.5 + 11 cm; the collar 12 mm across, 22 mm long; the spout 15 mm long, 8 mm across, 6 mm bore; the
   valve a quarter turn, clockwise seen from the spout; the sleeve 30 mm from mouth to closed top, its bore 13 mm
   across, its lowest 4 mm flared to an 18 mm mouth (fully home: 15 mm of collar inside, 7 mm showing); the graduate
   11.2 cm across the bottom and 12.7 cm across the top outside, 14.6 cm tall (the maker's 4.4 in, 5 in and 5.75 in),
   with a 2 mm wall, a 3 mm floor and 136 g; its handle's top arm reaching 4 cm out from the rim, 1.2 cm wide, and its
-  grip 9 cm tall. Setup step 2 checks them against the trial parts.
+  grip 9 cm tall.
 
 ## Sources
 
 - O*NET 29-2061.00 Licensed Practical and Licensed Vocational Nurses, task list and 2025 employment:
-  https://www.onetonline.org/link/summary/29-2061.00 ; O*NET 31-1121.00 / 31-1122.00 (home health and personal care
-  aides, not counted): https://www.onetonline.org/link/details/31-1121.00
+  https://www.onetonline.org/link/summary/29-2061.00
 - O*NET 31-1131.00 Nursing Assistants, task list and 2025 employment: https://www.onetonline.org/link/summary/31-1131.00 ;
   BLS OEWS 31-1131: https://www.bls.gov/oes/current/oes311131.htm
 - CDC, CAUTI guideline background (15-25 % of hospitalized patients; about 5 % of long-term-care residents; up to
@@ -440,7 +386,7 @@ finger cots.
   https://www.utoledo.edu/policies/utmc/nursing/guidelines/general/pdfs/Guideline%20General%20-%20Indwelling%20Foley%20Catheter%20Care%20with%20Nurse%20Driven%20Protocol.pdf
 - Arizona nurse-aide skills checklist, Catheter Care - Emptying a Urinary Drainage Bag:
   https://src.bryanuniversity.edu/wp-content/uploads/Catheter-Care_-Emptying-a-Urinary-Drainage-Bag_AZ-Skills-Checklist-.pdf
-- Bard 154002 urinary drainage bag, 2000 mL: https://www.bd.com/en-us/products-and-solutions/products/product-page.154002 ;
+- Bard (BD) 154002 urinary drainage bag, 2000 mL (BD's product page): https://www.bd.com/en-us/products-and-solutions/products/product-page.154002 ;
   McKesson's listing (drain tube type "Twist Valve", "48 Inch Tubing", vinyl, anti-reflux valve, hook and string
   hanger): https://mms.mckesson.com/product/146120/Bard-Medical-154002
 - The drain spout's sleeve: "Remove the drain spout from its sleeve at the bottom of the drainage bag" and "Put the
@@ -448,7 +394,7 @@ finger cots.
   https://healthlibrary.methodisthealthsystem.org/surgery/recovery/how-empty-and-clean-your-urinary-catheter ;
   C.R. Bard, US patent 4417892 ("The free end of the outlet is received in a protective housing heat sealed to one face
   of the urine drainage bag"): https://patents.google.com/patent/US4417892
-- Friction of dry PVC on other materials (kinetic, measured: plastic tape 0.229, aluminum 0.281, wood 0.296):
+- Friction of dry PVC on other materials (kinetic: plastic tape 0.229, aluminum 0.281, wood 0.296):
   https://arxiv.org/pdf/1902.03573
 - Eisco CH0357D 1000 mL short-form polypropylene measuring jug, with handle and spout (5.75 in tall, 5 in top and
   4.4 in bottom diameter, 6.75 in from spout to handle edge): https://www.eiscolabs.com/products/ch0357d
@@ -466,8 +412,6 @@ finger cots.
 - Revlon Super Lustrous Lipstick, Certainly Red (a cream finish):
   https://www.temptalia.com/product/revlon-super-lustrous-lipstick/certainly-red
 - Lipstick (wax, oils and pigments; traces left on drinking cups and glasses): https://en.wikipedia.org/wiki/Lipstick
-- Engineer's blue, the contact transfer test ("transferred only in places where the surfaces are in contact"):
-  https://en.wikipedia.org/wiki/Engineer%27s_blue
 - Sloshing frequency and damping of the graduate's water: Dodge, The New Dynamic Behavior of Liquids in Moving
   Containers (update of NASA SP-106), eq. (1.40)-(1.41) and ch. 2 eq. (2.6a):
   https://www2.swri.org/www2/fluid-slosh/dodge-sp-106-update.pdf
