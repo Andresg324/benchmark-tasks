@@ -37,7 +37,7 @@ inspect-robots run --embodiment yam_arena --policy yam_scripted \
 
 ## Why it matters (Other: home and hospital oxygen)
 
-**Who depends on it.** "More than 1.5 million adults in the United States use supplemental oxygen for a variety of
+**Who is on oxygen.** "More than 1.5 million adults in the United States use supplemental oxygen for a variety of
 respiratory disorders to improve their quality of life and prolong survival." (Jacobs et al., Optimizing Home Oxygen
 Therapy, ATS workshop report, Ann Am Thorac Soc 2018;15(12):1369-1381,
 https://www.aarc.org/wp-content/uploads/2019/01/ATS-Oxygen-Workshop-Report.pdf); the ATS's 2021 summary of its home
@@ -47,6 +47,8 @@ experience significant functional, mechanical, and financial problems and a lack
 equipment". In hospitals, the British Thoracic Society's 2015 national audit covered "181 UK hospitals representing 2473
 wards and 55,208 patients, 14% of which were on oxygen" (BTS oxygen guideline 2017, web appendix 11,
 https://www.brit-thoracic.org.uk/document-library/guidelines/emergency-oxygen/web-appendix-11-dissemination-and-implementation).
+No source we found counts how many of these patients use a bubble humidifier; it is fitted at higher flows and, in
+practice, often at low flows too (below).
 
 **When the humidifier goes on.** At higher flows the oxygen is bubbled through water. A nursing skills text: "If using a
 high O2 flow, attach humidifier" (figure: "Attach humidifier to flow meter."; Craven and Hirnle, Fundamentals of
@@ -57,7 +59,8 @@ humidified." (Respir Care 2007;52(8):1063-1068, https://www.aarc.org/wp-content/
 7600 is used at "3 LPM to 7 LPM" (AirLife 7100 and 7600 hospital-use user guide UG-20019,
 https://connect.myairlife.com/resources/UG-20019-C1%20Rev%201%207100%20and%207600%20Bubble%20Humidifier%20Hospital%20Use%20User%20Guide.pdf).
 In practice the bottle is fitted more widely than that: "Bubble humidification is often utilized with low-flow nasal
-cannulas despite a lack of evidence to support its use." (Neal-Rice et al., Respir Care 2026, a US children's hospital,
+cannulas despite a lack of evidence to support its use." (Neal-Rice et al., Respir Care 2026, a US children's hospital that
+then discontinued it,
 https://pubmed.ncbi.nlm.nih.gov/42561086/). In a French randomized trial of 354 ICU patients on oxygen, "for patients
 receiving more than 4 L/min, a post hoc superiority analysis suggested that patients receiving dry oxygen were less
 comfortable." (Poiroux et al., Oxyrea, Ann Intensive Care 2018;8:126, https://pubmed.ncbi.nlm.nih.gov/30560440/).
