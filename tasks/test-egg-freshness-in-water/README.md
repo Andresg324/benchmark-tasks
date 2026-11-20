@@ -47,7 +47,7 @@ Category: **Societal relatability**.
 ## Real-world build
 
 A low-cost setup: the bowl, the ramekin, a thin non-slip silicone mat under both, a tea towel, a carton of eggs,
-non-hardening modelling clay, a 10 mL oral syringe, nitrile gloves, and common tools (a thumbtack, a small Phillips
+oil-based modelling clay (plasticine), a 10 mL oral syringe, nitrile gloves, and common tools (a thumbtack, a small Phillips
 screwdriver, tape, a ruler, a bamboo skewer, the egg carton, a phone with a flashlight).
 
 | Item | What | Size, mass |
@@ -66,9 +66,10 @@ tips.
 **Why a refilled egg.** A real egg takes weeks of aging to float, and keeps changing, so the floater is a third egg
 from the same carton, emptied and refilled with cold tap water to the sim floater's specific gravity (0.972). Like
 the sim's floater it floats blunt end up with about 5 mm showing (sim: 5.2 mm). Its shell is a real eggshell with
-water behind it everywhere below its air gap, as a fresh egg's contents are behind its shell, so a squeeze or knock
+water behind it below its air gap, and soft clay in the last 8 mm or so of its narrow tip, as a fresh egg's contents
+are behind its shell, so a squeeze or knock
 that cracks an egg cracks it, and the crack rule (see Scoring) covers it as it covers the other two. A small ball of
-modelling clay pressed into its narrow tip keeps it blunt end up: with water alone, its air could also gather at the
+plasticine pressed into its narrow tip keeps it blunt end up: with water alone, its air could also gather at the
 narrow end and float it upside down. The fill follows from published egg data: a 57 g egg at a fresh egg's specific
 gravity of 1.075-1.085 (UF/IFAS VM044) has a volume of 52.5-53.0 cm3, so at 0.972 it weighs 51.0-51.5 g (sim: 52.54
 cm3, 51.1 g). Its shell is about 11% of the egg's mass (Park and Sohn 2018), about 6 g, which leaves about 45 g:
@@ -88,9 +89,9 @@ about 20 minutes, plus a night for the emptied shell to dry. Make two from the s
 2. Over a bowl, blow into the narrow-end hole until the contents run out of the blunt-end hole; if the yolk blocks
    the hole, break it up with a bamboo skewer. Run a little water in, shake, and blow it out. Stand the shell blunt end
    down in the egg carton overnight to dry.
-3. Cover the narrow-end hole with a dab of modelling clay pressed flat and a small piece of tape. Roll about 4 g of
-   clay (a ball about 17 mm across) into a few small pieces, push them in through the blunt-end hole with the skewer
-   and press them into the narrow tip.
+3. Cover the narrow-end hole with a dab of modelling clay pressed flat and a small piece of tape. Break about 4 g of
+   plasticine (a ball about 17 mm across) into pieces small enough to pass the blunt-end hole, push them in with the
+   skewer and press them into the narrow tip.
 4. Stand the shell blunt end up in the carton. With a 10 mL oral syringe (pharmacy aisle), fill it with cold tap
    water through the hole, floating it in a bowl of cold tap water after each syringe-full (hole above the water),
    then a little at a time, until it floats blunt end up with 5 to 7 mm showing against a ruler.
