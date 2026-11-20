@@ -372,7 +372,7 @@ finger cots.
   mouth (offline: within 43 mm of the mouth's center, inside its 61.5 mm radius, from 40 % to 100 % open). 49 s
   after the flow starts, the valve hand takes the collar again and twists it closed, pressing it onto its closed stop;
   the aiming hand swings the tube back up, stands it under the sleeve and pushes the spout straight up into it, aiming
-  15 mm past the sleeve's top (the scripted demo's choice: the arm gives as the pad resists the collar, and the top
+  25 mm past the sleeve's top (the scripted demo's choice: the arm gives as the pad resists the collar, and the top
   stops the spout), keeps pushing 1.5 s, eases off to aim 2 mm past the top; both hands let go and back away. Offline, on the robot's collision hulls at
   the planned joint angles, at every pose checked (every 0.25 s; while carried, the graduate moves with the hand that
   holds it), no arm comes within 5 mm of the coated surface, once the graduate is down none comes within

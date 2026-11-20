@@ -209,8 +209,9 @@ PLASTIC_MU = (0.30, 0.25)  # static, dynamic: dry PVC on plastic (kinetic 0.23-0
 PAD_FACE = 0.0045  # m from the axis: the pad's face at rest, clear of the 8 mm spout (the collar, against the far
 # wall, pushes it back 1 mm)
 PAD_SIZE = (0.003, 0.006, 0.010)  # thickness, width, height
-PAD_LEAD = SLEEVE_R - PAD_FACE  # m: its top and bottom edges are chamfered 45 degrees back to the bore's wall, so a
-# collar end coming up (or down) meets a slope, not a step, and pushes the pad back
+PAD_LEAD = SLEEVE_R - PAD_FACE  # m: its top and bottom edges are chamfered back to the bore's wall over PAD_RAMP of
+PAD_RAMP = 0.004  # its height (27 degrees off the wall), so the collar's shoulder coming up (or its end coming down)
+# meets a slope, not a step, and pushes the pad back
 PAD_Z = SLEEVE_MOUTH + (SLEEVE_FLARE[0] + COLLAR_HOME_IN) / 2  # its middle: on the collar's part in the straight bore
 PAD_TRAVEL = 0.004  # m it can be pushed back into the wall
 PAD_K, PAD_PRELOAD = 200.0, 0.006  # N/m and m: about 1.2 N pressing at rest (a light spring)
@@ -297,7 +298,7 @@ def _pad_collider():
     """The pad: a block in the sleeve's bag-side wall, its face toward the axis, chamfered top and bottom (a 6-sided
     prism across y), in the pad link's frame."""
     x0, x1, h, w = PAD_FACE, PAD_FACE + PAD_SIZE[0], PAD_SIZE[2] / 2, PAD_SIZE[1] / 2
-    prof = [(x1, -h), (x0 + PAD_LEAD, -h), (x0, -h + PAD_LEAD), (x0, h - PAD_LEAD), (x0 + PAD_LEAD, h), (x1, h)]
+    prof = [(x1, -h), (x0 + PAD_LEAD, -h), (x0, -h + PAD_RAMP), (x0, h - PAD_RAMP), (x0 + PAD_LEAD, h), (x1, h)]
     pts = [(x, y, z) for y in (-w, w) for (x, z) in prof]
     n = len(prof)
     faces = [(0, k, k + 1) for k in range(1, n - 1)] + [(n, n + k + 1, n + k) for k in range(1, n - 1)]
@@ -1451,9 +1452,10 @@ PULL_A = STOW_A - math.asin((SLEEVE_DEPTH + PULL_CLEAR) / LA)  # the stub lowere
 # down out of its sleeve
 PUSH_PAST = 0.002  # m: once the spout is in, the hand eases back to aim this far past the sleeve's closed top, and
 # lets go there (a light push up, so easing off never pulls the spout back down)
-PUSH_DEEP = 0.015  # m: pushing the spout in, the hand aims this far past the top: the arm gives under the pad's push
-# (in a sim run of task.py 31b81c30832f, aiming 2 mm past, stopped 11 mm short with the collar on the pad's chamfer), so it aims
-# deeper to push through; the top stops the spout
+PUSH_DEEP = 0.025  # m: pushing the spout in, the hand aims this far past the top: the arm gives under the pad's push
+# (in sim runs, aiming 2 mm past stopped 11 mm short with the collar on the pad's chamfer (task.py 31b81c30832f), and
+# with the 30 mm sleeve aiming 15 mm past stopped 9 mm short, the shoulder on a 45-degree chamfer (42bca433c847)), so
+# it aims deeper to push through; the top stops the spout
 PUSH_HOLD_S = 1.5  # s: the hand keeps pushing this long before easing off
 RAISE_PHI = math.pi - 0.62  # the tube already leans out toward the robot as the stub rises: the palm keeps off the bag
 LEAN_PHI = math.pi - 0.75  # below the sleeve the tube first leans out this far, so it rises clear of the sleeve

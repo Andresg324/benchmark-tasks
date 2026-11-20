@@ -642,13 +642,14 @@ def test_closing_never_turns_the_collar_back_open():
 
 def test_push_goes_deep_then_eases_off_before_letting_go():
     # from the same sim run: aiming 2 mm past the sleeve's top, the arm stopped 11 mm short (the collar on the pad's
-    # chamfer, pad 0.6 mm back) and the let-go dropped the tube. The push aims deeper than that shortfall and keeps on,
+    # chamfer, pad 0.6 mm back) and the let-go dropped the tube; with the 30 mm sleeve (task.py 42bca433c847), aiming
+    # 15 mm past, it stopped 9 mm short. The push aims deeper than that shortfall and keeps on,
     # then eases off to a light push (never a pull down) before the fingers open.
     poses = M.left_tube_poses()
     k = next(i for i, p in enumerate(poses) if p[4] == "let go")
     pushes = [p for p in poses if p[4].startswith("push the spout") or p[4].startswith("keep pushing")]
     deepest = max(p[1] for p in pushes)
-    check((deepest - M.STOW_A) * M.LA > 0.011 + 0.002, f"aims {1e3 * (deepest - M.STOW_A) * M.LA:.0f} mm past the top")
+    check((deepest - M.STOW_A) * M.LA > 0.015 + 0.009, f"aims {1e3 * (deepest - M.STOW_A) * M.LA:.0f} mm past the top")
     check(poses[k - 2][4].startswith("keep pushing") and poses[k - 2][0] >= 1.0 and poses[k - 2][3] == M.TUBE_FINGER,
           "keeps pushing at least 1 s, gripping")
     ease = poses[k - 1]
@@ -731,7 +732,7 @@ def test_sleeve_spec_is_consistent_and_home_is_reachable():
     lo, hi = M.PAD_Z - M.PAD_SIZE[2] / 2, M.PAD_Z + M.PAD_SIZE[2] / 2
     check(M.SLEEVE_MOUTH + M.SLEEVE_FLARE[0] <= lo and hi <= M.SLEEVE_MOUTH + M.COLLAR_HOME_IN,
           "the pad lies on the collar's part in the straight bore when fully home")
-    check(lo + M.PAD_LEAD < M.SLEEVE_MOUTH + M.COLLAR_MIN_IN,
+    check(lo + M.PAD_RAMP < M.SLEEVE_MOUTH + M.COLLAR_MIN_IN and 2 * M.PAD_RAMP < M.PAD_SIZE[2],
           "at the home threshold the collar still reaches past the pad's lower chamfer onto its face")
     zs = [c.center[2] + p[2] for c in M._sleeve_colliders() if c.hull for p in c.hull]
     check(abs(min(zs) - M.SLEEVE_MOUTH) < 1e-9 and abs(max(zs) - M.SLEEVE_TOP) < 1e-9,
