@@ -2,10 +2,12 @@
 
 Three eighth-size sheet pans stand side by side: a wet chicken tender in the left one, seasoned flour 1 cm deep in the
 middle one, a wire rack in the right one. The instruction is "Bread the chicken tender and put it on the rack for the fryer."
-Recipes press each face into the flour so the coat adheres ("turning to thoroughly coat and pressing to adhere.
-Transfer to prepared rack", America's Test Kitchen, One-Batch Fried Chicken), and the coat sticks to fingers, so the
-robot has to press both faces and then turn and move the soft, drooping piece with as few grips as it can. Setup,
-scoring and fidelity notes are in `task.json`.
+Breading chicken in seasoned flour is a familiar home-cooking step for fried chicken, chicken tenders and cutlets: the
+cook takes each wet piece from the bowl, lays it in a shallow pan of seasoned flour, presses and turns it so the coat
+sticks, and sets it on a rack while the rest are breaded. Recipes press each face into the flour so the coat adheres
+("turning to thoroughly coat and pressing to adhere. Transfer to prepared rack", America's Test Kitchen, One-Batch
+Fried Chicken), and the coat sticks to fingers, so the robot has to press both faces and then turn and move the soft,
+drooping piece with as few grips as it can. Setup, scoring and fidelity notes are in `task.json`.
 
 Raw chicken is not practical on shared rigs, so the real trial uses a non-perishable stand-in matched to the raw
 tender's size, mass and wet, smooth surface (below), in real flour. The simulation is the raw tender.
@@ -23,10 +25,24 @@ tender's size, mass and wet, smooth surface (below), in real flour. The simulati
   wrap absorbs no water and is not tacky.
 - **Untested.** We found no published data comparing flour adhesion on wet plastic with wet chicken, so how much a
   press sets and a pinch wipes on the wrap, compared with meat, is not measured; nor is how the folded ends and the
-  taped face hold flour, or how well the pads grip the wet wrap. Whatever it is, the real trial counts
+  taped face hold flour, or how well the gloved pads grip the wet, soapy wrap. Whatever it is, the real trial counts
   the bare area the stand-in actually has; the simulation credits only pressed coat.
 - **Reset.** Between trials rinse the flour off under the tap, dip in the soapy water, shake once. After each
   session unwrap it, rinse it and let it dry; soak, squeeze, re-wrap and weigh it at the next (or cut a fresh one).
+
+## Shared rig: gloved fingers and contained flour
+
+- **Gloves on the fingers.** Before every trial (and at once if one tears) each of the four gripper fingers gets a
+  fresh disposable nitrile glove (up&up nitrile gloves, Target, size L). A YAM finger is about 6.8 cm wide, too wide
+  for a glove's finger, so the finger goes into the glove's palm, pad against the palm side, tip at the glove's
+  knuckles; the glove's fingers are folded back over the finger's outer face and taped there with the cuff by two
+  turns of ScotchBlue painter's tape above the pad. Every press and grip on the tender happens through the glove.
+  After the trial the gloves come off, tape and all, and go in the bin.
+- **Flour kept in one tray.** The three small pans stand inside one full-size aluminum sheet pan (Vollrath Wear-Ever
+  9002 or any 26 x 18 x 1 in. full-size sheet pan) on a plastic painter's drop cloth; the flour stays 1 cm deep in the
+  middle pan. After each trial the outer pan and drop cloth are swept or vacuumed, and the wrists, gripper bodies,
+  finger roots and finger slides are dry-wiped, so no flour stays on the robot. Positions are in `task.json` (setup);
+  the outer pan, drop cloth and gloves are not in the simulation.
 
 ## Run a trial
 
@@ -83,7 +99,8 @@ Counterfactual runs (`DEMO_VARIANT`, same task.py):
 
 A low-cost setup: three aluminum eighth sheet pans (Nordic Ware, Target; about 9.6 x 6.6 x 1 in.) on strips of
 non-slip shelf liner, an eighth-size wire cooling rack, all-purpose flour with 2 % paprika by weight, the wrapped sponge above
-(plastic wrap, clear tape, dish soap), and kitchen tools (scissors, scale, sieve, ruler, tongs, a pastry brush, a
+(plastic wrap, clear tape, dish soap), the outer full-size sheet pan, drop cloth, nitrile gloves and painter's tape
+above, and kitchen tools (scissors, scale, sieve, ruler, tongs, a pastry brush, a
 printed 5 mm grid card). Positions are in
 `task.json` (setup). Nothing hot, sharp or raw is on the rig.
 
@@ -91,6 +108,7 @@ printed 5 mm grid card). Positions are in
 
 - Demo: a 75 s plan, run with `--max-steps 1600`; it scores 1.0 on this task.py, succeeding at step 1,444 with 8.8 cm^2
   bare (92.8 % coated).
+- Dream-1: 0 over 2,400 steps.
 - Model run limit: 2,400 steps (2 minutes at 20 Hz).
 - Seeds: none. The layout is fixed (`object_jitter=0`).
 
