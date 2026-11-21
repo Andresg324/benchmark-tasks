@@ -4,8 +4,9 @@ hulls.
 
 Covers: the geometry (the head standing on end is taller than the rail's clearance, lying on its fins it clears; the
 masher starts inside the drawer, on its floor, clear of its walls; the snag comes before OPEN_PAST); the readings
-(flat, pitch, in the drawer); every cheat mode (doing nothing, pulled to the snag, a yank that levers the masher up, a
-head forced under the rail, lifted out and put back, opened then shut again, still holding the pull, not still) and
+(flat, in the drawer, taken out); every cheat mode (doing nothing, pulled to the snag, a yank held against the rail,
+a masher pressed on the rail past the damage force, taken out and put back, opened then shut again, still holding the
+pull, not still), the harmless moves now allowed (the grip lifted or tilted, the masher lifted inside the drawer) and
 the full ladder; a new trial; the demo plans'
 reach for every variant; per-hull clearance of both arms from the cabinet, the drawer and the masher, and from each
 other, over the whole demo; the README's numbers.
@@ -157,6 +158,7 @@ class Trial:
         self.d = 0.0
         self.c, self.R = standing()
         self.links = ready_links()
+        self.force = 0.0  # N: the masher on the cabinet's frame
 
     def set(self, pose=None, d=None):
         if pose is not None:
@@ -175,6 +177,7 @@ class Trial:
         for _ in range(n):
             self.n += 1
             kit._EPISODE["last"] = self.n
+            M.CABINET_FORCE[0] = self.force
             M.success(self.objects())
         return M.score(self.objects())
 
@@ -207,7 +210,7 @@ def test_geometry():
     end_x = (c + R @ np.array([M.GRIP_X1, 0, 0]))[0] - M.GRIP_R * math.sin(M.BETA)
     check(end_x >= M.IN_X0 + 0.002, f"the handle's end is behind the front wall ({(end_x - M.IN_X0) * 1000:.1f} mm)")
     check(np.all(np.abs(P[:, 1]) <= M.IN_HALF_W - 0.02), "clear of the sides")
-    com = c + R @ np.array(M.MASHER_COM)  # it stands: its centre of mass over the triangle of the head's bottom edge
+    com = c + R @ np.array(M.MASHER_COM)  # it stands: its center of mass over the triangle of the head's bottom edge
     foot = pc[np.argsort(pc[:, 2])[:2]]  # and the handle's end
     end = c + R @ np.array([M.GRIP_X1, 0, 0])
     f = (foot[:, 0].mean() - com[0]) / (foot[:, 0].mean() - end[0])
@@ -239,9 +242,10 @@ def test_readings():
     o = t.objects()
     level = math.degrees(math.asin(min(1.0, abs(float(M.masher_pose(o)[1][2, 1])))))
     check(81 < level < 82 and not M.flat(o), "standing: the head 81 degrees from level, not flat")
-    check(abs(M.pitch_deg(o) - math.degrees(M.BETA)) < 0.1, "the handle starts 8.6 degrees from level")
-    check(not M.over_rail(o), "the start is clear of the rail")
-    check(M.in_drawer(o) and M.lowest_over_floor(o) < 1e-3, "the start is in the drawer, on its floor")
+    pitch = math.degrees(math.asin(min(1.0, abs(float(M.masher_pose(o)[1][2, 0])))))
+    check(abs(pitch - math.degrees(M.BETA)) < 0.1, "the handle starts 8.6 degrees from level")
+    check(M.in_drawer(o) and M.lowest_over_floor(o) < 1e-3 and not M.taken_out(o),
+          "the start is in the drawer, on its floor, not taken out")
     t.set(flat_pose())
     o = t.objects()
     check(M.flat(o) and M.in_drawer(o), "rolled over: flat and in the drawer")
@@ -252,6 +256,15 @@ def test_readings():
                                  f"{'flat' if want else 'not flat'}")
     t.set(flat_pose(dy=-0.05))
     check(not M.in_drawer(t.objects()), "over the side wall: not in the drawer")
+    c, R = flat_pose()
+    for dz in (0.060, 0.100):
+        t.set((c + np.array([0, 0, dz]), R), M.FULL_PULL)
+        check(not M.taken_out(t.objects()), f"flat, lifted {dz * 1000:.0f} mm over the drawer: not taken out")
+    t.set((c + np.array([-0.20, 0, 0]), R), M.FULL_PULL)
+    check(M.taken_out(t.objects()), "carried 20 cm toward the robot (its centre past the front): taken out")
+    t.set((c + np.array([0, -0.10, 0.07]), R), M.FULL_PULL)
+    check(M.taken_out(t.objects()), "carried 10 cm sideways over the wall: taken out")
+    check(400 < M.DAMAGE_N < 500, f"damage force from nylon's yield and the fork arm: {M.DAMAGE_N:.0f} N")
 
 
 # -- cheat modes and the ladder ---------------------------------------------------------------------------------------------
@@ -263,51 +276,57 @@ def test_nothing():
 def test_snag():
     t = Trial()
     t.set(d=snag_d() + 0.002)
-    check(t.step(40) == 0.0 and not M._L.forced, "pulled 2 mm into the snag and left there: 0 (not latched forced)")
+    check(t.step(40) == 0.0 and not M._L.damaged, "pulled 2 mm into the snag and left there: 0 (not latched)")
 
 
 def test_yank():
+    """A yank only jams (the masher stays on end at the snag: 0 by its end state); a yank hard enough to bend the
+    masher's fork against the rail is damage (latched 0), however it ends up."""
     t = Trial()
-    t.set(levered(35.0), snag_d() - 0.001)  # at the snag, levered up against the rail
-    t.step(2)
-    t.set(flat_pose(), M.FULL_PULL)  # however it then lands, flat and fully out
-    check(t.step(40) == 0.0, "a yank that levers the masher up past 30 degrees scores 0 (latched)")
-    t = Trial()
-    t.set(levered(25.0), snag_d(levered(25.0)) - 0.001)
-    t.step(2)
+    t.set(d=snag_d() - 0.0005)
+    t.force = 120.0  # a hard pull (well past what the YAM's arm gives), under the damage force
+    check(t.step(60) == 0.0 and not M._L.damaged, "a yank held at the snag: 0 (on end), not damage")
+    t.force = 0.0
     t.set(flat_pose(), M.FULL_PULL)
-    check(t.step(40) == 1.0, "a pull that lifts the handle 25 degrees, then the masher turned: still 1.0")
+    check(t.step(40) == 1.0, "  then the masher turned and the drawer drawn out: 1.0 (a yank alone harms nothing)")
     t = Trial()
-    t.set(d=M.OPEN_PAST + 0.002)  # a standing masher past the rail (only by passing through it)
-    t.step(2)
+    t.set(d=snag_d() - 0.0005)
+    t.force = M.DAMAGE_N + 10.0
+    t.step(M.DAMAGE_STEPS)
+    t.force = 0.0
     t.set(flat_pose(), M.FULL_PULL)
-    check(t.step(40) == 0.0, "a standing masher dragged past the rail scores 0 (latched)")
+    check(t.step(40) == 0.0 and M._L.damaged, "pressed on the rail past the damage force for 0.5 s, then flat at the "
+                                              "stop: 0 (latched)")
     t = Trial()
-    t.set(d=snag_d() + 0.010)  # 10 mm through the rail, short of OPEN_PAST
-    t.step(2)
+    t.set(d=snag_d() - 0.0005)
+    t.force = M.DAMAGE_N + 10.0
+    t.step(M.DAMAGE_STEPS - 1)  # a spike shorter than 0.5 s
+    t.force = 0.0
+    t.step(1)
+    t.force = M.DAMAGE_N + 10.0
+    t.step(M.DAMAGE_STEPS - 1)
+    t.force = 0.0
     t.set(flat_pose(), M.FULL_PULL)
-    check(t.step(40) == 0.0, "the masher forced 10 mm under the rail, then turned flat and opened: 0 (latched)")
+    check(t.step(40) == 1.0, "two spikes past the damage force, each under 0.5 s: not damage, 1.0")
     t = Trial()
-    t.set(tilted(18.0), 0.285)  # tilted 18 deg (91 mm tall), dragged under the rail
-    t.step(2)
+    t.set(levered(35.0), snag_d() - 0.001)  # levered up against the rail (it cannot really lever: the yank probe
+    t.step(2)  # stayed at 8.6 degrees), then turned flat and opened: allowed if nothing is damaged
     t.set(flat_pose(), M.FULL_PULL)
-    check(t.step(40) == 0.0, "a head tilted 18 deg dragged under the rail to 285 mm, then flat at the stop: 0")
+    check(t.step(40) == 1.0, "levered 35 degrees at the snag without damage, then flat at the stop: 1.0")
+    t = Trial()
+    t.set(tilted(18.0), M.FULL_PULL)  # tilted 18 deg (91 mm tall) at the stop: not flat, the drawer would not shut
+    check(t.step(40) == 0.0, "left tilted 18 degrees in the open drawer (would wedge under the rail): 0")
 
 
 def test_grip_lifted():
-    """Lifting the grip in front of the cabinet while turning the masher is the skill, not a forced head."""
-    for deg, d in ((9.4, M.EASE), (12.0, 0.170)):  # (at 185 mm the fork meets the rail's underside at about +10 deg)
+    """Lifting or tilting the masher inside the drawer is allowed: only where it ends up and damage count."""
+    for pose, d, what in ((grip_up(9.4), M.EASE, "on end, the grip lifted to 9.4 deg"),
+                          (flat_grip_up(15.0), M.EASE, "flat, the grip's end raised 15 deg"),
+                          (flat_grip_up(35.0), M.FULL_PULL, "flat, the grip's end raised 35 deg at the stop")):
         t = Trial()
-        t.set(grip_up(deg), d)
+        t.set(pose, d)
         t.step(2)
-        check(not M._L.forced, f"on end, the grip lifted to {deg} deg above level at {d * 1000:.0f} mm open: no latch")
-        t.set(flat_pose(), M.FULL_PULL)
-        check(t.step(40) == 1.0, "  then turned flat and drawn out: 1.0")
-    for deg, d in ((15.0, M.EASE), (32.0, 0.150)):  # 32 deg: past the pitch limit, short of the snag
-        t = Trial()
-        t.set(flat_grip_up(deg), d)
-        t.step(2)
-        check(not M._L.forced, f"flat, the grip's end raised {deg:.0f} deg at {d * 1000:.0f} mm open: no latch")
+        check(not M._L.removed and not M._L.damaged, f"{what} at {d * 1000:.0f} mm open: no latch")
         t.set(flat_pose(), M.FULL_PULL)
         check(t.step(40) == 1.0, "  then laid flat and drawn out: 1.0")
 
@@ -315,19 +334,23 @@ def test_grip_lifted():
 def test_lift_out():
     t = Trial()
     c, R = flat_pose()
-    t.set((c + np.array([0, 0, M.LIFTED + 0.005]), R), M.EASE)
+    t.set((c + np.array([0, 0, 0.060]), R), M.FULL_PULL)  # over the old 40 mm limit, still in the box
+    t.step(20)
+    t.set(flat_pose(), M.FULL_PULL)
+    check(t.step(40) == 1.0, "lifted 60 mm inside the drawer and laid back: 1.0 (allowed)")
+    t = Trial()
+    t.set((c + np.array([-0.20, 0, 0.10]), R), M.FULL_PULL)
     t.step(2)
     t.set(flat_pose(), M.FULL_PULL)
-    check(t.step(40) == 0.0, "lifted more than 40 mm off the floor and put back: 0 (latched)")
+    check(t.step(40) == 0.0 and M._L.removed, "taken out of the drawer and put back: 0 (latched)")
+    t = Trial()
+    t.set((c + np.array([0, 0, 0.100]), R), M.FULL_PULL)
+    t.step(20)
+    t.set(flat_pose(), M.FULL_PULL)
+    check(t.step(40) == 1.0, "lifted 10 cm over the drawer and put back: 1.0 (allowed)")
     t = Trial()
     t.set((np.array([-0.15, -0.30, 0.04]), _rx(math.pi / 2) @ M.MASHER_R0), M.FULL_PULL)
     check(t.step(40) == 0.0, "taken out and left on the bench, the drawer fully open: 0")
-    t = Trial()
-    c, R = flat_pose()
-    t.set((c + np.array([0, 0, 0.02]), R), M.EASE)
-    t.step(2)
-    t.set(flat_pose(), M.FULL_PULL)
-    check(t.step(40) == 1.0, "lifted 20 mm while being turned (under the 40 mm limit): still 1.0")
 
 
 def test_ladder():
@@ -377,7 +400,7 @@ def test_new_trial():
 
 
 # -- the demo plans -----------------------------------------------------------------------------------------------------
-VARIANTS = ("", "yank", "lift", "close", "hold", "nothing")
+VARIANTS = ("", "yank", "lift", "close", "hold", "nothing", "tilt")
 
 
 def test_demo_plan():
@@ -489,7 +512,7 @@ def _clearance_run(variant=""):
 
 
 def test_clearance():
-    for v in ("", "yank"):
+    for v in ("", "yank", "tilt"):
         scene, arm = _clearance_run(v)
         check(scene[0] >= 0.005, f"[{v or 'demo'}] arms >= 5 mm (3 mm + 2 mm sampling) from cabinet, drawer, bench, masher "
                                  f"(min {scene[0] * 1000:.1f} mm: {scene[1]})")
@@ -502,7 +525,7 @@ def test_text():
         print("skip README checks (no README yet)")
         return
     txt = readme.read_text()
-    for frag in ("83 mm", "30 degrees", "40 mm", "5 mm", "1 s", "280 mm", "295 mm", "0.25", "0.5"):
+    for frag in ("83 mm", "450 N", "0.5 s", "5 mm", "1 s", "280 mm", "295 mm", "0.25", "0.5"):
         check(frag in txt, f"README states {frag!r}")
     check(not re.search(r"\$\d", txt), "README names no prices")
 

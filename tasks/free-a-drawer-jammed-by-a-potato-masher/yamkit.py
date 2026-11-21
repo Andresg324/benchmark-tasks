@@ -200,6 +200,7 @@ class Prop(Box):
     inertia: tuple | None = None  # kg m^2: principal moments about the center of mass (prop axes); None = from colliders
     com: tuple | None = None  # m: center of mass in the prop's frame; None = from the colliders (uniform density)
     solver_iterations: tuple | None = None  # (position, velocity) PhysX solver iterations for this body; None = default
+    contact_report: bool = False  # PhysX reports this body's contacts (a scorer reads the forces on it)
 
 
 def _linear(c: float) -> float:
@@ -213,7 +214,10 @@ def _fmt(v) -> str:
 def _usda(prop: Prop) -> str:
     looks = list(dict.fromkeys(m.look for m in prop.meshes))
     out = ['#usda 1.0\n(\n    defaultPrim = "Root"\n    metersPerUnit = 1\n    upAxis = "Z"\n)\n']
-    out.append('def Xform "Root" (\n    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]\n)\n{\n')
+    schemas = '"PhysicsRigidBodyAPI", "PhysicsMassAPI"' + (', "PhysxContactReportAPI"' if prop.contact_report else "")
+    out.append(f'def Xform "Root" (\n    prepend apiSchemas = [{schemas}]\n)\n{{\n')
+    if prop.contact_report:
+        out.append("    float physxContactReport:threshold = 0\n")
     if prop.mass is not None:
         out.append(f"    float physics:mass = {prop.mass}\n")
     if prop.inertia is not None:

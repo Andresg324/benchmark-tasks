@@ -5,7 +5,7 @@ the counter, lies an OXO Good Grips Nylon Potato Masher, handle toward the front
 head standing on one end, so it is 102 mm tall; the top rail's underside is only 85 mm above the drawer's floor.
 
 Pulled, the drawer runs out about 21.5 cm and stops hard: the masher's forked neck catches the back of the top rail and
-the masher is pinned between the rail and the drawer's back wall. Pulling harder only levers the masher up against
+the masher is pinned between the rail and the drawer's back wall. Pulling harder only presses the fork harder into
 the rail. The way to open it is to reach into the open drawer, take the masher by its grip and roll it over, so the
 head lies on its fins (66 mm tall, clear of the rail), then pull the drawer out to its stop.
 
@@ -173,7 +173,7 @@ def _arm(sy: float):
 
 
 def _masher_mass():
-    """(centre of mass, principal moments) from the parts, each filled with points of equal mass (the masher is
+    """(center of mass, principal moments) from the parts, each filled with points of equal mass (the masher is
     symmetric about its two mid-planes, so its inertia's axes are the frame's)."""
     g = np.linspace(-0.5, 0.5, 9)
     cube = np.array([(a, b, c) for a in g for b in g for c in g])
@@ -244,7 +244,7 @@ MASHER = kit.Prop(
     colliders=(kit.Collider((0, 0, 0), size=(HEAD_T, HEAD_L, HEAD_S)), *(c for _, c in _ARMS),
                kit.Collider(_NECK_C, radius=NECK_R, height=NECK_X1 - NECK_X0, axis="X"),
                kit.Collider(_GRIP_C, radius=GRIP_R, height=GRIP_X1 - NECK_X1, axis="X", material=TPE)),
-    material=NYLON, contact_offset=0.002, solver_iterations=(32, 8))
+    material=NYLON, contact_offset=0.002, solver_iterations=(32, 8), contact_report=True)
 
 OBJECTS = [CABINET, MASHER]
 gripkit.use_rubber_pads()  # the YAM's finger pads are rubber-faced
@@ -253,10 +253,16 @@ gripkit.use_rubber_pads()  # the YAM's finger pads are rubber-faced
 FLAT_TOP = RAIL_Z0 - FLOOR - 0.002  # flat: the head's highest point at least 2 mm under the rail's underside (83 mm
 # over the drawer's floor; lying on its fins it is 65.7 mm tall, standing on end 102; tilted 7 degrees off flat it is
 # 77, 10 degrees 82, 13 degrees 86: the limit is crossed at about 10.6 degrees)
-PITCH_FORCED_DEG = 30.0  # forced: the handle levered more than 30 degrees off level (it starts at 8.6) ...
-PITCH_FROM = 0.205  # m: ... with the drawer out this far or more (at the snag, 0.215, where a yank levers it up)
-RAIL_SLACK = 0.002  # m: a point over the rail's underside counts as under or past it 2 mm in front of its back
-LIFTED = 0.040  # removed: the masher's lowest point more than 40 mm over the drawer's floor
+NYLON_YIELD = 55e6  # Pa: assumed nylon 66 (the listing says only nylon): tensile stress at yield, 50% RH (Zytel 101L
+# datasheet, ISO 527-2: 82 dry, 55 conditioned). Damaged: the masher pressed on the cabinet's frame (its top rail) by
+# more than the force that starts to bend a fork arm. The arm is held at both ends (the head and the neck); the whole
+# contact force is taken as if it pressed across one arm (a low bound: at the snag the rail pushes partly along it), at
+# the worst place, a third of the way along: peak moment 4/27 F L, so F = yield x section modulus / (4/27 L), the
+# section 12 x 8 mm bent in the fork's plane (Z = 12 x 8^2 / 6 = 128 mm^3): about 450 N ...
+_ARM_L = math.hypot(ARM_B[0] - ARM_A[0], ARM_B[1] - ARM_A[1])
+DAMAGE_N = NYLON_YIELD * (ARM_D * ARM_W ** 2 / 6) / (4 / 27 * _ARM_L)
+DAMAGE_S = 0.5  # s: ... pressed on the cabinet that hard for this long (a yank held against the rail, not a bump)
+DAMAGE_STEPS = round(DAMAGE_S / DT)
 IN_TOL = 0.003  # m: the masher's outline within the drawer's inside, give or take 3 mm
 OPEN_PAST = 0.280  # m: open past the snag (standing on end, the head stops the drawer by 0.26)
 OPEN_FULL = 0.295  # m: fully open (the stop is at 0.300)
@@ -308,10 +314,7 @@ def _outline_local() -> tuple:
     return np.vstack(pts), n_head
 
 
-OUTLINE, N_HEAD = _outline_local()
-# the head's and fork's outline points that stand higher than the rail's underside at the start: the part the rail
-# catches, which gets under or in front of the rail only by being forced through it or after the masher is turned
-CAUGHT = (np.arange(len(OUTLINE)) < N_HEAD) & ((MASHER_START_C + OUTLINE @ MASHER_R0.T)[:, 2] > RAIL_Z0)
+OUTLINE = _outline_local()[0]
 
 
 def outline_points(objects) -> np.ndarray:
@@ -325,23 +328,6 @@ def head_top(objects) -> float:
     return float(np.max((outline_points(objects) - drawer_origin(objects))[:, 2])) - FLOOR
 
 
-def over_rail(objects) -> bool:
-    """A point of the head or fork that the rail catches (CAUGHT) higher than the rail's underside while under the rail
-    or in front of its back (it got there only by being forced through), or any other point (the fork's front, the
-    grip) higher than it while under the rail itself (in front of the cabinet they are free to be lifted). RAIL_SLACK
-    of give for contact."""
-    q = outline_points(objects) - (np.asarray(objects["cabinet"].pos, float))
-    in_front = q[:, 0] < FF_T - RAIL_SLACK
-    under = in_front & (q[:, 0] >= -RAIL_SLACK)
-    return bool(np.any((q[:, 2] > RAIL_Z0 + 0.001) & np.where(CAUGHT, in_front, under)))
-
-
-def pitch_deg(objects) -> float:
-    """Angle (degrees) of the handle from level."""
-    _, R = masher_pose(objects)
-    return math.degrees(math.asin(min(1.0, abs(float(R[2, 0])))))
-
-
 def in_drawer(objects) -> bool:
     """The masher's whole outline inside the drawer box: between its front and back walls and its sides, none of it
     under the floor (give or take IN_TOL). (Standing, its head rises 29 mm over the sides; lifted off the floor is
@@ -353,6 +339,15 @@ def in_drawer(objects) -> bool:
 
 def lowest_over_floor(objects) -> float:
     return float(np.min((outline_points(objects) - drawer_origin(objects))[:, 2])) - FLOOR
+
+
+def taken_out(objects) -> bool:
+    """The masher out of the drawer: its center of mass no longer over the box's inside (carried out past a wall or the
+    front). Lifting or tilting it over the drawer is not taken out."""
+    p, R = masher_pose(objects)
+    c = p + R @ np.asarray(MASHER_COM, float) - drawer_origin(objects)
+    over_box = IN_X0 <= c[0] <= IN_X1 and abs(c[1] - CAB_Y) <= IN_HALF_W
+    return not over_box
 
 
 def flat(objects) -> bool:
@@ -438,12 +433,14 @@ def arm_gap(objects, part, robots=ROBOTS) -> float:
 
 # -- the trial's ledger ----------------------------------------------------------------------------------------------------
 class Ledger:
-    """One trial: the forced and removed latches and the still/hold count."""
+    """One trial: the damage and taken-out latches and the still/hold count."""
 
     def __init__(self):
         self.episode = kit.episode()
         self.key = None
-        self.forced = False
+        self.pressed = 0  # control steps in a row the masher has pressed on the cabinet harder than DAMAGE_N
+        self.peak = 0.0  # N: the hardest such press this trial
+        self.damaged = False
         self.removed = False
         self.clear = False
         self.last = None
@@ -457,12 +454,13 @@ class Ledger:
         d = opening(objects)
         mp = np.asarray(objects["masher"].pos, float)
         is_flat, inside = flat(objects), in_drawer(objects)
-        if d >= PITCH_FROM and pitch_deg(objects) > PITCH_FORCED_DEG:
-            self.forced = True  # levered up against the rail (a yank)
-        if (d >= OPEN_PAST and not is_flat) or over_rail(objects):
-            self.forced = True  # a head too tall for the rail got under or past it: forced through
-        if not inside or lowest_over_floor(objects) > LIFTED:
-            self.removed = True  # taken out of the drawer (or lifted off its floor)
+        f = float(CABINET_FORCE[0])
+        self.peak = max(self.peak, f)
+        self.pressed = self.pressed + 1 if f > DAMAGE_N else 0
+        if self.pressed >= DAMAGE_STEPS:
+            self.damaged = True  # hauled against the rail hard enough to bend the masher's fork
+        if taken_out(objects):
+            self.removed = True
         gaps = {part: arm_gap(objects, part) for part in ("masher", "front")}
         self.gaps = gaps
         self.clear = min(gaps.values()) > CLEAR
@@ -475,7 +473,7 @@ class Ledger:
 
     def tier(self) -> float:
         s = self.state
-        if self.forced or self.removed or not s or not (s["flat"] and s["inside"]):
+        if self.damaged or self.removed or not s or not (s["flat"] and s["inside"]):
             return 0.0
         return 0.5 if s["d"] >= OPEN_PAST else 0.25
 
@@ -517,6 +515,56 @@ def _read_links(base) -> None:
 
 _READ_ONCE: list = []
 kit.STATE_HOOKS.append(_read_links)
+
+CABINET_FORCE = [0.0]  # N: the contact force between the masher and the cabinet's fixed frame (its top rail, stiles,
+# top), over the last physics step of this control step (filled in the sim)
+_CONTACT: dict = {}
+
+
+def _np(x) -> np.ndarray:
+    x = getattr(x, "torch", x)
+    if hasattr(x, "detach"):
+        return x.detach().cpu().numpy().astype(np.float64)
+    if hasattr(x, "numpy"):  # warp arrays
+        return np.asarray(x.numpy(), np.float64)
+    return np.asarray(x, np.float64)
+
+
+def _read_force(base) -> None:
+    """PhysX's contact force between the masher and the cabinet's fixed frame, into CABINET_FORCE: a rigid contact view
+    on the masher (its USD carries PhysxContactReportAPI) filtered by the cabinet's base body. A missing body or a
+    failed read stops the trial: the damage check would otherwise pass silently."""
+    if _CONTACT.get("base") is not base:
+        import isaaclab.sim as sim_utils
+        from isaaclab_physx.physics import PhysxManager
+        from pxr import Usd, UsdPhysics
+
+        masher = sim_utils.find_matching_prims(base.scene["masher"].cfg.prim_path)
+        cab = sim_utils.find_matching_prims(base.scene["cabinet"].cfg.prim_path)
+        if not masher or not cab:
+            raise RuntimeError("masher: no masher or cabinet prim for the contact force check")
+        frame = [p.GetPath().pathString for p in Usd.PrimRange(cab[0])
+                 if p.HasAPI(UsdPhysics.RigidBodyAPI) and p.GetName() == "base"]
+        if len(frame) != 1:
+            raise RuntimeError(f"masher: the cabinet's fixed frame body not found ({frame})")
+        dt = getattr(base, "physics_dt", None) or float(base.cfg.sim.dt)
+        view = PhysxManager.get_physics_sim_view().create_rigid_contact_view(
+            [masher[0].GetPath().pathString], filter_patterns=[frame], max_contact_data_count=64)
+        counts = (getattr(view, "sensor_count", 1), getattr(view, "filter_count", 1))
+        if counts != (1, 1):
+            raise RuntimeError(f"masher: contact view has {counts} sensor/filter bodies, not (1, 1)")
+        _CONTACT.update(base=base, view=view, dt=float(dt))
+        print(f"masher: contact force view masher x {frame[0]} (physics dt {dt})", file=sys.stderr, flush=True)
+    m = _np(_CONTACT["view"].get_contact_force_matrix(dt=_CONTACT["dt"]))
+    if m.size != 3:  # one sensor x one filter body x (x, y, z); an empty read would pass silently as 0 N
+        raise RuntimeError(f"masher: contact force matrix of shape {m.shape}, not (1, 1, 3)")
+    f = float(np.linalg.norm(m.reshape(3)))
+    if not math.isfinite(f):
+        raise RuntimeError("masher: non-finite contact force")
+    CABINET_FORCE[0] = f
+
+
+kit.STATE_HOOKS.append(_read_force)
 if "isaaclab" in sys.modules:  # in the simulator: read and check the hulls as the task loads, not in a trial's step
     yg.warm(ARM_LINKS)
 
@@ -546,10 +594,10 @@ def score(objects):
     clear of the masher and of the drawer's front and pull, all still (under 1 cm/s) for 1 s. 0.5: the masher flat in
     the drawer and the drawer out at least 280 mm (past the snag), but not fully out, not let go of, or not still.
     0.25: the masher lying flat in the drawer, the drawer not past the snag. 0: anything else: the masher still on end
-    (doing nothing; the drawer pulled to the snag); at any moment (latched): levered more than 30 degrees off level
-    with the drawer out 205 mm or more (a yank against the rail), any point of the head or fork higher than the rail's
-    underside while under or in front of the rail, or of the grip while under the rail (forced through), the drawer past 280 mm while the masher is not flat, lifted more than 40 mm off the drawer's floor or
-    out of the box."""
+    (doing nothing; the drawer pulled to the snag); at any moment (latched): the masher taken out of the drawer (its
+    center of mass carried out past a wall or the front), or damaged (pressed on
+    the cabinet's frame harder than DAMAGE_N, about 450 N, for 0.5 s: a yank hard enough to bend its fork against the
+    rail). Lifting or tilting the masher inside the drawer is allowed; only where it ends up is scored."""
     _update(objects)
     return _L.score()
 
@@ -651,7 +699,8 @@ def demo():
     drawer out to its stop. MASHER_VARIANT=nothing: both arms stay at the ready pose. =yank: the left pulls straight
     to the stop without the masher being turned. =lift: after turning it, the right lifts the masher out of the drawer
     before the left opens it. =close: the full demo, then the left pushes the drawer shut again. =hold: the full demo,
-    the left never letting go of the pull."""
+    the left never letting go of the pull. =tilt: the full demo, then the right raises the masher's grip 13 cm inside the
+    open drawer and lays it back down (allowed: it stays in the drawer)."""
     variant = os.environ.get("MASHER_VARIANT", "")
     if variant == "nothing":
         return {"left": [kit.Home(10.0, label="stay at the ready pose")],
@@ -704,6 +753,22 @@ def demo():
         end = 0.02
     else:
         end = FULL_PULL
+    if variant == "tilt":  # the drawer drawn out and held there (so the trial does not end at success first), the
+        # right takes the grip, raises it 13 cm (the head stays on the floor: tilted past 30 degrees; a 10 cm raise gave
+        # 27 in sim), a harmless move inside the drawer, lays it back down and lets go
+        _hold(right, _t(left) - _t(right), "wait")
+        g = grip_tcp(TRAVEL)
+        at = (g[0], g[1] - 0.02, g[2])  # where the roll left the grip (as the lift variant)
+        right += [_tw(3.0, (at[0], at[1], at[2] + 0.06), g_open, "over the handle in the open drawer"),
+                  _tw(1.5, at, g_open, "down to it"),
+                  _tw(1.0, at, g_hold, "grip it"),
+                  _tw(2.5, (at[0], at[1], at[2] + 0.13), g_hold, "raise the grip 13 cm"),
+                  _tw(1.0, (at[0], at[1], at[2] + 0.13), g_hold, "hold it up"),
+                  _tw(2.5, (at[0], at[1], at[2] + 0.002), g_hold, "lay it back down"),
+                  _tw(1.0, (at[0], at[1], at[2] + 0.002), g_open, "let go"),
+                  _tw(1.5, (at[0], at[1], at[2] + 0.06), g_open, "up out of the drawer"),
+                  kit.Home(3.5, label="back to the ready pose")]
+        _hold(left, _t(right) - _t(left), "keep hold of the pull while the masher is tilted")
     if variant == "hold":
         left += [_tw(4.0, pull_tcp(end), p_hold, "keep hold of the pull", YAW_X, pitch=PULL_PITCH)]
     else:
