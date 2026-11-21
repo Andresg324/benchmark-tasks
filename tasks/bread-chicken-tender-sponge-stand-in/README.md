@@ -2,10 +2,10 @@
 
 Three eighth-size sheet pans stand side by side: a wet chicken tender in the left one, seasoned flour 1 cm deep in the
 middle one, a wire rack in the right one. The instruction is "Bread the chicken tender and put it on the rack for the fryer."
-Breading is a basic home-cooking technique for chicken tenders and cutlets, fish fillets, pork chops and tofu: each
-wet piece is pressed and turned in seasoned flour ("Coat fish on both sides with flour, pressing down firmly so it
-adheres", RecipeTin Eats, Crispy Pan Fried Fish; "dust each piece with flour", PBS Food, Pan-Fried Tofu). Chicken is
-the everyday case: "three-quarters (75%) of Americans who eat any chicken say they prepare chicken at home at least
+Breading is a basic home-cooking technique for chicken tenders and cutlets, fish fillets and pork chops: each wet
+piece is pressed and turned in seasoned flour ("Coat fish on both sides with flour, pressing down firmly so it
+adheres", RecipeTin Eats, Crispy Pan Fried Fish), and tofu is floured before pan-frying ("dust each piece with
+flour", PBS Food, Pan-Fried Tofu). Chicken is a staple of home cooking: "three-quarters (75%) of Americans who eat any chicken say they prepare chicken at home at least
 once a week" (National Chicken Council, "Survey Says: Americans Flock to Chicken, the Nation's #1 Quarantine Protein",
 2020 consumer survey), and fried-chicken recipes bread each piece by "turning to thoroughly coat and pressing to
 adhere. Transfer to prepared rack" (America's Test Kitchen, One-Batch Fried Chicken). The coat also comes off on
