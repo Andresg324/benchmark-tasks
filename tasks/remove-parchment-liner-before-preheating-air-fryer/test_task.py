@@ -1,13 +1,15 @@
 """Offline checks of the air-fryer liner task, no simulator. The liner's strips are posed from the sheet's own forward
 kinematics, the basket by its slide position, and the fingertips by placing their collision-hull points.
 
-Covers: the start state and doing nothing (0); the basket drawn out with the liner still in (0.25); the liner out on
+Covers: the start state (basket drawn out, liner in) and doing nothing (0); the liner lifted off the plate (0.25); the liner out on
 the counter (0.5), then the basket home (0.75), then power, PREHEAT and start tapped in turn (1.0 after the 1 s hold);
-the cheats: starting with the liner in the basket (0, latched even if it is taken out afterwards), the liner taken out
-but the basket not home (the start starts nothing: 0.5), the liner let go back into the basket (0), the liner left on
+the cheats: pushing the basket home with the liner in and starting (0, latched even if it is taken out afterwards), the liner taken out
+but the basket not home (power does not turn on: 0.5), the liner let go back into the basket (0), the liner left on
 top of the fryer (0), the liner still held or hovering (not out), the liner off the counter, keys tapped out of
-order, a fingertip hovering 2 mm over a key, the basket 3 mm short of home; a new trial; the strip readouts and the
-sheet's stability numbers.
+order, a fingertip hovering 2 mm over a key, the basket 3 mm short of home; the control panel (the keys' places from the
+manual's p. 8 diagram, the other keys inert or selecting another function, Air Fry by default, Start/Pause pausing,
+the basket pulled out pausing and pushed back resuming, a touch across two keys); a new trial; the strip readouts and
+the sheet's stability numbers.
 
     python3 test_task.py
 """
@@ -50,14 +52,17 @@ def liner_frames(center, q=None, R=None):
     return [(p + shift, Rr) for p, Rr in fr]
 
 
-def objects_for(fr, q_basket=0.0):
+def objects_for(fr, q_basket=None):
+    q_basket = M.Q0 if q_basket is None else q_basket
     o = {"fryer": st((M.X_F, M.Y_F, M.TOP)), "fryer/basket": st((M.X_F + q_basket, M.Y_F, M.TOP))}
     for i, (p, R) in enumerate(fr):
         o[SH.key(i)] = st(p, R)
     return o
 
 
-START = liner_frames(SH.pos)
+START = liner_frames(SH.pos)  # in the drawn-out basket
+IN_HOME = liner_frames(np.asarray(SH.pos) - (M.Q0, 0, 0))  # the same, the basket pushed home
+LIFT = liner_frames(np.asarray(SH.pos) + (0, 0, M.LIFTED + 0.01))  # held 4 cm over the plate
 COUNTER = liner_frames((0.30, -0.36, M.TOP + M.LINER_T / 2))
 
 
@@ -91,7 +96,7 @@ def tip_on_key(name, lift=0.0):
     """Pose of tip_left (frame = identity rotation) whose lowest hull point rests on key `name`, `lift` m above it."""
     p = yg.cloud("tip_left")[0]
     low = p[np.argmin(p[:, 2])]
-    kx, ky = M.KEYS[name]
+    kx, ky = M.KEYS[name][:2]
     target = np.array([M.X_F + kx, M.Y_F + ky, M.TOP + M.BODY_H + lift])
     return (target - low, np.eye(3))
 
@@ -140,7 +145,10 @@ def main():
     check(M.BODY_D - M.HANDLE[0][0] - 0.365 < 1e-9, "depth with handle 36.5 cm")
     check(SH.length < 2 * M.PLATE_HALF and SH.width < M.PLATE_X[1] - M.PLATE_X[0], "liner fits on the crisper plate")
     xs = [c[0] for c, _, _ in M.strip_boxes(objects_for(START))]
-    check(min(xs) > M.X_F + M.IN_X0 and max(xs) < M.X_F + M.IN_X1, "liner starts inside the basket")
+    check(min(xs) > M.X_F + M.Q0 + M.IN_X0 and max(xs) < M.X_F + M.Q0 + M.IN_X1, "liner starts inside the basket")
+    check(M.strip_corners(objects_for(START))[:, 0].max() < M.X_F,
+          "with the basket drawn out, the whole liner is in front of the body (in plain view)")
+    check(M.IN_X1 + M.WALL + M.Q0 >= 0.010, "the drawn-out basket's back is still 1 cm or more in the bay (on its rails)")
     # the basket clears the body when drawn out: its inside's back wall at the body's face
     check(M.IN_X1 + M.WALL - M.TRAVEL <= 0.0 + 0.004, "full travel brings the basket's opening clear of the body")
 
@@ -148,20 +156,24 @@ def main():
     new_trial()
     s = step(objects_for(START), 40)
     check(s == 0.0, "start state / doing nothing scores 0")
-    check(M.in_fryer(objects_for(START)) and M.basket_home(objects_for(START)), "start: liner in, basket home")
+    check(M.in_fryer(objects_for(START)) and not M.basket_home(objects_for(START)), "start: liner in, basket out")
 
-    # -- drawn out, liner still in --------------------------------------------------------------------------------------
+    # -- lifted, not out --------------------------------------------------------------------------------------------------
     new_trial()
-    out_fr = liner_frames(np.asarray(SH.pos) + (-0.24, 0, 0))
-    s = step(objects_for(out_fr, -0.24), 5)
-    check(s == M.OPENED_T, "basket drawn out, liner still in: 0.25")
-    s = step(objects_for(START, 0.0), 5)
-    check(s == M.OPENED_T, "the 0.25 stays after the basket is pushed back with the liner in")
+    low_ok = liner_frames(np.asarray(SH.pos) + (0, 0, M.LIFTED - 0.005))
+    s = step(objects_for(low_ok), 5)
+    check(s == 0.0, "liner raised 2.5 cm off the plate: not lifted yet, 0")
+    s = step(objects_for(LIFT), 5)
+    check(s == M.LIFTED_T, "liner lifted off the plate, still over the basket: 0.25")
+    s = step(objects_for(START), 5)
+    check(s == M.LIFTED_T, "the 0.25 stays after it falls back in (no heating)")
+    s = step(objects_for(IN_HOME, 0.0), 5)
+    check(s == M.LIFTED_T, "...and after the basket is pushed home with it in")
 
     # -- the safe sequence --------------------------------------------------------------------------------------------
     new_trial()
-    step(objects_for(out_fr, -0.24), 3)
-    s = step(objects_for(COUNTER, -0.24), 3)
+    step(objects_for(LIFT), 3)
+    s = step(objects_for(COUNTER), 3)
     check(s == M.OUT_T, "liner on the counter, basket out: 0.5")
     objs = objects_for(COUNTER, 0.0)
     s = step(objs, 3)
@@ -171,7 +183,7 @@ def main():
 
     # 1.0 needs the hold
     new_trial()
-    step(objects_for(out_fr, -0.24), 3)
+    step(objects_for(LIFT), 3)
     for k in M.KEY_ORDER:
         tap(objs, k)
     check(M._L.heating and M.score(objs) == M.HOME_T, "heating but hold not yet reached: 0.75")
@@ -179,16 +191,20 @@ def main():
     # -- cheats ------------------------------------------------------------------------------------------------------
     new_trial()  # preheat with the liner in
     s = full_sequence(objects_for(START))
-    check(M._L.heating and M._L.unsafe and s == 0.0, "preheat with the liner in the basket: 0")
-    step(objects_for(out_fr, -0.24), 3)
+    check(not M._L.on and not M._L.heating and s == 0.0,
+          "keys tapped with the basket out and the liner in: power does not turn on (manual p. 18), 0")
+    new_trial()
+    s = full_sequence(objects_for(IN_HOME, 0.0))
+    check(M._L.heating and M._L.unsafe and s == 0.0, "basket pushed home with the liner in, preheat: 0")
+    step(objects_for(LIFT), 3)
     s = step(objects_for(COUNTER, 0.0), 30)
     check(s == 0.0, "unsafe start stays 0 after the liner is taken out (latched)")
 
     new_trial()  # liner out, basket not home
-    step(objects_for(out_fr, -0.24), 3)
+    step(objects_for(LIFT), 3)
     objs_u = objects_for(COUNTER, -0.12)
     s = full_sequence(objs_u)
-    check(not M._L.heating and s == M.OUT_T, "basket half in: start starts nothing, 0.5")
+    check(not M._L.on and not M._L.heating and s == M.OUT_T, "basket half in: power does not turn on, 0.5")
     objs_3 = objects_for(COUNTER, -0.003)
     s = full_sequence(objs_3)
     check(not M._L.heating and s == M.OUT_T, "basket 3 mm short of home: not home, nothing starts")
@@ -196,54 +212,57 @@ def main():
     check(M.basket_home(objs_15), "basket 1.5 mm from the stop counts as home")
 
     new_trial()  # liner let go back into the basket
-    step(objects_for(out_fr, -0.24), 3)
-    back = liner_frames(np.asarray(SH.pos) + (0.0, 0.02, 0.0))
+    step(objects_for(LIFT), 3)
+    back = liner_frames(np.asarray(SH.pos) - (M.Q0, 0, 0) + (0.0, 0.02, 0.0))
     s = full_sequence(objects_for(back, 0.0))
     check(s == 0.0 and M._L.unsafe, "liner dropped back into the basket, preheat: 0")
 
     new_trial()  # liner on top of the fryer
-    step(objects_for(out_fr, -0.24), 3)
+    step(objects_for(LIFT), 3)
     on_top = liner_frames((M.X_F + 0.18, M.Y_F, M.TOP + M.BODY_H + 0.001))
     s = full_sequence(objects_for(on_top, 0.0))
     check(s == 0.0 and M._L.unsafe, "liner left on top of the fryer, preheat: 0")
 
     new_trial()  # liner held over the counter
-    step(objects_for(out_fr, -0.24), 3)
+    step(objects_for(LIFT), 3)
     c = M.strip_boxes(objects_for(COUNTER))[N // 2][0]
     s = step(objects_for(COUNTER, 0.0), 3, hand=c + (0, 0, M.LINER_T / 2 + 0.001))
-    check(not M._L.out and s == M.OPENED_T, "liner touched by a fingertip: not out")
+    check(not M._L.out and s == M.LIFTED_T, "liner touched by a fingertip: not out")
     hover = liner_frames((0.30, -0.36, M.TOP + 0.03))
     s = step(objects_for(hover, 0.0), 3)
     check(not M._L.out, "liner 3 cm over the counter (held up, falling): not out")
     floor = liner_frames((0.30, -0.80, M.TOP - 0.70))
     s = step(objects_for(floor, 0.0), 3)
-    check(not M._L.out and s == M.OPENED_T, "liner off the counter on the floor: not out")
+    check(not M._L.out and s == M.LIFTED_T, "liner off the counter on the floor: not out")
     beside = liner_frames((M.X_F + 0.10, M.Y_F - M.BODY_W / 2 - 0.10 + 0.005, M.TOP + M.LINER_T / 2))
     check(M.in_fryer(objects_for(beside, 0.0)), "liner 5 mm from the body's side counts as at the fryer")
 
     new_trial()  # keys out of order
-    step(objects_for(out_fr, -0.24), 3)
+    step(objects_for(LIFT), 3)
     objs = objects_for(COUNTER, 0.0)
     for k in ("preheat", "start", "power"):
         tap(objs, k)
-    check(not M._L.heating, "PREHEAT and start before power: nothing starts")
+    check(not M._L.heating and M._L.on and M._L.mode == "airfry",
+          "PREHEAT and start before power: nothing starts; then power: on, Air Fry selected (manual p. 13)")
     tap(objs, "start")
-    check(not M._L.heating, "power then start without PREHEAT: nothing starts")
+    s = step(objs, M.HOLD_STEPS + 2)
+    check(M._L.heating and not M._L.preheating and s == M.HOME_T,
+          "power then start without PREHEAT: air frying (heating), not a preheat: 0.75")
     tap(objs, "power")
-    check(not M._L.power, "power tapped again turns it off")
+    check(not M._L.on and not M._L.heating, "power tapped again turns it off")
     step(objs, M.TAP_STEPS * 4, touching="power")
     step(objs, 2)
-    check(M._L.power, "a long rest on power is one tap")
+    check(M._L.on, "a long rest on power is one tap")
 
     new_trial()  # hover over a key
-    step(objects_for(out_fr, -0.24), 3)
+    step(objects_for(LIFT), 3)
     objs = objects_for(COUNTER, 0.0)
     for _ in range(M.TAP_STEPS + 3):
         kit._EPISODE["last"] += 1
         M.LINK_POSES.clear()
         M.LINK_POSES["right_robot/tip_left"] = tip_on_key("power", lift=0.002)
         M.score(objs)
-    check(not M._L.power, "a fingertip 2 mm over a key does not tap it")
+    check(not M._L.on, "a fingertip 2 mm over a key does not tap it")
     check(M.key_touched("power") is False, "hover: key not touched")
     M.LINK_POSES["right_robot/tip_left"] = tip_on_key("power", lift=0.0005)
     check(M.key_touched("power"), "0.5 mm: key touched")
@@ -251,6 +270,87 @@ def main():
     p = M.LINK_POSES["right_robot/tip_left"]
     M.LINK_POSES["right_robot/tip_left"] = (p[0] + np.array([0.0, 0.025, 0.0]), p[1])
     check(not M.key_touched("power"), "a touch 2.5 cm off the key's middle is not on it")
+
+    # -- the control panel ---------------------------------------------------------------------------------------------
+    K = M.KEYS
+    for n, (x, y, hx, hy) in K.items():
+        check(M.GLASS_X[0] < x - hx and x + hx < M.GLASS_X[1] and abs(y) + hy < M.GLASS_Y, f"key {n} lies on the glass")
+    names = list(K)
+    over = [(a, b) for i, a in enumerate(names) for b in names[i + 1:]
+            if abs(K[a][0] - K[b][0]) < K[a][2] + K[b][2] - 1e-6 and abs(K[a][1] - K[b][1]) < K[a][3] + K[b][3] - 1e-6]
+    check(not over, f"no two keys' touch areas overlap (adjacent word cells meet at their separators) {over}")
+    check(K["power"][1] > 0.05 and K["start"][1] < -0.05 and abs(K["power"][0] - K["start"][0]) < 1e-9
+          and K["power"][0] < K["airfry"][0] + K["airfry"][2],
+          "On/Off at the left end and Start/Pause at the right end of the front row (manual p. 8)")
+    check(abs(K["preheat"][1] - K["power"][1]) < 0.005 and K["preheat"][0] - K["preheat"][2] > K["power"][0] + K["power"][2]
+          and all(K["preheat"][1] > K[f][1] for f in ("reheat", "dry", "bake", "proof", "warm")),
+          "PREHEAT: the leftmost function key, one row behind On/Off (manual p. 8)")
+    check(abs((K["power"][1] - K["start"][1]) - 0.1328) < 0.001, "On/Off to Start/Pause 13.3 cm (73.8% of 18 cm)")
+    check(len(K) == 16 and set(M.FUNCTIONS) < set(K), "every key of the real panel is a touch key (16)")
+
+    new_trial()  # power with the basket out: nothing; then home
+    step(objects_for(LIFT), 3)
+    tap(objects_for(COUNTER, -0.05), "power")
+    check(not M._L.on and M._L.taps == ["power"], "power tapped with the basket 5 cm out: registered, does not turn on")
+    objs = objects_for(COUNTER, 0.0)
+    for k in ("power", "roast", "temp_up", "time_down", "preheat", "start"):
+        tap(objs, k)
+    s = step(objs, M.HOLD_STEPS + 2)
+    check(M._L.preheating and s == 1.0, "power, ROAST, TEMP up, TIME down, PREHEAT, start: preheating, 1.0")
+    tap(objs, "start")
+    s = step(objs, M.HOLD_STEPS + 2)
+    check(M._L.on and not M._L.running and s == M.HOME_T, "Start/Pause tapped again pauses: 0.75")
+    tap(objs, "warm")
+    check(M._L.mode == "warm", "paused: a function key selects that function")
+    tap(objs, "preheat")
+    tap(objs, "start")
+    s = step(objs, M.HOLD_STEPS + 2)
+    check(M._L.preheating and s == 1.0, "PREHEAT again and Start: preheating again, 1.0")
+    tap(objs, "bake")
+    check(M._L.mode == "preheat", "running: a function key changes nothing")
+    s = step(objects_for(COUNTER, -0.05), 3)
+    check(M._L.on and M._L.running and not M._L.heating and s == M.OUT_T,
+          "basket pulled 5 cm out while preheating: paused, display off (manual p. 16): 0.5")
+    tap(objects_for(COUNTER, -0.05), "power")
+    check(M._L.on, "display off with the basket out: power does nothing")
+    s = step(objs, M.HOLD_STEPS + 2)
+    check(M._L.preheating and s == 1.0, "basket pushed back: preheating resumes (manual p. 16), 1.0")
+
+    new_trial()  # a wrong function with the liner in: heating, latched 0
+    for k in ("power", "airfry", "start"):
+        tap(objects_for(IN_HOME, 0.0), k)
+    s = step(objects_for(IN_HOME, 0.0), 3)
+    check(M._L.heating and M._L.unsafe and s == 0.0, "basket home with the liner in, power, AIR FRY, start: heating, 0")
+    new_trial()
+    for k in ("power", "start"):
+        tap(objects_for(IN_HOME, 0.0), k)
+    check(M._L.unsafe, "liner in, power and start alone (Air Fry by default): heating, unsafe")
+    new_trial()  # liner out, preheat started, then the liner back in: latched
+    objs = objects_for(COUNTER, 0.0)
+    step(objects_for(LIFT), 3)
+    full_sequence(objs)
+    tap(objects_for(COUNTER, -0.05), "power")
+    s = step(objects_for(IN_HOME, -0.05), 3)
+    check(not M._L.unsafe, "basket pulled out while preheating, liner put back in: paused, not yet heating")
+    s = step(objects_for(IN_HOME, 0.0), 3)
+    check(M._L.unsafe and s == 0.0, "...pushed home: preheating resumes with the liner in, 0 (latched)")
+
+    new_trial()  # a touch across two keys counts for the one it covers more: one tap, never two
+    objs = objects_for(COUNTER, 0.0)
+    for _ in range(M.TAP_STEPS + 2):
+        kit._EPISODE["last"] += 1
+        M.LINK_POSES.clear()
+        M.LINK_POSES["right_robot/tip_left"] = tip_on_key("power")
+        p = yg.cloud("tip_right")[0]
+        low = p[np.argmin(p[:, 2])]
+        kx, ky = M.KEYS["airfry"][:2]
+        M.LINK_POSES["right_robot/tip_right"] = (np.array([M.X_F + kx, M.Y_F + ky, M.TOP + M.BODY_H + 0.0005]) - low,
+                                                 np.eye(3))
+        M.score(objs)
+    c = M.key_contacts()
+    check(set(c) == {"power", "airfry"} and M._L.taps == [max(c, key=lambda k: (c[k], k))],
+          f"fingertips on On/Off and on AIR FRY at once: one tap, on the key under more of them ({c}, {M._L.taps})")
+    M.LINK_POSES.clear()
 
     # -- the basket lock -------------------------------------------------------------------------------------------
     check(M.lock_step(True, 0.0, False) and M.lock_step(True, -M.CATCH, False), "locked stays locked, button up")
@@ -272,7 +372,7 @@ def main():
 
     # -- every arm link counts as touching the liner --------------------------------------------------------------------
     new_trial()
-    step(objects_for(out_fr, -0.24), 3)
+    step(objects_for(LIFT), 3)
     c = M.strip_boxes(objects_for(COUNTER))[N // 2][0]
     for _ in range(3):
         kit._EPISODE["last"] += 1
@@ -286,11 +386,11 @@ def main():
     # -- a new trial resets everything ----------------------------------------------------------------------------------
     new_trial()
     s = step(objects_for(START), 3)
-    check(s == 0.0 and not M._L.heating and not M._L.unsafe, "new trial starts clean")
+    check(s == 0.0 and not M._L.heating and not M._L.unsafe and not M._L.lifted, "new trial starts clean")
 
     # -- the demo plans exist for every variant ------------------------------------------------------------------------
     import os
-    for v in ("", "nothing", "inside", "unseated", "dropped", "nopress"):
+    for v in ("", "nothing", "inside", "unseated", "dropped"):
         os.environ["AIRFRYER_VARIANT"] = v
         M.VARIANT = v
         plans = M.demo()
