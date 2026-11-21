@@ -2,12 +2,15 @@
 
 Three eighth-size sheet pans stand side by side: a wet chicken tender in the left one, seasoned flour 1 cm deep in the
 middle one, a wire rack in the right one. The instruction is "Bread the chicken tender and put it on the rack for the fryer."
-Breading chicken in seasoned flour is a familiar home-cooking step for fried chicken, chicken tenders and cutlets: the
-cook takes each wet piece from the bowl, lays it in a shallow pan of seasoned flour, presses and turns it so the coat
-sticks, and sets it on a rack while the rest are breaded. Recipes press each face into the flour so the coat adheres
-("turning to thoroughly coat and pressing to adhere. Transfer to prepared rack", America's Test Kitchen, One-Batch
-Fried Chicken), and the coat sticks to fingers, so the robot has to press both faces and then turn and move the soft,
-drooping piece with as few grips as it can. Setup, scoring and fidelity notes are in `task.json`.
+Breading is a basic home-cooking technique for chicken tenders and cutlets, fish fillets, pork chops and tofu: each
+wet piece is pressed and turned in seasoned flour ("Coat fish on both sides with flour, pressing down firmly so it
+adheres", RecipeTin Eats, Crispy Pan Fried Fish; "dust each piece with flour", PBS Food, Pan-Fried Tofu). Chicken is
+the everyday case: "three-quarters (75%) of Americans who eat any chicken say they prepare chicken at home at least
+once a week" (National Chicken Council, "Survey Says: Americans Flock to Chicken, the Nation's #1 Quarantine Protein",
+2020 consumer survey), and fried-chicken recipes bread each piece by "turning to thoroughly coat and pressing to
+adhere. Transfer to prepared rack" (America's Test Kitchen, One-Batch Fried Chicken). The coat also comes off on
+fingers, so the robot has to press both faces and then turn and move the soft, drooping piece with as few grips as it
+can. Setup, scoring and fidelity notes are in `task.json`.
 
 Raw chicken is not practical on shared rigs, so the real trial uses a non-perishable stand-in matched to the raw
 tender's size, mass and wet, smooth surface (below), in real flour. The simulation is the raw tender.
@@ -38,11 +41,11 @@ tender's size, mass and wet, smooth surface (below), in real flour. The simulati
   knuckles; the glove's fingers are folded back over the finger's outer face and taped there with the cuff by two
   turns of ScotchBlue painter's tape above the pad. Every press and grip on the tender happens through the glove.
   After the trial the gloves come off, tape and all, and go in the bin.
-- **Flour kept in one tray.** The three small pans stand inside one full-size aluminum sheet pan (Vollrath Wear-Ever
-  9002 or any 26 x 18 x 1 in. full-size sheet pan) on a plastic painter's drop cloth; the flour stays 1 cm deep in the
-  middle pan. After each trial the outer pan and drop cloth are swept or vacuumed, and the wrists, gripper bodies,
-  finger roots and finger slides are dry-wiped, so no flour stays on the robot. Positions are in `task.json` (setup);
-  the outer pan, drop cloth and gloves are not in the simulation.
+- **Flour kept in one tray.** The three small pans stand inside one full-size aluminum sheet pan (any 26 x 18 x 1 in.
+  full-size rimmed sheet pan, e.g. Vollrath Wear-Ever 9002; a half sheet pan is too small for the three) on a plastic
+  painter's drop cloth; the flour stays 1 cm deep in the middle pan. After each trial the outer pan and drop cloth are
+  swept or vacuumed, and the wrists, gripper bodies, finger roots and finger slides are dry-wiped, so no flour stays
+  on the robot. Positions are in `task.json` (setup); the outer pan, drop cloth and gloves are not in the simulation.
 
 ## Run a trial
 
