@@ -1,0 +1,20 @@
+{
+  "title": "Set up a new box of wine: push the tab in, draw the tap out through the opening and seat its neck in the slot",
+  "category": "Societal relatability",
+  "keywords": [
+    "bag-in-box wine",
+    "perforated tab",
+    "tap through a tight opening",
+    "flanges straddle a slot",
+    "tethered part"
+  ],
+  "instruction": "Get the box of wine ready to pour.",
+  "context": "Boxed wine is a 3 L bag inside a carton, sold in most supermarkets. A new box comes with its tap tucked inside behind a perforated tab. Setting it up is the same everywhere. With one hand steadying the box, push the tab in until its perforations tear, reach into the opening, draw the tap out on its bag and set its neck down into the die-cut slot under the opening, so the panel sits between the tap's two flanges and the tap points out, outlet down. The opening barely fits two fingers either side of the tap, the tap is tethered to the bag, and its 7 mm groove has to meet the 3 mm panel before it can drop into a 24 mm slot.",
+  "setup": "Centimeters from the midpoint between the arm bases: x forward, y to the robot's left, heights above the counter (the table top). Carton: Black Box 3 L, a 12.7 x 12.7 x 24.1 cm tower (5 x 5 x 9.5 in, Packaging World), full, 3.25 kg, corrugated board 3 mm thick, standing with its front face at x 33.0, centered at y -8.0, front toward the robot, standing free on the counter on a taped footprint mark (board friction 0.45 / 0.40, estimated; about 14 N slides it, about 16 N at the tab's height tips it). Opening: 9.6 x 7.6 cm, 7.2 to 14.8 cm high, filled by a perforated tab (3.1 g) that tears at an 8 N push (estimated) and then drops into the box. Slot: 24 mm wide under the opening, its bottom 5.4 cm high. Tap: a Vitop-type tap (16.3 g: tap 10.2 g, spout 6.1 g, Smurfit Kappa product sheet), body 36 mm long, 32 mm wide, 34 mm tall, outlet down, two 30 mm square flanges 7 mm apart on a 20 mm neck (simple shapes; plastic friction 0.35 / 0.30, estimated), its front 4.2 cm behind the panel's outside face, at the opening's height, resting on the full bag. The sizes of the opening, the slot and the tap are estimated from maker photos. Both arms start at their ready pose.",
+  "scoring": "Possible scores: 0, 0.25, 0.5, 1.0. 1.0: the tap's neck resting down in the slot, not caught on its edges (in the simulator within 3 mm of the slot's bottom), with the panel between its flanges, the tap level within 15 degrees, pointing out of the box within 30 degrees, outlet down (its up within 30 degrees of the carton's up), let go (fingers open and the hand drawn back, not touching it; in the simulator no part of either arm, upper arm to fingertips, within 5 mm of the tap), the carton never knocked over, standing upright on the counter (leaning at most 10 degrees, not held up) with its footprint within 5 cm of its mark, all still for 1 s. 0.5: the tap out through the opening but not seated so (hanging outside, upside down, or still held), or seated with the carton shoved more than 5 cm off its mark or held tilted or off the counter. 0.25: the tab torn, the tap still inside. 0: doing nothing, nothing torn, or the carton knocked over (leaning more than 45 degrees) at any time.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "fidelity": "Rigid. The carton stands free on the counter, 3.25 kg full: it can be shoved or knocked over. The bag is rigid, with a pocket behind the opening. The tab's perforations are a stiff spring that tears for good at 8 N; torn, the tab slides in, drops and can tip back. The bag's film is a slide-and-hinge chain with limits, 2 g per joint, no yaw. Square flanges. No liquid.",
+  "scores": "Scripted demo: 1.0 (557 steps), left hand steadying the free carton (moved under 1 mm); right hand only: 1.0 (no steadying needed); lazy routes: nothing 0, tap let go hanging 0.5, seated but held 0.5, turned over then seated 0.5; Dream-1 run: 0 (2,400 steps; never tore the tab)",
+  "reset_notes": "Nothing is random (object_jitter=0). Each real trial uses a new box (the perforations tear only once).",
+  "media": "M-JLFMTT"
+}
