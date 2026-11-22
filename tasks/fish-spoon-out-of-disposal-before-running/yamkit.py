@@ -364,6 +364,8 @@ for a slide, to stay stable."""
     follow_rate: float = 0.25
     stick: bool = False  # zero the joint's speed every control step: it moves only while pushed (a threaded stem)
     parent: str | None = None  # the link this one is jointed to (None = the base)
+    frame_yaw: float = 0.0  # rad: the joint's frame turned this far about the base's z, so `axis` "X" can run along
+    # any horizontal direction (a ring of radial flaps, each hinged on its own tangent); the link's own frame is unturned
 
 
 @dataclass(frozen=True)
@@ -560,13 +562,18 @@ def _mech_usda(mech: Mechanism) -> str:
                    f'        float state:{lin}:physics:velocity = 0\n'
                    f'        uniform token physics:axis = "{lk.axis}"\n'
                    f"        rel physics:body0 = </Root/{lk.parent or 'base'}>\n        rel physics:body1 = </Root/{lk.name}>\n"
-                   f"        point3f physics:localPos0 = {_fmt(_local_anchor(mech, lk))}\n        quatf physics:localRot0 = (1, 0, 0, 0)\n"
-                   f"        point3f physics:localPos1 = (0, 0, 0)\n        quatf physics:localRot1 = (1, 0, 0, 0)\n"
+                   f"        point3f physics:localPos0 = {_fmt(_local_anchor(mech, lk))}\n        quatf physics:localRot0 = {_fmt(_yaw_wxyz(lk.frame_yaw))}\n"
+                   f"        point3f physics:localPos1 = (0, 0, 0)\n        quatf physics:localRot1 = {_fmt(_yaw_wxyz(lk.frame_yaw))}\n"
                    f"        float physics:lowerLimit = {(lk.lower - 1e-4) * scale:.7g}\n"
                    f"        float physics:upperLimit = {(lk.upper + 1e-4) * scale:.7g}\n"
                    f"        float physxJoint:jointFriction = {lk.friction}\n    }}\n")
     out.append("}\n")
     return "".join(out)
+
+
+def _yaw_wxyz(yaw: float) -> tuple:
+    """A turn about z as a USD quaternion (w, x, y, z)."""
+    return (math.cos(yaw / 2), 0.0, 0.0, math.sin(yaw / 2))
 
 
 def _local_anchor(mech: Mechanism, lk: Link) -> tuple:
@@ -597,12 +604,12 @@ def _mech_object(scene, spec: Mechanism):
             # Implicit actuators carry each joint's spring and damping; their targets are set every step (_drive).
             # No stiffness here: the drive's position target starts at 0, not at the joint's start, so a stiff drive
             # would pull the part there while the scene settles. The spring is applied as a torque each step instead.
-            # Exception: a link whose law is a plain spring with rest 0 and start 0 (a sprung hinge or button) gets
-            # that spring as its drive from the first physics step (the drive's target 0 is then its rest), so the
-            # part is never limp while the scene settles.
+            # Exception: a link whose law is a plain spring with rest 0 (a sprung hinge or button, also one that
+            # starts pushed off its rest) gets that spring as its drive from the first physics step (the drive's
+            # target 0 is then its rest), so the part is never limp while the scene settles.
             def _k0(lk):
                 law = lk.law
-                if law is not None and type(law).__name__ == "Spring" and law.rest == 0.0 and lk.start == 0.0:
+                if _rest0_spring(lk):
                     return float(law.k), float(law.damp)
                 return 0.0, lk.damping
 
@@ -626,6 +633,12 @@ def _mech_object(scene, spec: Mechanism):
                        object_type=scene.ObjectType.ARTICULATION,
                        initial_pose=scene.Pose(position_xyz=tuple(float(v) for v in spec.pos), rotation_xyzw=tuple(float(v) for v in _quat_mul(yaw, spec.tilt_xyzw))),
                        spawn_cfg_addon={} if spec.material is not None else {"physics_material": scene._grippy()})
+
+
+def _rest0_spring(lk) -> bool:
+    """A link whose law is a plain Spring (a `drive` returning rest, k, 0, damp) with rest 0."""
+    law = lk.law
+    return law is not None and type(law).__name__ == "Spring" and law.rest == 0.0
 
 
 def _set_drive(art, j: int, target: float, stiffness: float, effort: float, damping: float | None = None) -> None:
@@ -679,7 +692,10 @@ def _watch_resets(base) -> None:
             names = list(art.joint_names)
             for lk in spec.links:
                 j = names.index(f"{lk.name}_joint")
-                _set_drive(art, j, target=lk.start, stiffness=0.0, effort=0.0)
+                if _rest0_spring(lk):  # a plain spring with rest 0 stays live (target 0 is its rest): not limp
+                    _set_drive(art, j, target=0.0, stiffness=float(lk.law.k), effort=0.0, damping=float(lk.law.damp))
+                else:
+                    _set_drive(art, j, target=lk.start, stiffness=0.0, effort=0.0)
                 if lk.law is not None and getattr(lk.law, "sets_limits", False):  # a law's narrowed stop is released
                     _set_limits(art, j, lk.lower - 1e-4, lk.upper + 1e-4)
                 _put_joint(art, j, lk.start)
