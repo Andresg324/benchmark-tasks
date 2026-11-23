@@ -10,8 +10,8 @@ wrinkle and no tear; then set the knife down. Tape set on the wet bed with a lig
 (the compound's tack) but is not bedded; only the knife beds it.
 
 The tape is sheetkit's row of rigid strips (6.7 mm pitch) with the real tape's width, weight per length and bending
-stiffness. The compound is bedkit's height field on the panel's face. A held knife sliding with its edge on a strip
-that lies on the face presses the compound under it down to a depth set by the blade's angle and squeezes the rest out
+stiffness. The compound is bedkit's height field on the panel's face. A held knife sliding on a strip that lies on
+the face, which PhysX reports touching it while pushing the tape into the face with PRESS_FORCE or more, presses the compound under it down to a depth set by the blade's angle and squeezes the rest out
 at the tape's edges; a strip pressed with a thin layer left under it bonds to the bed (a joint to the wall switched
 on: it no longer lifts or slides freely); with too little compound it does not (a blister). A strip a finger presses
 onto the bed sticks weakly (a much weaker joint: the wet compound's tack); it never counts as bedded. Hands do not bed
@@ -241,7 +241,24 @@ KNIFE_PARTS = (gk.Block(*HANDLE), gk.Block(*FERRULE))  # what a hand holds
 OBJECTS = [PANEL, STOP, BRACE, BLOCK, KNIFE, dataclasses.replace(TAPE.mechanism(), yaw=TAPE_YAW)]
 
 # -- the compound model and thresholds (each with its reason in the README and task.json) ------------------------------
-LAW = bk.Law()  # the angle law: 0.8 mm left at <= 40 deg, 0.1 mm at >= 60 deg; bonds with 0.4-1.6 mm left
+# The push that beds the tape. A strip is pressed only while the physics engine reports the knife touching it and the
+# knife's total contact force on the tape (its normal component, pushing the tape into the face) is at least
+# PRESS_FORCE. No measured figure for the force of a taping-knife stroke was found, so the force needed to bed the
+# tape is estimated from the compound's yield stress: squeezing a yield-stress paste from under a strip of tape of
+# half-width a, out to both edges, through a film h thick under a blade contact zone b long takes about
+# F = 2 tau_y a^2 b / h (plastic squeeze flow). Here a = 26.2 mm (the tape's half-width), h = 0.8 mm (the film the
+# angle law leaves), and b = 2.6-3.1 mm (the wedge where a blade at 35-40 degrees thins the 3 mm bed to 0.8 mm). A
+# commercially available joint compound's yield stress is about 200 Pa (US 12,054,627 B2, Proform Finishing Products:
+# "approximately 2,000 dynes/cm2"; the patent's own lightweight ready-mix is about 50 Pa), which gives F = 0.9-1.1 N,
+# about 1 N. PRESS_FORCE asks for twice that estimate, a conservative margin. In the scripted demo the knife pushes
+# the tape with 2.3-4.5 N (10th percentile to maximum over both passes, 2 N or more in 304 of 309 contact steps, probe
+# n1demo); drawn with its edge aimed 4 mm off the tape (variant hover), it grazes the tape with 0.3 N (median) and at
+# most 1.8 N (probe n1hov4).
+# The engine's force is read once per control step (the last physics step's contact force between the knife's
+# colliders and each strip).
+PRESS_FORCE = 2.0  # N
+TOUCH_FORCE = 0.05  # N: less contact force on a strip than this is not the knife touching it
+LAW = bk.Law(press_force=PRESS_FORCE, touch_force=TOUCH_FORCE)  # angle law: 0.8 mm left at <= 40 deg, 0.1 mm at >= 60
 BLADE = bk.Blade(edge_x=BLADE_LEN, width=BLADE_W, thick=BLADE_T, z=BLADE_Z)
 FACE = bk.Face("panel", origin=(_FACE_LOCAL_X, -PANEL_W / 2, -PANEL_H / 2), u=(0, 0, 1), v=(0, 1, 0),
                size=(PANEL_H, PANEL_W), cell=0.001)
@@ -272,8 +289,8 @@ BOND_SHEAR = 0.1  # N per strip
 # contact with it (a pad or tip box within TACK_TOUCH): never from a distance, never off the bed, never without a
 # finger on it. It is the same kind of joint as the bond, five to ten times weaker. No published figure for wet
 # compound's tack was found; its strength is an assumption, about 20 times a strip's weight (about 0.5 mN; its shear
-# cap is about 30 Pa over a strip, below the 200-1000 Pa yield stress of wall (spackling and joint) compounds in
-# US 11,267,758 B2): its shear is a capped damper, so it does not hold a load still but slows the tape's sliding to
+# cap is about 30 Pa over a strip, below the 50-200 Pa yield stresses of joint compounds in US 12,054,627 B2): its
+# shear is a capped damper, so it does not hold a load still but slows the tape's sliding to
 # under a millimeter a minute; it lets go when the strip is lifted past TACK_STRETCH. It never counts as bedded.
 TACK_TOUCH = 0.001  # m: a fingertip's pad or tip box within this of the strip (contact, not nearness)
 TACK_GAP = 0.001  # m: the strip's underside middle within this of the face (touching the bed)
@@ -376,7 +393,7 @@ def knife_released(objects) -> bool:
 
 
 # -- the bonds in the simulator: one joint per strip, authored switched off, switched on and off by the task -----------
-_BONDS = {"paths": [], "on": set(), "tack_paths": [], "tack_on": set()}
+_BONDS = {"paths": [], "on": set(), "tack_paths": [], "tack_on": set(), "strip_paths": []}
 
 
 def _author_bonds(prim) -> None:
@@ -395,10 +412,61 @@ def _author_bonds(prim) -> None:
     anchor = env_M.Transform(Gf.Vec3d(*(float(v) for v in face_point(0.2, PANEL_YC) + TAPE_COLLIDER_T / 2 * NORMAL)))
     m = float(min(TAPE.mass(i) for i in range(TAPE.n)))
     root = str(prim.GetPath())
+    _author_contact_report(stage, root)
+    _author_solver(stage, str(prim.GetParent().GetPath()), root)
     for kind, peel, stretch, shear in (("bond", BOND_PEEL, BOND_STRETCH, BOND_SHEAR),
                                        ("tack", TACK_PEEL, TACK_STRETCH, TACK_SHEAR)):
         _BONDS["paths" if kind == "bond" else "tack_paths"] = _author_kind(stage, root, kind, anchor, rot, m, peel,
                                                                            stretch, shear)
+
+
+# Solver precision for the knife on the tape. A tape strip weighs about 0.05 g; pressed between the 110 g knife and the
+# wall, PhysX's contact solver does not converge at the default iterations (32 for the tape, 16 for the arms): the knife
+# pushes through the strip onto the panel and the strip reports a fraction of the push (0.4-0.6 N for a 4 N press,
+# probes adiag and b2demo). With SOLVER_ITERATIONS position iterations on the knife and the tape (one velocity
+# iteration, as NVIDIA recommends for the TGS solver) the strip carries the push (3-6 N for the same press, b1demo).
+# A strip's depenetration speed cap (sheetkit: 0.3 m/s, so a pad pressing deep into a strip does not fire it out) is
+# raised to STRIP_DEPENETRATION so the strip is pushed back out of the wall promptly. Masses and sizes are unchanged.
+SOLVER_ITERATIONS = 128
+STRIP_DEPENETRATION = 1.0  # m/s
+
+
+def _author_solver(stage, env, root) -> None:
+    """SOLVER_ITERATIONS position (and 1 velocity) iterations on the knife's rigid body and the tape's articulation,
+    and STRIP_DEPENETRATION on every strip. Anything missing stops the trial."""
+    from pxr import Sdf, UsdPhysics
+
+    knife = stage.GetPrimAtPath(f"{env}/knife")
+    if not knife.IsValid() or not knife.HasAPI(UsdPhysics.RigidBodyAPI):
+        raise RuntimeError(f"tape: no knife rigid body at {env}/knife for the solver settings")
+    knife.AddAppliedSchema("PhysxRigidBodyAPI")
+    knife.CreateAttribute("physxRigidBody:solverPositionIterationCount", Sdf.ValueTypeNames.Int).Set(SOLVER_ITERATIONS)
+    knife.CreateAttribute("physxRigidBody:solverVelocityIterationCount", Sdf.ValueTypeNames.Int).Set(1)
+    tape = stage.GetPrimAtPath(root)
+    if not tape.HasAttribute("physxArticulation:solverPositionIterationCount"):
+        raise RuntimeError(f"tape: {root} is not the tape's articulation root")
+    tape.GetAttribute("physxArticulation:solverPositionIterationCount").Set(SOLVER_ITERATIONS)
+    tape.GetAttribute("physxArticulation:solverVelocityIterationCount").Set(1)
+    for path in _BONDS["strip_paths"]:
+        body = stage.GetPrimAtPath(path)
+        body.AddAppliedSchema("PhysxRigidBodyAPI")
+        body.CreateAttribute("physxRigidBody:maxDepenetrationVelocity", Sdf.ValueTypeNames.Float).Set(STRIP_DEPENETRATION)
+
+
+def _author_contact_report(stage, root) -> None:
+    """PhysxContactReportAPI (threshold 0) on every strip's rigid body, so the engine reports the knife's contact forces
+    on each strip (KnifePush)."""
+    from pxr import Sdf
+
+    paths = []
+    for i in range(TAPE.n):
+        body = stage.GetPrimAtPath(f"{root}/{'base' if i == TAPE.root else TAPE.link_name(i)}")
+        if not body.IsValid():
+            raise RuntimeError(f"tape: no strip body {i} under {root} for the contact report")
+        body.AddAppliedSchema("PhysxContactReportAPI")  # by name, as yamkit writes it (no PhysxSchema offline)
+        body.CreateAttribute("physxContactReport:threshold", Sdf.ValueTypeNames.Float).Set(0.0)
+        paths.append(str(body.GetPath()))
+    _BONDS["strip_paths"] = paths
 
 
 def _author_kind(stage, root, kind, anchor, rot, m, peel, stretch, shear) -> list:
@@ -567,7 +635,7 @@ def _update(objects):
     held = knife_held(objects)
     kp, kq = _pose(objects["knife"])
     fr = bk.face_frame(FACE, FIXED_POSES["panel"])
-    for i in _L.bed.step(kp, kq, held, FIXED_POSES["panel"], frames):
+    for i in _L.bed.step(kp, kq, held, FIXED_POSES["panel"], frames, knife_push()):
         _L.bed.set_bonded(i, True, fr, frames)
         _set_bond(i, True)
     for i in _L.bed.release(fr, frames, BOND_STRETCH):
@@ -730,6 +798,68 @@ def _read_links(base) -> None:
 
 _READ_ONCE: list = []
 kit.STATE_HOOKS.append(_read_links)
+
+
+def _np(x) -> np.ndarray:
+    x = getattr(x, "torch", x)
+    if hasattr(x, "detach"):
+        return x.detach().cpu().numpy().astype(np.float64)
+    if hasattr(x, "numpy"):  # warp arrays (the PhysX tensor views' getters on this Isaac Lab)
+        return np.asarray(x.numpy(), np.float64)
+    return np.asarray(x, np.float64)
+
+
+class KnifePush:
+    """The knife's contact force on each tape strip, from PhysX: a rigid contact view on the strips (each carries
+    PhysxContactReportAPI) filtered by the knife's rigid body. Built at the first control step; anything missing stops
+    the trial (the bedding would otherwise fail silently)."""
+
+    def __init__(self, base):
+        import isaaclab.sim as sim_utils
+        from isaaclab_physx.physics import PhysxManager
+        from pxr import Usd, UsdPhysics
+
+        strips = list(_BONDS["strip_paths"])
+        if len(strips) != TAPE.n:
+            raise RuntimeError(f"tape: {len(strips)} strips carry a contact report, not {TAPE.n}")
+        roots = sim_utils.find_matching_prims(base.scene["knife"].cfg.prim_path)
+        if not roots:
+            raise RuntimeError("tape: no knife prim for the contact forces")
+        knife = [str(p.GetPath()) for p in Usd.PrimRange(roots[0]) if p.HasAPI(UsdPhysics.RigidBodyAPI)]
+        if len(knife) != 1:
+            raise RuntimeError(f"tape: the knife should be one rigid body, found {knife}")
+        self.view = PhysxManager.get_physics_sim_view().create_rigid_contact_view(
+            strips, filter_patterns=[knife] * len(strips), max_contact_data_count=16 * len(strips))
+        self.dt = float(getattr(base, "physics_dt", 1 / 240))
+        print(f"tape: knife contact forces on {len(strips)} strips (rigid contact view, knife {knife[0]}, "
+              f"dt {self.dt:.5f})", file=sys.stderr, flush=True)
+
+    def read(self) -> np.ndarray:
+        """Per strip: the knife's contact force pushing it into the face (N, >= 0)."""
+        m = _np(self.view.get_contact_force_matrix(dt=self.dt)).reshape(TAPE.n, 3)
+        self.last = m
+        return np.maximum(0.0, -(m @ NORMAL))
+
+
+_PUSH = {"reader": None, "now": None}
+
+
+def _read_push(base) -> None:
+    if _PUSH["reader"] is None:
+        _PUSH["reader"] = KnifePush(base)
+    _PUSH["now"] = _PUSH["reader"].read()
+
+
+def knife_push() -> np.ndarray:
+    """The knife's contact push on each strip at this control step (N). In the simulator it is read from PhysX each
+    step; offline (tests) it is whatever was set in _PUSH["now"], and must be set."""
+    f = _PUSH["now"]
+    if f is None:
+        raise RuntimeError("tape: no knife contact forces were read for this step")
+    return f
+
+
+kit.STATE_HOOKS.append(_read_push)
 if in_sim():  # in the simulator: read and check the hulls as the task loads, not in a trial's step
     yg.warm(ARM_LINKS)
 
@@ -930,16 +1060,18 @@ def tip_compliance(q, base) -> np.ndarray:
     return J @ np.linalg.inv(K_ARM) @ J.T
 
 
-def press_dir(p, R, base=_station.BASES["left"], seed=_Q_SET_SEED) -> np.ndarray:
-    """u = C n / (n . C n) at the left's fingertips pressing at face point p with rotation R (u . n = 1)."""
+def press_dir(p, R, base=_station.BASES["left"], seed=_Q_SET_SEED, n=NORMAL) -> np.ndarray:
+    """u = C n / (n . C n) at the left's fingertips pressing at point p with rotation R (u . n = 1; n defaults to the
+    face's normal)."""
     q, err, _ = _ik.solve(_set_tcp(p, TAPE_COLLIDER_T, R), _ik.matrix_to_quat_xyzw(R), seed, base_pos=base, iters=200)
+    n = np.asarray(n, float)
     if err > 0.002:
-        return NORMAL.copy()
-    c = tip_compliance(q, base) @ NORMAL
-    return c / float(c @ NORMAL)
+        return n.copy()
+    c = tip_compliance(q, base) @ n
+    return c / float(c @ n)
 
 
-def _left_set() -> list:
+def _left_set(home=True) -> list:
     s0 = HOLD_FOLD - 0.008 * CRACK_UP
     s1 = CRACK_TOP - (SET_START + SET_OVERLAP) * CRACK_UP
     on = TAPE_COLLIDER_T - LEFT_PRESS
@@ -963,7 +1095,7 @@ def _left_set() -> list:
              _wp(0.5, at(0.0, None)[0], FINGER_CLOSED, "settle", R_SET)]
             + [_wp(sec, pos, FINGER_CLOSED, label, R) for sec, pos, R, label in dabs]
             + [_wp(LEFT_DAB_S[0], at(run, SET_OUT)[0], FINGER_CLOSED, "back off the tape", R_SET),
-               _wp(1.0, _set_tcp(s1, 0.06), FINGER_CLOSED, "off the tape", R_SET), kit.Home(4.0)])
+               _wp(1.0, _set_tcp(s1, 0.06), FINGER_CLOSED, "off the tape", R_SET)] + ([kit.Home(4.0)] if home else []))
 
 
 def _right_set() -> list:
@@ -989,10 +1121,25 @@ def _right_set() -> list:
     return [_wp(sec, pos, FINGER_CLOSED, label, R) for sec, pos, R, label in plan]
 
 
-def _right(deg=KNIFE_DEG, keep=False, sets=True, start=STROKE[0]) -> list:
-    """The right's plan: the set pass (`sets`), then the knife taken, drawn down the tape at `deg` to the face from
-    `start` m above the crack's top end and laid back on the bench (`keep`: kept in hand with its edge on the wall at
-    the stroke's end instead)."""
+def _pass(e0, e1, R_knife, R_hand, on) -> list:
+    """One pass: the knife squared to the tape below e0, in close, up to e0, its edge set on the tape, drawn down to e1."""
+    below = e0 - APPROACH_BELOW * CRACK_UP  # the knife comes in below the start, then slides up onto it
+    return [_wp(3.0, knife_tcp(below + BACK * NORMAL, R_knife), FINGER_CLOSED, "square the blade to the tape", R_hand),
+            _wp(1.2, knife_tcp(below + OFF * NORMAL, R_knife), FINGER_CLOSED, "in close, below the start", R_hand),
+            _wp(2.0, knife_tcp(e0 + OFF * NORMAL, R_knife), FINGER_CLOSED, "up to the start of the pass", R_hand),
+            _wp(1.0, knife_tcp(e0 + on * NORMAL, R_knife), FINGER_CLOSED, "edge on the tape", R_hand),
+            _wp(SETTLE_S, knife_tcp(e0 + on * NORMAL, R_knife), FINGER_CLOSED, "settle the edge on the tape", R_hand),
+            _wp(float(np.linalg.norm(e1 - e0)) / SPEED, knife_tcp(e1 + on * NORMAL, R_knife), FINGER_CLOSED,
+                "draw the knife down the tape", R_hand)]
+
+
+def _right(deg=KNIFE_DEG, keep=False, sets=True, start=STROKE[0], hover=False, light=False) -> list:
+    """The right's plan: the set pass (`sets`), then the knife taken and drawn down the tape at `deg` to the face in two
+    passes, from the middle out (PASS1: from PASS1_START below the crack's top end, clear of the left hand holding the
+    top end, to past the bottom end; then, the left gone, PASS2: from `start` above the top end to PASS2_END below it,
+    over the first pass's start), and laid back on the bench (`keep`: kept in hand with its edge on the wall at the
+    second pass's end instead; `hover`: the edge drawn HOVER_GAP off the tape instead of pressed onto it; `light`: the
+    edge aimed LIGHT_PRESS below the tape's top instead of PRESS)."""
     R_knife, R_hand = _pass_rotations(deg)
     g0 = np.asarray(KNIFE_START) + R_KNIFE_REST @ GRIP_LOCAL
     gx, gy, gz = (float(v) for v in g0)
@@ -1001,23 +1148,19 @@ def _right(deg=KNIFE_DEG, keep=False, sets=True, start=STROKE[0]) -> list:
             Waypoint(1.5, (gx, gy, gz + 0.003), FINGER_OPEN, "around the handle", KNIFE_YAW),
             Waypoint(1.3, (gx, gy, gz + 0.003), FINGER_CLOSED, "grip", KNIFE_YAW),
             Waypoint(1.2, (gx, gy, TOP + LIFT), FINGER_CLOSED, "lift", KNIFE_YAW)]
-    e0 = CRACK_TOP + start * CRACK_UP
+    on = TAPE_COLLIDER_T + HOVER_GAP if hover else TAPE_COLLIDER_T - (LIGHT_PRESS if light else PRESS)
+    top_end = CRACK_TOP + start * CRACK_UP
     e1 = CRACK_BOT + STROKE[1] * CRACK_UP
-    on = TAPE_COLLIDER_T - PRESS
-    below = e0 - APPROACH_BELOW * CRACK_UP  # the knife comes in below the held end, then slides up onto the start
-    plan += [_wp(3.0, knife_tcp(below + BACK * NORMAL, R_knife), FINGER_CLOSED, "square the blade to the tape", R_hand),
-             _wp(1.2, knife_tcp(below + OFF * NORMAL, R_knife), FINGER_CLOSED, "in close, below the held end", R_hand),
-             _wp(2.0, knife_tcp(e0 + OFF * NORMAL, R_knife), FINGER_CLOSED, "up to the start of the stroke", R_hand),
-             _wp(1.0, knife_tcp(e0 + on * NORMAL, R_knife), FINGER_CLOSED, "edge on the tape below the held end",
-                 R_hand),
-             _wp(1.0, knife_tcp(e0 + on * NORMAL, R_knife), FINGER_CLOSED, "settle the edge on the tape", R_hand),
-             _wp(float(np.linalg.norm(e1 - e0)) / SPEED, knife_tcp(e1 + on * NORMAL, R_knife), FINGER_CLOSED,
-                 "draw the knife down the tape", R_hand)]
-    if keep:
-        return plan + [_wp(5.0, knife_tcp(e1 + on * NORMAL, R_knife), FINGER_CLOSED, "keep the knife on the wall",
-                           R_hand)]
+    e2 = CRACK_TOP + PASS2_END * CRACK_UP
+    plan += _pass(CRACK_TOP + PASS1_START * CRACK_UP, e1, R_knife, R_hand, on)
     plan += [_wp(0.8, knife_tcp(e1 + OFF * NORMAL, R_knife), FINGER_CLOSED, "lift off", R_hand),
-             _wp(1.2, knife_tcp(e1 + BACK * NORMAL, R_knife), FINGER_CLOSED, "back from the panel", R_hand),
+             _wp(1.2, knife_tcp(e1 + BACK * NORMAL, R_knife), FINGER_CLOSED, "back from the panel", R_hand)]
+    plan += _pass(top_end, e2, R_knife, R_hand, on)
+    if keep:
+        return plan + [_wp(5.0, knife_tcp(e2 + on * NORMAL, R_knife), FINGER_CLOSED, "keep the knife on the wall",
+                           R_hand)]
+    plan += [_wp(0.8, knife_tcp(e2 + OFF * NORMAL, R_knife), FINGER_CLOSED, "lift off", R_hand),
+             _wp(1.2, knife_tcp(e2 + BACK * NORMAL, R_knife), FINGER_CLOSED, "back from the panel", R_hand),
              Waypoint(3.5, (TURN_X, gy, TOP + LIFT), FINGER_CLOSED, "over the bench", KNIFE_YAW),
              Waypoint(1.2, (gx, gy, TOP + LIFT), FINGER_CLOSED, "over its place", KNIFE_YAW),
              Waypoint(1.5, (gx, gy, gz + 0.001), FINGER_CLOSED, "lay it down", KNIFE_YAW),
@@ -1027,7 +1170,42 @@ def _right(deg=KNIFE_DEG, keep=False, sets=True, start=STROKE[0]) -> list:
     return plan
 
 
-VARIANTS = ("", "hand_only", "bare_bed", "knife_left", "steep")
+# The passes. The right hand alone pushes the knife's edge onto the tape with about 2.5-5 N (PhysX contact report,
+# probes b1light, b1f15, b1f2): held by the back of its handle, the knife sags in the pinch onto the tape and the arm
+# presses it there. Pushed that hard, the knife drags the tape down the wall with it if nothing holds the tape (the
+# strips slid 3-4 mm and peeled off the bed, b1demo), so the left keeps its pinch on the tape's top end while the knife
+# beds the lower part, as finishers hold the tape's end on the first pass. The two arms cannot both reach the top of
+# the crack at once (with the left holding the top end, the right's forearm would pass through the left's upper arm
+# while the knife is within about 5 cm of the top end: offline hull check, probes h1r-hov3r), so the knife embeds the
+# tape from the middle out, as finishers often do: the first pass from PASS1_START below the crack's top end to past
+# its bottom end with the left holding the top end (LEFT_HOLD "through"; "regrip": the left first sets the top part
+# with its fingertips and takes the top end again); the left then lets go and goes home, and the second pass runs from
+# above the top end to PASS2_END, over the first pass's start, while the bedded lower part holds the tape.
+PASS1_START = -0.065  # m along the crack from its top end (negative: below it) where the first pass starts
+PASS2_END = -0.090  # m: where the second pass ends, 2.5 cm past the first pass's start (the edge lands about 1 cm short)
+LEFT_HOLD = "through"  # "through" or "regrip"
+SETTLE_S = 1.0  # s the edge rests on the tape at the stroke's start before it is drawn down
+REGRIP_OUT = 0.05  # m out from the face where the left's open fingers line up with the standing top end
+
+
+def _left_hold_end(t_now, t_release) -> list:
+    """The left from PIN_TCP (holding) at t_now: keep the top end until t_release, then let go and go home."""
+    return [_wp(max(0.5, t_release - t_now), PIN_TCP, FINGER_CLOSED, "hold the top end while the knife beds the tape",
+                R_PIN),
+            _wp(1.0, PIN_TCP, FINGER_OPEN, "let go of the top end", R_PIN),
+            _wp(1.2, PIN_TCP + REGRIP_OUT * NORMAL, FINGER_OPEN, "back off the face", R_PIN), kit.Home(4.0)]
+
+
+def _left_regrip() -> list:
+    """From where _left_set(home=False) leaves the left: back to the standing top end, open, and pinch it again."""
+    return [_wp(1.5, PIN_TCP + REGRIP_OUT * NORMAL, FINGER_OPEN, "open, in front of the tape's top end", R_PIN),
+            _wp(1.2, PIN_TCP, FINGER_OPEN, "pads either side of the top end", R_PIN),
+            _wp(1.0, PIN_TCP, FINGER_CLOSED, "pinch the top end again", R_PIN)]
+
+
+VARIANTS = ("", "hand_only", "bare_bed", "knife_left", "steep", "hover", "light")
+HOVER_GAP = 0.004  # m: the hover variant draws the edge this far off the tape's top (a careless pass held just off it)
+LIGHT_PRESS = 0.0  # m: the light variant aims the edge at the tape's top instead of PRESS below it (a light touch)
 STEEP_DEG = 60.0  # the steep variant's blade angle (bedkit's law leaves 0.1 mm: a starved, unbonded stretch) ...
 STEEP_START = -0.04  # ... from 4 cm below the crack's top end (that steep, the arm cannot reach higher): 9 of 13 stations
 HANDS_OFF_WAIT = 14.0  # s both hands wait at home at the end of the hand_only variant (the tape on its own)
@@ -1035,33 +1213,54 @@ HANDS_OFF_WAIT = 14.0  # s both hands wait at home at the end of the hand_only v
 
 def demo():
     """Left hand: pick up the tape by its top end and lay it on the crack, holding the end. Right hand: press the tape
-    onto the bed with the fingertips down its length below the held end. Left: let go, press the top part the same way,
-    go home. Right: take the knife, draw it down the tape from above the crack's top end past its bottom end, and lay
-    the knife down.
+    onto the bed with the fingertips down its length below the held end. Left: keep holding the top end (LEFT_HOLD
+    "through"; "regrip": let go, press the top part the same way, take the end again). Right: take the knife and draw it
+    down the tape from PASS1_START below the crack's top end past its bottom end; the left lets go of the end and goes
+    home; the right draws the knife down again from above the top end to PASS2_END and lays the knife down.
 
-    DRYWALL_VARIANT runs a cheat instead (each scores its cap): hand_only (the tape laid and dabbed by hand, no knife:
+    DRYWALL_VARIANT runs a cheat or a careless pass instead: hand_only (the tape laid and dabbed by hand, no knife:
     0), bare_bed (the tape left on the bench, the knife drawn down the bare bed and laid back: 0), knife_left (the
-    knife kept in hand on the wall at the stroke's end: 0.75), steep (the pass at 60 degrees from 4 cm below the top end,
-    starving the bed: 0.5)."""
+    knife kept in hand on the wall at the second pass's end: 0.75 at most), steep (both passes at 60 degrees, the second
+    from 4 cm below the top end: a starved bed, 0.5 at most; in the sim the right arm, squaring the blade that steep,
+    meets the left holding the top end and knocks the tape off the line: 0), hover (the whole demo, but the knife's edge
+    aimed HOVER_GAP off the tape: it grazes it below PRESS_FORCE and beds nothing, 0), light (the whole demo, the edge
+    aimed at the tape's top instead of pressed into it: the knife sags in the fingers and still presses, bedding part
+    of the tape)."""
     variant = os.environ.get("DRYWALL_VARIANT", "")
     if variant not in VARIANTS:
         raise ValueError(f"DRYWALL_VARIANT {variant!r} is not one of {VARIANTS}")
     if variant == "bare_bed":
-        return {"left": [kit.Home(1.0)], "right": [kit.Home(1.0)] + _right(sets=False)}
+        return {"left": [kit.Home(1.0)], "right": [kit.Home(1.0)] + _right(KNIFE_DEG, sets=False, start=STROKE[0])}
     left = _left()
-    right = (_right(STEEP_DEG, start=STEEP_START) if variant == "steep" else _right(keep=variant == "knife_left"))
+    right = (_right(STEEP_DEG, start=STEEP_START) if variant == "steep"
+             else _right(KNIFE_DEG, keep=variant == "knife_left", start=STROKE[0], hover=variant == "hover",
+                    light=variant == "light"))
     t_laid = sum(w.duration for w in left)
     right.insert(0, kit.Home(t_laid + 0.5))  # wait at home for the tape to be laid
     n_set = 1 + len(_right_set())
     t_set_done = sum(w.duration for w in right[:n_set])
     left.append(_wp(max(0.5, t_set_done - t_laid), PIN_TCP, FINGER_CLOSED,
                     "keep the top end while the right hand sets the tape below", R_PIN))
-    left += _left_set()
     if variant == "hand_only":  # the right goes home after its dabs, out of the left's way; both then wait, hands off
+        left += _left_set(home=True)
         return {"left": left + [kit.Home(HANDS_OFF_WAIT)], "right": right[:n_set] + [kit.Home(4.0)]}
-    t_left_home = sum(w.duration for w in left)
+    if LEFT_HOLD == "regrip":
+        left += _left_set(home=False) + _left_regrip()
+    elif LEFT_HOLD != "through":
+        raise ValueError(f"LEFT_HOLD {LEFT_HOLD!r}")
+    t_held = sum(w.duration for w in left)  # the left holds the top end from here
     k = next(i for i, w in enumerate(right) if w.label == "square the blade to the tape")
     t_k = sum(w.duration for w in right[:k])
-    right.insert(k, Waypoint(max(0.0, t_left_home - t_k), right[k - 1].pos, FINGER_CLOSED,
-                             "wait for the left hand to clear", KNIFE_YAW))
+    if t_held > t_k:  # the knife comes in once the left holds the end again
+        right.insert(k, Waypoint(t_held - t_k, right[k - 1].pos, FINGER_CLOSED, "wait for the left hand to hold the end",
+                                 KNIFE_YAW))
+    ks = next(i for i, w in enumerate(right) if w.label == "draw the knife down the tape")
+    t_past = sum(w.duration for w in right[:ks + 1])  # the first pass has passed the crack's bottom end
+    left += _left_hold_end(t_held, t_past + 0.5)
+    t_home = sum(w.duration for w in left)  # the left is home, clear of the top of the crack
+    k2 = next(i for i, w in enumerate(right) if i > ks and w.label == "square the blade to the tape")
+    t_k2 = sum(w.duration for w in right[:k2])
+    if t_home > t_k2:  # the second pass comes in once the left is home
+        right.insert(k2, dataclasses.replace(right[k2 - 1], duration=t_home - t_k2,
+                                             label="wait for the left hand to go home"))
     return {"left": left, "right": right}

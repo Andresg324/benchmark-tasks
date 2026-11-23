@@ -89,8 +89,15 @@ def knife_at_edge(edge_mid, R):
     return np.asarray(edge_mid, float) - R @ low
 
 
-def objs(tape_frames, kpos=None, krot=None, held=False, hand_on=None):
+STROKE_PUSH = 8.0  # N: the knife's contact push on the tape in these hand-built states (the demo's is read in the sim)
+TOUCH = 0.0003  # m: in these states the engine would report a contact where an edge point is this close to a strip
+
+
+def objs(tape_frames, kpos=None, krot=None, held=False, hand_on=None, push=None):
+    """One hand-built state. `push`: the knife's total contact push (N) the engine would report, shared by the strips
+    its edge touches (default STROKE_PUSH whenever a knife pose is given; none touched, none reported)."""
     o = dict(FIXED)
+    o["__push__"] = (STROKE_PUSH if kpos is not None else 0.0) if push is None else float(push)
     if kpos is None:
         kpos, krot = np.asarray(M.KNIFE_START), KNIFE_REST_R
     o["knife"] = st(kpos, krot)
@@ -117,6 +124,28 @@ def _r_down_into_face():
     return np.column_stack([c, np.cross(a, c), a])
 
 
+def contact_push(o, push):
+    """Stand-in for the engine's contact report offline: per strip, the knife's push (N), shared equally by the strips
+    an edge point (on the edge's lower face, 41 across the blade) is within TOUCH of; zero for the rest."""
+    f = np.zeros(M.TAPE.n)
+    if push <= 0:
+        return f
+    R = bk.rotm(o["knife"].quat_xyzw)
+    low = np.array([[M.BLADE_LEN, y, M.BLADE_Z + dz] for y in np.linspace(-M.BLADE_W / 2, M.BLADE_W / 2, 41)
+                    for dz in (-M.BLADE_T / 2, M.BLADE_T / 2)])
+    pts = low @ R.T + np.asarray(o["knife"].pos, float)
+    hit = []
+    for i, s_ in enumerate(M.STRIPS):
+        c, Rs = bk.strip_world(s_, (np.asarray(o[s_.key].pos, float), bk.rotm(o[s_.key].quat_xyzw)))
+        loc = (pts - c) @ Rs
+        h = np.asarray(s_.size) / 2
+        if np.any((np.abs(loc[:, 0]) <= h[0]) & (np.abs(loc[:, 1]) <= h[1] + 0.0003) & (np.abs(loc[:, 2]) <= h[2] + TOUCH)):
+            hit.append(i)
+    if hit:
+        f[hit] = push / len(hit)
+    return f
+
+
 def feed(states):
     s = 0.0
     for o, opening in states:
@@ -124,12 +153,13 @@ def feed(states):
         n = kit._EPISODE.get("last")
         kit._EPISODE["last"] = 0 if n is None else n + 1
         o = dict(o)
+        M._PUSH["now"] = contact_push(o, o.pop("__push__", 0.0))
         M.success(o)
         s = M.score(o)
     return s
 
 
-def stroke(tape, deg=M.KNIFE_DEG, held=True, start=None, end=None, speed=M.SPEED, height=None):
+def stroke(tape, deg=M.KNIFE_DEG, held=True, start=None, end=None, speed=M.SPEED, height=None, push=None):
     """States for a knife drawn from `start` to `end` (default: the demo's stroke) with its edge on the tape's top."""
     R = knife_pass_rot(deg)
     e0 = M.CRACK_TOP + M.STROKE[0] * M.CRACK_UP if start is None else start
@@ -141,7 +171,7 @@ def stroke(tape, deg=M.KNIFE_DEG, held=True, start=None, end=None, speed=M.SPEED
         f = min(1.0, max(0.0, k / n))
         e = e0 + f * (e1 - e0) + h * M.NORMAL
         kp = knife_at_edge(e, R)
-        out.append(objs(tape, kp, R, held=held))
+        out.append(objs(tape, kp, R, held=held, push=push))
     return out
 
 
@@ -174,6 +204,40 @@ def test_full_job_scores_1():
     check(s == 0.75, f"bedded, knife still in hand: 0.75 ({s})")
     s = feed(set_down(tape))
     check(s == 1.0, f"knife set down, hands off, still 1 s: 1.0 ({s})")
+
+
+def test_bedding_needs_contact_force():
+    """The bedding rule reads the knife's contact force (PhysX contact reporting in the sim): a knife 0.5 mm off the
+    tape with no contact (which the old proximity rule, 0.6 mm, counted) beds nothing; a light push (under
+    PRESS_FORCE) beds nothing; a push of PRESS_FORCE beds it."""
+    fresh()
+    tape = tape_laid()
+    s = feed(stroke(tape, height=M.TAPE_COLLIDER_T + M.HOVER_GAP, push=0.0) + set_down(tape))
+    check(s == 0.0 and M._L.bed.pressed.sum() == 0 and M._L.bed.bonded.sum() == 0,
+          f"hover: the edge drawn {M.HOVER_GAP * 1000:g} mm off the tape, no contact force: nothing pressed or bedded, 0 ({s})")
+    fresh()
+    s = feed(stroke(tape, height=M.TAPE_COLLIDER_T + M.HOVER_GAP, push=STROKE_PUSH) + set_down(tape))
+    check(s == 0.0 and M._L.bed.pressed.sum() == 0,
+          f"hover with a push reported elsewhere: no strip touched, nothing pressed, 0 ({s})")
+    fresh()
+    s = feed(stroke(tape, push=0.6 * M.PRESS_FORCE) + set_down(tape))
+    check(s == 0.0 and M._L.bed.pressed.sum() == 0,
+          f"edge on the tape, light push ({0.6 * M.PRESS_FORCE:.2f} N < {M.PRESS_FORCE:g} N): nothing bedded, 0 ({s})")
+    fresh()
+    s = feed(stroke(tape, push=M.PRESS_FORCE - 0.01) + set_down(tape))
+    check(s == 0.0 and M._L.bed.pressed.sum() == 0,
+          f"edge on the tape, just under the threshold ({M.PRESS_FORCE - 0.01:.2f} N): nothing bedded, 0 ({s})")
+    fresh()
+    s = feed(stroke(tape, push=M.PRESS_FORCE) + set_down(tape))
+    check(s == 1.0, f"edge on the tape pushing {M.PRESS_FORCE:g} N: bedded, 1.0 ({s})")
+    fresh()
+    s = feed(stroke(tape, push=4 * M.PRESS_FORCE) + set_down(tape))
+    check(s == 1.0 and all(abs(d - 0.0008) < 1e-6 for d in M._L.view["st"]["depth"]),
+          f"a harder push ({4 * M.PRESS_FORCE:g} N) beds it the same (0.8 mm, set by the angle): 1.0 ({s})")
+    old = bk.Bed(M.FACE, M.STRIPS, M.BLADE, M.LAW, M.start_bed)
+    import pytest
+    with pytest.raises(ValueError):
+        old.step(np.zeros(3), np.array([0, 0, 0, 1.0]), True, M.FIXED_POSES["panel"], [], None)
 
 
 def test_hold_needs_a_full_second():
@@ -345,9 +409,26 @@ def test_usd_patch_and_bonds():
     for i in range(M.TAPE.n):
         if i != M.TAPE.root:
             UsdGeom.Xform.Define(stage, f"/World/envs/env_0/tape/{M.TAPE.link_name(i)}")
+    from pxr import Sdf
+    knife = UsdGeom.Xform.Define(stage, "/World/envs/env_0/knife").GetPrim()
+    UsdPhysics.RigidBodyAPI.Apply(knife)
+    for name, v in (("solverPositionIterationCount", 32), ("solverVelocityIterationCount", 4)):
+        prim.CreateAttribute(f"physxArticulation:{name}", Sdf.ValueTypeNames.Int).Set(v)  # as yamkit writes them
     M._author_bonds(prim)
+    check(knife.GetAttribute("physxRigidBody:solverPositionIterationCount").Get() == M.SOLVER_ITERATIONS
+          and knife.GetAttribute("physxRigidBody:solverVelocityIterationCount").Get() == 1
+          and prim.GetAttribute("physxArticulation:solverPositionIterationCount").Get() == M.SOLVER_ITERATIONS
+          and prim.GetAttribute("physxArticulation:solverVelocityIterationCount").Get() == 1,
+          f"knife and tape solve with {M.SOLVER_ITERATIONS} position / 1 velocity iterations")
+    check(all(stage.GetPrimAtPath(q).GetAttribute("physxRigidBody:maxDepenetrationVelocity").Get()
+              == M.STRIP_DEPENETRATION for q in M._BONDS["strip_paths"]), "every strip's depenetration cap")
     joints = [p for p in stage.Traverse() if p.GetName().startswith("bond_")]
     check(len(joints) == M.TAPE.n, "one bond joint per strip")
+    rep = [p for p in stage.Traverse()  # the listed schema (offline pxr has no PhysX schemas registered to apply)
+           if p.GetMetadata("apiSchemas") and "PhysxContactReportAPI" in p.GetMetadata("apiSchemas").GetAddedOrExplicitItems()]
+    check(len(rep) == M.TAPE.n and len(M._BONDS["strip_paths"]) == M.TAPE.n
+          and all(p.GetAttribute("physxContactReport:threshold").Get() == 0.0 for p in rep),
+          "every strip body carries a contact report (threshold 0) for the knife's contact forces")
     j = UsdPhysics.Joint(joints[0])
     check(j.GetJointEnabledAttr().Get() is False, "authored switched off")
     check(j.GetExcludeFromArticulationAttr().Get() is True, "outside the articulation")
@@ -430,6 +511,30 @@ def test_demo_reach():
             if e > worst:
                 worst, where = e, label
         check(worst < 0.010, f"{side} plan reachable: worst IK miss {worst * 1000:.1f} mm ({where})")
+
+
+def test_arms_clear_each_other():
+    """With the left holding the tape's top end, the right's forearm cannot reach the top of the crack (WIP5 probes: it
+    shoved the left and the tape off the line), so the knife embeds from the middle out. Both arms' planned poses
+    (the scripted policy's IK actions, in time), every 0.5 s: no collision hull of one arm within 5 mm of the other's."""
+    from yam_arena import analysis as A
+    from yam_arena.constants import ARM_JOINTS
+    d = M.demo()
+    plans = {s: _demo.ArmPlan(d[s], _station.BASES[s]) for s in d}
+    links = ("link2", "link3", "link4", "link5", "gripper", "tip_left", "tip_right")
+    worst, where = 1.0, ""
+    t, t_end = 0.0, max(p.duration for p in plans.values())
+    while t < t_end:
+        hulls, labels = {}, {}
+        for s, p in plans.items():
+            a, labels[s] = p.action7(min(t, p.duration - 1e-6))
+            poses = A.fk_link_poses_world({n: float(v) for n, v in zip(ARM_JOINTS, a[:6])}, _station.BASES[s])
+            hulls[s] = A.world_hulls(poses, [k for k in poses if k.endswith(links)])
+        dist, _ = A.hull_set_distance(hulls["right"], hulls["left"])
+        if dist < worst:
+            worst, where = dist, f"{labels['right']} / {labels['left']}"
+        t += 0.5
+    check(worst > 0.005, f"the arms stay clear of each other: {worst * 1000:.1f} mm at the closest ({where})")
 
 
 def _tilted_pass_rot(deg=M.KNIFE_DEG, tilt_deg=0.0, turn_deg=0.0):
@@ -567,6 +672,12 @@ def test_text_matches():
     for val in ("3 mm", "0.4", "1.6 mm", "90%", "1 cm", "1 s"):
         check(val in text, f"text states {val}")
     check(tj["instruction"] == M.INSTRUCTION, "instruction matches")
+    f = f"{M.PRESS_FORCE:g} N"
+    for name, t in (("task.json scoring", tj["scoring"]), ("task.json fidelity", tj["fidelity"]), ("README", readme)):
+        check(f in t, f"{name} states the bedding force {f}")
+    for t in (tj["scoring"], tj["fidelity"], readme):
+        check(not re.search(r"\b(4\.5|5\.4|5) N\b|1,000 Pa", t), "no stale 5 N / 4.5-5.4 N / 1,000 Pa figure")
+    check(not re.search(r"[A-Z_]+_TBD|_RESULT\b|VARIANT_RESULTS|@[A-Z]+@", readme + json.dumps(tj)), "no placeholders left")
     check(not re.search(r"\bspread", tj["title"].lower()), "the title is about laying tape, not spreading")
 
 
@@ -626,12 +737,13 @@ def test_set_passes_never_slide_on_the_tape():
         check(presses >= 4, f"{side}: it sets the tape in dabs ({presses})")
 
 
-def test_left_dabs_press_straight_in():
+def test_left_dabs_press_straight_in(monkeypatch):
     """A dab aimed straight into the face slides the fingertips about 1 mm sideways as the arm's joint springs give
     under the press, and the pads carry the loose tape off the crack. Modelled with
     those springs (the face stops the fingertips; they give by C n, C = J K^-1 J^T), the left's fingertips do not move
     along the face while they press, and every press lands on the tape's middle."""
     from yam_arena import ik
+    monkeypatch.setenv("DRYWALL_VARIANT", "hand_only")  # the dabs the left makes when it sets the top part
     d, base = M.demo(), _station.BASES["left"]
     plan = _demo.ArmPlan(d["left"], base)
     o, n = M.face_point(0.0, 0.0), M.NORMAL
@@ -798,6 +910,17 @@ def test_variants_plans(monkeypatch):
     check(labels["knife_left"]["right"][-1] == "keep the knife on the wall" and "let go" not in labels["knife_left"]["right"],
           "knife_left: ends holding the knife on the wall (no home or lay-down after it)")
     check(labels["steep"]["right"] == labels[""]["right"], "steep: the same plan as the demo ...")
+    hold = "hold the top end while the knife beds the tape"
+    for v in ("", "hover", "steep", "knife_left"):
+        check(hold in labels[v]["left"] and labels[v]["left"][-1] == "home",
+              f"{v or 'demo'}: the left holds the tape's top end through the stroke, then lets go and goes home")
+    t_hold_end = {v: sum(w.duration for w in got[v]["left"][:labels[v]["left"].index(hold) + 1]) for v in ("", "hover")}
+    t_stroke_end = {v: sum(w.duration for w in got[v]["right"][:labels[v]["right"].index("draw the knife down the tape") + 1])
+                    for v in ("", "hover")}
+    check(all(t_hold_end[v] >= t_stroke_end[v] for v in t_hold_end), "the left lets go only after the stroke")
+    check(labels["hover"]["right"] == labels[""]["right"], "hover: the right's plan is the demo's, the edge held off")
+    check(labels["light"]["right"] == labels[""]["right"] and labels["light"]["left"] == labels[""]["left"],
+          "light: the demo's plan, the edge aimed at the tape's top")
     k = labels["steep"]["right"].index("draw the knife down the tape")
     _, R_s = M._pass_rotations(M.STEEP_DEG)
     w = got["steep"]["right"][k]

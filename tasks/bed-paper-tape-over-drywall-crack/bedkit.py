@@ -12,11 +12,18 @@ The simulator has no paste, so the compound is a scored model computed from obje
 
 The law (each number a `Law` field; the task states its reason):
 
-1. Contact, not proximity. An edge sample presses a strip when it is inside the strip's box or no more than `gap`
-   above its outer face (whichever side faces out), over its footprint; it touches the bare face (or the compound on
-   it) when it is no more than `gap` in front of the face or up to `below` behind it. Only a HELD knife (a gripper's own shape touching its handle,
-   decided by the task) whose edge SLIDES (its middle moved at least `slide_min` along the face over `slide_steps`
-   control steps) works the compound: a knife pressed and held still, or a dab, does nothing; so do hands.
+1. Contact and force, not proximity. The task passes, each control step, the knife's contact force on each strip
+   as the physics engine reports it (PhysX contact reporting: the normal force pushing the strip into the face, N).
+   A strip is pressed only while the knife touches it (`touch_force` or more on that strip) AND the knife's total
+   push on the tape is at least `press_force`, the force needed to squeeze the compound out from under the tape (the
+   task states its derivation). A knife near the tape but not touching it, or touching it lightly, presses nothing.
+   Where on a pushed strip the edge is (which cells it works) is found from the poses: an edge sample is over a
+   strip when it is inside the strip's box or no more than `gap` above its outer face (whichever side faces out),
+   over its footprint (`gap` only locates the edge on a strip the engine says it pushes; it never presses by
+   itself); it touches the bare face (or the compound on it) when it is no more than `gap` in front of the face or up
+   to `below` behind it. Only a HELD knife (a gripper's own shape touching its handle, decided by the task) whose edge
+   SLIDES (its middle moved at least `slide_min` along the face over `slide_steps` control steps) works the compound:
+   a knife pressed and held still, or a dab, does nothing; so do hands.
 2. Each face cell is worked once per entry under the edge (moving off and coming back is a new entry); the knife's
    pose is interpolated between control steps in sub-steps of at most half a cell.
 3. The blade's angle sets what it leaves, as in drywall finishing ("less angle lays on, more angle takes off"):
@@ -32,14 +39,16 @@ The law (each number a `Law` field; the task states its reason):
    bond (a blister). An unpressed strip floats on the full bed and does not bond. A bonded strip lets go when its
    middle is lifted off the face past the joint's stretch (a peel), or when it has slid more than `slide_release`
    along the face from where it bonded (moving wet tape that far undoes the bedding; it needs a fresh pass).
-7. Torn tape. A knife whose edge is turned more than `gouge_tilt_deg` out of the face's plane presses with one corner;
+7. Torn tape. A knife pushing on the tape (rule 1) whose edge is turned more than `gouge_tilt_deg` out of the face's
+   plane presses with one corner;
    sliding that corner `gouge_len` along the tape tears wet paper tape (`torn`, latched for the trial).
 
 What it does not model (say so in the task's text): the compound does not flow, slump or dry, and does not push back
-on the knife or the tape; the tape lies on the wall's face with the compound's depth kept as numbers; pressure is not
-read (the blade is rigid, the edge only has to be on the tape and sliding), so a light pass that leaves thick compound
-is not modelled: an unpressed stretch is simply not bedded; the direction of the stroke does not change what a pass
-leaves.
+on the knife or the tape (the push that squeezes it is a threshold on the knife's measured contact force, not a
+pressure field); the tape lies on the wall's face with the compound's depth kept as numbers; above `press_force` the
+film left is set by the blade's angle alone (a harder push does not leave less), and below it nothing is pressed (a
+light pass that would leave thick compound is not modelled: it is simply not bedded); the direction of the stroke
+does not change what a pass leaves.
 """
 
 from __future__ import annotations
@@ -127,6 +136,8 @@ class Law:
     gouge_tilt_deg: float = 15.0  # the edge turned this far out of the face's plane: only a corner presses ...
     gouge_len: float = 0.005  # ... and sliding this far along the tape tears it
     slide_release: float = 0.003  # m a bonded strip may slide along the face before its bond lets go
+    press_force: float = 5.0  # N: the knife's total push on the tape (contact normal force) that squeezes compound
+    touch_force: float = 0.05  # N: a strip with less contact force from the knife is not touched by it
 
     def film(self, theta_deg: float) -> float:
         if theta_deg <= self.low_deg:
@@ -230,6 +241,7 @@ class Bed:
         self.scraped = 0.0
         self.touch_tape = False
         self.touch_face = False
+        self.push = 0.0  # N: the knife's total contact push on the tape at the last step
         n_pts = blade.n_pts or int(math.ceil(blade.width / (face.cell / 2))) + 1  # no cell between two samples
         self._edge = edge_points(blade, n_pts)
 
@@ -283,9 +295,18 @@ class Bed:
         return best
 
     # -- the step -----------------------------------------------------------------------------------------------
-    def step(self, knife_pos, knife_quat, held: bool, face_pose, frames) -> list:
-        """One control step. `frames`: each strip's body frame (pos, R) now. Returns the strips to bond now."""
+    def step(self, knife_pos, knife_quat, held: bool, face_pose, frames, force) -> list:
+        """One control step. `frames`: each strip's body frame (pos, R) now; `force`: the knife's contact normal force
+        on each strip (N, pushing it into the face) at this step, from the physics engine. Returns the strips to bond
+        now."""
         L = self.law
+        force = np.asarray(force, float).reshape(-1)
+        if force.shape != (len(self.strips),) or not np.all(np.isfinite(force)):
+            raise ValueError(f"bedkit: need the knife's contact force on each of {len(self.strips)} strips, got "
+                             f"{force.shape}")
+        touched = force >= L.touch_force
+        self.push = float(force[touched].sum())
+        pushing = touched & (self.push >= L.press_force)
         self.n += 1
         fr = face_frame(self.face, face_pose)
         o, eu, ev, nrm = fr
@@ -347,6 +368,8 @@ class Bed:
                 cell = (int(iu[m]), int(iv[m]))
                 if any_in[m]:
                     j = int(first[m])
+                    if not pushing[int(live[j])]:
+                        continue  # over the strip, but the knife does not touch it or push hard enough: no work
                     key = ("t", int(live[j]), cell)
                     work.append((key, (int(live[j]), loc[j, m]), float(hs_all[m])))
                 else:
