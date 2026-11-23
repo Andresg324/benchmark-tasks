@@ -36,21 +36,28 @@ too firm or too long overshoots, so the policy must squeeze with the walls, watc
 | 0.25 | 0.5 to 1.5 g or 4.0 to 15 g in the dish, or 0.5 to 15 g in the dish with more than 0.3 g outside it (on the counter, the dish's rim or outside, the cap, the lid or the bottle) |
 | 0 | under 0.5 g or over 15 g in the dish: doing nothing (the dish starts empty), holding it open cap-down unsqueezed or only lightly squeezed (nothing comes out), squeezing with the cap shut, squeezing through a lid left on its catch (it all runs over the cap), a dumped dose, the dish knocked over |
 
-**Real trial**, judged by eye from the overhead video (no scale or gauge), with a US quarter (24 mm) lying beside
-the dish as a size reference. The dose is the dollop in the dish, its width read in the first overhead frame after the bottle last leaves the dish,
-before it spreads (24 mm domed 6 mm is 1.5 g; a wider dollop
-slumps lower, and 34 mm domed 8 mm is 4.0 g; by eye this is an approximation of the simulated band). Same tiers as the simulation:
+**Real trial**, scored by weight with the same grams as the simulation, on a digital pocket scale (500 g x 0.01 g, zeroed before each weighing;
+the bottle is 234 g, the dish 110 g). Before the trial, weigh the empty, dry dish and the bottle (lid shut, outside
+wiped dry at the reset). After it, wipe the dish's rim, outside and base with a dry cloth, not its inside, and weigh it:
+the gain is the dose in the dish. Then wipe the cap's and lid's outside and the bottle's outside with the cloth
+(open the lid and wipe its underside too, but not inside the orifice: in simulation shampoo
+squeezed onto a lid opened less than 61 degrees counts as outside) and weigh the bottle: everything it lost that is not in the dish (on the pad, the dish's rim or outside, the cap, the lid, the
+bottle, a glove) is outside. So outside = bottle's loss - dish's gain, read to 0.01 g, finer than the 0.3 g limit.
+Same tiers and thresholds as the simulation: 1.0 is 1.5 to 4.0 g in the dish and at most 0.3 g outside, with the
+finish judged by eye from the overhead video: the lid flush on the cap, the bottle and dish upright on the pad, both
+hands off and clear of them, nothing moving over the last second (else 0.5). 0.25 and 0 by the same grams as the
+table; a dish tipped past 45 degrees with shampoo in it (seen in the video) scores 0, as in the simulation,
+where its shampoo counts as spilled. The score counts
+grams, however hard the bottle is squeezed.
 
-- **1.0:** a dollop from a quarter's width to about 1.4 quarters' (24 to 34 mm), no drop outside the dish, and at the
-  end the lid flush on the cap, the bottle and dish standing upright on the pad, both hands off and clear of them,
-  nothing moving over the last second.
-- **0.5:** that dollop with no drop outside, but the lid open or on its catch (it then stands visibly open), a hand
-  still on the lid or bottle, the bottle not standing, or something still moving at the end.
-- **0.25:** a dollop at least a dime's width (18 mm, about 0.6 g) and not across most of the dish's floor that is
-  narrower than a quarter or wider than 34 mm, or has any drop on the pad, the dish's rim or outside, the cap, the lid
-  or the bottle.
-- **0:** nothing in the dish or less than a dime's width, shampoo across most of the dish's floor (a dumped dose, over
-  15 g), or the dish knocked over. Doing nothing scores 0.
+**Real bottle vs the model (squeeze force and flow).** Checked once (Nov 23) on a flip-top bottle of
+another brand (Head & Shoulders): nothing came out cap-down unsqueezed. Laid on its broad side on a kitchen scale, the
+cap end out over a dish, and pressed on the top wall (the reading is the force on each wall), it first let shampoo
+out at 700 to 800 g, about 7 to 8 N; the model opens at 7.5 N a side with no help from the shampoo's weight, as on its
+side, and at about 5 to 7 N cap-down, where its weight helps. A few pushes at about that force (700 to 800 g) gave about 4 g in all, about 1 to 1.5 g each (the scripted
+demo's squeeze, peaking at about 17 N a side, gives 2.64 g in one). So the real bottle flows more readily than the model once open:
+it gave a similar dose at a lower force than the model needs. The grams per squeeze are of the same order, and two
+such squeezes give a dose in the band, judged by the pool; the score counts grams, not force. A lab preparing trials can repeat this on its Suave trial bottle with any kitchen scale.
 
 Scripted demo:
 
@@ -116,9 +123,11 @@ cap-down, no squeeze, then shut) 0 (0 g); `weak` (a light squeeze held 5 s) 0 (0
   back and taped clear of the pads, fingertips and wrist camera; a glove that tears or gets shampoo on it is replaced.
 - **Containment.** The bottle and dish stand on a plastic-backed absorbent bench pad (about 50 x 60 cm), taped flat;
   replace it after any spill. Reset: wash and dry the dish, wipe the orifice
-  and lid with a damp, then a dry paper towel, snap the lid shut, set both on their tape marks; once the shampoo is a finger's width under the pen line,
-  top it up to the line from the same product. About 3 minutes, then the 5 minute rest. Each trial uses about 2 to 3 g
-  of shampoo and a paper towel; nothing else is consumed.
+  and lid with a damp, then a dry cloth, snap the lid shut, set both on their tape marks; once the shampoo is a finger's width under the pen line,
+  top it up to the line from the same product. About 3 minutes plus the four weighings, then the 5 minute rest. Each
+  trial uses about 2 to 3 g of shampoo; nothing else is consumed.
+- **Scale:** a digital pocket scale, 500 g x 0.01 g, on the bench beside the pad (out of the arms' reach and the cameras' view). Optional: any
+  kitchen scale (1 g steps) to repeat the squeeze-force check.
 - **Safety:** a shampoo bottle and a dish; nothing sharp, hot or heavy.
 
 ## Runtime and seeds
